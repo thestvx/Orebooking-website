@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OreBooking - Premium Stays</title>
+  
+  <!-- Fonts: Poppins (EN) & Tajawal (AR) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">
+      <i class="ph-fill ph-house-line"></i>
+      <span class="font-bold">OreBooking</span>
+    </div>
+    
+    <div class="nav-actions">
+      <!-- Rewards Points (Mock) -->
+      <div class="rewards-badge">
+        <i class="ph-fill ph-star"></i>
+        <span id="user-points">1,250</span> <span data-i18n="pts">Pts</span>
+      </div>
+
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
+        <i class="ph ph-moon"></i>
+      </button>
+      
+      <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
+      
+      <div class="profile-menu">
+        <i class="ph ph-user"></i>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section & Search -->
+  <header class="hero">
+    <h1 class="font-bold" data-i18n="hero_title">Find your next perfect stay</h1>
+    <p class="font-regular" data-i18n="hero_subtitle">Discover premium apartments, villas, and unique homes around the world.</p>
+    
+    <div class="search-bar">
+      <div class="search-field">
+        <label class="font-medium" data-i18n="location">Location</label>
+        <input type="text" id="search-location" placeholder="Where are you going?" data-i18n-placeholder="location_placeholder">
+      </div>
+      <div class="search-divider"></div>
+      <div class="search-field">
+        <label class="font-medium" data-i18n="dates">Dates</label>
+        <input type="text" placeholder="Add dates" data-i18n-placeholder="dates_placeholder">
+      </div>
+      <div class="search-divider"></div>
+      <div class="search-field">
+        <label class="font-medium" data-i18n="guests">Guests</label>
+        <input type="text" placeholder="Add guests" data-i18n-placeholder="guests_placeholder">
+      </div>
+      <button class="search-btn font-medium">
+        <i class="ph ph-magnifying-glass"></i>
+        <span data-i18n="search">Search</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Categories -->
+  <section class="categories" id="categories-container">
+    <!-- Rendered via JS -->
+  </section>
+
+  <!-- Listings Grid -->
+  <main class="container">
+    <div class="section-header">
+      <h2 class="font-bold" data-i18n="trending">Trending Destinations</h2>
+    </div>
+    <div class="listings-grid" id="listings-grid">
+      <!-- Cards rendered via JS -->
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
