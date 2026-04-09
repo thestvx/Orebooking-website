@@ -20,10 +20,10 @@
 
   <!-- Navbar -->
   <nav class="navbar">
-    <div class="logo">
+    <a href="#" class="logo">
       <i class="ph-fill ph-house-line"></i>
       <span class="font-bold">OreBooking</span>
-    </div>
+    </a>
     
     <div class="nav-actions">
       <!-- Rewards Points (Mock) -->
@@ -38,10 +38,10 @@
       
       <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
       
-      <!-- User Icon links to Auth Page -->
-      <a href="auth.html" class="profile-menu">
+      <!-- User Icon to open Modal -->
+      <button id="open-auth-btn" class="profile-menu">
         <i class="ph ph-user"></i>
-      </a>
+      </button>
     </div>
   </nav>
 
@@ -86,6 +86,99 @@
       <!-- Cards rendered via JS -->
     </div>
   </main>
+
+  <!-- Auth Modal (Sign In / Sign Up) -->
+  <div id="auth-modal" class="modal-overlay">
+    <div class="modal-content auth-card">
+      
+      <button id="close-auth-btn" class="close-modal-btn">
+        <i class="ph ph-x"></i>
+      </button>
+
+      <div class="auth-header">
+        <div class="logo justify-center">
+          <i class="ph-fill ph-house-line"></i>
+          <span class="font-bold">OreBooking</span>
+        </div>
+      </div>
+
+      <div class="auth-content">
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form active" onsubmit="event.preventDefault();">
+          <h2 class="font-bold auth-title" data-i18n="welcome_back">Welcome back</h2>
+          <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
+
+          <div class="input-group">
+            <label class="font-medium" data-i18n="email">Email</label>
+            <input type="email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="input-group">
+            <label class="font-medium" data-i18n="password">Password</label>
+            <input type="password" placeholder="••••••••" required>
+          </div>
+
+          <div class="auth-options">
+            <label class="checkbox-container">
+              <input type="checkbox">
+              <span class="checkmark"></span>
+              <span class="font-medium" data-i18n="remember_me">Remember me</span>
+            </label>
+            <a href="#" class="forgot-link font-medium" data-i18n="forgot_pass">Forgot password?</a>
+          </div>
+
+          <button class="primary-btn font-medium" data-i18n="sign_in">Sign In</button>
+
+          <div class="auth-divider">
+            <span data-i18n="or_continue">or continue with</span>
+          </div>
+
+          <div class="social-logins">
+            <button type="button" class="social-btn">
+              <i class="ph-fill ph-google-logo" style="color: #ea4335;"></i> Google
+            </button>
+            <button type="button" class="social-btn">
+              <i class="ph-fill ph-apple-logo"></i> Apple
+            </button>
+          </div>
+
+          <p class="switch-form-text">
+            <span data-i18n="no_account">Don't have an account?</span> 
+            <a href="#" id="go-to-register" class="font-bold text-primary" data-i18n="sign_up">Sign up</a>
+          </p>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" class="auth-form" onsubmit="event.preventDefault();">
+          <h2 class="font-bold auth-title" data-i18n="create_account">Create an account</h2>
+          <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
+
+          <div class="input-group">
+            <label class="font-medium" data-i18n="full_name">Full Name</label>
+            <input type="text" placeholder="John Doe" required>
+          </div>
+
+          <div class="input-group">
+            <label class="font-medium" data-i18n="email">Email</label>
+            <input type="email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="input-group">
+            <label class="font-medium" data-i18n="password">Password</label>
+            <input type="password" placeholder="••••••••" required>
+          </div>
+
+          <button class="primary-btn font-medium" data-i18n="sign_up_btn">Create Account</button>
+
+          <p class="switch-form-text mt-4">
+            <span data-i18n="has_account">Already have an account?</span> 
+            <a href="#" id="go-to-login" class="font-bold text-primary" data-i18n="sign_in">Sign in</a>
+          </p>
+        </form>
+      </div>
+
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
