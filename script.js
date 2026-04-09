@@ -5,7 +5,7 @@ const state = {
   favorites: []
 };
 
-// --- Consolidated Translations (Main + Auth) ---
+// --- Consolidated Translations (Main + Auth + Footer) ---
 const translations = {
   en: {
     // Main Page
@@ -23,6 +23,7 @@ const translations = {
     night: "night",
     urgency_few: "Only 2 rooms left",
     urgency_hot: "Booked 5 times today",
+    developed_by: "Developed by:",
     // Auth Modal
     welcome_back: "Welcome back",
     login_desc: "Enter your details to access your account.",
@@ -56,6 +57,7 @@ const translations = {
     night: "ليلة",
     urgency_few: "بقي غرفتان فقط",
     urgency_hot: "تم حجزه 5 مرات اليوم",
+    developed_by: "تم تطوير هذا الموقع من قبل:",
     // Auth Modal
     welcome_back: "مرحباً بعودتك",
     login_desc: "أدخل بياناتك للوصول إلى حسابك.",
