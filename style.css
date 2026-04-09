@@ -99,8 +99,6 @@ html[dir="rtl"] body {
   object-fit: contain; 
 }
 
-/* تم حذف .dark .logo-img { filter: brightness(1.1) } من هنا ليظهر شعار الوضع المظلم بألوانه الأصلية */
-
 .nav-actions { 
   display: flex; 
   align-items: center; 
