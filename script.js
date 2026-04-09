@@ -1,14 +1,14 @@
-// --- Mock Data & State ---
-// تم إضافة قراءة الإعدادات من LocalStorage للحفاظ على المزامنة
+// --- Global State ---
 const state = {
   lang: localStorage.getItem('ore_lang') || 'en',
   theme: localStorage.getItem('ore_theme') || 'light',
   favorites: []
 };
 
-// Translations Dictionary
+// --- Consolidated Translations (Main + Auth) ---
 const translations = {
   en: {
+    // Main Page
     hero_title: "Find your next perfect stay",
     hero_subtitle: "Discover premium apartments, villas, and unique homes around the world.",
     location: "Location",
@@ -22,9 +22,26 @@ const translations = {
     pts: "Pts",
     night: "night",
     urgency_few: "Only 2 rooms left",
-    urgency_hot: "Booked 5 times today"
+    urgency_hot: "Booked 5 times today",
+    // Auth Modal
+    welcome_back: "Welcome back",
+    login_desc: "Enter your details to access your account.",
+    email: "Email Address",
+    password: "Password",
+    remember_me: "Remember me",
+    forgot_pass: "Forgot password?",
+    sign_in: "Sign In",
+    or_continue: "or continue with",
+    no_account: "Don't have an account?",
+    sign_up: "Sign up",
+    create_account: "Create an account",
+    register_desc: "Join OreBooking to unlock premium features.",
+    full_name: "Full Name",
+    sign_up_btn: "Create Account",
+    has_account: "Already have an account?"
   },
   ar: {
+    // Main Page
     hero_title: "اكتشف إقامتك المثالية القادمة",
     hero_subtitle: "اكتشف شققاً فاخرة، فلل، ومنازل فريدة حول العالم.",
     location: "الموقع",
@@ -38,10 +55,27 @@ const translations = {
     pts: "نقطة",
     night: "ليلة",
     urgency_few: "بقي غرفتان فقط",
-    urgency_hot: "تم حجزه 5 مرات اليوم"
+    urgency_hot: "تم حجزه 5 مرات اليوم",
+    // Auth Modal
+    welcome_back: "مرحباً بعودتك",
+    login_desc: "أدخل بياناتك للوصول إلى حسابك.",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    remember_me: "تذكرني",
+    forgot_pass: "نسيت كلمة المرور؟",
+    sign_in: "تسجيل الدخول",
+    or_continue: "أو المتابعة باستخدام",
+    no_account: "ليس لديك حساب؟",
+    sign_up: "إنشاء حساب",
+    create_account: "إنشاء حساب جديد",
+    register_desc: "انضم إلى OreBooking لفتح ميزات حصرية.",
+    full_name: "الاسم الكامل",
+    sign_up_btn: "إنشاء الحساب",
+    has_account: "لديك حساب بالفعل؟"
   }
 };
 
+// Mock Data
 const properties = [
   {
     id: 1,
@@ -90,17 +124,66 @@ const langBtn = document.getElementById('lang-toggle');
 const themeBtn = document.getElementById('theme-toggle');
 const htmlEl = document.documentElement;
 
+// Modal Elements
+const authModal = document.getElementById('auth-modal');
+const openAuthBtn = document.getElementById('open-auth-btn');
+const closeAuthBtn = document.getElementById('close-auth-btn');
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const goToRegisterBtn = document.getElementById('go-to-register');
+const goToLoginBtn = document.getElementById('go-to-login');
+
 // --- Initialization ---
 function init() {
-  applyInitialState(); // Apply state from localStorage
+  applyInitialState();
   renderCategories();
   renderListings();
   
-  // Event Listeners
+  // Toggles
   langBtn.addEventListener('click', toggleLanguage);
   themeBtn.addEventListener('click', toggleTheme);
+
+  // Modal Events
+  openAuthBtn.addEventListener('click', openModal);
+  closeAuthBtn.addEventListener('click', closeModal);
+  
+  // Close modal when clicking outside the card
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) closeModal();
+  });
+
+  // Form Switch Events
+  goToRegisterBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.classList.remove('active');
+    registerForm.classList.add('active');
+  });
+
+  goToLoginBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerForm.classList.remove('active');
+    loginForm.classList.add('active');
+  });
 }
 
+// --- Modal Logic ---
+function openModal() {
+  authModal.classList.add('active');
+  document.body.classList.add('modal-open');
+}
+
+function closeModal() {
+  authModal.classList.remove('active');
+  document.body.classList.remove('modal-open');
+  
+  // Reset forms to login view after closing
+  setTimeout(() => {
+    registerForm.classList.remove('active');
+    loginForm.classList.add('active');
+  }, 300);
+}
+
+// --- Theme & Language Logic ---
 function applyInitialState() {
   // Theme
   if (state.theme === 'dark') {
@@ -119,10 +202,9 @@ function applyInitialState() {
   updateLanguageUI();
 }
 
-// --- Theme Logic ---
 function toggleTheme() {
   state.theme = state.theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem('ore_theme', state.theme); // Save to storage
+  localStorage.setItem('ore_theme', state.theme);
   
   if (state.theme === 'dark') {
     document.body.classList.add('dark');
@@ -133,10 +215,9 @@ function toggleTheme() {
   }
 }
 
-// --- Language Logic ---
 function toggleLanguage() {
   state.lang = state.lang === 'en' ? 'ar' : 'en';
-  localStorage.setItem('ore_lang', state.lang); // Save to storage
+  localStorage.setItem('ore_lang', state.lang);
   
   htmlEl.setAttribute('dir', state.lang === 'en' ? 'ltr' : 'rtl');
   htmlEl.setAttribute('lang', state.lang);
@@ -208,7 +289,7 @@ function renderListings() {
         <div class="card-img-wrapper">
           <img src="${prop.image}" alt="${title}" class="card-img">
           ${urgencyHtml}
-          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite(${prop.id})">
+          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite(${prop.id})">
             <i class="${isFav ? 'ph-fill' : 'ph'} ph-heart"></i>
           </button>
         </div>
