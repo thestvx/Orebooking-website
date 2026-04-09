@@ -16,9 +16,29 @@
   
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="admin-body bg-light">
+<body class="admin-body">
 
-  <div class="admin-layout">
+  <!-- 🔐 Admin Login Screen -->
+  <div id="admin-login-screen" class="admin-login-screen">
+    <div class="admin-login-card">
+      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height: 50px; margin: 0 auto 20px; display: block;">
+      <h2 class="font-bold" style="text-align: center; margin-bottom: 24px;">تسجيل دخول الإدارة</h2>
+      <form id="admin-login-form">
+        <div class="input-group">
+          <label>اسم المستخدم</label>
+          <input type="text" id="admin-user" required placeholder="أدخل اسم المستخدم">
+        </div>
+        <div class="input-group">
+          <label>كلمة المرور</label>
+          <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور">
+        </div>
+        <button type="submit" class="primary-btn mt-4">تسجيل الدخول <i class="ph ph-sign-in"></i></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 🎛️ Main Admin Layout -->
+  <div class="admin-layout" id="admin-layout" style="display: none;">
     <!-- Sidebar -->
     <aside class="admin-sidebar">
       <div class="sidebar-logo">
@@ -26,48 +46,45 @@
         <span class="font-bold">Admin Panel</span>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="switchTab('dashboard')"><i class="ph ph-squares-four"></i> الإحصائيات</button>
-        <button class="nav-item" onclick="switchTab('add-property')"><i class="ph ph-house-line"></i> إضافة عقار جديد</button>
+        <button class="nav-item active" onclick="switchTab('manage-props')"><i class="ph ph-list-dashes"></i> إدارة العقارات</button>
+        <button class="nav-item" onclick="switchTab('add-property')"><i class="ph ph-plus-circle"></i> إضافة عقار جديد</button>
         <button class="nav-item" onclick="switchTab('bookings')"><i class="ph ph-calendar-check"></i> الحجوزات</button>
-        <a href="index.html" class="nav-item" style="margin-top: auto; color: var(--text-muted);"><i class="ph ph-arrow-square-out"></i> العودة للموقع</a>
+        <a href="index.html" class="nav-item" style="margin-top: auto; color: var(--text-danger);"><i class="ph ph-sign-out"></i> خروج من اللوحة</a>
       </nav>
     </aside>
 
     <!-- Main Content -->
     <main class="admin-main">
       <header class="admin-header">
-        <h2 id="page-title" class="font-bold">نظرة عامة</h2>
+        <h2 id="page-title" class="font-bold">إدارة العقارات</h2>
         <div class="admin-profile">
           <span class="font-medium">المدير</span>
-          <div class="avatar"><i class="ph-fill ph-user"></i></div>
+          <div class="avatar"><i class="ph-fill ph-user-gear"></i></div>
         </div>
       </header>
 
       <div class="admin-content">
         
-        <!-- Tab 1: Dashboard -->
-        <div id="tab-dashboard" class="tab-pane active">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon" style="background: #dcfce7; color: #059669;"><i class="ph-fill ph-house"></i></div>
-              <div class="stat-info">
-                <h3>إجمالي العقارات</h3>
-                <p id="total-props">0</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon" style="background: #fef08a; color: #b45309;"><i class="ph-fill ph-calendar"></i></div>
-              <div class="stat-info">
-                <h3>الحجوزات الجديدة</h3>
-                <p>0</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon" style="background: #dbeafe; color: #1d4ed8;"><i class="ph-fill ph-users"></i></div>
-              <div class="stat-info">
-                <h3>العملاء</h3>
-                <p>0</p>
-              </div>
+        <!-- Tab 1: Manage Properties -->
+        <div id="tab-manage-props" class="tab-pane active">
+          <div class="admin-card">
+            <h3 class="font-bold" style="margin-bottom: 20px;">العقارات المضافة</h3>
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>الصورة</th>
+                    <th>الاسم</th>
+                    <th>الموقع</th>
+                    <th>السعر</th>
+                    <th>الحالة (إظهار/إخفاء)</th>
+                    <th>إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="properties-tbody">
+                  <!-- Data will be loaded here via JS -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -76,55 +93,50 @@
         <div id="tab-add-property" class="tab-pane">
           <div class="admin-card">
             <h3 class="font-bold" style="margin-bottom: 24px;">إدخال تفاصيل العقار الجديد</h3>
-            
             <form id="add-property-form" class="admin-form">
               <div class="form-grid">
+                <div class="input-group"><label>الاسم (عربي)</label><input type="text" id="prop-title-ar" required></div>
+                <div class="input-group"><label>الاسم (إنجليزي)</label><input type="text" id="prop-title-en" required></div>
+                <div class="input-group"><label>الموقع (عربي)</label><input type="text" id="prop-loc-ar" required></div>
+                <div class="input-group"><label>الموقع (إنجليزي)</label><input type="text" id="prop-loc-en" required></div>
+                <div class="input-group"><label>السعر (DZD)</label><input type="number" id="prop-price" required></div>
                 <div class="input-group">
-                  <label>اسم العقار (عربي)</label>
-                  <input type="text" id="prop-title-ar" required placeholder="مثال: منتجع الرمال الذهبية">
-                </div>
-                <div class="input-group">
-                  <label>اسم العقار (إنجليزي)</label>
-                  <input type="text" id="prop-title-en" required placeholder="Ex: Golden Sands Resort">
-                </div>
-                <div class="input-group">
-                  <label>الموقع (عربي)</label>
-                  <input type="text" id="prop-loc-ar" required placeholder="مثال: الجزائر، العاصمة">
-                </div>
-                <div class="input-group">
-                  <label>الموقع (إنجليزي)</label>
-                  <input type="text" id="prop-loc-en" required placeholder="Ex: Algiers, Algeria">
-                </div>
-                <div class="input-group">
-                  <label>السعر لليلة (DZD)</label>
-                  <input type="number" id="prop-price" required placeholder="مثال: 12000">
-                </div>
-                <div class="input-group">
-                  <label>الصورة الرئيسية للعقار</label>
+                  <label>صورة العقار</label>
                   <input type="file" id="prop-image" accept="image/*" required>
                   <small id="upload-status" class="text-primary"></small>
                 </div>
               </div>
-
-              <div class="input-group" style="margin-top: 20px;">
-                <label>الوصف (عربي)</label>
-                <textarea id="prop-desc-ar" rows="3" required placeholder="اكتب وصفاً جذاباً للمكان..."></textarea>
-              </div>
-
-              <div class="input-group">
-                <label>الوصف (إنجليزي)</label>
-                <textarea id="prop-desc-en" rows="3" required placeholder="Write an attractive description..."></textarea>
-              </div>
-
-              <button type="submit" class="primary-btn mt-4" id="submit-prop-btn">
-                <i class="ph ph-plus-circle"></i> إضافة ونشر العقار
-              </button>
+              <div class="input-group" style="margin-top: 20px;"><label>الوصف (عربي)</label><textarea id="prop-desc-ar" rows="3" required></textarea></div>
+              <div class="input-group"><label>الوصف (إنجليزي)</label><textarea id="prop-desc-en" rows="3" required></textarea></div>
+              <button type="submit" class="primary-btn mt-4" id="submit-prop-btn"><i class="ph ph-plus-circle"></i> إضافة العقار</button>
             </form>
+          </div>
+        </div>
+
+        <!-- Tab 3: Bookings -->
+        <div id="tab-bookings" class="tab-pane">
+          <div class="admin-card">
+            <h3 class="font-bold text-center text-muted">سيتم ربط الحجوزات قريباً...</h3>
           </div>
         </div>
 
       </div>
     </main>
+  </div>
+
+  <!-- ✏️ Edit Modal Overlay -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal-content admin-card">
+      <button class="close-modal-btn" onclick="closeEditModal()"><i class="ph ph-x"></i></button>
+      <h3 class="font-bold" style="margin-bottom: 20px;">تعديل العقار</h3>
+      <form id="edit-property-form" class="admin-form">
+        <input type="hidden" id="edit-prop-id">
+        <div class="input-group"><label>الاسم (عربي)</label><input type="text" id="edit-title-ar" required></div>
+        <div class="input-group"><label>السعر (DZD)</label><input type="number" id="edit-price" required></div>
+        <div class="input-group"><label>الوصف (عربي)</label><textarea id="edit-desc-ar" rows="3" required></textarea></div>
+        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn">حفظ التعديلات</button>
+      </form>
+    </div>
   </div>
 
   <script src="admin.js"></script>
