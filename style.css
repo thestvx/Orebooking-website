@@ -99,9 +99,7 @@ html[dir="rtl"] body {
   object-fit: contain; 
 }
 
-.dark .logo-img { 
-  filter: brightness(1.1) contrast(1.1); 
-}
+/* تم حذف .dark .logo-img { filter: brightness(1.1) } من هنا ليظهر شعار الوضع المظلم بألوانه الأصلية */
 
 .nav-actions { 
   display: flex; 
@@ -838,40 +836,6 @@ html[dir="rtl"] .search-bar {
 }
 
 /* =========================================
-   --- Responsive Design ---
-   ========================================= */
-@media (max-width: 768px) {
-  .search-bar { 
-    flex-direction: column; 
-    border-radius: 1rem; 
-    padding: 16px; 
-    gap: 16px; 
-  }
-  
-  .search-divider { 
-    width: 100%; 
-    height: 1px; 
-  }
-  
-  .search-btn { 
-    width: 100%; 
-    justify-content: center; 
-  }
-  
-  .hero h1 { 
-    font-size: 2rem; 
-  }
-  
-  .navbar { 
-    padding: 16px 20px; 
-  }
-  
-  .logo-img { 
-    height: 48px; 
-  } 
-}
-
-/* =========================================
    --- Property Details Page (property.html) ---
    ========================================= */
 .inner-nav {
@@ -934,7 +898,24 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
 
 .text-center { text-align: center; }
 
+/* =========================================
+   --- Responsive Design ---
+   ========================================= */
 @media (max-width: 900px) {
   .prop-content-grid { grid-template-columns: 1fr; }
   .prop-image-gallery { height: 350px; }
+}
+
+@media (max-width: 768px) {
+  .search-bar { 
+    flex-direction: column; 
+    border-radius: 1rem; 
+    padding: 16px; 
+    gap: 16px; 
+  }
+  .search-divider { width: 100%; height: 1px; }
+  .search-btn { width: 100%; justify-content: center; }
+  .hero h1 { font-size: 2rem; }
+  .navbar { padding: 16px 20px; }
+  .logo-img { height: 48px; } 
 }
