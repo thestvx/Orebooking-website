@@ -862,125 +862,48 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
 .prop-rating i { color: #fbbf24; }
 .prop-location { display: flex; align-items: center; gap: 4px; text-decoration: underline; }
 
-.prop-image-gallery { 
-  width: 100%; height: 500px; 
-  border-radius: var(--radius-2xl); 
-  overflow: hidden; margin-bottom: 40px; 
-}
-.prop-img-main { width: 100%; height: 100%; object-fit: cover; }
-
 .prop-content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 48px; }
 .prop-details h2 { font-size: 1.5rem; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
 .prop-description { color: var(--text-muted); line-height: 1.7; margin-bottom: 32px; font-size: 1.05rem; }
-
 .prop-features h3 { font-size: 1.25rem; margin-bottom: 16px; }
 .features-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .features-list li { display: flex; align-items: center; gap: 12px; font-size: 1rem; color: var(--text-main); }
 .features-list i { font-size: 1.5rem; color: var(--primary); }
-
-.prop-booking-card { 
-  background-color: var(--surface-color); 
-  border: 1px solid var(--border-color); 
-  border-radius: var(--radius-2xl); 
-  padding: 24px; 
-  box-shadow: var(--shadow-soft); 
-  height: fit-content; position: sticky; top: 100px; 
-}
+.prop-booking-card { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-2xl); padding: 24px; box-shadow: var(--shadow-soft); height: fit-content; position: sticky; top: 100px; }
 .booking-price { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; }
-.booking-inputs { border: 1px solid var(--text-muted); border-radius: var(--radius-xl); overflow: hidden; }
-.input-row { display: flex; width: 100%; }
-.input-half { flex: 1; padding: 12px; display: flex; flex-direction: column; }
-.border-left { border-inline-start: 1px solid var(--text-muted); }
-.input-half label { font-size: 0.65rem; color: var(--text-main); margin-bottom: 4px; }
-.input-half input { border: none; background: transparent; outline: none; font-family: inherit; color: var(--text-muted); }
-
-.text-center { text-align: center; }
 
 /* =========================================
-   --- Property Image Slider ---
+   --- Slider & Smooth Animations ---
    ========================================= */
-.slider-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: var(--radius-2xl);
-  background-color: var(--bg-color);
-}
+.prop-image-gallery { width: 100%; height: 500px; border-radius: var(--radius-2xl); overflow: hidden; margin-bottom: 40px; position: relative; }
+.slider-container { position: relative; width: 100%; height: 100%; background-color: #000; }
+.prop-img-main { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
 
-.slider-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: opacity 0.3s ease-in-out;
-}
+/* Smooth Fade Effect */
+.fade-anim { animation: fadeInOut 0.4s ease-in-out; }
+@keyframes fadeInOut { 0% { opacity: 0.4; transform: scale(0.98); } 100% { opacity: 1; transform: scale(1); } }
 
-.slider-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(4px);
-  color: var(--text-main);
-  border: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  cursor: pointer;
-  z-index: 10;
-  transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+.slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(255, 255, 255, 0.9); border: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; z-index: 10; transition: var(--transition); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); color: var(--text-main); }
+.slider-btn:hover { background-color: white; transform: translateY(-50%) scale(1.1); color: var(--primary); }
+.prev-btn { inset-inline-start: 16px; }
+.next-btn { inset-inline-end: 16px; }
 
-.slider-btn:hover {
-  background-color: white;
-  transform: translateY(-50%) scale(1.1);
-  color: var(--primary);
-}
+.slider-dots-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; background-color: rgba(0, 0, 0, 0.4); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(4px); }
+.slider-dot { width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.5); cursor: pointer; transition: var(--transition); }
+.slider-dot.active { background-color: white; transform: scale(1.3); }
 
-.prev-btn {
-  inset-inline-start: 16px;
-}
-
-.next-btn {
-  inset-inline-end: 16px;
-}
-
-.slider-dots-container {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  z-index: 10;
-  background-color: rgba(0, 0, 0, 0.3);
-  padding: 6px 12px;
-  border-radius: 20px;
-  backdrop-filter: blur(4px);
-}
-
-.slider-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.slider-dot.active {
-  background-color: white;
-  transform: scale(1.3);
-}
-
-.slider-dot:hover {
-  background-color: rgba(255, 255, 255, 0.8);
-}
+/* =========================================
+   --- 🔍 Lightbox / Zoom ---
+   ========================================= */
+.lightbox-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(10px); }
+.lightbox-overlay.active { opacity: 1; pointer-events: auto; }
+.close-lightbox { position: absolute; top: 24px; right: 24px; background: rgba(255,255,255,0.1); color: white; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; transition: 0.3s; z-index: 10000; }
+.close-lightbox:hover { background: #e11d48; transform: rotate(90deg); }
+.lightbox-img-wrapper { width: 90%; height: 90%; display: flex; align-items: center; justify-content: center; overflow: auto; scrollbar-width: none; }
+.lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.lightbox-img.zoomed { transform: scale(2); cursor: zoom-out; }
+.lightbox-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: white; border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; transition: 0.3s; z-index: 10000; }
+.lightbox-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-50%) scale(1.1); }
 
 /* =========================================
    --- Responsive Design ---
@@ -1002,4 +925,6 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   .hero h1 { font-size: 2rem; }
   .navbar { padding: 16px 20px; }
   .logo-img { height: 48px; } 
+  .lightbox-btn { width: 40px; height: 40px; font-size: 1.2rem; }
+  .close-lightbox { top: 16px; right: 16px; }
 }
