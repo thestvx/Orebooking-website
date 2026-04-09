@@ -5,31 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OreBooking - Premium Stays</title>
   
-  <!-- Fonts: Poppins (EN) & Tajawal (AR) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
   
-  <!-- Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   
-  <!-- 🔥 Firebase SDKs (Compat version) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Navbar -->
   <nav class="navbar">
-    <a href="#" class="logo">
-      <img src="logos/orebooking.png" alt="OreBooking Logo" class="logo-img">
+    <a href="index.html" class="logo">
+      <!-- 🔴 أضفت ID هنا للتحكم بالشعار -->
+      <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
     </a>
     
     <div class="nav-actions">
-      <!-- Rewards Points -->
       <div class="rewards-badge">
         <i class="ph-fill ph-star"></i>
         <span id="user-points">1,250</span> <span data-i18n="pts">Pts</span>
@@ -41,13 +36,11 @@
       
       <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
       
-      <!-- User Profile Container -->
       <div class="profile-container">
         <button id="open-auth-btn" class="profile-menu">
           <i class="ph ph-user"></i>
         </button>
 
-        <!-- Dropdown Menu -->
         <div id="profile-dropdown" class="profile-dropdown">
           <div class="dropdown-header">
             <span class="font-bold" id="dropdown-user-name">User Name</span>
@@ -69,7 +62,6 @@
     </div>
   </nav>
 
-  <!-- Hero Section & Search -->
   <header class="hero">
     <h1 class="font-bold" data-i18n="hero_title">Find your next perfect stay</h1>
     <p class="font-regular" data-i18n="hero_subtitle">Discover premium apartments, villas, and unique homes around the world.</p>
@@ -96,12 +88,10 @@
     </div>
   </header>
 
-  <!-- Categories -->
   <section class="categories" id="categories-container">
     <!-- Rendered via JS -->
   </section>
 
-  <!-- Listings Grid -->
   <main class="container">
     <div class="section-header">
       <h2 class="font-bold" data-i18n="trending">Trending Destinations</h2>
@@ -111,7 +101,6 @@
     </div>
   </main>
 
-  <!-- Footer Section -->
   <footer class="footer">
     <div class="container">
       <p class="developed-by">
@@ -121,7 +110,6 @@
     </div>
   </footer>
 
-  <!-- Auth Modal -->
   <div id="auth-modal" class="modal-overlay">
     <div class="modal-content auth-card">
       
@@ -131,15 +119,14 @@
 
       <div class="auth-header">
         <div class="logo justify-center">
-          <img src="logos/orebooking.png" alt="OreBooking Logo" class="logo-img">
+          <!-- 🔴 أضفت ID هنا للتحكم بشعار الموديل -->
+          <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking Logo" class="logo-img">
         </div>
       </div>
 
       <div class="auth-content">
-        <!-- Message Box -->
         <div id="auth-message" class="auth-message" style="display:none;"></div>
 
-        <!-- Login Form -->
         <form id="login-form" class="auth-form active">
           <h2 class="font-bold auth-title" data-i18n="welcome_back">Welcome back</h2>
           <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
@@ -186,7 +173,6 @@
           </p>
         </form>
 
-        <!-- Register Form -->
         <form id="register-form" class="auth-form">
           <h2 class="font-bold auth-title" data-i18n="create_account">Create an account</h2>
           <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
