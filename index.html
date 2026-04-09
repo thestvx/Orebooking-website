@@ -13,7 +13,7 @@
   <!-- Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   
-  <!-- 🔥 Firebase SDKs (Compat version for simple Vanilla JS) -->
+  <!-- 🔥 Firebase SDKs (Compat version) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
@@ -29,7 +29,7 @@
     </a>
     
     <div class="nav-actions">
-      <!-- Rewards Points (Mock) -->
+      <!-- Rewards Points -->
       <div class="rewards-badge">
         <i class="ph-fill ph-star"></i>
         <span id="user-points">1,250</span> <span data-i18n="pts">Pts</span>
@@ -43,12 +43,11 @@
       
       <!-- User Profile Container -->
       <div class="profile-container">
-        <!-- User Icon Button -->
         <button id="open-auth-btn" class="profile-menu">
           <i class="ph ph-user"></i>
         </button>
 
-        <!-- Dropdown Menu (Hidden by default, shown if logged in & clicked) -->
+        <!-- Dropdown Menu -->
         <div id="profile-dropdown" class="profile-dropdown">
           <div class="dropdown-header">
             <span class="font-bold" id="dropdown-user-name">User Name</span>
@@ -122,7 +121,7 @@
     </div>
   </footer>
 
-  <!-- Auth Modal (Sign In / Sign Up) -->
+  <!-- Auth Modal -->
   <div id="auth-modal" class="modal-overlay">
     <div class="modal-content auth-card">
       
@@ -137,7 +136,7 @@
       </div>
 
       <div class="auth-content">
-        <!-- Error/Success Message Box -->
+        <!-- Message Box -->
         <div id="auth-message" class="auth-message" style="display:none;"></div>
 
         <!-- Login Form -->
