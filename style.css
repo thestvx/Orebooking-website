@@ -970,7 +970,7 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   display: flex;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); /* نعومة احترافية */
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); 
 }
 
 /* الصورة الواحدة داخل المسار */
@@ -1129,11 +1129,200 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
 }
 
 /* =========================================
+   --- Admin Dashboard Styles ---
+   ========================================= */
+.admin-body { 
+  background-color: #f1f5f9; 
+  display: flex; 
+  height: 100vh; 
+  overflow: hidden; 
+}
+
+.admin-layout { 
+  display: flex; 
+  width: 100%; 
+  height: 100%; 
+}
+
+.admin-sidebar { 
+  width: 280px; 
+  background-color: var(--surface-color); 
+  border-inline-end: 1px solid var(--border-color); 
+  display: flex; 
+  flex-direction: column; 
+  padding: 24px;
+}
+
+.sidebar-logo { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  margin-bottom: 40px; 
+  font-size: 1.2rem; 
+}
+
+.sidebar-nav { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 8px; 
+  flex: 1; 
+}
+
+.nav-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 12px 16px; 
+  border-radius: var(--radius-xl); 
+  border: none; 
+  background: transparent; 
+  color: var(--text-main); 
+  font-family: inherit; 
+  font-size: 1rem; 
+  font-weight: 500; 
+  cursor: pointer; 
+  transition: var(--transition); 
+  text-decoration: none; 
+  text-align: start;
+}
+
+.nav-item:hover { 
+  background-color: var(--bg-color); 
+}
+
+.nav-item.active { 
+  background-color: var(--primary); 
+  color: white; 
+}
+
+.nav-item i { 
+  font-size: 1.3rem; 
+}
+
+.admin-main { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  overflow-y: auto; 
+}
+
+.admin-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 24px 40px; 
+  background-color: var(--surface-color); 
+  border-bottom: 1px solid var(--border-color); 
+  position: sticky; 
+  top: 0; 
+  z-index: 10;
+}
+
+.admin-profile { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+}
+
+.admin-profile .avatar { 
+  width: 40px; 
+  height: 40px; 
+  background: var(--bg-color); 
+  border-radius: 50%; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  color: var(--primary); 
+  font-size: 1.2rem; 
+}
+
+.admin-content { 
+  padding: 40px; 
+}
+
+.tab-pane { 
+  display: none; 
+  animation: fadeIn 0.4s ease; 
+}
+
+.tab-pane.active { 
+  display: block; 
+}
+
+.stats-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+  gap: 24px; 
+}
+
+.stat-card { 
+  background: var(--surface-color); 
+  padding: 24px; 
+  border-radius: var(--radius-2xl); 
+  box-shadow: var(--shadow-soft); 
+  display: flex; 
+  align-items: center; 
+  gap: 20px; 
+}
+
+.stat-icon { 
+  width: 60px; 
+  height: 60px; 
+  border-radius: 50%; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 2rem; 
+}
+
+.stat-info h3 { 
+  font-size: 0.9rem; 
+  color: var(--text-muted); 
+  font-weight: 500; 
+  margin-bottom: 4px; 
+}
+
+.stat-info p { 
+  font-size: 1.8rem; 
+  font-weight: 700; 
+  color: var(--text-main); 
+}
+
+.admin-card { 
+  background: var(--surface-color); 
+  padding: 32px; 
+  border-radius: var(--radius-2xl); 
+  box-shadow: var(--shadow-soft); 
+}
+
+.admin-form textarea { 
+  width: 100%; 
+  padding: 14px 16px; 
+  border-radius: var(--radius-xl); 
+  border: 1px solid var(--border-color); 
+  font-family: inherit; 
+  resize: vertical; 
+  outline: none; 
+}
+
+.admin-form textarea:focus { 
+  border-color: var(--primary); 
+  box-shadow: 0 0 0 3px rgba(67, 90, 191, 0.15); 
+}
+
+.form-grid { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 20px; 
+}
+
+/* =========================================
    --- Responsive Design ---
    ========================================= */
 @media (max-width: 900px) {
   .prop-content-grid { grid-template-columns: 1fr; }
   .prop-image-gallery { height: 350px; }
+  .form-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -1150,4 +1339,10 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   .logo-img { height: 48px; } 
   .lightbox-btn { width: 40px; height: 40px; font-size: 1.2rem; }
   .close-lightbox { top: 16px; right: 16px; }
+
+  /* Admin Responsive tweaks */
+  .admin-layout { flex-direction: column; }
+  .admin-sidebar { width: 100%; height: auto; border-inline-end: none; border-bottom: 1px solid var(--border-color); }
+  .admin-header { padding: 16px 20px; }
+  .admin-content { padding: 20px; }
 }
