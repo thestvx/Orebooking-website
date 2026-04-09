@@ -435,7 +435,7 @@ function renderListings() {
 }
 
 // ==========================================
-// 🏨 8. RENDER PROPERTY DETAILS, SLIDER & ZOOM
+// 🏨 8. RENDER PROPERTY DETAILS, GALLERY SLIDER & ZOOM
 // ==========================================
 let currentPropImages = []; 
 
@@ -455,7 +455,8 @@ function renderPropertyDetails() {
   const featuresEl = document.getElementById('prop-features');
   const priceEl = document.getElementById('prop-price');
   
-  const galleryEl = document.getElementById('gallery-container');
+  const trackEl = document.getElementById('slider-track');
+  const dotsEl = document.getElementById('slider-dots');
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
   
   if(titleEl) titleEl.textContent = state.lang === 'en' ? prop.title_en : prop.title_ar;
@@ -466,39 +467,39 @@ function renderPropertyDetails() {
 
   if(featuresEl) {
     const features = state.lang === 'en' ? prop.features_en : prop.features_ar;
-    if(features) {
-      featuresEl.innerHTML = features.map(f => `<li><i class="ph-fill ph-check-circle"></i> ${f}</li>`).join('');
-    }
+    if(features) featuresEl.innerHTML = features.map(f => `<li><i class="ph-fill ph-check-circle"></i> ${f}</li>`).join('');
   }
 
-  // Build Slider HTML
-  if(galleryEl && prop.images) {
+  // 🖼️ بناء معرض الصور الانزلاقي (Slide Gallery)
+  if(trackEl && prop.images) {
     currentPropImages = prop.images;
     state.currentImageIndex = 0;
     
-    if(currentPropImages.length <= 1) {
-      galleryEl.innerHTML = `<img src="${prop.image}" alt="Property" class="prop-img-main" onclick="openLightbox()">`;
-      return;
+    // حقن جميع الصور داخل المسار (Track)
+    trackEl.innerHTML = currentPropImages.map(img => 
+      `<img src="${img}" alt="Property Image" onclick="openLightbox()">`
+    ).join('');
+
+    // حقن النقاط السفلية (Dots)
+    if(dotsEl) {
+      dotsEl.innerHTML = currentPropImages.map((img, i) => `
+        <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(event, ${i})"></div>
+      `).join('');
     }
 
-    const dotsHtml = currentPropImages.map((img, i) => `
-      <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(event, ${i})"></div>
-    `).join('');
-
-    galleryEl.innerHTML = `
-      <div class="slider-container">
-        <button class="slider-btn prev-btn" onclick="prevSlide(event)"><i class="ph ph-caret-left"></i></button>
-        <img src="${currentPropImages[0]}" id="slider-main-img" alt="Property Image" class="prop-img-main fade-anim" onclick="openLightbox()">
-        <button class="slider-btn next-btn" onclick="nextSlide(event)"><i class="ph ph-caret-right"></i></button>
-        <div class="slider-dots-container" id="slider-dots">
-          ${dotsHtml}
-        </div>
-      </div>
-    `;
+    // إخفاء الأسهم والنقاط إذا كانت صورة واحدة فقط
+    if(currentPropImages.length <= 1) {
+      document.querySelector('.prev-btn').style.display = 'none';
+      document.querySelector('.next-btn').style.display = 'none';
+      if(dotsEl) dotsEl.style.display = 'none';
+    } else {
+      // تحديث الموضع الأولي
+      updateSlider();
+    }
   }
 }
 
-// 🎛️ Slider Controls
+// 🎛️ Gallery Slider Controls (Smooth Sliding)
 window.prevSlide = function(e) {
   if(e) e.stopPropagation();
   state.currentImageIndex = state.currentImageIndex > 0 ? state.currentImageIndex - 1 : currentPropImages.length - 1;
@@ -518,22 +519,24 @@ window.goToSlide = function(e, index) {
 };
 
 function updateSlider() {
-  const mainImg = document.getElementById('slider-main-img');
+  const trackEl = document.getElementById('slider-track');
+  const isRTL = document.documentElement.getAttribute('dir') === 'rtl';
+  
+  if (trackEl) {
+    // حساب مسافة الإزاحة بناءً على اتجاه الموقع (LTR أو RTL)
+    const slideWidth = 100; // نسبة مئوية
+    const directionMultiplier = isRTL ? 1 : -1; 
+    trackEl.style.transform = `translateX(${state.currentImageIndex * slideWidth * directionMultiplier}%)`;
+  }
+
+  // تحديث صورة اللايت بوكس إذا كان مفتوحاً
   const lbImg = document.getElementById('lightbox-img');
-
-  if (mainImg) {
-    // Restart animation for smoothness
-    mainImg.classList.remove('fade-anim');
-    void mainImg.offsetWidth; 
-    mainImg.src = currentPropImages[state.currentImageIndex];
-    mainImg.classList.add('fade-anim');
-  }
-
-  if (lbImg) {
+  if (lbImg && document.getElementById('lightbox').classList.contains('active')) {
     lbImg.src = currentPropImages[state.currentImageIndex];
-    lbImg.classList.remove('zoomed'); // reset zoom on slide change
+    lbImg.classList.remove('zoomed'); 
   }
 
+  // تحديث النقاط
   document.querySelectorAll('.slider-dot').forEach((dot, index) => {
     dot.classList.toggle('active', index === state.currentImageIndex);
   });
