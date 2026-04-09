@@ -1,5 +1,5 @@
 // ==========================================
-// 🔥 1. YOUR REAL FIREBASE CONFIGURATION
+// 🔥 1. FIREBASE CONFIGURATION
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
@@ -11,7 +11,6 @@ const firebaseConfig = {
   measurementId: "G-5GKMRMVHC3"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
@@ -22,7 +21,7 @@ const state = {
   lang: localStorage.getItem('ore_lang') || 'en',
   theme: localStorage.getItem('ore_theme') || 'light',
   favorites: [],
-  user: null // Stores logged-in user data
+  user: null 
 };
 
 const translations = {
@@ -58,7 +57,12 @@ const translations = {
     sign_up_btn: "Create Account",
     has_account: "Already have an account?",
     logout: "Log Out",
-    my_favorites: "My Favorites"
+    my_favorites: "My Favorites",
+    back_home: "Back to Home",
+    about_prop: "About this space",
+    what_offers: "What this place offers",
+    book_now: "Reserve Now",
+    wont_charged: "You won't be charged yet"
   },
   ar: {
     hero_title: "اكتشف إقامتك المثالية القادمة",
@@ -92,47 +96,22 @@ const translations = {
     sign_up_btn: "إنشاء الحساب",
     has_account: "لديك حساب بالفعل؟",
     logout: "تسجيل الخروج",
-    my_favorites: "مفضلتي"
+    my_favorites: "مفضلتي",
+    back_home: "العودة للرئيسية",
+    about_prop: "حول هذا المكان",
+    what_offers: "ماذا يوفر هذا المكان",
+    book_now: "احجز الآن",
+    wont_charged: "لن يتم خصم المبلغ الآن"
   }
 };
 
 // ==========================================
-// 🏠 3. MOCK DATA
+// 🏠 3. MOCK DATA (Later from Firestore)
 // ==========================================
 const properties = [
-  { 
-    id: 1, 
-    title_en: "Luxury Skyline Penthouse", 
-    title_ar: "بنتهاوس فاخر بإطلالة بانورامية", 
-    location_en: "Dubai, UAE", 
-    location_ar: "دبي، الإمارات", 
-    price: 450, 
-    rating: 4.96, 
-    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80", 
-    urgency: "few" 
-  },
-  { 
-    id: 2, 
-    title_en: "Modern Forest Cabin", 
-    title_ar: "كوخ عصري في الغابة", 
-    location_en: "Aspen, Colorado", 
-    location_ar: "أسبن، كولورادو", 
-    price: 280, 
-    rating: 4.85, 
-    image: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80", 
-    urgency: "hot" 
-  },
-  { 
-    id: 3, 
-    title_en: "Minimalist Beach Villa", 
-    title_ar: "فيلا شاطئية بتصميم بسيط", 
-    location_en: "Bali, Indonesia", 
-    location_ar: "بالي، إندونيسيا", 
-    price: 320, 
-    rating: 4.92, 
-    image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80", 
-    urgency: null 
-  }
+  { id: 1, title_en: "Luxury Skyline Penthouse", title_ar: "بنتهاوس فاخر بإطلالة بانورامية", location_en: "Dubai, UAE", location_ar: "دبي، الإمارات", price: 450, rating: 4.96, image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80", urgency: "few", desc_en: "Enjoy breathtaking views from this luxury penthouse.", desc_ar: "استمتع بإطلالات خلابة من هذا البنتهاوس الفاخر." },
+  { id: 2, title_en: "Modern Forest Cabin", title_ar: "كوخ عصري في الغابة", location_en: "Aspen, Colorado", location_ar: "أسبن، كولورادو", price: 280, rating: 4.85, image: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80", urgency: "hot", desc_en: "A perfect modern retreat in the heart of nature.", desc_ar: "ملاذ عصري مثالي في قلب الطبيعة." },
+  { id: 3, title_en: "Minimalist Beach Villa", title_ar: "فيلا شاطئية بتصميم بسيط", location_en: "Bali, Indonesia", location_ar: "بالي، إندونيسيا", price: 320, rating: 4.92, image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80", urgency: null, desc_en: "Wake up to the sound of waves in this beautiful villa.", desc_ar: "استيقظ على صوت الأمواج في هذه الفيلا الجميلة." }
 ];
 
 const categories = [
@@ -149,7 +128,6 @@ const langBtn = document.getElementById('lang-toggle');
 const themeBtn = document.getElementById('theme-toggle');
 const htmlEl = document.documentElement;
 
-// Auth Modal & Dropdown DOM Elements
 const authModal = document.getElementById('auth-modal');
 const openAuthBtn = document.getElementById('open-auth-btn');
 const closeAuthBtn = document.getElementById('close-auth-btn');
@@ -163,49 +141,34 @@ const logoutBtn = document.getElementById('logout-btn');
 
 function init() {
   applyInitialState();
-  renderCategories();
-  renderListings();
   
-  // Theme & Language
-  langBtn.addEventListener('click', toggleLanguage);
-  themeBtn.addEventListener('click', toggleTheme);
-
-  // Profile Menu Click
-  openAuthBtn.addEventListener('click', handleAuthButtonClick);
+  if (document.getElementById('categories-container')) {
+    renderCategories();
+    renderListings();
+  }
   
-  // Close Modals & Dropdowns on outside click
+  if (langBtn) langBtn.addEventListener('click', toggleLanguage);
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+  if (openAuthBtn) openAuthBtn.addEventListener('click', handleAuthButtonClick);
+  
   window.addEventListener('click', (e) => {
-    if (e.target === authModal) {
-        closeModal();
-    }
-    // Close dropdown if clicking outside of profile container
-    if (!e.target.closest('.profile-container')) {
+    if (e.target === authModal) closeModal();
+    if (profileDropdown && !e.target.closest('.profile-container')) {
       profileDropdown.classList.remove('active');
     }
   });
 
-  closeAuthBtn.addEventListener('click', closeModal);
-  
-  // Switch Forms
-  goToRegisterBtn.addEventListener('click', (e) => { 
-      e.preventDefault(); 
-      switchForm('register'); 
-  });
-  
-  goToLoginBtn.addEventListener('click', (e) => { 
-      e.preventDefault(); 
-      switchForm('login'); 
-  });
+  if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeModal);
+  if (goToRegisterBtn) goToRegisterBtn.addEventListener('click', (e) => { e.preventDefault(); switchForm('register'); });
+  if (goToLoginBtn) goToLoginBtn.addEventListener('click', (e) => { e.preventDefault(); switchForm('login'); });
 
-  // Form Submissions
-  loginForm.addEventListener('submit', handleLogin);
-  registerForm.addEventListener('submit', handleRegister);
+  if (loginForm) loginForm.addEventListener('submit', handleLogin);
+  if (registerForm) registerForm.addEventListener('submit', handleRegister);
   
-  // Google Login & Log Out
-  document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
-  logoutBtn.addEventListener('click', handleLogout);
+  const googleBtn = document.getElementById('google-login-btn');
+  if (googleBtn) googleBtn.addEventListener('click', handleGoogleLogin);
+  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-  // Listen to Firebase Auth State Changes
   auth.onAuthStateChanged((user) => {
     state.user = user;
     updateUserUI();
@@ -213,176 +176,33 @@ function init() {
 }
 
 // ==========================================
-// 🔐 5. FIREBASE AUTHENTICATION LOGIC
+// 🌍 5. THEME, LOGO & LANGUAGE LOGIC
 // ==========================================
 
-function showMessage(msg, type = 'error') {
-  authMessage.textContent = msg;
-  authMessage.className = `auth-message ${type}`;
-  authMessage.style.display = 'block';
+// 🚀 Update Logo based on Theme
+function updateLogo() {
+  const mainLogo = document.getElementById('main-logo');
+  const modalLogo = document.getElementById('modal-logo');
+  const logoPath = state.theme === 'dark' ? 'logos/orebooking2.png' : 'logos/orebooking.png';
   
-  setTimeout(() => { 
-      authMessage.style.display = 'none'; 
-  }, 5000);
+  if (mainLogo) mainLogo.src = logoPath;
+  if (modalLogo) modalLogo.src = logoPath;
 }
 
-// Email/Password Login
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  const btn = loginForm.querySelector('button');
-  
-  btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i>`;
-  btn.disabled = true;
-
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-    closeModal();
-    loginForm.reset();
-  } catch (error) {
-    console.error(error);
-    const msg = state.lang === 'ar' ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' : 'Invalid email or password.';
-    showMessage(msg, 'error');
-  } finally {
-    btn.innerHTML = `<span data-i18n="sign_in">${state.lang === 'en' ? 'Sign In' : 'تسجيل الدخول'}</span>`;
-    btn.disabled = false;
-  }
-}
-
-// Email/Password Registration
-async function handleRegister(e) {
-  e.preventDefault();
-  const name = document.getElementById('reg-name').value;
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-password').value;
-  const btn = registerForm.querySelector('button');
-
-  btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i>`;
-  btn.disabled = true;
-
-  try {
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    // Update profile with name
-    await userCredential.user.updateProfile({ displayName: name });
-    
-    closeModal();
-    registerForm.reset();
-    
-    // Force UI update to show the new name in the dropdown
-    updateUserUI();
-  } catch (error) {
-    console.error(error);
-    const msg = state.lang === 'ar' ? 'حدث خطأ أثناء التسجيل، ربما البريد مستخدم مسبقاً.' : error.message;
-    showMessage(msg, 'error');
-  } finally {
-    btn.innerHTML = `<span data-i18n="sign_up_btn">${state.lang === 'en' ? 'Create Account' : 'إنشاء الحساب'}</span>`;
-    btn.disabled = false;
-  }
-}
-
-// Google Login
-async function handleGoogleLogin() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    await auth.signInWithPopup(provider);
-    closeModal();
-  } catch (error) {
-    console.error(error);
-    showMessage(error.message, 'error');
-  }
-}
-
-// Log Out function
-function handleLogout() {
-    auth.signOut().then(() => {
-        profileDropdown.classList.remove('active');
-        state.favorites = []; // Clear favorites from UI on logout
-        renderListings();
-    }).catch((error) => {
-        console.error("Logout Error:", error);
-    });
-}
-
-// Handle clicking the top-right user icon
-function handleAuthButtonClick() {
-  if (state.user) {
-    // If logged in, toggle dropdown visibility
-    profileDropdown.classList.toggle('active');
-  } else {
-    // If not logged in, open the Auth Modal
-    openModal();
-  }
-}
-
-// Update UI based on Auth State (Dropdown & Icon)
-function updateUserUI() {
-  if (state.user) {
-    // 1. Update Profile Button Icon (Show Initial of Name or Email)
-    let initial = 'U';
-    if (state.user.displayName) {
-        initial = state.user.displayName.charAt(0).toUpperCase();
-    } else if (state.user.email) {
-        initial = state.user.email.charAt(0).toUpperCase();
-    }
-    
-    openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
-    openAuthBtn.style.backgroundColor = 'var(--accent)';
-    
-    // 2. Update Dropdown Header Data
-    document.getElementById('dropdown-user-name').textContent = state.user.displayName || 'OreBooking User';
-    document.getElementById('dropdown-user-email').textContent = state.user.email || '';
-    
-  } else {
-    // Reset to default user icon
-    openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
-    openAuthBtn.style.backgroundColor = 'var(--primary)';
-    profileDropdown.classList.remove('active'); // Hide dropdown
-  }
-}
-
-// ==========================================
-// 🎨 6. UI & MODAL LOGIC
-// ==========================================
-function openModal() {
-  authModal.classList.add('active');
-  document.body.classList.add('modal-open');
-}
-
-function closeModal() {
-  authModal.classList.remove('active');
-  document.body.classList.remove('modal-open');
-  authMessage.style.display = 'none';
-  
-  // Reset back to Login form after modal closes
-  setTimeout(() => switchForm('login'), 300);
-}
-
-function switchForm(type) {
-  if (type === 'register') {
-    loginForm.classList.remove('active');
-    registerForm.classList.add('active');
-  } else {
-    registerForm.classList.remove('active');
-    loginForm.classList.add('active');
-  }
-}
-
-// ==========================================
-// 🌍 7. THEME & LANGUAGE LOGIC
-// ==========================================
 function applyInitialState() {
   if (state.theme === 'dark') {
     document.body.classList.add('dark');
-    themeBtn.innerHTML = '<i class="ph ph-sun"></i>';
+    if (themeBtn) themeBtn.innerHTML = '<i class="ph ph-sun"></i>';
   } else {
     document.body.classList.remove('dark');
-    themeBtn.innerHTML = '<i class="ph ph-moon"></i>';
+    if (themeBtn) themeBtn.innerHTML = '<i class="ph ph-moon"></i>';
   }
   
+  updateLogo(); // Apply correct logo on load
+
   htmlEl.setAttribute('dir', state.lang === 'en' ? 'ltr' : 'rtl');
   htmlEl.setAttribute('lang', state.lang);
-  langBtn.textContent = state.lang === 'en' ? 'العربية' : 'English';
+  if (langBtn) langBtn.textContent = state.lang === 'en' ? 'العربية' : 'English';
   
   updateLanguageUI();
 }
@@ -397,18 +217,18 @@ function toggleLanguage() {
   state.lang = state.lang === 'en' ? 'ar' : 'en';
   localStorage.setItem('ore_lang', state.lang);
   applyInitialState();
-  renderCategories();
-  renderListings();
+  if (document.getElementById('categories-container')) {
+    renderCategories();
+    renderListings();
+  }
 }
 
 function updateLanguageUI() {
   const dict = translations[state.lang];
-  
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (dict[key]) el.textContent = dict[key];
   });
-  
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key]) el.placeholder = dict[key];
@@ -416,10 +236,11 @@ function updateLanguageUI() {
 }
 
 // ==========================================
-// 📦 8. RENDER LISTINGS & CATEGORIES
+// 📦 6. RENDER LISTINGS & NAVIGATION
 // ==========================================
 function renderCategories() {
   const container = document.getElementById('categories-container');
+  if(!container) return;
   container.innerHTML = categories.map((cat, index) => `
     <div class="category-item ${index === 0 ? 'active' : ''}">
       <i class="ph ${cat.icon}"></i>
@@ -428,26 +249,28 @@ function renderCategories() {
   `).join('');
 }
 
-function toggleFavorite(id) {
-  // Prevent favoriting if the user is not logged in
+function toggleFavorite(e, id) {
+  e.stopPropagation(); // Prevents navigating to property page when clicking heart
   if (!state.user) {
     openModal();
-    const errorMsg = state.lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً لإضافة العقار للمفضلة' : 'Please log in first to save favorites';
-    showMessage(errorMsg, 'error');
+    showMessage(state.lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً' : 'Please log in first', 'error');
     return;
   }
-  
   const index = state.favorites.indexOf(id);
-  if (index > -1) {
-      state.favorites.splice(index, 1);
-  } else {
-      state.favorites.push(id);
-  }
+  if (index > -1) state.favorites.splice(index, 1);
+  else state.favorites.push(id);
   renderListings(); 
+}
+
+// 🚀 Navigate to Property Details Page
+function goToProperty(id) {
+  // Pass the ID in the URL to fetch it later
+  window.location.href = `property.html?id=${id}`;
 }
 
 function renderListings() {
   const container = document.getElementById('listings-grid');
+  if(!container) return;
   const dict = translations[state.lang];
 
   container.innerHTML = properties.map(prop => {
@@ -467,11 +290,12 @@ function renderListings() {
     }
 
     return `
-      <div class="card" onclick="alert('Navigating to property ${prop.id}')">
+      <!-- 🔴 Added onclick to navigate to property details -->
+      <div class="card" onclick="goToProperty(${prop.id})">
         <div class="card-img-wrapper">
           <img src="${prop.image}" alt="${title}" class="card-img">
           ${urgencyHtml}
-          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite(${prop.id})">
+          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, ${prop.id})">
             <i class="${isFav ? 'ph-fill' : 'ph'} ph-heart"></i>
           </button>
         </div>
@@ -498,6 +322,113 @@ function renderListings() {
 }
 
 // ==========================================
-// 🚀 9. INIT APP ON LOAD
+// 🔐 7. FIREBASE AUTH LOGIC
 // ==========================================
+function showMessage(msg, type = 'error') {
+  if(!authMessage) return;
+  authMessage.textContent = msg;
+  authMessage.className = `auth-message ${type}`;
+  authMessage.style.display = 'block';
+  setTimeout(() => { authMessage.style.display = 'none'; }, 5000);
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const btn = loginForm.querySelector('button');
+  btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i>`;
+  btn.disabled = true;
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    closeModal();
+    loginForm.reset();
+  } catch (error) {
+    showMessage(state.lang === 'ar' ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password', 'error');
+  } finally {
+    btn.innerHTML = `<span data-i18n="sign_in">${state.lang === 'en' ? 'Sign In' : 'تسجيل الدخول'}</span>`;
+    btn.disabled = false;
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const name = document.getElementById('reg-name').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  const btn = registerForm.querySelector('button');
+  btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i>`;
+  btn.disabled = true;
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    await userCredential.user.updateProfile({ displayName: name });
+    closeModal();
+    registerForm.reset();
+    updateUserUI();
+  } catch (error) {
+    showMessage(error.message, 'error');
+  } finally {
+    btn.innerHTML = `<span data-i18n="sign_up_btn">${state.lang === 'en' ? 'Create Account' : 'إنشاء الحساب'}</span>`;
+    btn.disabled = false;
+  }
+}
+
+async function handleGoogleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try { await auth.signInWithPopup(provider); closeModal(); } 
+  catch (error) { showMessage(error.message, 'error'); }
+}
+
+function handleLogout() {
+  auth.signOut().then(() => {
+    profileDropdown.classList.remove('active');
+    state.favorites = [];
+    if(document.getElementById('listings-grid')) renderListings();
+  });
+}
+
+function handleAuthButtonClick() {
+  if (state.user) profileDropdown.classList.toggle('active');
+  else openModal();
+}
+
+function updateUserUI() {
+  if(!openAuthBtn) return;
+  if (state.user) {
+    let initial = state.user.displayName ? state.user.displayName.charAt(0).toUpperCase() : state.user.email.charAt(0).toUpperCase();
+    openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
+    openAuthBtn.style.backgroundColor = 'var(--accent)';
+    if(document.getElementById('dropdown-user-name')){
+        document.getElementById('dropdown-user-name').textContent = state.user.displayName || 'OreBooking User';
+        document.getElementById('dropdown-user-email').textContent = state.user.email || '';
+    }
+  } else {
+    openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
+    openAuthBtn.style.backgroundColor = 'var(--primary)';
+    if(profileDropdown) profileDropdown.classList.remove('active');
+  }
+}
+
+function openModal() {
+  authModal.classList.add('active');
+  document.body.classList.add('modal-open');
+}
+
+function closeModal() {
+  authModal.classList.remove('active');
+  document.body.classList.remove('modal-open');
+  if(authMessage) authMessage.style.display = 'none';
+  setTimeout(() => switchForm('login'), 300);
+}
+
+function switchForm(type) {
+  if (type === 'register') {
+    loginForm.classList.remove('active');
+    registerForm.classList.add('active');
+  } else {
+    registerForm.classList.remove('active');
+    loginForm.classList.add('active');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', init);
