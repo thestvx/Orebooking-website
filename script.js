@@ -20,9 +20,10 @@ const auth = firebase.auth();
 const state = {
   lang: localStorage.getItem('ore_lang') || 'en',
   theme: localStorage.getItem('ore_theme') || 'light',
-  favorites: [], // Will load from LocalStorage based on User ID
+  favorites: [], 
   user: null,
-  currentView: 'home' // 'home' or 'favorites'
+  currentView: 'home', 
+  currentImageIndex: 0 // للتحكم بالسلايدر
 };
 
 const translations = {
@@ -109,7 +110,7 @@ const translations = {
 };
 
 // ==========================================
-// 🏠 3. MOCK DATA (With PALM GARDEN)
+// 🏠 3. MOCK DATA (With PALM GARDEN 10 IMAGES)
 // ==========================================
 const properties = [
   { 
@@ -121,7 +122,13 @@ const properties = [
     price: 45, 
     rating: 4.95, 
     image: "images/palmgarden/01.jpg", 
-    images: ["images/palmgarden/01.jpg", "images/palmgarden/02.jpg", "images/palmgarden/03.jpg", "images/palmgarden/04.jpg"],
+    images: [
+      "images/palmgarden/01.jpg", "images/palmgarden/02.jpg", 
+      "images/palmgarden/03.jpg", "images/palmgarden/04.jpg",
+      "images/palmgarden/05.jpg", "images/palmgarden/06.jpg",
+      "images/palmgarden/07.jpg", "images/palmgarden/08.jpg",
+      "images/palmgarden/09.jpg", "images/palmgarden/10.jpg"
+    ],
     urgency: "hot", 
     desc_en: "Where to find peace and comfort as if you are away from the bustle... but without feeling like you are in the desert! At Palm Garden you will find comfortable rooms, a breakfast fit for royalty, green lawns, and a safe family space.", 
     desc_ar: "وين تلقى الهدوء والراحة وكأنك بعيد عن الصخب… لكن بلا ما تحس روحك في الصحراء! في بالم قاردن تلقى غرف مريحة، فطور صباحي يليق بالمقام، قازون أخضر يشرح الخاطر، وفضاء عائلي آمن ومناظر طبيعية تصحي العين.",
@@ -190,23 +197,19 @@ const homeLogoBtn = document.getElementById('home-logo-btn');
 function init() {
   applyInitialState();
   
-  // Render Index page elements if they exist
   if (document.getElementById('categories-container')) {
     renderCategories();
     renderListings();
   }
 
-  // Render Property details page elements if we are on property.html
   renderPropertyDetails();
   
   if (langBtn) langBtn.addEventListener('click', toggleLanguage);
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
   if (openAuthBtn) openAuthBtn.addEventListener('click', handleAuthButtonClick);
   
-  // Navigate to Home when logo clicked
   if (homeLogoBtn) {
     homeLogoBtn.addEventListener('click', (e) => {
-      // Only do this if we are on index.html
       if(document.getElementById('hero-section')) {
         e.preventDefault();
         state.currentView = 'home';
@@ -220,7 +223,6 @@ function init() {
     });
   }
 
-  // Show My Favorites
   if (myFavoritesBtn) {
     myFavoritesBtn.addEventListener('click', () => {
       profileDropdown.classList.remove('active');
@@ -255,7 +257,6 @@ function init() {
   document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleLogin);
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-  // Listen to Firebase Auth
   auth.onAuthStateChanged((user) => {
     state.user = user;
     loadFavorites(); 
@@ -303,7 +304,7 @@ function toggleLanguage() {
     renderCategories();
     renderListings();
   }
-  renderPropertyDetails(); // Re-render details if we are on property page
+  renderPropertyDetails(); 
 }
 
 function updateLanguageUI() {
@@ -433,13 +434,15 @@ function renderListings() {
 }
 
 // ==========================================
-// 🏨 8. RENDER PROPERTY DETAILS (PROPERTY PAGE)
+// 🏨 8. RENDER PROPERTY DETAILS & SLIDER
 // ==========================================
+let currentPropImages = []; // To store images for the slider
+
 function renderPropertyDetails() {
   const urlParams = new URLSearchParams(window.location.search);
   const propId = parseInt(urlParams.get('id'));
   
-  if(!propId) return; // Not on property page or no ID
+  if(!propId) return; 
 
   const prop = properties.find(p => p.id === propId);
   if(!prop) return;
@@ -447,15 +450,16 @@ function renderPropertyDetails() {
   const titleEl = document.getElementById('prop-title');
   const ratingEl = document.getElementById('prop-rating');
   const locationEl = document.getElementById('prop-location');
-  const mainImgEl = document.getElementById('prop-main-img');
   const descEl = document.getElementById('prop-desc');
   const featuresEl = document.getElementById('prop-features');
   const priceEl = document.getElementById('prop-price');
-
+  
+  // Create slider HTML
+  const galleryEl = document.querySelector('.prop-image-gallery');
+  
   if(titleEl) titleEl.textContent = state.lang === 'en' ? prop.title_en : prop.title_ar;
   if(ratingEl) ratingEl.textContent = prop.rating;
   if(locationEl) locationEl.textContent = state.lang === 'en' ? prop.location_en : prop.location_ar;
-  if(mainImgEl) mainImgEl.src = prop.image; 
   if(descEl) descEl.textContent = state.lang === 'en' ? prop.desc_en : prop.desc_ar;
   if(priceEl) priceEl.textContent = '$' + prop.price;
 
@@ -465,6 +469,69 @@ function renderPropertyDetails() {
       featuresEl.innerHTML = features.map(f => `<li><i class="ph-fill ph-check-circle"></i> ${f}</li>`).join('');
     }
   }
+
+  // Inject Slider HTML if gallery container exists
+  if(galleryEl && prop.images) {
+    currentPropImages = prop.images;
+    state.currentImageIndex = 0;
+    
+    // If only one image, just show it
+    if(currentPropImages.length <= 1) {
+      galleryEl.innerHTML = `<img src="${prop.image}" alt="Property" class="prop-img-main">`;
+      return;
+    }
+
+    // Build the dots
+    const dotsHtml = currentPropImages.map((img, i) => `
+      <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>
+    `).join('');
+
+    galleryEl.innerHTML = `
+      <div class="slider-container">
+        <button class="slider-btn prev-btn" onclick="prevSlide()"><i class="ph ph-caret-left"></i></button>
+        <img src="${currentPropImages[0]}" id="slider-main-img" alt="Property Image" class="prop-img-main">
+        <button class="slider-btn next-btn" onclick="nextSlide()"><i class="ph ph-caret-right"></i></button>
+        <div class="slider-dots-container" id="slider-dots">
+          ${dotsHtml}
+        </div>
+      </div>
+    `;
+  }
+}
+
+// Slider Controls
+window.prevSlide = function() {
+  if (state.currentImageIndex > 0) {
+    state.currentImageIndex--;
+  } else {
+    state.currentImageIndex = currentPropImages.length - 1; // loop back
+  }
+  updateSlider();
+};
+
+window.nextSlide = function() {
+  if (state.currentImageIndex < currentPropImages.length - 1) {
+    state.currentImageIndex++;
+  } else {
+    state.currentImageIndex = 0; // loop forward
+  }
+  updateSlider();
+};
+
+window.goToSlide = function(index) {
+  state.currentImageIndex = index;
+  updateSlider();
+};
+
+function updateSlider() {
+  const imgEl = document.getElementById('slider-main-img');
+  if (imgEl) imgEl.src = currentPropImages[state.currentImageIndex];
+
+  const dots = document.querySelectorAll('.slider-dot');
+  dots.forEach((dot, index) => {
+    if (index === state.currentImageIndex) dot.classList.add('active');
+    else dot.classList.remove('active');
+  });
 }
 
 // ==========================================
