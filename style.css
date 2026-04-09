@@ -85,6 +85,13 @@ html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
   text-decoration: none;
 }
 
+/* New style for the logo image */
+.logo-img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
 .nav-actions {
   display: flex;
   align-items: center;
@@ -365,7 +372,6 @@ html[dir="rtl"] .search-bar { padding: 10px 32px 10px 10px; }
   overflow-y: auto;
   transform: translateY(20px) scale(0.95);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  /* Scrollbar hide */
   scrollbar-width: none;
 }
 .modal-content::-webkit-scrollbar { display: none; }
