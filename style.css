@@ -67,7 +67,7 @@ html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 40px;
+  padding: 16px 40px; /* Adjusted padding to accommodate larger logo */
   background-color: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
@@ -82,16 +82,16 @@ html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
   text-decoration: none;
 }
 
-/* Updated logo style for perfect readability */
+/* 🚀 UPDATED LOGO SIZE: Much larger for perfect readability */
 .logo-img {
-  height: 44px; /* Increased size for better text readability */
-  width: auto;
+  height: 64px; /* Increased from 44px to 64px */
+  max-width: 240px;
   object-fit: contain;
 }
 
-/* Add a subtle background in dark mode if the logo is dark text on transparent background */
+/* Subtle enhancement in dark mode */
 .dark .logo-img {
-  filter: brightness(1.2) contrast(1.2); /* Adjust this if needed, or wrap in a white pill */
+  filter: brightness(1.1) contrast(1.1);
 }
 
 .nav-actions {
@@ -240,7 +240,7 @@ html[dir="rtl"] .search-bar { padding: 10px 32px 10px 10px; }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
-  padding-bottom: 80px;
+  padding-bottom: 60px;
 }
 
 .card {
@@ -343,6 +343,28 @@ html[dir="rtl"] .search-bar { padding: 10px 32px 10px 10px; }
 
 .card-price { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
 .card-price span { font-size: 0.875rem; color: var(--text-muted); font-weight: 500; }
+
+/* =========================================
+   --- Footer CSS ---
+   ========================================= */
+.footer {
+  background-color: var(--surface-color);
+  border-top: 1px solid var(--border-color);
+  padding: 32px 0;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.developed-by {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.developers-names {
+  color: var(--primary);
+  margin-inline-start: 6px;
+  letter-spacing: 0.5px;
+}
 
 /* =========================================
    --- Auth Modal & Forms CSS ---
@@ -504,4 +526,5 @@ html[dir="rtl"] .search-bar { padding: 10px 32px 10px 10px; }
   .search-btn { width: 100%; justify-content: center; }
   .hero h1 { font-size: 2rem; }
   .navbar { padding: 16px 20px; }
+  .logo-img { height: 48px; } /* Slightly smaller on mobile but still prominent */
 }
