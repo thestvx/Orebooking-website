@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property Details - OreBooking</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- 🔥 Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Simple Navbar for inner pages -->
+  <nav class="navbar inner-nav">
+    <a href="index.html" class="back-btn font-medium">
+      <i class="ph ph-arrow-left"></i>
+      <span data-i18n="back_home">Back to Home</span>
+    </a>
+    <a href="index.html" class="logo">
+      <img src="logos/orebooking.png" alt="OreBooking Logo" class="logo-img">
+    </a>
+  </nav>
+
+  <main class="container property-container">
+    <!-- Property Header -->
+    <div class="prop-header">
+      <h1 class="prop-title font-bold" id="prop-title">Loading...</h1>
+      <div class="prop-meta">
+        <div class="prop-rating"><i class="ph-fill ph-star"></i> <span id="prop-rating">0.0</span></div>
+        <div class="prop-location"><i class="ph ph-map-pin"></i> <span id="prop-location">Location</span></div>
+      </div>
+    </div>
+
+    <!-- Main Image -->
+    <div class="prop-image-gallery">
+      <img src="" id="prop-main-img" alt="Property Image" class="prop-img-main">
+    </div>
+
+    <!-- Details Section -->
+    <div class="prop-content-grid">
+      <div class="prop-details">
+        <h2 class="font-bold" data-i18n="about_prop">About this space</h2>
+        <p class="prop-description" id="prop-desc">Loading description...</p>
+        
+        <div class="prop-features">
+          <h3 class="font-bold" data-i18n="what_offers">What this place offers</h3>
+          <ul class="features-list" id="prop-features">
+            <!-- Rendered via JS -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Booking Card -->
+      <div class="prop-booking-card">
+        <div class="booking-price">
+          <span class="price-val" id="prop-price">$0</span> <span class="text-muted">/ <span data-i18n="night">night</span></span>
+        </div>
+        
+        <div class="booking-inputs">
+          <div class="input-row">
+            <div class="input-half">
+              <label class="text-sm font-bold">CHECK-IN</label>
+              <input type="date" id="checkin-date">
+            </div>
+            <div class="input-half border-left">
+              <label class="text-sm font-bold">CHECKOUT</label>
+              <input type="date" id="checkout-date">
+            </div>
+          </div>
+        </div>
+
+        <button class="primary-btn font-bold mt-4" id="book-now-btn" data-i18n="book_now">Reserve Now</button>
+        <p class="text-center text-sm text-muted mt-3" data-i18n="wont_charged">You won't be charged yet</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
