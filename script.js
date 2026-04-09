@@ -110,7 +110,7 @@ const translations = {
 };
 
 // ==========================================
-// 🏠 3. MOCK DATA (With PALM GARDEN 10 IMAGES)
+// 🏠 3. MOCK DATA (With PALM GARDEN & DZD)
 // ==========================================
 const properties = [
   { 
@@ -118,8 +118,8 @@ const properties = [
     title_en: "Camp Palm Garden Resort", 
     title_ar: "منتجع بالم قاردن", 
     location_en: "Hai Al-Sharqiya, Taghzout - El Oued", 
-    location_ar: "حي الشرقية، تغزوت – دائرة قمار – ولاية الوادي", 
-    price: 45, 
+    location_ar: "حي الشرقية، تغزوت – دائرة قمار", 
+    price: 9500, // 9500 DZD
     rating: 4.95, 
     image: "images/palmgarden/01.jpg", 
     images: [
@@ -141,7 +141,7 @@ const properties = [
     title_ar: "كوخ عصري في الغابة", 
     location_en: "Aspen, Colorado", 
     location_ar: "أسبن، كولورادو", 
-    price: 280, 
+    price: 45000, 
     rating: 4.85, 
     image: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80", 
     images: ["https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80"],
@@ -157,7 +157,7 @@ const properties = [
     title_ar: "فيلا شاطئية بتصميم بسيط", 
     location_en: "Bali, Indonesia", 
     location_ar: "بالي، إندونيسيا", 
-    price: 320, 
+    price: 62000, 
     rating: 4.92, 
     image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80", 
     images: ["https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80"],
@@ -377,6 +377,7 @@ function renderListings() {
   const container = document.getElementById('listings-grid');
   if(!container) return;
   const dict = translations[state.lang];
+  const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
 
   let itemsToShow = properties;
   if (state.currentView === 'favorites') {
@@ -425,7 +426,7 @@ function renderListings() {
             </div>
           </div>
           <div class="card-footer">
-            <div class="card-price">$${prop.price} <span>/ ${dict.night}</span></div>
+            <div class="card-price">${prop.price.toLocaleString()} ${currency} <span>/ ${dict.night}</span></div>
           </div>
         </div>
       </div>
@@ -434,9 +435,9 @@ function renderListings() {
 }
 
 // ==========================================
-// 🏨 8. RENDER PROPERTY DETAILS & SLIDER
+// 🏨 8. RENDER PROPERTY DETAILS, SLIDER & ZOOM
 // ==========================================
-let currentPropImages = []; // To store images for the slider
+let currentPropImages = []; 
 
 function renderPropertyDetails() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -454,14 +455,14 @@ function renderPropertyDetails() {
   const featuresEl = document.getElementById('prop-features');
   const priceEl = document.getElementById('prop-price');
   
-  // Create slider HTML
-  const galleryEl = document.querySelector('.prop-image-gallery');
+  const galleryEl = document.getElementById('gallery-container');
+  const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
   
   if(titleEl) titleEl.textContent = state.lang === 'en' ? prop.title_en : prop.title_ar;
   if(ratingEl) ratingEl.textContent = prop.rating;
   if(locationEl) locationEl.textContent = state.lang === 'en' ? prop.location_en : prop.location_ar;
   if(descEl) descEl.textContent = state.lang === 'en' ? prop.desc_en : prop.desc_ar;
-  if(priceEl) priceEl.textContent = '$' + prop.price;
+  if(priceEl) priceEl.textContent = prop.price.toLocaleString() + ' ' + currency;
 
   if(featuresEl) {
     const features = state.lang === 'en' ? prop.features_en : prop.features_ar;
@@ -470,27 +471,25 @@ function renderPropertyDetails() {
     }
   }
 
-  // Inject Slider HTML if gallery container exists
+  // Build Slider HTML
   if(galleryEl && prop.images) {
     currentPropImages = prop.images;
     state.currentImageIndex = 0;
     
-    // If only one image, just show it
     if(currentPropImages.length <= 1) {
-      galleryEl.innerHTML = `<img src="${prop.image}" alt="Property" class="prop-img-main">`;
+      galleryEl.innerHTML = `<img src="${prop.image}" alt="Property" class="prop-img-main" onclick="openLightbox()">`;
       return;
     }
 
-    // Build the dots
     const dotsHtml = currentPropImages.map((img, i) => `
-      <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>
+      <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(event, ${i})"></div>
     `).join('');
 
     galleryEl.innerHTML = `
       <div class="slider-container">
-        <button class="slider-btn prev-btn" onclick="prevSlide()"><i class="ph ph-caret-left"></i></button>
-        <img src="${currentPropImages[0]}" id="slider-main-img" alt="Property Image" class="prop-img-main">
-        <button class="slider-btn next-btn" onclick="nextSlide()"><i class="ph ph-caret-right"></i></button>
+        <button class="slider-btn prev-btn" onclick="prevSlide(event)"><i class="ph ph-caret-left"></i></button>
+        <img src="${currentPropImages[0]}" id="slider-main-img" alt="Property Image" class="prop-img-main fade-anim" onclick="openLightbox()">
+        <button class="slider-btn next-btn" onclick="nextSlide(event)"><i class="ph ph-caret-right"></i></button>
         <div class="slider-dots-container" id="slider-dots">
           ${dotsHtml}
         </div>
@@ -499,40 +498,73 @@ function renderPropertyDetails() {
   }
 }
 
-// Slider Controls
-window.prevSlide = function() {
-  if (state.currentImageIndex > 0) {
-    state.currentImageIndex--;
-  } else {
-    state.currentImageIndex = currentPropImages.length - 1; // loop back
-  }
+// 🎛️ Slider Controls
+window.prevSlide = function(e) {
+  if(e) e.stopPropagation();
+  state.currentImageIndex = state.currentImageIndex > 0 ? state.currentImageIndex - 1 : currentPropImages.length - 1;
   updateSlider();
 };
 
-window.nextSlide = function() {
-  if (state.currentImageIndex < currentPropImages.length - 1) {
-    state.currentImageIndex++;
-  } else {
-    state.currentImageIndex = 0; // loop forward
-  }
+window.nextSlide = function(e) {
+  if(e) e.stopPropagation();
+  state.currentImageIndex = state.currentImageIndex < currentPropImages.length - 1 ? state.currentImageIndex + 1 : 0;
   updateSlider();
 };
 
-window.goToSlide = function(index) {
+window.goToSlide = function(e, index) {
+  if(e) e.stopPropagation();
   state.currentImageIndex = index;
   updateSlider();
 };
 
 function updateSlider() {
-  const imgEl = document.getElementById('slider-main-img');
-  if (imgEl) imgEl.src = currentPropImages[state.currentImageIndex];
+  const mainImg = document.getElementById('slider-main-img');
+  const lbImg = document.getElementById('lightbox-img');
 
-  const dots = document.querySelectorAll('.slider-dot');
-  dots.forEach((dot, index) => {
-    if (index === state.currentImageIndex) dot.classList.add('active');
-    else dot.classList.remove('active');
+  if (mainImg) {
+    // Restart animation for smoothness
+    mainImg.classList.remove('fade-anim');
+    void mainImg.offsetWidth; 
+    mainImg.src = currentPropImages[state.currentImageIndex];
+    mainImg.classList.add('fade-anim');
+  }
+
+  if (lbImg) {
+    lbImg.src = currentPropImages[state.currentImageIndex];
+    lbImg.classList.remove('zoomed'); // reset zoom on slide change
+  }
+
+  document.querySelectorAll('.slider-dot').forEach((dot, index) => {
+    dot.classList.toggle('active', index === state.currentImageIndex);
   });
 }
+
+// 🔍 Lightbox / Zoom Controls
+window.openLightbox = function() {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  if(lb && lbImg) {
+    lbImg.src = currentPropImages[state.currentImageIndex];
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden'; // prevent scrolling behind
+  }
+};
+
+window.closeLightbox = function() {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  if(lb) {
+    lb.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    if(lbImg) lbImg.classList.remove('zoomed');
+  }
+};
+
+window.toggleZoom = function(e) {
+  e.stopPropagation(); // prevent closing lightbox
+  const img = document.getElementById('lightbox-img');
+  if(img) img.classList.toggle('zoomed');
+};
 
 // ==========================================
 // 🔐 9. FIREBASE AUTH LOGIC
