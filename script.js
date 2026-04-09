@@ -1,7 +1,8 @@
 // --- Mock Data & State ---
+// تم إضافة قراءة الإعدادات من LocalStorage للحفاظ على المزامنة
 const state = {
-  lang: 'en',
-  theme: 'light',
+  lang: localStorage.getItem('ore_lang') || 'en',
+  theme: localStorage.getItem('ore_theme') || 'light',
   favorites: []
 };
 
@@ -51,7 +52,7 @@ const properties = [
     price: 450,
     rating: 4.96,
     image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
-    urgency: "few" // "few" | "hot" | null
+    urgency: "few"
   },
   {
     id: 2,
@@ -91,18 +92,38 @@ const htmlEl = document.documentElement;
 
 // --- Initialization ---
 function init() {
+  applyInitialState(); // Apply state from localStorage
   renderCategories();
   renderListings();
-  updateLanguageUI();
   
   // Event Listeners
   langBtn.addEventListener('click', toggleLanguage);
   themeBtn.addEventListener('click', toggleTheme);
 }
 
+function applyInitialState() {
+  // Theme
+  if (state.theme === 'dark') {
+    document.body.classList.add('dark');
+    themeBtn.innerHTML = '<i class="ph ph-sun"></i>';
+  } else {
+    document.body.classList.remove('dark');
+    themeBtn.innerHTML = '<i class="ph ph-moon"></i>';
+  }
+  
+  // Language
+  htmlEl.setAttribute('dir', state.lang === 'en' ? 'ltr' : 'rtl');
+  htmlEl.setAttribute('lang', state.lang);
+  langBtn.textContent = state.lang === 'en' ? 'العربية' : 'English';
+  
+  updateLanguageUI();
+}
+
 // --- Theme Logic ---
 function toggleTheme() {
   state.theme = state.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('ore_theme', state.theme); // Save to storage
+  
   if (state.theme === 'dark') {
     document.body.classList.add('dark');
     themeBtn.innerHTML = '<i class="ph ph-sun"></i>';
@@ -115,6 +136,8 @@ function toggleTheme() {
 // --- Language Logic ---
 function toggleLanguage() {
   state.lang = state.lang === 'en' ? 'ar' : 'en';
+  localStorage.setItem('ore_lang', state.lang); // Save to storage
+  
   htmlEl.setAttribute('dir', state.lang === 'en' ? 'ltr' : 'rtl');
   htmlEl.setAttribute('lang', state.lang);
   
@@ -122,19 +145,17 @@ function toggleLanguage() {
   
   updateLanguageUI();
   renderCategories();
-  renderListings(); // Re-render to update card text
+  renderListings();
 }
 
 function updateLanguageUI() {
   const dict = translations[state.lang];
   
-  // Update text content
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (dict[key]) el.textContent = dict[key];
   });
 
-  // Update placeholders
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key]) el.placeholder = dict[key];
@@ -159,7 +180,7 @@ function toggleFavorite(id) {
   } else {
     state.favorites.push(id);
   }
-  renderListings(); // Simple re-render to update heart icon
+  renderListings(); 
 }
 
 function renderListings() {
@@ -171,7 +192,6 @@ function renderListings() {
     const title = state.lang === 'en' ? prop.title_en : prop.title_ar;
     const location = state.lang === 'en' ? prop.location_en : prop.location_ar;
     
-    // Urgency Tag Logic
     let urgencyHtml = '';
     if (prop.urgency) {
       const urgencyText = prop.urgency === 'few' ? dict.urgency_few : dict.urgency_hot;
