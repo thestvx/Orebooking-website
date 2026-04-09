@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Property Details - OreBooking</title>
   
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- 🔥 Firebase SDKs -->
@@ -36,6 +39,7 @@
       </button>
       <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
       
+      <!-- Profile Dropdown -->
       <div class="profile-container">
         <button id="open-auth-btn" class="profile-menu">
           <i class="ph ph-user"></i>
@@ -70,13 +74,27 @@
       </div>
     </div>
 
-    <!-- Image Gallery (Slider) -->
+    <!-- 🖼️ Image Gallery (Smooth Horizontal Slide) -->
     <div class="prop-image-gallery" id="gallery-container">
-      <img src="" id="prop-main-img" alt="Property Image" class="prop-img-main">
+      <div class="slider-container">
+        <!-- Prev Button -->
+        <button class="slider-btn prev-btn" onclick="prevSlide(event)"><i class="ph ph-caret-left"></i></button>
+        
+        <!-- Track that holds all images side by side -->
+        <div class="slider-track" id="slider-track">
+          <!-- Images will be injected here dynamically by JS -->
+        </div>
+        
+        <!-- Next Button -->
+        <button class="slider-btn next-btn" onclick="nextSlide(event)"><i class="ph ph-caret-right"></i></button>
+        
+        <!-- Dots -->
+        <div class="slider-dots-container" id="slider-dots"></div>
+      </div>
     </div>
 
     <div class="prop-content-grid">
-      <!-- Info -->
+      <!-- Info Details -->
       <div class="prop-details">
         <h2 class="font-bold" data-i18n="about_prop">About this space</h2>
         <p class="prop-description" id="prop-desc">Loading description...</p>
@@ -114,13 +132,17 @@
 
   <!-- 🔍 Lightbox for Zoom -->
   <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
+    <!-- Close Button -->
     <button class="close-lightbox"><i class="ph ph-x"></i></button>
+    
+    <!-- Prev Button for Lightbox -->
     <button class="lightbox-btn prev-btn" onclick="prevSlide(event)"><i class="ph ph-caret-left"></i></button>
     
     <div class="lightbox-img-wrapper">
       <img src="" id="lightbox-img" class="lightbox-img" onclick="toggleZoom(event)" title="Click to Zoom">
     </div>
 
+    <!-- Next Button for Lightbox -->
     <button class="lightbox-btn next-btn" onclick="nextSlide(event)"><i class="ph ph-caret-right"></i></button>
   </div>
 
