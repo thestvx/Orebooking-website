@@ -18,7 +18,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- 🗺️ Leaflet.js (OpenStreetMap) - مجاني 100% -->
+  <!-- 🗺️ Leaflet.js (OpenStreetMap) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -107,18 +107,33 @@
       color: var(--text-main);
       box-shadow: var(--shadow-soft);
     }
+
+    /* Auth Modal (needed on this page too) */
+    .auth-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .auth-modal-overlay.active {
+      display: flex;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
+  <!-- ======== Navbar ======== -->
   <nav class="navbar inner-nav">
     <a href="index.html" class="back-btn font-medium">
       <i class="ph ph-arrow-left"></i>
       <span data-i18n="back_home">Back to Home</span>
     </a>
 
-    <a href="index.html" class="logo">
+    <a href="index.html" class="logo" id="home-logo-btn">
       <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
     </a>
 
@@ -139,7 +154,7 @@
             <span class="text-muted text-sm" id="dropdown-user-email">user@email.com</span>
           </div>
           <div class="dropdown-body">
-            <a href="index.html?view=favorites" class="dropdown-item" style="text-decoration: none;">
+            <a href="index.html" class="dropdown-item" style="text-decoration: none;" id="my-favorites-btn">
               <i class="ph ph-heart"></i>
               <span data-i18n="my_favorites">My Favorites</span>
             </a>
@@ -153,8 +168,10 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
+  <!-- ======== Main Content ======== -->
   <main class="container property-container">
+
+    <!-- Property Header -->
     <div class="prop-header">
       <h1 class="prop-title font-bold" id="prop-title">Loading...</h1>
       <div class="prop-meta">
@@ -163,42 +180,59 @@
       </div>
     </div>
 
-    <!-- 🖼️ Image Gallery -->
+    <!-- 🖼️ Image Gallery Slider -->
     <div class="prop-image-gallery" id="gallery-container">
       <div class="slider-container">
-        <button class="slider-btn prev-btn" onclick="prevSlide(event)"><i class="ph ph-caret-left"></i></button>
+        <button class="slider-btn prev-btn" onclick="prevSlide(event)">
+          <i class="ph ph-caret-left"></i>
+        </button>
         <div class="slider-track" id="slider-track"></div>
-        <button class="slider-btn next-btn" onclick="nextSlide(event)"><i class="ph ph-caret-right"></i></button>
+        <button class="slider-btn next-btn" onclick="nextSlide(event)">
+          <i class="ph ph-caret-right"></i>
+        </button>
         <div class="slider-dots-container" id="slider-dots"></div>
       </div>
     </div>
 
+    <!-- Content Grid -->
     <div class="prop-content-grid">
-      <!-- Info Details -->
+
+      <!-- ======== Info Column ======== -->
       <div class="prop-details">
+
         <h2 class="font-bold" data-i18n="about_prop">About this space</h2>
         <p class="prop-description" id="prop-desc">Loading description...</p>
 
+        <!-- Features List -->
         <div class="prop-features">
           <h3 class="font-bold" data-i18n="what_offers">What this place offers</h3>
           <ul class="features-list" id="prop-features"></ul>
         </div>
 
         <!-- 🗺️ Map Section -->
-        <div class="map-section">
+        <div class="map-section" id="prop-map-section">
           <h3 class="font-bold">
             <i class="ph ph-map-trifold"></i>
             <span id="map-title">Where you'll be</span>
           </h3>
+
+          <!-- الخريطة أو رسالة "لا يوجد موقع" تُحقن هنا من JS -->
           <div id="property-map"></div>
-          <a id="map-open-link" class="map-open-btn" href="#" target="_blank" rel="noopener noreferrer">
+
+          <a id="map-open-link"
+             class="map-open-btn"
+             href="#"
+             target="_blank"
+             rel="noopener noreferrer"
+             style="display:none;">
             <i class="ph ph-arrow-square-out"></i>
             <span id="open-maps-text">Open in Google Maps</span>
           </a>
         </div>
+
       </div>
 
-      <!-- Booking Card -->
+      <!-- ======== Booking Card ======== -->
       <div class="prop-booking-card">
         <div class="booking-price">
           <span class="price-val" id="prop-price">0 DZD</span>
@@ -218,92 +252,212 @@
           </div>
         </div>
 
-        <button class="primary-btn font-bold mt-4" id="book-now-btn" data-i18n="book_now">Reserve Now</button>
-        <p class="text-center text-sm text-muted mt-3" data-i18n="wont_charged">You won't be charged yet</p>
+        <button class="primary-btn font-bold mt-4" id="book-now-btn" data-i18n="book_now">
+          Reserve Now
+        </button>
+        <p class="text-center text-sm text-muted mt-3" data-i18n="wont_charged">
+          You won't be charged yet
+        </p>
       </div>
-    </div>
+
+    </div><!-- /prop-content-grid -->
   </main>
 
-  <!-- 🔍 Lightbox -->
+  <!-- ======== 🔍 Lightbox ======== -->
   <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
-    <button class="close-lightbox"><i class="ph ph-x"></i></button>
-    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)"><i class="ph ph-caret-left"></i></button>
+    <button class="close-lightbox" onclick="closeLightbox()">
+      <i class="ph ph-x"></i>
+    </button>
+    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)">
+      <i class="ph ph-caret-left"></i>
+    </button>
     <div class="lightbox-img-wrapper">
-      <img src="" id="lightbox-img" class="lightbox-img" onclick="toggleZoom(event)" title="Click to Zoom">
+      <img src=""
+           id="lightbox-img"
+           class="lightbox-img"
+           onclick="toggleZoom(event)"
+           title="Click to Zoom"
+           alt="Property Image">
     </div>
-    <button class="lightbox-btn next-btn" onclick="nextSlide(event)"><i class="ph ph-caret-right"></i></button>
+    <button class="lightbox-btn next-btn" onclick="nextSlide(event)">
+      <i class="ph ph-caret-right"></i>
+    </button>
   </div>
 
+  <!-- ======== Auth Modal ======== -->
+  <div id="auth-modal" class="auth-modal-overlay">
+    <div class="auth-modal">
+      <button id="close-auth-btn" class="modal-close-btn">
+        <i class="ph ph-x"></i>
+      </button>
+
+      <div class="modal-logo-wrapper">
+        <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking" class="modal-logo">
+      </div>
+
+      <div id="auth-message" class="auth-message" style="display:none;"></div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form active">
+        <h2 class="font-bold" data-i18n="welcome_back">Welcome back</h2>
+        <p class="text-muted text-sm" data-i18n="login_desc">Enter your details to access your account.</p>
+
+        <div class="form-group">
+          <label data-i18n="email">Email Address</label>
+          <input type="email" id="login-email" required
+                 data-i18n-placeholder="email" placeholder="Email Address">
+        </div>
+        <div class="form-group">
+          <label data-i18n="password">Password</label>
+          <input type="password" id="login-password" required
+                 data-i18n-placeholder="password" placeholder="Password">
+        </div>
+        <div class="form-row-between">
+          <label class="checkbox-label">
+            <input type="checkbox" id="remember-me">
+            <span data-i18n="remember_me">Remember me</span>
+          </label>
+          <a href="#" class="link-small" data-i18n="forgot_pass">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="primary-btn font-bold">
+          <span data-i18n="sign_in">Sign In</span>
+        </button>
+
+        <div class="divider"><span data-i18n="or_continue">or continue with</span></div>
+
+        <button type="button" id="google-login-btn" class="google-btn">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+               alt="Google" width="20" height="20">
+          Google
+        </button>
+
+        <p class="text-center text-sm mt-3">
+          <span data-i18n="no_account">Don't have an account?</span>
+          <a href="#" id="go-to-register" class="link-small" data-i18n="sign_up">Sign up</a>
+        </p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form">
+        <h2 class="font-bold" data-i18n="create_account">Create an account</h2>
+        <p class="text-muted text-sm" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
+
+        <div class="form-group">
+          <label data-i18n="full_name">Full Name</label>
+          <input type="text" id="reg-name" required
+                 data-i18n-placeholder="full_name" placeholder="Full Name">
+        </div>
+        <div class="form-group">
+          <label data-i18n="email">Email Address</label>
+          <input type="email" id="reg-email" required
+                 data-i18n-placeholder="email" placeholder="Email Address">
+        </div>
+        <div class="form-group">
+          <label data-i18n="password">Password</label>
+          <input type="password" id="reg-password" required
+                 data-i18n-placeholder="password" placeholder="Password">
+        </div>
+
+        <button type="submit" class="primary-btn font-bold">
+          <span data-i18n="sign_up_btn">Create Account</span>
+        </button>
+
+        <p class="text-center text-sm mt-3">
+          <span data-i18n="has_account">Already have an account?</span>
+          <a href="#" id="go-to-login" class="link-small" data-i18n="sign_in">Sign In</a>
+        </p>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ======== Scripts ======== -->
   <script src="script.js"></script>
 
   <script>
-  // ===================================================
-  //  🗺️ Map Initializer — يُستدعى من script.js
-  //  بعد تحميل بيانات العقار
-  // ===================================================
+  // =======================================================
+  //  🗺️ initPropertyMap — يُستدعى من _fillPropertyPage()
+  //  في script.js بعد تحميل بيانات العقار
+  // =======================================================
   window.initPropertyMap = function(lat, lng, locationName, lang) {
-    const mapEl = document.getElementById('property-map');
+    const mapEl     = document.getElementById('property-map');
+    const mapLink   = document.getElementById('map-open-link');
+    const mapTitle  = document.getElementById('map-title');
+    const mapsText  = document.getElementById('open-maps-text');
     if (!mapEl) return;
 
-    // تعريب نصوص الخريطة
     const isAr = lang === 'ar';
-    document.getElementById('map-title').textContent      = isAr ? 'موقع العقار' : 'Where you\'ll be';
-    document.getElementById('open-maps-text').textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
 
+    // ترجمة نصوص القسم
+    if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار'         : "Where you'll be";
+    if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل'  : 'Open in Google Maps';
+
+    // ─── لا يوجد إحداثيات ───
     if (!lat || !lng) {
-      // لا يوجد موقع محدد
       mapEl.style.display = 'none';
-      document.getElementById('map-open-link').style.display = 'none';
 
-      const noLoc = document.createElement('div');
-      noLoc.className = 'map-no-location';
-      noLoc.innerHTML = `
-        <i class="ph ph-map-pin-slash"></i>
-        <p>${isAr ? 'لم يتم تحديد موقع لهذا العقار' : 'No location set for this property'}</p>
-      `;
-      mapEl.parentNode.insertBefore(noLoc, mapEl);
+      // إظهار رسالة "لا يوجد موقع"
+      const existing = document.querySelector('.map-no-location');
+      if (!existing) {
+        const noLoc = document.createElement('div');
+        noLoc.className = 'map-no-location';
+        noLoc.innerHTML = `
+          <i class="ph ph-map-pin-slash"></i>
+          <p>${isAr ? 'لم يتم تحديد موقع لهذا العقار' : 'No location set for this property'}</p>
+        `;
+        mapEl.parentNode.insertBefore(noLoc, mapEl.nextSibling);
+      }
       return;
     }
 
-    // تهيئة الخريطة
+    // ─── تنظيف أي خريطة سابقة ───
+    if (mapEl._leaflet_id) {
+      mapEl._leaflet_id = null;
+      mapEl.innerHTML   = '';
+    }
+
+    // ─── تهيئة Leaflet ───
     const map = L.map('property-map', {
       center: [lat, lng],
       zoom: 15,
       scrollWheelZoom: false
     });
 
-    // طبقة الخريطة من OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
       maxZoom: 19
     }).addTo(map);
 
-    // أيقونة مخصصة للماركر
+    // أيقونة مخصصة (دبوس ملوّن)
     const customIcon = L.divIcon({
       className: '',
       html: `<div style="
-        width: 40px; height: 40px;
-        background: var(--primary, #435abf);
-        border: 3px solid white;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        width:38px; height:38px;
+        background:var(--primary,#435abf);
+        border:3px solid white;
+        border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);
+        box-shadow:0 4px 14px rgba(0,0,0,0.3);
       "></div>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 40],
-      popupAnchor: [0, -45]
+      iconSize:    [38, 38],
+      iconAnchor:  [19, 38],
+      popupAnchor: [0, -42]
     });
 
-    // إضافة الماركر مع Popup
+    // ماركر مع Popup
     L.marker([lat, lng], { icon: customIcon })
       .addTo(map)
-      .bindPopup(`<strong style="font-family:inherit;">${locationName || ''}</strong>`)
+      .bindPopup(`<strong style="font-family:inherit; font-size:0.95rem;">${locationName || ''}</strong>`)
       .openPopup();
 
-    // رابط فتح في قوقل ماب
-    const gmLink = document.getElementById('map-open-link');
-    if (gmLink) {
-      gmLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
+    // حل مشكلة الخريطة الرمادية
+    setTimeout(() => map.invalidateSize(), 300);
+
+    // رابط Google Maps
+    if (mapLink) {
+      mapLink.href          = `https://www.google.com/maps?q=${lat},${lng}`;
+      mapLink.style.display = 'inline-flex';
     }
   };
   </script>
