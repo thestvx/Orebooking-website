@@ -388,7 +388,9 @@ function loadFavorites() {
   } else {
     state.favorites = [];
   }
-  if (document.getElementById('listings-grid')) renderListings();
+  // ✅ لا نعرض القائمة هنا — نتركها لـ loadPropertiesFromFirestore
+  // نعيد رسم الكروت فقط إذا كانت البيانات محملة مسبقاً
+  if (document.getElementById('listings-grid') && state.liveProperties.length > 0) renderListings();
 }
 
 function saveFavorites() {
@@ -434,10 +436,8 @@ function renderListings() {
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
 
-  // ✅ دمج العقارات: Firestore أولاً، ثم الـ mock data
-  const allProps = state.liveProperties.length > 0
-    ? state.liveProperties
-    : properties;
+  // ✅ الصفحة الرئيسية تعرض Firestore فقط — لا mock data
+  const allProps = state.liveProperties;
 
   let itemsToShow = allProps;
 
