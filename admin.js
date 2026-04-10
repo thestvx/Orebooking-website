@@ -94,21 +94,29 @@ async function loadProperties() {
     snapshot.forEach(doc => {
       const p = doc.data();
       const isVisible = p.visible !== false;
+      // ✅ عرض أيقونة الخريطة إذا كان الموقع محدداً
+      const hasLocation = p.lat && p.lng;
+      const mapBadge = hasLocation
+        ? `<span title="الموقع محدد (${parseFloat(p.lat).toFixed(4)}, ${parseFloat(p.lng).toFixed(4)})" style="color:var(--primary); font-size:1rem;"><i class="ph-fill ph-map-pin"></i></span>`
+        : `<span title="لا يوجد موقع" style="color:var(--text-muted); font-size:1rem;"><i class="ph ph-map-pin-slash"></i></span>`;
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>
-          <img class="admin-table-img" src="${p.imageUrl || ''}" alt="${p.titleAr || ''}">
+          <img class="admin-table-img" src="${p.imageUrl || ""}" alt="${p.titleAr || ""}">
         </td>
         <td>
-          <div class="font-medium">${p.titleAr || '-'}</div>
-          <div style="font-size:0.8rem; color:var(--text-muted);">${p.titleEn || ''}</div>
+          <div class="font-medium">${p.titleAr || "-"}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${p.titleEn || ""}</div>
         </td>
-        <td>${p.locationAr || '-'}</td>
+        <td>
+          <div>${p.locationAr || "-"}</div>
+          <div style="margin-top:4px;">${mapBadge}</div>
+        </td>
         <td class="font-bold" style="color:var(--primary);">${Number(p.price || 0).toLocaleString()} DZD</td>
         <td>
           <label class="switch">
-            <input type="checkbox" ${isVisible ? 'checked' : ''} onchange="toggleVisibility('${doc.id}', this.checked)">
+            <input type="checkbox" ${isVisible ? "checked" : ""} onchange="toggleVisibility('${doc.id}', this.checked)">
             <span class="slider round"></span>
           </label>
         </td>
@@ -147,8 +155,8 @@ async function toggleVisibility(docId, isVisible) {
 // =========================================
 //   Add Property Form
 // =========================================
-const addForm    = document.getElementById("add-property-form");
-const submitBtn  = document.getElementById("submit-prop-btn");
+const addForm      = document.getElementById("add-property-form");
+const submitBtn    = document.getElementById("submit-prop-btn");
 const uploadStatus = document.getElementById("upload-status");
 
 addForm.addEventListener("submit", async function (e) {
@@ -165,7 +173,11 @@ addForm.addEventListener("submit", async function (e) {
     const imageUrl = await uploadToCloudinary(imageFile);
     uploadStatus.textContent = "✅ تم رفع الصورة";
 
-    await db.collection("properties").add({
+    // ✅ قراءة الإحداثيات من الخريطة (اختياري)
+    const latVal = document.getElementById("prop-lat").value;
+    const lngVal = document.getElementById("prop-lng").value;
+
+    const newProperty = {
       titleAr:    document.getElementById("prop-title-ar").value.trim(),
       titleEn:    document.getElementById("prop-title-en").value.trim(),
       locationAr: document.getElementById("prop-loc-ar").value.trim(),
@@ -176,10 +188,24 @@ addForm.addEventListener("submit", async function (e) {
       imageUrl:   imageUrl,
       visible:    true,
       createdAt:  firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+
+    // ✅ أضف lat/lng فقط إذا تم تحديدهما
+    if (latVal && lngVal) {
+      newProperty.lat = parseFloat(latVal);
+      newProperty.lng = parseFloat(lngVal);
+    }
+
+    await db.collection("properties").add(newProperty);
 
     addForm.reset();
     uploadStatus.textContent = "";
+    // إعادة تعيين badge الخريطة
+    const badge = document.getElementById("map-picked-badge");
+    if (badge) badge.classList.remove("visible");
+    document.getElementById("prop-lat").value = "";
+    document.getElementById("prop-lng").value = "";
+
     alert("✅ تم إضافة العقار بنجاح!");
     switchTab("manage-props");
     loadProperties();
@@ -198,7 +224,6 @@ addForm.addEventListener("submit", async function (e) {
 //   Upload Image to Cloudinary
 // =========================================
 async function uploadToCloudinary(file) {
-  // ⚠️ ضع هنا بيانات Cloudinary الخاصة بك
   const CLOUD_NAME    = "dy9bqizhm";
   const UPLOAD_PRESET = "orebooking";
 
@@ -229,8 +254,27 @@ async function openEditModal(docId) {
     document.getElementById("edit-price").value    = p.price   || "";
     document.getElementById("edit-desc-ar").value  = p.descAr  || "";
 
+    // ✅ تحميل الإحداثيات الموجودة في حقول التعديل
+    const existingLat = p.lat ? parseFloat(p.lat) : null;
+    const existingLng = p.lng ? parseFloat(p.lng) : null;
+
+    document.getElementById("edit-lat").value = existingLat || "";
+    document.getElementById("edit-lng").value = existingLng || "";
+
+    // إظهار badge إذا كان الموقع محدداً مسبقاً
+    const editBadge = document.getElementById("edit-map-picked-badge");
+    if (editBadge) {
+      editBadge.classList.toggle("visible", !!(existingLat && existingLng));
+    }
+
     document.getElementById("edit-modal").classList.add("active");
     document.body.classList.add("modal-open");
+
+    // ✅ تهيئة خريطة التعديل مع الموقع الحالي
+    if (typeof window.initEditMapFromAdmin === "function") {
+      window.initEditMapFromAdmin(existingLat, existingLng);
+    }
+
   } catch (err) {
     console.error(err);
     alert("تعذّر تحميل بيانات العقار");
@@ -253,11 +297,23 @@ editForm.addEventListener("submit", async function (e) {
   submitEditBtn.textContent = "جارٍ الحفظ...";
 
   try {
-    await db.collection("properties").doc(docId).update({
+    // ✅ قراءة الإحداثيات المحدّثة من خريطة التعديل
+    const latVal = document.getElementById("edit-lat").value;
+    const lngVal = document.getElementById("edit-lng").value;
+
+    const updateData = {
       titleAr: document.getElementById("edit-title-ar").value.trim(),
       price:   Number(document.getElementById("edit-price").value),
       descAr:  document.getElementById("edit-desc-ar").value.trim()
-    });
+    };
+
+    // ✅ أضف lat/lng إذا تم تحديدهما
+    if (latVal && lngVal) {
+      updateData.lat = parseFloat(latVal);
+      updateData.lng = parseFloat(lngVal);
+    }
+
+    await db.collection("properties").doc(docId).update(updateData);
 
     closeEditModal();
     loadProperties();
