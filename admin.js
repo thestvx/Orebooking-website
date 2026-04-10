@@ -199,8 +199,8 @@ addForm.addEventListener("submit", async function (e) {
 // =========================================
 async function uploadToCloudinary(file) {
   // ⚠️ ضع هنا بيانات Cloudinary الخاصة بك
-  const CLOUD_NAME    = "YOUR_CLOUD_NAME";
-  const UPLOAD_PRESET = "YOUR_UPLOAD_PRESET";
+  const CLOUD_NAME    = "dy9bqizhm";
+  const UPLOAD_PRESET = "orebooking";
 
   const formData = new FormData();
   formData.append("file", file);
