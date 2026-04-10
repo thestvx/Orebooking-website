@@ -25,7 +25,6 @@ const state = {
   user: null,
   currentView: 'home',
   currentImageIndex: 0,
-  // ✅ العقارات الحية من Firestore
   liveProperties: []
 };
 
@@ -70,7 +69,8 @@ const translations = {
     book_now: "Reserve Now",
     wont_charged: "You won't be charged yet",
     loading: "Loading properties...",
-    no_props: "No properties available yet."
+    no_props: "No properties available yet.",
+    location_on_map: "Location on Map"
   },
   ar: {
     hero_title: "اكتشف إقامتك المثالية القادمة",
@@ -112,12 +112,13 @@ const translations = {
     book_now: "احجز الآن",
     wont_charged: "لن يتم خصم المبلغ الآن",
     loading: "جارٍ تحميل العقارات...",
-    no_props: "لا توجد عقارات متاحة بعد."
+    no_props: "لا توجد عقارات متاحة بعد.",
+    location_on_map: "الموقع على الخريطة"
   }
 };
 
 // ==========================================
-// 🏠 3. STATIC MOCK DATA (للـ property.html فقط)
+// 🏠 3. STATIC MOCK DATA
 // ==========================================
 const properties = [
   {
@@ -140,7 +141,9 @@ const properties = [
     desc_en: "Where to find peace and comfort as if you are away from the bustle... but without feeling like you are in the desert! At Palm Garden you will find comfortable rooms, a breakfast fit for royalty, green lawns, and a safe family space.",
     desc_ar: "وين تلقى الهدوء والراحة وكأنك بعيد عن الصخب… لكن بلا ما تحس روحك في الصحراء! في بالم قاردن تلقى غرف مريحة، فطور صباحي يليق بالمقام، قازون أخضر يشرح الخاطر، وفضاء عائلي آمن.",
     features_ar: ["غرف فردية، ثنائية وعائلية","فطور صباحي","قازون أخضر","فضاء عائلي آمن"],
-    features_en: ["Single & Family Rooms","Breakfast Included","Green Lawn","Safe Family Space"]
+    features_en: ["Single & Family Rooms","Breakfast Included","Green Lawn","Safe Family Space"],
+    lat: null,
+    lng: null
   },
   {
     id: 2,
@@ -156,7 +159,9 @@ const properties = [
     desc_en: "A perfect modern retreat in the heart of nature.",
     desc_ar: "ملاذ عصري مثالي في قلب الطبيعة.",
     features_ar: ["غرفتين نوم","مطبخ مجهز","مدفأة حطب"],
-    features_en: ["2 Bedrooms","Equipped Kitchen","Fireplace"]
+    features_en: ["2 Bedrooms","Equipped Kitchen","Fireplace"],
+    lat: null,
+    lng: null
   },
   {
     id: 3,
@@ -172,47 +177,49 @@ const properties = [
     desc_en: "Wake up to the sound of waves in this beautiful villa.",
     desc_ar: "استيقظ على صوت الأمواج في هذه الفيلا الجميلة.",
     features_ar: ["إطلالة على البحر","مسبح خاص","واي فاي سريع"],
-    features_en: ["Sea View","Private Pool","Fast WiFi"]
+    features_en: ["Sea View","Private Pool","Fast WiFi"],
+    lat: null,
+    lng: null
   }
 ];
 
 const categories = [
-  { icon: 'ph-buildings', label_en: 'Apartments', label_ar: 'شقق' },
-  { icon: 'ph-house',     label_en: 'Villas',      label_ar: 'فلل' },
-  { icon: 'ph-tree-evergreen', label_en: 'Resorts', label_ar: 'منتجعات' },
-  { icon: 'ph-swimming-pool',  label_en: 'Pools',   label_ar: 'مسابح' },
+  { icon: 'ph-buildings',      label_en: 'Apartments', label_ar: 'شقق' },
+  { icon: 'ph-house',          label_en: 'Villas',     label_ar: 'فلل' },
+  { icon: 'ph-tree-evergreen', label_en: 'Resorts',    label_ar: 'منتجعات' },
+  { icon: 'ph-swimming-pool',  label_en: 'Pools',      label_ar: 'مسابح' },
 ];
 
 // ==========================================
 // ⚙️ 4. CORE INITIALIZATION
 // ==========================================
-const langBtn     = document.getElementById('lang-toggle');
-const themeBtn    = document.getElementById('theme-toggle');
-const htmlEl      = document.documentElement;
-const authModal   = document.getElementById('auth-modal');
-const openAuthBtn = document.getElementById('open-auth-btn');
-const closeAuthBtn = document.getElementById('close-auth-btn');
-const loginForm   = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
-const authMessage = document.getElementById('auth-message');
+const langBtn         = document.getElementById('lang-toggle');
+const themeBtn        = document.getElementById('theme-toggle');
+const htmlEl          = document.documentElement;
+const authModal       = document.getElementById('auth-modal');
+const openAuthBtn     = document.getElementById('open-auth-btn');
+const closeAuthBtn    = document.getElementById('close-auth-btn');
+const loginForm       = document.getElementById('login-form');
+const registerForm    = document.getElementById('register-form');
+const authMessage     = document.getElementById('auth-message');
 const profileDropdown = document.getElementById('profile-dropdown');
-const logoutBtn   = document.getElementById('logout-btn');
-const myFavoritesBtn = document.getElementById('my-favorites-btn');
-const homeLogoBtn = document.getElementById('home-logo-btn');
+const logoutBtn       = document.getElementById('logout-btn');
+const myFavoritesBtn  = document.getElementById('my-favorites-btn');
+const homeLogoBtn     = document.getElementById('home-logo-btn');
 
 function init() {
   applyInitialState();
 
   if (document.getElementById('categories-container')) {
     renderCategories();
-    // ✅ جلب العقارات من Firestore أولاً ثم عرضها
     loadPropertiesFromFirestore();
   }
 
+  // صفحة التفاصيل
   renderPropertyDetails();
 
-  if (langBtn) langBtn.addEventListener('click', toggleLanguage);
-  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+  if (langBtn)    langBtn.addEventListener('click', toggleLanguage);
+  if (themeBtn)   themeBtn.addEventListener('click', toggleTheme);
   if (openAuthBtn) openAuthBtn.addEventListener('click', handleAuthButtonClick);
 
   if (homeLogoBtn) {
@@ -256,8 +263,8 @@ function init() {
 
   if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeModal);
   document.getElementById('go-to-register')?.addEventListener('click', (e) => { e.preventDefault(); switchForm('register'); });
-  document.getElementById('go-to-login')?.addEventListener('click', (e) => { e.preventDefault(); switchForm('login'); });
-  if (loginForm) loginForm.addEventListener('submit', handleLogin);
+  document.getElementById('go-to-login')?.addEventListener('click',    (e) => { e.preventDefault(); switchForm('login');    });
+  if (loginForm)    loginForm.addEventListener('submit', handleLogin);
   if (registerForm) registerForm.addEventListener('submit', handleRegister);
   document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleLogin);
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
@@ -278,7 +285,6 @@ async function loadPropertiesFromFirestore() {
 
   const dict = translations[state.lang];
 
-  // عرض حالة التحميل
   container.innerHTML = `
     <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
       <i class="ph ph-circle-notch" style="font-size:2rem; display:block; margin-bottom:12px; animation: spin 1s linear infinite;"></i>
@@ -292,24 +298,25 @@ async function loadPropertiesFromFirestore() {
       .get();
 
     if (!snapshot.empty) {
-      // تحويل بيانات Firestore لنفس شكل الـ mock data
       state.liveProperties = snapshot.docs.map(doc => {
         const d = doc.data();
         return {
-          id:          doc.id,        // string ID من Firestore
-          title_en:    d.titleEn  || d.title_en  || '',
-          title_ar:    d.titleAr  || d.title_ar  || '',
+          id:          doc.id,
+          title_en:    d.titleEn    || d.title_en    || '',
+          title_ar:    d.titleAr    || d.title_ar    || '',
           location_en: d.locationEn || d.location_en || '',
           location_ar: d.locationAr || d.location_ar || '',
-          price:       d.price    || 0,
-          rating:      d.rating   || 4.80,
-          image:       d.imageUrl || d.image || '',
-          images:      d.images   || [d.imageUrl || d.image || ''],
-          urgency:     d.urgency  || null,
-          desc_en:     d.descEn   || d.desc_en   || '',
-          desc_ar:     d.descAr   || d.desc_ar   || '',
+          price:       d.price      || 0,
+          rating:      d.rating     || 4.80,
+          image:       d.imageUrl   || d.image       || '',
+          images:      d.images     || [d.imageUrl   || d.image || ''],
+          urgency:     d.urgency    || null,
+          desc_en:     d.descEn     || d.desc_en     || '',
+          desc_ar:     d.descAr     || d.desc_ar     || '',
           features_en: d.featuresEn || d.features_en || [],
           features_ar: d.featuresAr || d.features_ar || [],
+          lat:         d.lat        || null,   // ✅ الإحداثيات
+          lng:         d.lng        || null,
         };
       });
     } else {
@@ -324,7 +331,7 @@ async function loadPropertiesFromFirestore() {
 }
 
 // ==========================================
-// 🌍 6. THEME, LOGO & LANGUAGE LOGIC
+// 🌍 6. THEME, LOGO & LANGUAGE
 // ==========================================
 function updateLogo() {
   const mainLogo  = document.getElementById('main-logo');
@@ -388,13 +395,15 @@ function loadFavorites() {
   } else {
     state.favorites = [];
   }
-  // ✅ لا نعرض القائمة هنا — نتركها لـ loadPropertiesFromFirestore
-  // نعيد رسم الكروت فقط إذا كانت البيانات محملة مسبقاً
-  if (document.getElementById('listings-grid') && state.liveProperties.length > 0) renderListings();
+  if (document.getElementById('listings-grid') && state.liveProperties.length > 0) {
+    renderListings();
+  }
 }
 
 function saveFavorites() {
-  if (state.user) localStorage.setItem(`ore_favs_${state.user.uid}`, JSON.stringify(state.favorites));
+  if (state.user) {
+    localStorage.setItem(`ore_favs_${state.user.uid}`, JSON.stringify(state.favorites));
+  }
 }
 
 function toggleFavorite(e, id) {
@@ -435,8 +444,6 @@ function renderListings() {
 
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
-
-  // ✅ الصفحة الرئيسية تعرض Firestore فقط — لا mock data
   const allProps = state.liveProperties;
 
   let itemsToShow = allProps;
@@ -465,9 +472,9 @@ function renderListings() {
   }
 
   container.innerHTML = itemsToShow.map(prop => {
-    const isFav     = state.favorites.includes(prop.id);
-    const title     = state.lang === 'en' ? prop.title_en    : prop.title_ar;
-    const location  = state.lang === 'en' ? prop.location_en : prop.location_ar;
+    const isFav    = state.favorites.includes(prop.id);
+    const title    = state.lang === 'en' ? prop.title_en    : prop.title_ar;
+    const location = state.lang === 'en' ? prop.location_en : prop.location_ar;
 
     let urgencyHtml = '';
     if (prop.urgency) {
@@ -496,7 +503,10 @@ function renderListings() {
             </div>
           </div>
           <div class="card-footer">
-            <div class="card-price">${Number(prop.price).toLocaleString()} ${currency} <span>/ ${dict.night}</span></div>
+            <div class="card-price">
+              ${Number(prop.price).toLocaleString()} ${currency}
+              <span>/ ${dict.night}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -505,7 +515,7 @@ function renderListings() {
 }
 
 // ==========================================
-// 🏨 9. PROPERTY DETAILS PAGE (property.html)
+// 🏨 9. PROPERTY DETAILS PAGE
 // ==========================================
 let currentPropImages = [];
 
@@ -514,39 +524,44 @@ function renderPropertyDetails() {
   const propId    = urlParams.get('id');
   if (!propId) return;
 
-  // ابحث أولاً في الـ mock data بالـ id رقمي
-  // ثم في liveProperties بالـ string id
+  // ابحث أولاً في الـ mock data
   let prop = properties.find(p => String(p.id) === String(propId));
 
   if (!prop) {
-    // إذا ما لقيناه في mock، جلبه من Firestore
-    db.collection('properties').doc(propId).get().then(doc => {
-      if (!doc.exists) return;
-      const d = doc.data();
-      const liveProp = {
-        id:          doc.id,
-        title_en:    d.titleEn  || '',
-        title_ar:    d.titleAr  || '',
-        location_en: d.locationEn || '',
-        location_ar: d.locationAr || '',
-        price:       d.price    || 0,
-        rating:      d.rating   || 4.80,
-        image:       d.imageUrl || '',
-        images:      d.images   || [d.imageUrl || ''],
-        urgency:     d.urgency  || null,
-        desc_en:     d.descEn   || '',
-        desc_ar:     d.descAr   || '',
-        features_en: d.featuresEn || [],
-        features_ar: d.featuresAr || [],
-      };
-      _fillPropertyPage(liveProp);
-    }).catch(err => console.error('Property fetch error:', err));
+    // جلب من Firestore
+    db.collection('properties').doc(propId).get()
+      .then(doc => {
+        if (!doc.exists) return;
+        const d = doc.data();
+        _fillPropertyPage({
+          id:          doc.id,
+          title_en:    d.titleEn    || '',
+          title_ar:    d.titleAr    || '',
+          location_en: d.locationEn || '',
+          location_ar: d.locationAr || '',
+          price:       d.price      || 0,
+          rating:      d.rating     || 4.80,
+          image:       d.imageUrl   || '',
+          images:      d.images     || [d.imageUrl || ''],
+          urgency:     d.urgency    || null,
+          desc_en:     d.descEn     || '',
+          desc_ar:     d.descAr     || '',
+          features_en: d.featuresEn || [],
+          features_ar: d.featuresAr || [],
+          lat:         d.lat        || null,  // ✅ الإحداثيات
+          lng:         d.lng        || null,
+        });
+      })
+      .catch(err => console.error('Property fetch error:', err));
     return;
   }
 
   _fillPropertyPage(prop);
 }
 
+// ==========================================
+// 🗺️ تعبئة صفحة التفاصيل + الخريطة
+// ==========================================
 function _fillPropertyPage(prop) {
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
@@ -569,12 +584,16 @@ function _fillPropertyPage(prop) {
   if (featuresEl) {
     const features = state.lang === 'en' ? prop.features_en : prop.features_ar;
     if (features && features.length) {
-      featuresEl.innerHTML = features.map(f => `<li><i class="ph-fill ph-check-circle"></i> ${f}</li>`).join('');
+      featuresEl.innerHTML = features.map(f =>
+        `<li><i class="ph-fill ph-check-circle"></i> ${f}</li>`
+      ).join('');
     }
   }
 
-  // Gallery Slider
-  if (trackEl && prop.images) {
+  // -----------------------------------------------
+  // 🖼️ Gallery Slider
+  // -----------------------------------------------
+  if (trackEl && prop.images && prop.images.length) {
     currentPropImages       = prop.images;
     state.currentImageIndex = 0;
 
@@ -590,6 +609,7 @@ function _fillPropertyPage(prop) {
 
     const prevBtn = document.querySelector('.prev-btn');
     const nextBtn = document.querySelector('.next-btn');
+
     if (currentPropImages.length <= 1) {
       if (prevBtn) prevBtn.style.display = 'none';
       if (nextBtn) nextBtn.style.display = 'none';
@@ -598,9 +618,51 @@ function _fillPropertyPage(prop) {
       updateSlider();
     }
   }
+
+  // -----------------------------------------------
+  // 🗺️ Leaflet Map — يظهر فقط إذا في إحداثيات
+  // -----------------------------------------------
+  const mapSection = document.getElementById('prop-map-section');
+  const mapEl      = document.getElementById('map-container');
+
+  if (prop.lat && prop.lng && mapEl) {
+    // أظهر قسم الخريطة
+    if (mapSection) {
+      mapSection.style.display = 'block';
+      // عنوان القسم
+      const mapTitle = mapSection.querySelector('h3');
+      if (mapTitle) mapTitle.textContent = dict.location_on_map;
+    }
+
+    // تنظيف أي خريطة سابقة (مهم عند تغيير اللغة)
+    if (mapEl._leaflet_id) {
+      mapEl._leaflet_id = null;
+      mapEl.innerHTML   = '';
+    }
+
+    // تأخير بسيط يضمن أن الـ div ظاهر قبل التهيئة
+    setTimeout(() => {
+      const map = L.map('map-container').setView([prop.lat, prop.lng], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a>'
+      }).addTo(map);
+
+      L.marker([prop.lat, prop.lng]).addTo(map);
+
+      // ✅ يحل مشكلة الخريطة الرمادية/الفارغة
+      map.invalidateSize();
+    }, 250);
+
+  } else {
+    // إخفاء قسم الخريطة إذا ما في إحداثيات
+    if (mapSection) mapSection.style.display = 'none';
+  }
 }
 
-// Slider Controls
+// ==========================================
+// 🎛️ Slider Controls
+// ==========================================
 window.prevSlide = function(e) {
   if (e) e.stopPropagation();
   state.currentImageIndex = state.currentImageIndex > 0
@@ -635,12 +697,14 @@ function updateSlider() {
     lbImg.src = currentPropImages[state.currentImageIndex];
     lbImg.classList.remove('zoomed');
   }
-  document.querySelectorAll('.slider-dot').forEach((dot, index) => {
-    dot.classList.toggle('active', index === state.currentImageIndex);
+  document.querySelectorAll('.slider-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === state.currentImageIndex);
   });
 }
 
-// Lightbox
+// ==========================================
+// 🔍 Lightbox
+// ==========================================
 window.openLightbox = function() {
   const lb    = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
@@ -672,8 +736,8 @@ window.toggleZoom = function(e) {
 // ==========================================
 function showMessage(msg, type = 'error') {
   if (!authMessage) return;
-  authMessage.textContent  = msg;
-  authMessage.className    = `auth-message ${type}`;
+  authMessage.textContent   = msg;
+  authMessage.className     = `auth-message ${type}`;
   authMessage.style.display = 'block';
   setTimeout(() => { authMessage.style.display = 'none'; }, 5000);
 }
@@ -755,7 +819,7 @@ function updateUserUI() {
     openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
     openAuthBtn.style.backgroundColor = 'var(--accent)';
     if (document.getElementById('dropdown-user-name')) {
-      document.getElementById('dropdown-user-name').textContent = state.user.displayName || 'OreBooking User';
+      document.getElementById('dropdown-user-name').textContent  = state.user.displayName || 'OreBooking User';
       document.getElementById('dropdown-user-email').textContent = state.user.email || '';
     }
   } else {
