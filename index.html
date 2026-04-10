@@ -4,18 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OreBooking - Premium Stays</title>
-  
+
   <!-- Fonts: Poppins (EN) & Tajawal (AR) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
-  
+
   <!-- Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  
+
   <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- CSS -->
   <link rel="stylesheet" href="style.css">
@@ -27,7 +28,7 @@
     <a href="#" class="logo" id="home-logo-btn">
       <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
     </a>
-    
+
     <div class="nav-actions">
       <!-- Rewards Points -->
       <div class="rewards-badge">
@@ -38,9 +39,9 @@
       <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
         <i class="ph ph-moon"></i>
       </button>
-      
+
       <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
-      
+
       <!-- User Profile Container -->
       <div class="profile-container">
         <button id="open-auth-btn" class="profile-menu">
@@ -73,7 +74,7 @@
   <header class="hero" id="hero-section">
     <h1 class="font-bold" data-i18n="hero_title">Find your next perfect stay</h1>
     <p class="font-regular" data-i18n="hero_subtitle">Discover premium apartments, villas, and unique homes around the world.</p>
-    
+
     <div class="search-bar">
       <div class="search-field">
         <label class="font-medium" data-i18n="location">Location</label>
@@ -124,7 +125,7 @@
   <!-- Auth Modal -->
   <div id="auth-modal" class="modal-overlay">
     <div class="modal-content auth-card">
-      
+
       <button id="close-auth-btn" class="close-modal-btn">
         <i class="ph ph-x"></i>
       </button>
