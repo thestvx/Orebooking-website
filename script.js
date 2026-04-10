@@ -620,43 +620,13 @@ function _fillPropertyPage(prop) {
   }
 
   // -----------------------------------------------
-  // 🗺️ Leaflet Map — يظهر فقط إذا في إحداثيات
+  // 🗺️ تفويض الخريطة لـ initPropertyMap في property.html
   // -----------------------------------------------
-  const mapSection = document.getElementById('prop-map-section');
-  const mapEl      = document.getElementById('map-container');
-
-  if (prop.lat && prop.lng && mapEl) {
-    // أظهر قسم الخريطة
-    if (mapSection) {
-      mapSection.style.display = 'block';
-      // عنوان القسم
-      const mapTitle = mapSection.querySelector('h3');
-      if (mapTitle) mapTitle.textContent = dict.location_on_map;
-    }
-
-    // تنظيف أي خريطة سابقة (مهم عند تغيير اللغة)
-    if (mapEl._leaflet_id) {
-      mapEl._leaflet_id = null;
-      mapEl.innerHTML   = '';
-    }
-
-    // تأخير بسيط يضمن أن الـ div ظاهر قبل التهيئة
+  if (typeof window.initPropertyMap === 'function') {
+    const locationName = state.lang === 'en' ? prop.location_en : prop.location_ar;
     setTimeout(() => {
-      const map = L.map('map-container').setView([prop.lat, prop.lng], 14);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a>'
-      }).addTo(map);
-
-      L.marker([prop.lat, prop.lng]).addTo(map);
-
-      // ✅ يحل مشكلة الخريطة الرمادية/الفارغة
-      map.invalidateSize();
-    }, 250);
-
-  } else {
-    // إخفاء قسم الخريطة إذا ما في إحداثيات
-    if (mapSection) mapSection.style.display = 'none';
+      window.initPropertyMap(prop.lat, prop.lng, locationName, state.lang);
+    }, 200);
   }
 }
 
