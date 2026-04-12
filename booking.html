@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Complete your booking on OreBooking - Secure and easy reservation.">
   <title>Complete Booking - OreBooking</title>
 
   <!-- Fonts -->
@@ -17,8 +18,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <!-- إضافة Storage SDK لرفع صور الوصولات البنكية -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="booking.css">
@@ -27,14 +26,14 @@
 
   <!-- ======== Navbar ======== -->
   <nav class="navbar inner-nav">
-    <button onclick="history.back()" class="back-btn font-medium">
+    <button id="back-btn" class="back-btn font-medium">
       <i class="ph ph-arrow-left"></i>
       <span id="nav-back-txt">Back to Property</span>
     </button>
     <a href="index.html" class="logo">
       <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
     </a>
-    <div class="nav-actions" style="margin-inline-start: auto;">
+    <div class="nav-actions">
       <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
         <i class="ph ph-moon"></i>
       </button>
@@ -44,21 +43,24 @@
 
   <!-- ======== Main Booking Area ======== -->
   <main class="booking-page">
-    
+
     <!-- Step Indicators -->
     <div class="booking-steps-header" id="steps-header">
       <div class="step-indicator active" data-step="1">
         <div class="step-num"><span>1</span></div>
         <div class="step-label" id="lbl-step1">Dates & Guests</div>
       </div>
+      <div class="step-connector"></div>
       <div class="step-indicator" data-step="2">
         <div class="step-num"><span>2</span></div>
         <div class="step-label" id="lbl-step2">Review & Pay</div>
       </div>
+      <div class="step-connector"></div>
       <div class="step-indicator" data-step="3">
         <div class="step-num"><span>3</span></div>
         <div class="step-label" id="lbl-step3">Guest Details</div>
       </div>
+      <div class="step-connector"></div>
       <div class="step-indicator" data-step="4">
         <div class="step-num"><span>4</span></div>
         <div class="step-label" id="lbl-step4">Confirmation</div>
@@ -66,188 +68,227 @@
     </div>
 
     <div class="booking-wrapper">
-      
+
       <!-- ⬅️ Left: Steps Content -->
       <div class="booking-main-card">
-        
-        <!-- STEP 1: Dates & Guests -->
+
+        <!-- ====================== STEP 1: Dates & Guests ====================== -->
         <div class="booking-step active" id="step-1">
           <div class="step-header">
             <h2 class="step-title" id="st-title-1">When are you traveling?</h2>
             <p class="step-subtitle" id="st-sub-1">Select your check-in and check-out dates.</p>
           </div>
           <div class="step-body">
-            
+
             <div class="calendar-section">
               <div class="calendar-nav">
-                <button class="cal-nav-btn" id="cal-prev"><i class="ph ph-caret-left"></i></button>
-                <span id="calendar-month-label">September 2024</span>
-                <button class="cal-nav-btn" id="cal-next"><i class="ph ph-caret-right"></i></button>
+                <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month"><i class="ph ph-caret-left"></i></button>
+                <span id="calendar-month-label" class="font-medium"></span>
+                <button class="cal-nav-btn" id="cal-next" aria-label="Next month"><i class="ph ph-caret-right"></i></button>
               </div>
               <div class="calendar-grid" id="calendar-grid">
                 <!-- Calendar cells injected via JS -->
               </div>
-              
               <div class="date-summary">
                 <div class="date-summary-item">
                   <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
                   <span class="date-summary-value" id="disp-checkin">Add date</span>
                 </div>
-                <div class="date-summary-item" style="border-inline: 1px solid var(--border-color);">
+                <div class="date-summary-item date-summary-middle">
                   <span class="date-summary-label" id="lbl-nights">Nights</span>
-                  <span class="date-summary-value" id="disp-nights">-</span>
+                  <span class="date-summary-value" id="disp-nights">—</span>
                 </div>
                 <div class="date-summary-item">
                   <span class="date-summary-label" id="lbl-chk-out">Checkout</span>
                   <span class="date-summary-value" id="disp-checkout">Add date</span>
                 </div>
               </div>
-              
-              <!-- رسالة التحذير للحد الأدنى لعدد الليالي أو التداخل مع تواريخ محجوزة -->
-              <div id="min-nights-warning" class="text-sm text-danger mt-2" style="display:none; text-align:center;"></div>
+              <div id="min-nights-warning" class="booking-warning" style="display:none;"></div>
             </div>
 
             <div class="guests-section">
-              <h3 id="lbl-who-coming">Who's coming?</h3>
+              <h3 class="guests-section-title" id="lbl-who-coming">Who's coming?</h3>
               <div class="guests-counter">
                 <div class="guests-label">
-                  <span id="lbl-guests-title">Guests</span>
-                  <small id="lbl-guests-sub">Ages 2 or above</small>
+                  <span class="font-medium" id="lbl-guests-title">Guests</span>
+                  <small class="text-muted-color" id="lbl-guests-sub">Ages 2 or above</small>
                 </div>
-                <button class="counter-btn" id="btn-minus-guest"><i class="ph ph-minus"></i></button>
-                <span id="guests-count">1</span>
-                <button class="counter-btn" id="btn-plus-guest"><i class="ph ph-plus"></i></button>
+                <div class="counter-controls">
+                  <button class="counter-btn" id="btn-minus-guest" aria-label="Decrease guests"><i class="ph ph-minus"></i></button>
+                  <span id="guests-count" class="counter-value font-bold">1</span>
+                  <button class="counter-btn" id="btn-plus-guest" aria-label="Increase guests"><i class="ph ph-plus"></i></button>
+                </div>
               </div>
             </div>
 
-            <div style="margin-top:32px; text-align:end;">
-              <button class="primary-btn font-bold" id="btn-next-1" disabled>Next Step <i class="ph ph-arrow-right"></i></button>
+            <div class="step-actions step-actions-end">
+              <button class="primary-btn font-bold" id="btn-next-1" disabled>
+                <span id="btn-next-1-txt">Next Step</span> <i class="ph ph-arrow-right"></i>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- STEP 2: Review & Payment Method -->
+        <!-- ====================== STEP 2: Review & Payment ====================== -->
         <div class="booking-step" id="step-2">
           <div class="step-header">
             <h2 class="step-title" id="st-title-2">Review & Payment</h2>
             <p class="step-subtitle" id="st-sub-2">Check your details and select how you want to pay.</p>
           </div>
           <div class="step-body">
-            
+
             <div class="review-list">
               <div class="review-row">
                 <span class="review-label" id="rev-dates">Dates</span>
-                <span class="review-value" id="rev-val-dates">-</span>
+                <span class="review-value font-medium" id="rev-val-dates">—</span>
+              </div>
+              <div class="review-row">
+                <span class="review-label" id="rev-nights-lbl">Nights</span>
+                <span class="review-value font-medium" id="rev-val-nights">—</span>
               </div>
               <div class="review-row">
                 <span class="review-label" id="rev-guests">Guests</span>
-                <span class="review-value" id="rev-val-guests">-</span>
+                <span class="review-value font-medium" id="rev-val-guests">—</span>
               </div>
-              <div class="review-row total-row">
-                <span class="review-label" id="rev-total">Total (DZD)</span>
-                <span class="review-value price-highlight" id="rev-val-total">0</span>
+              <div class="review-row">
+                <span class="review-label" id="rev-base">Subtotal</span>
+                <span class="review-value font-medium" id="rev-val-base">0 DZD</span>
+              </div>
+              <div class="review-row">
+                <span class="review-label" id="rev-fees">Service Fees (8%)</span>
+                <span class="review-value font-medium" id="rev-val-fees">0 DZD</span>
+              </div>
+              <div class="review-row review-total-row">
+                <span class="review-label font-bold" id="rev-total">Total</span>
+                <span class="review-value price-highlight font-bold" id="rev-val-total">0 DZD</span>
               </div>
             </div>
 
             <!-- Payment Methods -->
-            <div class="payment-methods-section mt-4 pt-4" style="border-top: 1px solid var(--border-color);">
-              <h3 class="font-bold mb-3" id="lbl-pay-method" style="font-size: 1rem;">Payment Method</h3>
-              
-              <!-- الخيار الأول: الدفع عند الوصول -->
-              <label class="payment-option">
+            <div class="payment-methods-section">
+              <h3 class="section-sub-title" id="lbl-pay-method">Payment Method</h3>
+
+              <label class="payment-option" id="opt-cash">
                 <input type="radio" name="pay_method" value="cash" checked>
                 <div class="pay-opt-content">
-                  <i class="ph ph-money text-primary" style="font-size: 1.5rem;"></i>
-                  <div>
+                  <i class="ph ph-money pay-opt-icon"></i>
+                  <div class="pay-opt-text">
                     <strong id="lbl-pay-cash">Pay at Property</strong>
-                    <p class="text-sm text-muted" id="desc-pay-cash">Pay the full amount when you arrive.</p>
+                    <p class="pay-opt-desc" id="desc-pay-cash">Pay the full amount when you arrive.</p>
                   </div>
                 </div>
+                <div class="pay-opt-check"><i class="ph-fill ph-check-circle"></i></div>
               </label>
 
-              <!-- الخيار الثاني: الدفع عبر تحويل بنكي/بريدي -->
-              <label class="payment-option mt-2">
+              <label class="payment-option" id="opt-transfer">
                 <input type="radio" name="pay_method" value="transfer">
                 <div class="pay-opt-content">
-                  <i class="ph ph-bank text-primary" style="font-size: 1.5rem;"></i>
-                  <div>
+                  <i class="ph ph-bank pay-opt-icon"></i>
+                  <div class="pay-opt-text">
                     <strong id="lbl-pay-transfer">Bank / CCP Transfer</strong>
-                    <p class="text-sm text-muted" id="desc-pay-transfer">Transfer to our account and upload receipt.</p>
+                    <p class="pay-opt-desc" id="desc-pay-transfer">Transfer to our account and upload receipt.</p>
                   </div>
                 </div>
+                <div class="pay-opt-check"><i class="ph-fill ph-check-circle"></i></div>
               </label>
 
-              <!-- بيانات الدفع والتحويل (مخفية وتظهر عند اختيار التحويل) -->
-              <div id="transfer-details" class="transfer-box mt-3" style="display: none;">
-                <p class="text-sm mb-2" id="txt-bank-info">Please transfer the total amount to the following account:</p>
-                <div class="bank-card mb-3">
-                  <p><strong>CCP:</strong> 123456789 00</p>
-                  <p><strong>Name:</strong> ORE BOOKING</p>
+              <!-- Transfer Details (shown when transfer selected) -->
+              <div id="transfer-details" class="transfer-box" style="display:none;">
+                <p class="transfer-info-txt" id="txt-bank-info">Please transfer the total amount to the following account:</p>
+                <div class="bank-card">
+                  <div class="bank-row">
+                    <span class="bank-label">CCP</span>
+                    <span class="bank-val font-bold" dir="ltr">123456789 00</span>
+                  </div>
+                  <div class="bank-row">
+                    <span class="bank-label">RIP</span>
+                    <span class="bank-val font-bold" dir="ltr">007 99999 123456789 00</span>
+                  </div>
+                  <div class="bank-row">
+                    <span class="bank-label">Name</span>
+                    <span class="bank-val font-bold">ORE BOOKING</span>
+                  </div>
                 </div>
                 <div class="form-group">
-                  <label id="lbl-receipt">Upload Receipt (Image)</label>
-                  <input type="file" id="receipt-file" accept="image/*">
+                  <label for="receipt-file" id="lbl-receipt">Upload Receipt (Image)</label>
+                  <div class="file-upload-wrapper">
+                    <input type="file" id="receipt-file" accept="image/*">
+                    <label for="receipt-file" class="file-upload-label" id="file-upload-label-txt">
+                      <i class="ph ph-upload-simple"></i>
+                      <span id="file-upload-hint">Click or drag to upload receipt</span>
+                    </label>
+                  </div>
+                  <p id="receipt-file-name" class="file-name-display"></p>
                 </div>
               </div>
-
             </div>
 
             <!-- Cancellation Policy -->
-            <div class="policy-section mt-4 pt-4" style="border-top: 1px solid var(--border-color);">
-              <label class="checkbox-label" style="align-items: flex-start;">
+            <div class="policy-section">
+              <label class="checkbox-policy-label">
                 <input type="checkbox" id="agree-policy">
-                <div>
-                  <span class="font-bold text-sm" id="lbl-policy-title">I agree to the Cancellation Policy</span>
-                  <p class="text-sm text-muted mt-1" id="lbl-policy-desc">Free cancellation up to 48 hours before check-in. After that, the first night is non-refundable.</p>
+                <div class="policy-text">
+                  <span class="font-bold policy-title" id="lbl-policy-title">I agree to the Cancellation Policy</span>
+                  <p class="policy-desc" id="lbl-policy-desc">Free cancellation up to 48 hours before check-in. After that, the first night's fee is non-refundable.</p>
                 </div>
               </label>
             </div>
 
-            <div style="margin-top:32px; display:flex; justify-content:space-between;">
-              <button class="icon-btn text-muted font-bold" id="btn-prev-2"><i class="ph ph-arrow-left"></i> <span id="btn-back-2">Back</span></button>
-              <button class="primary-btn font-bold" id="btn-next-2" disabled>Next Step <i class="ph ph-arrow-right"></i></button>
+            <div class="step-actions step-actions-between">
+              <button class="ghost-btn font-medium" id="btn-prev-2">
+                <i class="ph ph-arrow-left"></i> <span id="btn-back-2">Back</span>
+              </button>
+              <button class="primary-btn font-bold" id="btn-next-2" disabled>
+                <span id="btn-next-2-txt">Next Step</span> <i class="ph ph-arrow-right"></i>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- STEP 3: Guest Details -->
+        <!-- ====================== STEP 3: Guest Details ====================== -->
         <div class="booking-step" id="step-3">
           <div class="step-header">
             <h2 class="step-title" id="st-title-3">Who is booking?</h2>
             <p class="step-subtitle" id="st-sub-3">Enter your contact details so we can reach you.</p>
           </div>
           <div class="step-body">
-            
-            <form id="guest-form" class="guest-form">
+
+            <form id="guest-form" class="guest-form" novalidate>
               <div class="form-group">
-                <label id="lbl-fname">Full Name <span class="req">*</span></label>
-                <input type="text" id="g-name" required placeholder="John Doe">
+                <label for="g-name" id="lbl-fname">Full Name <span class="req-star">*</span></label>
+                <input type="text" id="g-name" required placeholder="John Doe" autocomplete="name">
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label id="lbl-email">Email <span class="req">*</span></label>
-                  <input type="email" id="g-email" required placeholder="john@example.com">
+                  <label for="g-email" id="lbl-email">Email <span class="req-star">*</span></label>
+                  <input type="email" id="g-email" required placeholder="john@example.com" autocomplete="email">
                 </div>
                 <div class="form-group">
-                  <label id="lbl-phone">Phone Number <span class="req">*</span></label>
-                  <input type="tel" id="g-phone" required placeholder="+213 555 000 000" dir="ltr" style="text-align:left;">
+                  <label for="g-phone" id="lbl-phone">Phone Number <span class="req-star">*</span></label>
+                  <input type="tel" id="g-phone" required placeholder="+213 555 000 000" dir="ltr" autocomplete="tel">
                 </div>
               </div>
               <div class="form-group">
-                <label id="lbl-notes">Special Requests (Optional)</label>
-                <textarea id="g-notes" rows="3" placeholder="Any special needs or arrival time?"></textarea>
+                <label for="g-notes" id="lbl-notes">Special Requests <span class="optional-tag" id="lbl-optional">(Optional)</span></label>
+                <textarea id="g-notes" rows="3" placeholder="Any special needs or estimated arrival time?"></textarea>
               </div>
 
               <!-- Auth Prompt if not logged in -->
-              <div id="auth-prompt" class="mt-3 p-3 bg-surface border rounded-xl" style="display:none;">
-                <p class="text-sm" id="txt-auth-prompt">Have an account? Log in for faster booking and to track your reservations.</p>
-                <a href="#" id="link-login-booking" class="link-small mt-1 d-inline-block">Log In</a>
+              <div id="auth-prompt" class="auth-prompt-box" style="display:none;">
+                <i class="ph ph-user-circle auth-prompt-icon"></i>
+                <div>
+                  <p class="auth-prompt-text" id="txt-auth-prompt">Have an account? Log in for faster booking and to track your reservations.</p>
+                  <a href="#" id="link-login-booking" class="auth-prompt-link">Log In / Register</a>
+                </div>
               </div>
 
-              <div style="margin-top:32px; display:flex; justify-content:space-between; align-items:center;">
-                <button type="button" class="icon-btn text-muted font-bold" id="btn-prev-3"><i class="ph ph-arrow-left"></i> <span id="btn-back-3">Back</span></button>
+              <div class="step-actions step-actions-between" style="margin-top:2rem;">
+                <button type="button" class="ghost-btn font-medium" id="btn-prev-3">
+                  <i class="ph ph-arrow-left"></i> <span id="btn-back-3">Back</span>
+                </button>
                 <button type="submit" class="primary-btn font-bold" id="btn-confirm-book">
-                  <i class="ph ph-check-circle"></i> <span id="btn-confirm-txt">Confirm Booking</span>
+                  <i class="ph ph-check-circle"></i>
+                  <span id="btn-confirm-txt">Confirm Booking</span>
                 </button>
               </div>
             </form>
@@ -255,64 +296,73 @@
           </div>
         </div>
 
-        <!-- STEP 4: Success -->
+        <!-- ====================== STEP 4: Success ====================== -->
         <div class="booking-step" id="step-4">
-          <div class="step-body" style="text-align:center; padding: 60px 20px;">
-            <div class="success-icon-wrapper mb-4">
-              <i class="ph-fill ph-check-circle text-success" style="font-size: 5rem;"></i>
+          <div class="step-body success-screen">
+            <div class="success-animation">
+              <div class="success-ring"></div>
+              <i class="ph-fill ph-check success-check-icon"></i>
             </div>
-            <h2 class="font-bold mb-2" id="st-title-4" style="font-size: 1.8rem;">Booking Confirmed!</h2>
-            <p class="text-muted mb-4" id="st-sub-4">Thank you for choosing OreBooking. We've received your request.</p>
-            
-            <div class="booking-ref-box bg-surface border rounded-xl p-4 mb-4 d-inline-block" style="max-width: 300px; margin: 0 auto;">
-              <p class="text-sm text-muted text-uppercase font-bold mb-1" id="lbl-ref">Booking Reference</p>
-              <h3 class="font-bold text-primary" id="ref-number" style="letter-spacing: 2px;">#---</h3>
+            <h2 class="success-title font-bold" id="st-title-4">Booking Confirmed!</h2>
+            <p class="success-subtitle" id="st-sub-4">Thank you for choosing OreBooking. We've received your request and will confirm shortly.</p>
+
+            <div class="booking-ref-box">
+              <p class="ref-label font-bold" id="lbl-ref">Booking Reference</p>
+              <h3 class="ref-number font-bold" id="ref-number">#---</h3>
             </div>
 
-            <div class="mt-4">
-              <a href="index.html" class="primary-btn font-bold d-inline-flex align-items-center gap-2" style="text-decoration:none;">
+            <div class="success-details-grid" id="success-details-grid">
+              <!-- Filled by JS -->
+            </div>
+
+            <div class="success-actions">
+              <a href="index.html" class="primary-btn font-bold success-home-btn" style="text-decoration:none;">
                 <i class="ph ph-house"></i> <span id="btn-go-home">Return to Home</span>
               </a>
+              <button class="ghost-btn font-medium" id="btn-print-booking" onclick="window.print()">
+                <i class="ph ph-printer"></i> <span id="btn-print-txt">Print Confirmation</span>
+              </button>
             </div>
           </div>
         </div>
 
       </div>
+      <!-- /booking-main-card -->
 
-      <!-- ➡️ Right: Property Summary (Fixed Sidebar) -->
+      <!-- ➡️ Right: Property Summary Sidebar -->
       <aside class="booking-sidebar">
         <div class="booking-summary-card">
-          <h4 id="sum-title">Booking Summary</h4>
-          
+          <h4 class="font-bold summary-card-title" id="sum-title">Booking Summary</h4>
+
           <div class="booking-prop-summary">
-            <img src="" id="sum-img" alt="Property" class="booking-prop-img">
+            <img src="" id="sum-img" alt="Property" class="booking-prop-img" width="80" height="80" loading="lazy">
             <div class="booking-prop-info">
               <div class="booking-prop-location" id="sum-loc">Loading...</div>
-              <div class="booking-prop-title" id="sum-name">Loading property...</div>
-              <div class="booking-prop-price mt-1">
-                <strong id="sum-price-night">0</strong> <span>/ <span id="sum-night-lbl">night</span></span>
+              <div class="booking-prop-title font-bold" id="sum-name">Loading property...</div>
+              <div class="booking-prop-price">
+                <strong id="sum-price-night">0</strong>
+                <span class="text-muted-color"> / <span id="sum-night-lbl">night</span></span>
               </div>
             </div>
           </div>
 
+          <div class="summary-divider"></div>
+
           <div id="price-breakdown">
-            <div class="price-placeholder" id="sum-placeholder">
-              Select dates to see price details
-            </div>
-            <!-- يتم تعبئتها ديناميكياً بملف booking.js عند اختيار التواريخ -->
+            <p class="sum-placeholder-txt" id="sum-placeholder">Select dates to see price details</p>
           </div>
         </div>
 
-        <div class="security-badge text-center mt-2">
-          <p class="text-sm text-muted"><i class="ph ph-lock-key"></i> <span id="txt-secure">Secure & encrypted booking</span></p>
+        <div class="security-badge">
+          <i class="ph ph-lock-key security-icon"></i>
+          <span id="txt-secure">Secure & encrypted booking</span>
         </div>
       </aside>
 
     </div>
   </main>
 
-  <script src="script.js"></script>
-  <!-- هذا الملف تم إنشاؤه سابقاً ويحتوي على المنطق المتقدم للحجز -->
+  <!-- ⚠️ لا تضف script.js هنا — booking.js يملك Firebase init خاص به -->
   <script src="booking.js"></script>
 </body>
 </html>
