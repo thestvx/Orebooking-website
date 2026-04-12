@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حجز غرفة — OreBooking</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="booking.css">
+</head>
+<body class="booking-page">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="index.html" class="logo" aria-label="OreBooking Home">
+      <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="main-logo">
+    </a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="تبديل الوضع">
+        <i class="ph ph-moon"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Booking Wrapper -->
+  <div class="booking-wrapper" id="booking-wrapper">
+
+    <!-- ═══ LEFT: Steps Panel ═══ -->
+    <div class="booking-main">
+
+      <!-- Step Indicator -->
+      <div class="booking-steps-header" role="list" aria-label="خطوات الحجز">
+        <div class="step-indicator active" role="listitem">
+          <div class="step-num"><span>1</span></div>
+          <span class="step-label">التواريخ</span>
+        </div>
+        <div class="step-indicator" role="listitem">
+          <div class="step-num"><span>2</span></div>
+          <span class="step-label">المراجعة</span>
+        </div>
+        <div class="step-indicator" role="listitem">
+          <div class="step-num"><span>3</span></div>
+          <span class="step-label">بياناتك</span>
+        </div>
+        <div class="step-indicator" role="listitem">
+          <div class="step-num"><span>4</span></div>
+          <span class="step-label">تأكيد</span>
+        </div>
+      </div>
+
+      <!-- Error Banner -->
+      <div id="step-error" role="alert"></div>
+
+      <!-- ── STEP 1: Dates & Guests ── -->
+      <article class="booking-main-card booking-step active" id="step-1">
+        <div class="step-header">
+          <h2 class="step-title">اختر تواريخ إقامتك</h2>
+          <p class="step-subtitle">انقر على يوم الدخول ثم يوم الخروج لتحديد فترة إقامتك.</p>
+        </div>
+
+        <div class="step-body">
+          <!-- Calendar -->
+          <div class="calendar-section">
+            <div class="calendar-nav">
+              <button class="cal-nav-btn" id="cal-prev" aria-label="الشهر السابق">
+                <i class="ph ph-caret-right"></i>
+              </button>
+              <span id="calendar-month-label" aria-live="polite"></span>
+              <button class="cal-nav-btn" id="cal-next" aria-label="الشهر التالي">
+                <i class="ph ph-caret-left"></i>
+              </button>
+            </div>
+            <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="تقويم الحجز"></div>
+
+            <!-- Date Summary -->
+            <div class="date-summary" aria-live="polite">
+              <div class="date-summary-item">
+                <span class="date-summary-label">دخول</span>
+                <span class="date-summary-value" id="selected-checkin">—</span>
+              </div>
+              <div class="date-summary-item">
+                <span class="date-summary-label">خروج</span>
+                <span class="date-summary-value" id="selected-checkout">—</span>
+              </div>
+              <div class="date-summary-item">
+                <span class="date-summary-label">المدة</span>
+                <span class="date-summary-value" id="selected-nights">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guests -->
+          <div class="guests-section">
+            <h3>عدد الضيوف</h3>
+            <div class="guests-counter" role="group" aria-label="عداد الضيوف">
+              <div class="guests-label">
+                <span>الضيوف</span>
+                <small>بالغون وأطفال</small>
+              </div>
+              <button class="counter-btn" onclick="changeGuests(-1)" aria-label="إنقاص عدد الضيوف">−</button>
+              <span id="guests-count" aria-live="polite">1</span>
+              <button class="counter-btn" onclick="changeGuests(1)" aria-label="زيادة عدد الضيوف">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-booking-primary" id="btn-step1-next">
+            متابعة <i class="ph ph-arrow-left"></i>
+          </button>
+        </div>
+      </article>
+
+      <!-- ── STEP 2: Review ── -->
+      <article class="booking-main-card booking-step" id="step-2">
+        <div class="step-header">
+          <h2 class="step-title">مراجعة الحجز</h2>
+          <p class="step-subtitle">تحقق من تفاصيل حجزك قبل المتابعة.</p>
+        </div>
+
+        <div class="step-body">
+          <div id="review-summary" class="review-list"></div>
+
+          <div id="price-breakdown" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-color);">
+            <p class="price-placeholder">يُحسب السعر بعد تحديد التواريخ</p>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-booking-back" id="btn-step2-back">
+            <i class="ph ph-arrow-right"></i> رجوع
+          </button>
+          <button class="btn-booking-primary" id="btn-step2-next">
+            متابعة <i class="ph ph-arrow-left"></i>
+          </button>
+        </div>
+      </article>
+
+      <!-- ── STEP 3: Guest Info ── -->
+      <article class="booking-main-card booking-step" id="step-3">
+        <div class="step-header">
+          <h2 class="step-title">بياناتك الشخصية</h2>
+          <p class="step-subtitle">أدخل بياناتك للتواصل معك وتأكيد الحجز.</p>
+        </div>
+
+        <div class="step-body">
+          <div class="guest-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="guest-name">الاسم الكامل <span class="req">*</span></label>
+                <input type="text" id="guest-name" placeholder="محمد العمري" autocomplete="name">
+              </div>
+              <div class="form-group">
+                <label for="guest-phone">رقم الهاتف <span class="req">*</span></label>
+                <input type="tel" id="guest-phone" placeholder="+213 555 000 000" autocomplete="tel" dir="ltr">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="guest-email">البريد الإلكتروني <span class="req">*</span></label>
+              <input type="email" id="guest-email" placeholder="example@mail.com" autocomplete="email" dir="ltr">
+            </div>
+
+            <div class="form-group">
+              <label for="guest-notes">ملاحظات إضافية (اختياري)</label>
+              <textarea id="guest-notes" rows="3"
+                placeholder="هل لديك طلبات خاصة أو ملاحظات للمضيف؟"></textarea>
+            </div>
+
+            <div class="policy-note">
+              <i class="ph ph-shield-check" style="color:var(--primary);margin-inline-end:4px;"></i>
+              بياناتك محمية ولن تُشارَك مع أطراف ثالثة. بالمتابعة فإنك توافق على
+              <a href="#" class="text-primary">سياسة الخصوصية</a>
+              وشروط الحجز الخاصة بنا.
+            </div>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-booking-back" id="btn-step3-back">
+            <i class="ph ph-arrow-right"></i> رجوع
+          </button>
+          <button class="btn-booking-primary" id="btn-step3-next">
+            <i class="ph ph-check-circle"></i> تأكيد الحجز
+          </button>
+        </div>
+      </article>
+
+      <!-- ── STEP 4: Confirmation ── -->
+      <article class="booking-main-card booking-step" id="step-4">
+        <div class="confirm-wrapper" id="confirm-details">
+          <!-- rendered by JS -->
+        </div>
+        <div class="step-footer" style="justify-content:center;">
+          <a href="index.html" class="btn-booking-back">
+            <i class="ph ph-house"></i> العودة للرئيسية
+          </a>
+        </div>
+      </article>
+
+    </div><!-- /booking-main -->
+
+    <!-- ═══ RIGHT: Sticky Summary ═══ -->
+    <aside class="booking-sidebar">
+      <div class="booking-summary-card">
+        <h4>ملخص الحجز</h4>
+        <div id="booking-prop-summary">
+          <!-- rendered by JS -->
+          <div class="price-placeholder">جارٍ التحميل...</div>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /booking-wrapper -->
+
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+      authDomain: "orebooking-website.firebaseapp.com",
+      projectId: "orebooking-website",
+      storageBucket: "orebooking-website.firebasestorage.app",
+      messagingSenderId: "1012887567747",
+      appId: "1:1012887567747:web:153b57b60cb143d88acab6",
+      measurementId: "G-5GKMRMVHC3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+
+  <!-- Theme Toggle -->
+  <script>
+    const themeBtn2 = document.getElementById('theme-toggle');
+    const body2 = document.body;
+    const saved2 = localStorage.getItem('ore_theme');
+    if (saved2 === 'dark') body2.classList.add('dark');
+    themeBtn2?.addEventListener('click', () => {
+      body2.classList.toggle('dark');
+      localStorage.setItem('ore_theme', body2.classList.contains('dark') ? 'dark' : 'light');
+      const logo = document.getElementById('main-logo');
+      if (logo) logo.src = body2.classList.contains('dark') ? 'logos/orebooking2.png' : 'logos/orebooking.png';
+    });
+  </script>
+
+  <!-- Booking Logic -->
+  <script src="booking.js" defer></script>
+
+</body>
+</html>
