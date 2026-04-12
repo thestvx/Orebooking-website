@@ -239,22 +239,19 @@
           <span class="text-muted text-sm">/ <span data-i18n="night">night</span></span>
         </div>
 
-        <div class="booking-inputs">
-          <div class="input-row">
-            <div class="input-half">
-              <label class="text-sm font-bold">CHECK-IN</label>
-              <input type="date" id="checkin-date">
-            </div>
-            <div class="input-half border-left">
-              <label class="text-sm font-bold">CHECKOUT</label>
-              <input type="date" id="checkout-date">
-            </div>
-          </div>
+        <!-- ✅ تمت إزالة حقول الإدخال القديمة من هنا لأن الحجز أصبح في صفحة منفصلة -->
+        <div style="padding: 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
+          <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">
+            <i class="ph ph-info" style="vertical-align: middle; margin-inline-end: 4px;"></i>
+            <span id="booking-info-text">اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.</span>
+          </p>
         </div>
 
-        <button class="primary-btn font-bold mt-4" id="book-now-btn" data-i18n="book_now">
-          Reserve Now
-        </button>
+        <!-- ✅ تم تحويل الزر إلى رابط (a tag) وتغيير الـ id ليتم التعامل معه في script.js -->
+        <a href="#" class="primary-btn font-bold" id="book-now-link" style="display: flex; justify-content: center; align-items: center; gap: 8px; text-decoration: none;">
+          <i class="ph ph-calendar-check" style="font-size: 1.2rem;"></i>
+          <span data-i18n="book_now">Reserve Now</span>
+        </a>
         <p class="text-center text-sm text-muted mt-3" data-i18n="wont_charged">
           You won't be charged yet
         </p>
@@ -460,6 +457,26 @@
       mapLink.style.display = 'inline-flex';
     }
   };
+  
+  // إعداد رابط زر "احجز الآن" ليأخذ معرّف العقار من الرابط الحالي
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const propId = urlParams.get('id');
+    const bookNowLink = document.getElementById('book-now-link');
+    
+    if (bookNowLink && propId) {
+      bookNowLink.href = `booking.html?id=${propId}`;
+    }
+    
+    // ترجمة نص الإشعار الصغير
+    const lang = localStorage.getItem('ore_lang') || 'en';
+    const infoText = document.getElementById('booking-info-text');
+    if (infoText) {
+      infoText.textContent = lang === 'ar' 
+        ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.' 
+        : 'Choose your dates and number of guests on the next page to see the final price.';
+    }
+  });
   </script>
 
 </body>
