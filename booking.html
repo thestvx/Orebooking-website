@@ -1,264 +1,318 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>حجز غرفة — OreBooking</title>
+  <title>Complete Booking - OreBooking</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
 
   <!-- Icons -->
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-  <!-- Firebase -->
+  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- إضافة Storage SDK لرفع صور الوصولات البنكية -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="booking.css">
 </head>
-<body class="booking-page">
+<body>
 
-  <!-- Navbar -->
-  <nav class="navbar">
-    <a href="index.html" class="logo" aria-label="OreBooking Home">
-      <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="main-logo">
+  <!-- ======== Navbar ======== -->
+  <nav class="navbar inner-nav">
+    <button onclick="history.back()" class="back-btn font-medium">
+      <i class="ph ph-arrow-left"></i>
+      <span id="nav-back-txt">Back to Property</span>
+    </button>
+    <a href="index.html" class="logo">
+      <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
     </a>
-    <div class="nav-actions">
-      <button class="icon-btn" id="theme-toggle" aria-label="تبديل الوضع">
+    <div class="nav-actions" style="margin-inline-start: auto;">
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
         <i class="ph ph-moon"></i>
       </button>
+      <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
     </div>
   </nav>
 
-  <!-- Main Booking Wrapper -->
-  <div class="booking-wrapper" id="booking-wrapper">
+  <!-- ======== Main Booking Area ======== -->
+  <main class="booking-page">
+    
+    <!-- Step Indicators -->
+    <div class="booking-steps-header" id="steps-header">
+      <div class="step-indicator active" data-step="1">
+        <div class="step-num"><span>1</span></div>
+        <div class="step-label" id="lbl-step1">Dates & Guests</div>
+      </div>
+      <div class="step-indicator" data-step="2">
+        <div class="step-num"><span>2</span></div>
+        <div class="step-label" id="lbl-step2">Review & Pay</div>
+      </div>
+      <div class="step-indicator" data-step="3">
+        <div class="step-num"><span>3</span></div>
+        <div class="step-label" id="lbl-step3">Guest Details</div>
+      </div>
+      <div class="step-indicator" data-step="4">
+        <div class="step-num"><span>4</span></div>
+        <div class="step-label" id="lbl-step4">Confirmation</div>
+      </div>
+    </div>
 
-    <!-- ═══ LEFT: Steps Panel ═══ -->
-    <div class="booking-main">
+    <div class="booking-wrapper">
+      
+      <!-- ⬅️ Left: Steps Content -->
+      <div class="booking-main-card">
+        
+        <!-- STEP 1: Dates & Guests -->
+        <div class="booking-step active" id="step-1">
+          <div class="step-header">
+            <h2 class="step-title" id="st-title-1">When are you traveling?</h2>
+            <p class="step-subtitle" id="st-sub-1">Select your check-in and check-out dates.</p>
+          </div>
+          <div class="step-body">
+            
+            <div class="calendar-section">
+              <div class="calendar-nav">
+                <button class="cal-nav-btn" id="cal-prev"><i class="ph ph-caret-left"></i></button>
+                <span id="calendar-month-label">September 2024</span>
+                <button class="cal-nav-btn" id="cal-next"><i class="ph ph-caret-right"></i></button>
+              </div>
+              <div class="calendar-grid" id="calendar-grid">
+                <!-- Calendar cells injected via JS -->
+              </div>
+              
+              <div class="date-summary">
+                <div class="date-summary-item">
+                  <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
+                  <span class="date-summary-value" id="disp-checkin">Add date</span>
+                </div>
+                <div class="date-summary-item" style="border-inline: 1px solid var(--border-color);">
+                  <span class="date-summary-label" id="lbl-nights">Nights</span>
+                  <span class="date-summary-value" id="disp-nights">-</span>
+                </div>
+                <div class="date-summary-item">
+                  <span class="date-summary-label" id="lbl-chk-out">Checkout</span>
+                  <span class="date-summary-value" id="disp-checkout">Add date</span>
+                </div>
+              </div>
+              
+              <!-- رسالة التحذير للحد الأدنى لعدد الليالي أو التداخل مع تواريخ محجوزة -->
+              <div id="min-nights-warning" class="text-sm text-danger mt-2" style="display:none; text-align:center;"></div>
+            </div>
 
-      <!-- Step Indicator -->
-      <div class="booking-steps-header" role="list" aria-label="خطوات الحجز">
-        <div class="step-indicator active" role="listitem">
-          <div class="step-num"><span>1</span></div>
-          <span class="step-label">التواريخ</span>
+            <div class="guests-section">
+              <h3 id="lbl-who-coming">Who's coming?</h3>
+              <div class="guests-counter">
+                <div class="guests-label">
+                  <span id="lbl-guests-title">Guests</span>
+                  <small id="lbl-guests-sub">Ages 2 or above</small>
+                </div>
+                <button class="counter-btn" id="btn-minus-guest"><i class="ph ph-minus"></i></button>
+                <span id="guests-count">1</span>
+                <button class="counter-btn" id="btn-plus-guest"><i class="ph ph-plus"></i></button>
+              </div>
+            </div>
+
+            <div style="margin-top:32px; text-align:end;">
+              <button class="primary-btn font-bold" id="btn-next-1" disabled>Next Step <i class="ph ph-arrow-right"></i></button>
+            </div>
+          </div>
         </div>
-        <div class="step-indicator" role="listitem">
-          <div class="step-num"><span>2</span></div>
-          <span class="step-label">المراجعة</span>
+
+        <!-- STEP 2: Review & Payment Method -->
+        <div class="booking-step" id="step-2">
+          <div class="step-header">
+            <h2 class="step-title" id="st-title-2">Review & Payment</h2>
+            <p class="step-subtitle" id="st-sub-2">Check your details and select how you want to pay.</p>
+          </div>
+          <div class="step-body">
+            
+            <div class="review-list">
+              <div class="review-row">
+                <span class="review-label" id="rev-dates">Dates</span>
+                <span class="review-value" id="rev-val-dates">-</span>
+              </div>
+              <div class="review-row">
+                <span class="review-label" id="rev-guests">Guests</span>
+                <span class="review-value" id="rev-val-guests">-</span>
+              </div>
+              <div class="review-row total-row">
+                <span class="review-label" id="rev-total">Total (DZD)</span>
+                <span class="review-value price-highlight" id="rev-val-total">0</span>
+              </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="payment-methods-section mt-4 pt-4" style="border-top: 1px solid var(--border-color);">
+              <h3 class="font-bold mb-3" id="lbl-pay-method" style="font-size: 1rem;">Payment Method</h3>
+              
+              <!-- الخيار الأول: الدفع عند الوصول -->
+              <label class="payment-option">
+                <input type="radio" name="pay_method" value="cash" checked>
+                <div class="pay-opt-content">
+                  <i class="ph ph-money text-primary" style="font-size: 1.5rem;"></i>
+                  <div>
+                    <strong id="lbl-pay-cash">Pay at Property</strong>
+                    <p class="text-sm text-muted" id="desc-pay-cash">Pay the full amount when you arrive.</p>
+                  </div>
+                </div>
+              </label>
+
+              <!-- الخيار الثاني: الدفع عبر تحويل بنكي/بريدي -->
+              <label class="payment-option mt-2">
+                <input type="radio" name="pay_method" value="transfer">
+                <div class="pay-opt-content">
+                  <i class="ph ph-bank text-primary" style="font-size: 1.5rem;"></i>
+                  <div>
+                    <strong id="lbl-pay-transfer">Bank / CCP Transfer</strong>
+                    <p class="text-sm text-muted" id="desc-pay-transfer">Transfer to our account and upload receipt.</p>
+                  </div>
+                </div>
+              </label>
+
+              <!-- بيانات الدفع والتحويل (مخفية وتظهر عند اختيار التحويل) -->
+              <div id="transfer-details" class="transfer-box mt-3" style="display: none;">
+                <p class="text-sm mb-2" id="txt-bank-info">Please transfer the total amount to the following account:</p>
+                <div class="bank-card mb-3">
+                  <p><strong>CCP:</strong> 123456789 00</p>
+                  <p><strong>Name:</strong> ORE BOOKING</p>
+                </div>
+                <div class="form-group">
+                  <label id="lbl-receipt">Upload Receipt (Image)</label>
+                  <input type="file" id="receipt-file" accept="image/*">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Cancellation Policy -->
+            <div class="policy-section mt-4 pt-4" style="border-top: 1px solid var(--border-color);">
+              <label class="checkbox-label" style="align-items: flex-start;">
+                <input type="checkbox" id="agree-policy">
+                <div>
+                  <span class="font-bold text-sm" id="lbl-policy-title">I agree to the Cancellation Policy</span>
+                  <p class="text-sm text-muted mt-1" id="lbl-policy-desc">Free cancellation up to 48 hours before check-in. After that, the first night is non-refundable.</p>
+                </div>
+              </label>
+            </div>
+
+            <div style="margin-top:32px; display:flex; justify-content:space-between;">
+              <button class="icon-btn text-muted font-bold" id="btn-prev-2"><i class="ph ph-arrow-left"></i> <span id="btn-back-2">Back</span></button>
+              <button class="primary-btn font-bold" id="btn-next-2" disabled>Next Step <i class="ph ph-arrow-right"></i></button>
+            </div>
+          </div>
         </div>
-        <div class="step-indicator" role="listitem">
-          <div class="step-num"><span>3</span></div>
-          <span class="step-label">بياناتك</span>
+
+        <!-- STEP 3: Guest Details -->
+        <div class="booking-step" id="step-3">
+          <div class="step-header">
+            <h2 class="step-title" id="st-title-3">Who is booking?</h2>
+            <p class="step-subtitle" id="st-sub-3">Enter your contact details so we can reach you.</p>
+          </div>
+          <div class="step-body">
+            
+            <form id="guest-form" class="guest-form">
+              <div class="form-group">
+                <label id="lbl-fname">Full Name <span class="req">*</span></label>
+                <input type="text" id="g-name" required placeholder="John Doe">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label id="lbl-email">Email <span class="req">*</span></label>
+                  <input type="email" id="g-email" required placeholder="john@example.com">
+                </div>
+                <div class="form-group">
+                  <label id="lbl-phone">Phone Number <span class="req">*</span></label>
+                  <input type="tel" id="g-phone" required placeholder="+213 555 000 000" dir="ltr" style="text-align:left;">
+                </div>
+              </div>
+              <div class="form-group">
+                <label id="lbl-notes">Special Requests (Optional)</label>
+                <textarea id="g-notes" rows="3" placeholder="Any special needs or arrival time?"></textarea>
+              </div>
+
+              <!-- Auth Prompt if not logged in -->
+              <div id="auth-prompt" class="mt-3 p-3 bg-surface border rounded-xl" style="display:none;">
+                <p class="text-sm" id="txt-auth-prompt">Have an account? Log in for faster booking and to track your reservations.</p>
+                <a href="#" id="link-login-booking" class="link-small mt-1 d-inline-block">Log In</a>
+              </div>
+
+              <div style="margin-top:32px; display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" class="icon-btn text-muted font-bold" id="btn-prev-3"><i class="ph ph-arrow-left"></i> <span id="btn-back-3">Back</span></button>
+                <button type="submit" class="primary-btn font-bold" id="btn-confirm-book">
+                  <i class="ph ph-check-circle"></i> <span id="btn-confirm-txt">Confirm Booking</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
         </div>
-        <div class="step-indicator" role="listitem">
-          <div class="step-num"><span>4</span></div>
-          <span class="step-label">تأكيد</span>
+
+        <!-- STEP 4: Success -->
+        <div class="booking-step" id="step-4">
+          <div class="step-body" style="text-align:center; padding: 60px 20px;">
+            <div class="success-icon-wrapper mb-4">
+              <i class="ph-fill ph-check-circle text-success" style="font-size: 5rem;"></i>
+            </div>
+            <h2 class="font-bold mb-2" id="st-title-4" style="font-size: 1.8rem;">Booking Confirmed!</h2>
+            <p class="text-muted mb-4" id="st-sub-4">Thank you for choosing OreBooking. We've received your request.</p>
+            
+            <div class="booking-ref-box bg-surface border rounded-xl p-4 mb-4 d-inline-block" style="max-width: 300px; margin: 0 auto;">
+              <p class="text-sm text-muted text-uppercase font-bold mb-1" id="lbl-ref">Booking Reference</p>
+              <h3 class="font-bold text-primary" id="ref-number" style="letter-spacing: 2px;">#---</h3>
+            </div>
+
+            <div class="mt-4">
+              <a href="index.html" class="primary-btn font-bold d-inline-flex align-items-center gap-2" style="text-decoration:none;">
+                <i class="ph ph-house"></i> <span id="btn-go-home">Return to Home</span>
+              </a>
+            </div>
+          </div>
         </div>
+
       </div>
 
-      <!-- Error Banner -->
-      <div id="step-error" role="alert"></div>
-
-      <!-- ── STEP 1: Dates & Guests ── -->
-      <article class="booking-main-card booking-step active" id="step-1">
-        <div class="step-header">
-          <h2 class="step-title">اختر تواريخ إقامتك</h2>
-          <p class="step-subtitle">انقر على يوم الدخول ثم يوم الخروج لتحديد فترة إقامتك.</p>
-        </div>
-
-        <div class="step-body">
-          <!-- Calendar -->
-          <div class="calendar-section">
-            <div class="calendar-nav">
-              <button class="cal-nav-btn" id="cal-prev" aria-label="الشهر السابق">
-                <i class="ph ph-caret-right"></i>
-              </button>
-              <span id="calendar-month-label" aria-live="polite"></span>
-              <button class="cal-nav-btn" id="cal-next" aria-label="الشهر التالي">
-                <i class="ph ph-caret-left"></i>
-              </button>
-            </div>
-            <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="تقويم الحجز"></div>
-
-            <!-- Date Summary -->
-            <div class="date-summary" aria-live="polite">
-              <div class="date-summary-item">
-                <span class="date-summary-label">دخول</span>
-                <span class="date-summary-value" id="selected-checkin">—</span>
-              </div>
-              <div class="date-summary-item">
-                <span class="date-summary-label">خروج</span>
-                <span class="date-summary-value" id="selected-checkout">—</span>
-              </div>
-              <div class="date-summary-item">
-                <span class="date-summary-label">المدة</span>
-                <span class="date-summary-value" id="selected-nights">—</span>
+      <!-- ➡️ Right: Property Summary (Fixed Sidebar) -->
+      <aside class="booking-sidebar">
+        <div class="booking-summary-card">
+          <h4 id="sum-title">Booking Summary</h4>
+          
+          <div class="booking-prop-summary">
+            <img src="" id="sum-img" alt="Property" class="booking-prop-img">
+            <div class="booking-prop-info">
+              <div class="booking-prop-location" id="sum-loc">Loading...</div>
+              <div class="booking-prop-title" id="sum-name">Loading property...</div>
+              <div class="booking-prop-price mt-1">
+                <strong id="sum-price-night">0</strong> <span>/ <span id="sum-night-lbl">night</span></span>
               </div>
             </div>
           </div>
 
-          <!-- Guests -->
-          <div class="guests-section">
-            <h3>عدد الضيوف</h3>
-            <div class="guests-counter" role="group" aria-label="عداد الضيوف">
-              <div class="guests-label">
-                <span>الضيوف</span>
-                <small>بالغون وأطفال</small>
-              </div>
-              <button class="counter-btn" onclick="changeGuests(-1)" aria-label="إنقاص عدد الضيوف">−</button>
-              <span id="guests-count" aria-live="polite">1</span>
-              <button class="counter-btn" onclick="changeGuests(1)" aria-label="زيادة عدد الضيوف">+</button>
+          <div id="price-breakdown">
+            <div class="price-placeholder" id="sum-placeholder">
+              Select dates to see price details
             </div>
+            <!-- يتم تعبئتها ديناميكياً بملف booking.js عند اختيار التواريخ -->
           </div>
         </div>
 
-        <div class="step-footer">
-          <button class="btn-booking-primary" id="btn-step1-next">
-            متابعة <i class="ph ph-arrow-left"></i>
-          </button>
+        <div class="security-badge text-center mt-2">
+          <p class="text-sm text-muted"><i class="ph ph-lock-key"></i> <span id="txt-secure">Secure & encrypted booking</span></p>
         </div>
-      </article>
+      </aside>
 
-      <!-- ── STEP 2: Review ── -->
-      <article class="booking-main-card booking-step" id="step-2">
-        <div class="step-header">
-          <h2 class="step-title">مراجعة الحجز</h2>
-          <p class="step-subtitle">تحقق من تفاصيل حجزك قبل المتابعة.</p>
-        </div>
+    </div>
+  </main>
 
-        <div class="step-body">
-          <div id="review-summary" class="review-list"></div>
-
-          <div id="price-breakdown" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-color);">
-            <p class="price-placeholder">يُحسب السعر بعد تحديد التواريخ</p>
-          </div>
-        </div>
-
-        <div class="step-footer">
-          <button class="btn-booking-back" id="btn-step2-back">
-            <i class="ph ph-arrow-right"></i> رجوع
-          </button>
-          <button class="btn-booking-primary" id="btn-step2-next">
-            متابعة <i class="ph ph-arrow-left"></i>
-          </button>
-        </div>
-      </article>
-
-      <!-- ── STEP 3: Guest Info ── -->
-      <article class="booking-main-card booking-step" id="step-3">
-        <div class="step-header">
-          <h2 class="step-title">بياناتك الشخصية</h2>
-          <p class="step-subtitle">أدخل بياناتك للتواصل معك وتأكيد الحجز.</p>
-        </div>
-
-        <div class="step-body">
-          <div class="guest-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="guest-name">الاسم الكامل <span class="req">*</span></label>
-                <input type="text" id="guest-name" placeholder="محمد العمري" autocomplete="name">
-              </div>
-              <div class="form-group">
-                <label for="guest-phone">رقم الهاتف <span class="req">*</span></label>
-                <input type="tel" id="guest-phone" placeholder="+213 555 000 000" autocomplete="tel" dir="ltr">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="guest-email">البريد الإلكتروني <span class="req">*</span></label>
-              <input type="email" id="guest-email" placeholder="example@mail.com" autocomplete="email" dir="ltr">
-            </div>
-
-            <div class="form-group">
-              <label for="guest-notes">ملاحظات إضافية (اختياري)</label>
-              <textarea id="guest-notes" rows="3"
-                placeholder="هل لديك طلبات خاصة أو ملاحظات للمضيف؟"></textarea>
-            </div>
-
-            <div class="policy-note">
-              <i class="ph ph-shield-check" style="color:var(--primary);margin-inline-end:4px;"></i>
-              بياناتك محمية ولن تُشارَك مع أطراف ثالثة. بالمتابعة فإنك توافق على
-              <a href="#" class="text-primary">سياسة الخصوصية</a>
-              وشروط الحجز الخاصة بنا.
-            </div>
-          </div>
-        </div>
-
-        <div class="step-footer">
-          <button class="btn-booking-back" id="btn-step3-back">
-            <i class="ph ph-arrow-right"></i> رجوع
-          </button>
-          <button class="btn-booking-primary" id="btn-step3-next">
-            <i class="ph ph-check-circle"></i> تأكيد الحجز
-          </button>
-        </div>
-      </article>
-
-      <!-- ── STEP 4: Confirmation ── -->
-      <article class="booking-main-card booking-step" id="step-4">
-        <div class="confirm-wrapper" id="confirm-details">
-          <!-- rendered by JS -->
-        </div>
-        <div class="step-footer" style="justify-content:center;">
-          <a href="index.html" class="btn-booking-back">
-            <i class="ph ph-house"></i> العودة للرئيسية
-          </a>
-        </div>
-      </article>
-
-    </div><!-- /booking-main -->
-
-    <!-- ═══ RIGHT: Sticky Summary ═══ -->
-    <aside class="booking-sidebar">
-      <div class="booking-summary-card">
-        <h4>ملخص الحجز</h4>
-        <div id="booking-prop-summary">
-          <!-- rendered by JS -->
-          <div class="price-placeholder">جارٍ التحميل...</div>
-        </div>
-      </div>
-    </aside>
-
-  </div><!-- /booking-wrapper -->
-
-  <!-- Firebase Init -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-      authDomain: "orebooking-website.firebaseapp.com",
-      projectId: "orebooking-website",
-      storageBucket: "orebooking-website.firebasestorage.app",
-      messagingSenderId: "1012887567747",
-      appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-      measurementId: "G-5GKMRMVHC3"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-  </script>
-
-  <!-- Theme Toggle -->
-  <script>
-    const themeBtn2 = document.getElementById('theme-toggle');
-    const body2 = document.body;
-    const saved2 = localStorage.getItem('ore_theme');
-    if (saved2 === 'dark') body2.classList.add('dark');
-    themeBtn2?.addEventListener('click', () => {
-      body2.classList.toggle('dark');
-      localStorage.setItem('ore_theme', body2.classList.contains('dark') ? 'dark' : 'light');
-      const logo = document.getElementById('main-logo');
-      if (logo) logo.src = body2.classList.contains('dark') ? 'logos/orebooking2.png' : 'logos/orebooking.png';
-    });
-  </script>
-
-  <!-- Booking Logic -->
-  <script src="booking.js" defer></script>
-
+  <script src="script.js"></script>
+  <!-- هذا الملف تم إنشاؤه سابقاً ويحتوي على المنطق المتقدم للحجز -->
+  <script src="booking.js"></script>
 </body>
 </html>
