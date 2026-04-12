@@ -1,437 +1,514 @@
 // =========================================
-//   OreBooking — Booking System (booking.js)
-//   Integrated with Firestore + Firebase Auth
+//   Advanced Booking Logic — booking.js
 // =========================================
 
-// ─── State ────────────────────────────────
+// 1. Firebase Auth State & DB
+const db = firebase.firestore();
+let currentUser = null;
+
+// 2. Booking State
 const bookingState = {
-  step: 1,          // 1: Dates/Guests → 2: Review → 3: Info → 4: Confirm
-  prop: null,       // property data from Firestore
-  docId: null,
+  propertyId: null,
+  property: null,
   checkIn: null,
   checkOut: null,
-  nights: 0,
   guests: 1,
+  nights: 0,
   totalPrice: 0,
-  currency: 'DZD',
-  user: null,
-  bookedDates: [],  // [{checkIn, checkOut}] — من Firestore
+  basePrice: 0,
+  fee: 0,
+  bookedDates: [], // Array of string dates 'YYYY-MM-DD' that are already booked
+  minNights: 1,
+  lang: localStorage.getItem('ore_lang') || 'en'
 };
 
-// ─── Init ─────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  bookingState.docId = params.get('id');
+// 3. UI Elements
+const els = {
+  step1: document.getElementById('step-1'),
+  step2: document.getElementById('step-2'),
+  step3: document.getElementById('step-3'),
+  step4: document.getElementById('step-4'),
 
-  if (!bookingState.docId) {
-    showBookingError('لم يتم تحديد العقار. يرجى العودة واختيار عقار.');
+  btnNext1: document.getElementById('btn-next-1'),
+  btnNext2: document.getElementById('btn-next-2'),
+  btnPrev2: document.getElementById('btn-prev-2'),
+  btnPrev3: document.getElementById('btn-prev-3'),
+
+  agreePolicy: document.getElementById('agree-policy'),
+  payRadios: document.getElementsByName('pay_method'),
+  transferDetails: document.getElementById('transfer-details'),
+
+  guestForm: document.getElementById('guest-form'),
+  btnConfirm: document.getElementById('btn-confirm-book')
+};
+
+// 4. Initialization
+document.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  bookingState.propertyId = urlParams.get('id');
+
+  if (!bookingState.propertyId) {
+    alert(bookingState.lang === 'ar' ? 'لم يتم تحديد عقار!' : 'No property selected!');
+    window.location.href = 'index.html';
     return;
   }
 
-  // Auth listener
-  firebase.auth().onAuthStateChanged(user => {
-    bookingState.user = user;
+  translateBookingPage();
+  setupEventListeners();
+
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+      document.getElementById('g-name').value = user.displayName || '';
+      document.getElementById('g-email').value = user.email || '';
+      document.getElementById('auth-prompt').style.display = 'none';
+    } else {
+      document.getElementById('auth-prompt').style.display = 'block';
+    }
   });
 
-  await loadProperty();
+  await loadPropertyDetails();
   await loadBookedDates();
-  initCalendar();
-  renderStep(1);
-  bindNavButtons();
+  renderCalendar();
 });
 
-// ─── Load Property ────────────────────────
-async function loadProperty() {
+// 5. Load Property Data
+async function loadPropertyDetails() {
   try {
-    const doc = await db.collection('properties').doc(bookingState.docId).get();
-    if (!doc.exists) { showBookingError('العقار غير موجود.'); return; }
-    bookingState.prop = doc.data();
-    renderPropertySummary();
-  } catch (e) {
-    showBookingError('فشل تحميل بيانات العقار.');
+    let propData;
+
+    // Check if ID is numeric (mock data) or string (Firestore)
+    if (!isNaN(bookingState.propertyId) && typeof properties !== 'undefined') {
+      const p = properties.find(x => x.id == bookingState.propertyId);
+      if(p) {
+        propData = {
+          titleAr: p.title_ar, titleEn: p.title_en,
+          locationAr: p.location_ar, locationEn: p.location_en,
+          price: p.price, imageUrl: p.image
+        };
+      }
+    } else {
+      const doc = await db.collection('properties').doc(bookingState.propertyId).get();
+      if (doc.exists) propData = doc.data();
+    }
+
+    if (!propData) throw new Error("Property not found");
+
+    bookingState.property = propData;
+    bookingState.basePrice = Number(propData.price || 0);
+
+    // Update Summary UI
+    const isAr = bookingState.lang === 'ar';
+    document.getElementById('sum-name').textContent = isAr ? (propData.titleAr || propData.titleEn) : (propData.titleEn || propData.titleAr);
+    document.getElementById('sum-loc').textContent = isAr ? propData.locationAr : propData.locationEn;
+    document.getElementById('sum-price-night').textContent = bookingState.basePrice.toLocaleString() + ' DZD';
+    document.getElementById('sum-img').src = propData.imageUrl || propData.images?.[0] || 'images/placeholder.jpg';
+
+  } catch (err) {
+    console.error(err);
+    alert(bookingState.lang === 'ar' ? 'عذراً، لم نتمكن من تحميل بيانات العقار.' : 'Sorry, could not load property details.');
   }
 }
 
-function renderPropertySummary() {
-  const p = bookingState.prop;
-  const lang = document.documentElement.lang || 'ar';
-  const title    = lang === 'en' ? (p.titleEn || p.titleAr) : (p.titleAr || p.titleEn);
-  const location = lang === 'en' ? (p.locationEn || p.locationAr) : (p.locationAr || p.locationEn);
-
-  const el = document.getElementById('booking-prop-summary');
-  if (!el) return;
-  el.innerHTML = `
-    <img src="${p.imageUrl || ''}" alt="${title}" class="booking-prop-img"
-         width="80" height="60" loading="lazy">
-    <div class="booking-prop-info">
-      <h3 class="booking-prop-title">${title}</h3>
-      <p class="booking-prop-location"><i class="ph ph-map-pin"></i> ${location}</p>
-      <p class="booking-prop-price">
-        <strong>${Number(p.price).toLocaleString()} DZD</strong>
-        <span>/ ليلة</span>
-      </p>
-    </div>
-  `;
-}
-
-// ─── Booked Dates ─────────────────────────
+// 6. Load Booked Dates from Firestore
 async function loadBookedDates() {
   try {
     const snap = await db.collection('bookings')
-      .where('propertyId', '==', bookingState.docId)
-      .where('status', 'in', ['confirmed', 'pending'])
+      .where('propertyId', '==', bookingState.propertyId)
+      .where('status', 'in', ['pending', 'confirmed'])
       .get();
 
-    bookingState.bookedDates = snap.docs.map(d => ({
-      checkIn:  d.data().checkIn.toDate(),
-      checkOut: d.data().checkOut.toDate(),
-    }));
-  } catch (e) {
     bookingState.bookedDates = [];
+
+    snap.forEach(doc => {
+      const b = doc.data();
+      if (!b.checkIn || !b.checkOut) return;
+
+      let start = b.checkIn.toDate();
+      let end = b.checkOut.toDate();
+
+      // Add all dates between checkIn and checkOut to bookedDates array
+      let curr = new Date(start);
+      while (curr < end) { // Don't block the checkout day itself so others can check in
+        bookingState.bookedDates.push(formatDateStr(curr));
+        curr.setDate(curr.getDate() + 1);
+      }
+    });
+  } catch (err) {
+    console.error("Error loading booked dates:", err);
   }
 }
 
-function isDateBooked(date) {
-  return bookingState.bookedDates.some(range => {
-    return date >= range.checkIn && date < range.checkOut;
-  });
+// 7. Calendar Logic (Prevent Double Booking)
+let currentDate = new Date();
+currentDate.setDate(1); // Set to first of month for rendering
+
+function formatDateStr(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-// ─── Calendar ─────────────────────────────
-let calendarMonth = new Date();
-calendarMonth.setDate(1);
+function isDateBooked(dateStr) {
+  return bookingState.bookedDates.includes(dateStr);
+}
 
-function initCalendar() {
-  renderCalendar();
-  document.getElementById('cal-prev')?.addEventListener('click', () => {
-    calendarMonth.setMonth(calendarMonth.getMonth() - 1);
-    renderCalendar();
-  });
-  document.getElementById('cal-next')?.addEventListener('click', () => {
-    calendarMonth.setMonth(calendarMonth.getMonth() + 1);
-    renderCalendar();
-  });
+function hasBookedDatesInRange(startStr, endStr) {
+  let start = new Date(startStr);
+  let end = new Date(endStr);
+  let curr = new Date(start);
+
+  while (curr < end) {
+    if (isDateBooked(formatDateStr(curr))) return true;
+    curr.setDate(curr.getDate() + 1);
+  }
+  return false;
 }
 
 function renderCalendar() {
-  const grid    = document.getElementById('calendar-grid');
-  const label   = document.getElementById('calendar-month-label');
-  if (!grid || !label) return;
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
 
-  const today   = new Date(); today.setHours(0,0,0,0);
-  const year    = calendarMonth.getFullYear();
-  const month   = calendarMonth.getMonth();
+  const isAr = bookingState.lang === 'ar';
+  const monthNamesEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthNamesAr = ['جانفي','فيفري','مارس','أفريل','ماي','جوان','جويلية','أوت','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
-  // Month label
-  label.textContent = new Date(year, month, 1).toLocaleDateString('ar-DZ', {
-    month: 'long', year: 'numeric'
+  const m = currentDate.getMonth();
+  const y = currentDate.getFullYear();
+
+  document.getElementById('calendar-month-label').textContent = `${isAr ? monthNamesAr[m] : monthNamesEn[m]} ${y}`;
+
+  const daysEn = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const daysAr = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+  const daysArr = isAr ? daysAr : daysEn;
+
+  daysArr.forEach(d => {
+    grid.innerHTML += `<div class="cal-day-name">${d}</div>`;
   });
 
-  // Days of week header
-  const weekDays = ['أح','إث','ثل','أر','خم','جم','سب'];
-  let html = weekDays.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+  const firstDayIndex = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
 
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
-  // Empty cells before first day
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-cell empty"></div>`;
+  for (let i = 0; i < firstDayIndex; i++) {
+    grid.innerHTML += `<div class="cal-cell empty"></div>`;
+  }
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(year, month, d);
-    date.setHours(0,0,0,0);
+    const cellDate = new Date(y, m, d);
+    const dateStr = formatDateStr(cellDate);
+    const isPast = cellDate < today;
+    const isBooked = isDateBooked(dateStr);
 
-    const isPast   = date < today;
-    const isBooked = isDateBooked(date);
-    // Add 12 hours before converting to ISO string to avoid timezone offset issues
-    const tzDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
-    const dateStr  = tzDate.toISOString().split('T')[0];
+    let stateClass = 'available';
+    if (isPast || isBooked) stateClass = 'disabled';
 
-    const isCheckIn  = bookingState.checkIn  && dateStr === bookingState.checkIn;
-    const isCheckOut = bookingState.checkOut && dateStr === bookingState.checkOut;
-    const isInRange  = bookingState.checkIn && bookingState.checkOut
-      && date > new Date(bookingState.checkIn)
-      && date < new Date(bookingState.checkOut);
-
-    let cls = 'cal-cell';
-    if (isPast || isBooked) cls += ' disabled';
-    else                    cls += ' available';
-    if (isCheckIn)  cls += ' check-in';
-    if (isCheckOut) cls += ' check-out';
-    if (isInRange)  cls += ' in-range';
-
-    const label2 = isCheckIn  ? '<span class="cal-label">دخول</span>'
-                 : isCheckOut ? '<span class="cal-label">خروج</span>'
-                 : '';
-
-    html += `<div class="${cls}" data-date="${dateStr}" onclick="selectDate('${dateStr}')">
-               <span>${d}</span>${label2}
-             </div>`;
-  }
-
-  grid.innerHTML = html;
-  updateDateSummary();
-}
-
-function selectDate(dateStr) {
-  const date = new Date(dateStr); date.setHours(0,0,0,0);
-  if (isDateBooked(date)) return;
-
-  if (!bookingState.checkIn || (bookingState.checkIn && bookingState.checkOut)) {
-    bookingState.checkIn  = dateStr;
-    bookingState.checkOut = null;
-  } else {
-    if (dateStr <= bookingState.checkIn) {
-      bookingState.checkIn = dateStr;
-    } else {
-      // Validate no booked dates in range
-      const ci = new Date(bookingState.checkIn);
-      const co = new Date(dateStr);
-      let hasConflict = false;
-      for (let d = new Date(ci); d < co; d.setDate(d.getDate()+1)) {
-        if (isDateBooked(new Date(d))) { hasConflict = true; break; }
-      }
-      if (hasConflict) {
-        showStepError('يوجد حجز سابق في الفترة المحددة. الرجاء اختيار تواريخ أخرى.');
-        bookingState.checkIn = dateStr;
-        bookingState.checkOut = null;
-      } else {
-        bookingState.checkOut = dateStr;
-      }
+    if (bookingState.checkIn === dateStr) stateClass += ' check-in';
+    else if (bookingState.checkOut === dateStr) stateClass += ' check-out';
+    else if (bookingState.checkIn && bookingState.checkOut && dateStr > bookingState.checkIn && dateStr < bookingState.checkOut) {
+      stateClass += ' in-range';
     }
-  }
 
-  renderCalendar();
-  calcPrice();
-}
-
-function updateDateSummary() {
-  const ciEl = document.getElementById('selected-checkin');
-  const coEl = document.getElementById('selected-checkout');
-  const niEl = document.getElementById('selected-nights');
-  if (ciEl) ciEl.textContent = bookingState.checkIn  || '—';
-  if (coEl) coEl.textContent = bookingState.checkOut || '—';
-  if (niEl) niEl.textContent = bookingState.nights > 0 ? `${bookingState.nights} ليلة` : '—';
-}
-
-// ─── Guests ───────────────────────────────
-function changeGuests(delta) {
-  const next = bookingState.guests + delta;
-  if (next < 1 || next > 20) return;
-  bookingState.guests = next;
-  const el = document.getElementById('guests-count');
-  if (el) el.textContent = bookingState.guests;
-  calcPrice();
-}
-
-// ─── Price Calculation ────────────────────
-function calcPrice() {
-  if (!bookingState.checkIn || !bookingState.checkOut || !bookingState.prop) return;
-  const ci = new Date(bookingState.checkIn);
-  const co = new Date(bookingState.checkOut);
-  const nights = Math.round((co - ci) / 86400000);
-  bookingState.nights = nights;
-
-  const base    = bookingState.prop.price * nights;
-  const service = Math.round(base * 0.08);
-  const total   = base + service;
-
-  bookingState.totalPrice = total;
-
-  // Update UI
-  const priceBreak = document.getElementById('price-breakdown');
-  if (priceBreak) {
-    priceBreak.innerHTML = `
-      <div class="price-row">
-        <span>${Number(bookingState.prop.price).toLocaleString()} DZD × ${nights} ليلة</span>
-        <span>${base.toLocaleString()} DZD</span>
-      </div>
-      <div class="price-row">
-        <span>رسوم الخدمة (8%)</span>
-        <span>${service.toLocaleString()} DZD</span>
-      </div>
-      <div class="price-row total">
-        <span>الإجمالي</span>
-        <span>${total.toLocaleString()} DZD</span>
+    grid.innerHTML += `
+      <div class="cal-cell ${stateClass}" data-date="${dateStr}">
+        <span>${d}</span>
       </div>
     `;
   }
 
-  updateDateSummary();
-}
-
-// ─── Step Navigation ──────────────────────
-function bindNavButtons() {
-  document.getElementById('btn-step1-next')?.addEventListener('click', goToStep2);
-  document.getElementById('btn-step2-back')?.addEventListener('click', () => renderStep(1));
-  document.getElementById('btn-step2-next')?.addEventListener('click', goToStep3);
-  document.getElementById('btn-step3-back')?.addEventListener('click', () => renderStep(2));
-  document.getElementById('btn-step3-next')?.addEventListener('click', submitBooking);
-}
-
-function renderStep(n) {
-  bookingState.step = n;
-  document.querySelectorAll('.booking-step').forEach(el => el.classList.remove('active'));
-  document.getElementById(`step-${n}`)?.classList.add('active');
-  document.querySelectorAll('.step-indicator').forEach((el, i) => {
-    el.classList.toggle('active',    i+1 === n);
-    el.classList.toggle('completed', i+1 < n);
+  // Add click events to active cells
+  document.querySelectorAll('.cal-cell.available, .cal-cell.check-in, .cal-cell.check-out, .cal-cell.in-range').forEach(cell => {
+    cell.addEventListener('click', () => handleDateClick(cell.getAttribute('data-date')));
   });
-  clearStepError();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function goToStep2() {
-  if (!bookingState.checkIn || !bookingState.checkOut) {
-    showStepError('الرجاء تحديد تاريخ الدخول والخروج.');
-    return;
+function handleDateClick(dateStr) {
+  const isAr = bookingState.lang === 'ar';
+  const warnEl = document.getElementById('min-nights-warning');
+  warnEl.style.display = 'none';
+
+  if (!bookingState.checkIn || (bookingState.checkIn && bookingState.checkOut)) {
+    // Start new selection
+    bookingState.checkIn = dateStr;
+    bookingState.checkOut = null;
+  } else {
+    // Select checkout
+    if (dateStr <= bookingState.checkIn) {
+      bookingState.checkIn = dateStr; // Reset start date if clicking before
+    } else {
+      // Check for conflicts in range
+      if (hasBookedDatesInRange(bookingState.checkIn, dateStr)) {
+        warnEl.textContent = isAr ? 'عذراً، يوجد أيام محجوزة ضمن هذه الفترة.' : 'Sorry, there are booked days in this range.';
+        warnEl.style.display = 'block';
+        return;
+      }
+      bookingState.checkOut = dateStr;
+    }
   }
-  calcPrice();
-  renderReview();
-  renderStep(2);
+
+  updateBookingSummary();
+  renderCalendar();
 }
 
-function goToStep3() {
-  if (bookingState.user) {
-    // Pre-fill form
-    const nameEl  = document.getElementById('guest-name');
-    const emailEl = document.getElementById('guest-email');
-    if (nameEl  && bookingState.user.displayName) nameEl.value  = bookingState.user.displayName;
-    if (emailEl && bookingState.user.email)        emailEl.value = bookingState.user.email;
+document.getElementById('cal-prev').addEventListener('click', () => {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  renderCalendar();
+});
+
+document.getElementById('cal-next').addEventListener('click', () => {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  renderCalendar();
+});
+
+// 8. Guests Counter
+document.getElementById('btn-minus-guest').addEventListener('click', () => {
+  if (bookingState.guests > 1) {
+    bookingState.guests--;
+    document.getElementById('guests-count').textContent = bookingState.guests;
+    updateBookingSummary();
   }
-  renderStep(3);
+});
+document.getElementById('btn-plus-guest').addEventListener('click', () => {
+  if (bookingState.guests < 10) { // Max 10 guests logic
+    bookingState.guests++;
+    document.getElementById('guests-count').textContent = bookingState.guests;
+    updateBookingSummary();
+  }
+});
+
+// 9. Update Summary & Prices
+function updateBookingSummary() {
+  document.getElementById('disp-checkin').textContent = bookingState.checkIn || (bookingState.lang==='ar'?'أضف تاريخ':'Add date');
+  document.getElementById('disp-checkout').textContent = bookingState.checkOut || (bookingState.lang==='ar'?'أضف تاريخ':'Add date');
+
+  if (bookingState.checkIn && bookingState.checkOut) {
+    const d1 = new Date(bookingState.checkIn);
+    const d2 = new Date(bookingState.checkOut);
+    const diffTime = Math.abs(d2 - d1);
+    bookingState.nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    document.getElementById('disp-nights').textContent = bookingState.nights;
+
+    // Check min nights
+    const warnEl = document.getElementById('min-nights-warning');
+    if (bookingState.nights < bookingState.minNights) {
+      warnEl.textContent = bookingState.lang==='ar' ? `الحد الأدنى للحجز هو ${bookingState.minNights} ليلة.` : `Minimum stay is ${bookingState.minNights} nights.`;
+      warnEl.style.display = 'block';
+      els.btnNext1.disabled = true;
+      return;
+    }
+
+    els.btnNext1.disabled = false;
+
+    // Calculate Prices
+    const subtotal = bookingState.nights * bookingState.basePrice;
+    bookingState.fee = Math.round(subtotal * 0.08); // 8% service fee
+    bookingState.totalPrice = subtotal + bookingState.fee;
+
+    const isAr = bookingState.lang === 'ar';
+    const curr = isAr ? 'د.ج' : 'DZD';
+
+    // Update Sidebar Breakdown
+    document.getElementById('sum-placeholder').style.display = 'none';
+    document.getElementById('price-breakdown').innerHTML = `
+      <div class="price-row">
+        <span>${bookingState.basePrice.toLocaleString()} ${curr} × ${bookingState.nights} ${isAr ? 'ليالي' : 'nights'}</span>
+        <span>${subtotal.toLocaleString()} ${curr}</span>
+      </div>
+      <div class="price-row">
+        <span>${isAr ? 'رسوم الخدمة' : 'Service Fee'}</span>
+        <span>${bookingState.fee.toLocaleString()} ${curr}</span>
+      </div>
+      <div class="price-row total">
+        <span>${isAr ? 'الإجمالي' : 'Total'}</span>
+        <span>${bookingState.totalPrice.toLocaleString()} ${curr}</span>
+      </div>
+    `;
+
+    // Update Step 2 Review details
+    document.getElementById('rev-val-dates').textContent = `${bookingState.checkIn} → ${bookingState.checkOut} (${bookingState.nights} ${isAr?'ليالي':'nights'})`;
+    document.getElementById('rev-val-guests').textContent = `${bookingState.guests} ${isAr?'ضيوف':'guests'}`;
+    document.getElementById('rev-val-total').textContent = `${bookingState.totalPrice.toLocaleString()} ${curr}`;
+
+  } else {
+    document.getElementById('disp-nights').textContent = '-';
+    els.btnNext1.disabled = true;
+    document.getElementById('sum-placeholder').style.display = 'block';
+    document.getElementById('price-breakdown').innerHTML = `<div class="price-placeholder" id="sum-placeholder">Select dates to see price details</div>`;
+  }
 }
 
-function renderReview() {
-  const p = bookingState.prop;
-  const lang = document.documentElement.lang || 'ar';
-  const title = lang === 'en' ? (p.titleEn || p.titleAr) : (p.titleAr || p.titleEn);
+// 10. Navigation & Steps Logic
+function switchStep(from, to) {
+  els[`step${from}`].classList.remove('active');
+  els[`step${to}`].classList.add('active');
 
-  const el = document.getElementById('review-summary');
-  if (!el) return;
-  el.innerHTML = `
-    <div class="review-row">
-      <span class="review-label">العقار</span>
-      <span class="review-value">${title}</span>
-    </div>
-    <div class="review-row">
-      <span class="review-label">تاريخ الدخول</span>
-      <span class="review-value">${formatDate(bookingState.checkIn)}</span>
-    </div>
-    <div class="review-row">
-      <span class="review-label">تاريخ الخروج</span>
-      <span class="review-value">${formatDate(bookingState.checkOut)}</span>
-    </div>
-    <div class="review-row">
-      <span class="review-label">عدد الليالي</span>
-      <span class="review-value">${bookingState.nights} ليلة</span>
-    </div>
-    <div class="review-row">
-      <span class="review-label">عدد الضيوف</span>
-      <span class="review-value">${bookingState.guests} ضيف</span>
-    </div>
-    <div class="review-row total-row">
-      <span class="review-label">الإجمالي</span>
-      <span class="review-value price-highlight">${bookingState.totalPrice.toLocaleString()} DZD</span>
-    </div>
-  `;
+  // Update Indicators
+  document.querySelectorAll('.step-indicator').forEach(ind => {
+    const num = parseInt(ind.getAttribute('data-step'));
+    ind.classList.remove('active', 'completed');
+    if (num < to) ind.classList.add('completed');
+    if (num === to) ind.classList.add('active');
+  });
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
-// ─── Submit Booking ────────────────────────
-async function submitBooking() {
-  const name    = document.getElementById('guest-name')?.value.trim();
-  const email   = document.getElementById('guest-email')?.value.trim();
-  const phone   = document.getElementById('guest-phone')?.value.trim();
-  const notes   = document.getElementById('guest-notes')?.value.trim();
+// Payment method toggle
+els.payRadios.forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    if (e.target.value === 'transfer') {
+      els.transferDetails.style.display = 'block';
+    } else {
+      els.transferDetails.style.display = 'none';
+    }
+  });
+});
 
-  if (!name || !email || !phone) {
-    showStepError('الرجاء ملء جميع الحقول المطلوبة.');
-    return;
-  }
+// Policy checkbox
+els.agreePolicy.addEventListener('change', (e) => {
+  els.btnNext2.disabled = !e.target.checked;
+});
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    showStepError('الرجاء إدخال بريد إلكتروني صحيح.');
-    return;
-  }
+els.btnNext1.addEventListener('click', () => switchStep(1, 2));
+els.btnPrev2.addEventListener('click', () => switchStep(2, 1));
+els.btnNext2.addEventListener('click', () => switchStep(2, 3));
+els.btnPrev3.addEventListener('click', () => switchStep(3, 2));
 
-  const btn = document.getElementById('btn-step3-next');
-  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ph ph-circle-notch ph-spin"></i> جارٍ الإرسال...`; }
+// 11. Final Submission
+els.guestForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const payMethod = document.querySelector('input[name="pay_method"]:checked').value;
+  const isTransfer = payMethod === 'transfer';
+  let receiptUrl = null;
+
+  els.btnConfirm.disabled = true;
+  els.btnConfirm.innerHTML = `<i class="ph ph-spinner ph-spin"></i> ${bookingState.lang === 'ar' ? 'جارٍ المعالجة...' : 'Processing...'}`;
 
   try {
-    const bookingRef = await db.collection('bookings').add({
-      propertyId:  bookingState.docId,
-      propertyTitle: bookingState.prop.titleAr || bookingState.prop.titleEn,
-      checkIn:     firebase.firestore.Timestamp.fromDate(new Date(bookingState.checkIn)),
-      checkOut:    firebase.firestore.Timestamp.fromDate(new Date(bookingState.checkOut)),
-      nights:      bookingState.nights,
-      guests:      bookingState.guests,
-      totalPrice:  bookingState.totalPrice,
-      guestName:   name,
-      guestEmail:  email,
-      guestPhone:  phone,
-      notes:       notes || '',
-      userId:      bookingState.user?.uid || null,
-      status:      'pending',
-      createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    // Re-verify availability exactly before booking (Real-time safety)
+    await loadBookedDates();
+    if (hasBookedDatesInRange(bookingState.checkIn, bookingState.checkOut)) {
+      alert(bookingState.lang === 'ar' ? 'عذراً، هذه التواريخ تم حجزها للتو من قبل شخص آخر. يرجى اختيار تواريخ جديدة.' : 'Sorry, these dates were just booked by someone else. Please choose new dates.');
+      switchStep(3, 1);
+      els.btnConfirm.disabled = false;
+      els.btnConfirm.innerHTML = `<i class="ph ph-check-circle"></i> ${bookingState.lang === 'ar' ? 'تأكيد الحجز' : 'Confirm Booking'}`;
+      return;
+    }
 
-    // Show confirmation
-    renderConfirmation(bookingRef.id);
-    renderStep(4);
+    // Handle receipt upload if transfer
+    if (isTransfer) {
+      const fileInput = document.getElementById('receipt-file');
+      if (!fileInput.files[0]) {
+        alert(bookingState.lang === 'ar' ? 'يرجى رفع وصل التحويل' : 'Please upload the transfer receipt');
+        els.btnConfirm.disabled = false;
+        els.btnConfirm.innerHTML = `<i class="ph ph-check-circle"></i> ${bookingState.lang === 'ar' ? 'تأكيد الحجز' : 'Confirm Booking'}`;
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const storageRef = firebase.storage().ref(`receipts/${Date.now()}_${file.name}`);
+      const uploadTask = await storageRef.put(file);
+      receiptUrl = await uploadTask.ref.getDownloadURL();
+    }
+
+    const bookingData = {
+      propertyId: String(bookingState.propertyId),
+      propertyTitle: bookingState.lang === 'ar' ? (bookingState.property.titleAr || bookingState.property.titleEn) : (bookingState.property.titleEn || bookingState.property.titleAr),
+      checkIn: firebase.firestore.Timestamp.fromDate(new Date(bookingState.checkIn)),
+      checkOut: firebase.firestore.Timestamp.fromDate(new Date(bookingState.checkOut)),
+      guests: bookingState.guests,
+      nights: bookingState.nights,
+      totalPrice: bookingState.totalPrice,
+      guestName: document.getElementById('g-name').value.trim(),
+      guestEmail: document.getElementById('g-email').value.trim(),
+      guestPhone: document.getElementById('g-phone').value.trim(),
+      notes: document.getElementById('g-notes').value.trim(),
+      paymentMethod: payMethod,
+      receiptUrl: receiptUrl,
+      status: 'pending',
+      userId: currentUser ? currentUser.uid : null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    const docRef = await db.collection('bookings').add(bookingData);
+
+    // Success
+    document.getElementById('ref-number').textContent = '#' + docRef.id.slice(0, 8).toUpperCase();
+    switchStep(3, 4);
 
   } catch (err) {
-    console.error(err);
-    showStepError('حدث خطأ أثناء إرسال الحجز. يرجى المحاولة مرة أخرى.');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="ph ph-check-circle"></i> تأكيد الحجز`; }
+    console.error("Booking failed:", err);
+    alert(bookingState.lang === 'ar' ? 'حدث خطأ غير متوقع. حاول مرة أخرى.' : 'An unexpected error occurred. Please try again.');
+    els.btnConfirm.disabled = false;
+    els.btnConfirm.innerHTML = `<i class="ph ph-check-circle"></i> ${bookingState.lang === 'ar' ? 'تأكيد الحجز' : 'Confirm Booking'}`;
   }
-}
+});
 
-function renderConfirmation(bookingId) {
-  const el = document.getElementById('confirm-details');
-  if (!el) return;
-  const short = bookingId.slice(0,8).toUpperCase();
-  el.innerHTML = `
-    <div class="confirm-id">
-      <i class="ph ph-check-circle confirm-icon"></i>
-      <p class="confirm-msg">تم إرسال طلب حجزك بنجاح!</p>
-      <p class="confirm-ref">رقم الطلب: <strong>#${short}</strong></p>
-    </div>
-    <div class="confirm-summary">
-      <div class="review-row"><span class="review-label">العقار</span><span class="review-value">${bookingState.prop.titleAr}</span></div>
-      <div class="review-row"><span class="review-label">تاريخ الدخول</span><span class="review-value">${formatDate(bookingState.checkIn)}</span></div>
-      <div class="review-row"><span class="review-label">تاريخ الخروج</span><span class="review-value">${formatDate(bookingState.checkOut)}</span></div>
-      <div class="review-row total-row"><span class="review-label">الإجمالي</span><span class="review-value price-highlight">${bookingState.totalPrice.toLocaleString()} DZD</span></div>
-    </div>
-    <p class="confirm-note">سيتم التواصل معك قريباً لتأكيد الحجز.</p>
-  `;
-}
+// 12. Translations
+function translateBookingPage() {
+  if (bookingState.lang !== 'ar') return;
 
-// ─── Helpers ──────────────────────────────
-function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('ar-DZ', {
-    weekday: 'short', year: 'numeric', month: 'long', day: 'numeric'
-  });
-}
+  document.documentElement.dir = 'rtl';
+  document.getElementById('nav-back-txt').textContent = 'العودة للعقار';
 
-function showStepError(msg) {
-  const el = document.getElementById('step-error');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  setTimeout(() => el.style.display = 'none', 5000);
-}
+  document.getElementById('lbl-step1').textContent = 'التواريخ والضيوف';
+  document.getElementById('lbl-step2').textContent = 'المراجعة والدفع';
+  document.getElementById('lbl-step3').textContent = 'بيانات الضيف';
+  document.getElementById('lbl-step4').textContent = 'التأكيد';
 
-function clearStepError() {
-  const el = document.getElementById('step-error');
-  if (el) el.style.display = 'none';
-}
+  document.getElementById('st-title-1').textContent = 'متى ستسافر؟';
+  document.getElementById('st-sub-1').textContent = 'اختر تاريخ الوصول والمغادرة.';
+  document.getElementById('lbl-chk-in').textContent = 'الوصول';
+  document.getElementById('lbl-nights').textContent = 'الليالي';
+  document.getElementById('lbl-chk-out').textContent = 'المغادرة';
 
-function showBookingError(msg) {
-  document.getElementById('booking-wrapper')?.insertAdjacentHTML('afterbegin',
-    `<div class="booking-fatal-error"><i class="ph ph-warning-circle"></i> ${msg}</div>`
-  );
+  document.getElementById('lbl-who-coming').textContent = 'من القادم؟';
+  document.getElementById('lbl-guests-title').textContent = 'الضيوف';
+  document.getElementById('lbl-guests-sub').textContent = 'أعمار سنتين فما فوق';
+  els.btnNext1.innerHTML = 'الخطوة التالية <i class="ph ph-arrow-left"></i>'; // Arrow left for RTL
+
+  document.getElementById('st-title-2').textContent = 'المراجعة والدفع';
+  document.getElementById('st-sub-2').textContent = 'راجع تفاصيل الحجز واختر طريقة الدفع.';
+  document.getElementById('rev-dates').textContent = 'التواريخ';
+  document.getElementById('rev-guests').textContent = 'الضيوف';
+  document.getElementById('rev-total').textContent = 'الإجمالي (د.ج)';
+
+  document.getElementById('lbl-pay-method').textContent = 'طريقة الدفع';
+  document.getElementById('lbl-pay-cash').textContent = 'الدفع عند الوصول';
+  document.getElementById('desc-pay-cash').textContent = 'ادفع المبلغ كاملاً عند وصولك للعقار.';
+  document.getElementById('lbl-pay-transfer').textContent = 'تحويل بنكي / بريدي';
+  document.getElementById('desc-pay-transfer').textContent = 'قم بالتحويل لحسابنا وارفع صورة الوصل.';
+  document.getElementById('txt-bank-info').textContent = 'يرجى تحويل المبلغ الإجمالي إلى الحساب التالي:';
+  document.getElementById('lbl-receipt').textContent = 'رفع صورة الوصل';
+
+  document.getElementById('lbl-policy-title').textContent = 'أوافق على سياسة الإلغاء';
+  document.getElementById('lbl-policy-desc').textContent = 'إلغاء مجاني حتى 48 ساعة قبل الوصول. بعد ذلك، الليلة الأولى غير مستردة.';
+
+  document.getElementById('btn-back-2').textContent = 'رجوع';
+  els.btnNext2.innerHTML = 'الخطوة التالية <i class="ph ph-arrow-left"></i>';
+
+  document.getElementById('st-title-3').textContent = 'من يقوم بالحجز؟';
+  document.getElementById('st-sub-3').textContent = 'أدخل بيانات التواصل الخاصة بك.';
+  document.getElementById('lbl-fname').innerHTML = 'الاسم الكامل <span class="req">*</span>';
+  document.getElementById('lbl-email').innerHTML = 'البريد الإلكتروني <span class="req">*</span>';
+  document.getElementById('lbl-phone').innerHTML = 'رقم الهاتف <span class="req">*</span>';
+  document.getElementById('lbl-notes').textContent = 'طلبات خاصة (اختياري)';
+  document.getElementById('txt-auth-prompt').textContent = 'هل لديك حساب؟ سجل الدخول لحجز أسرع وتتبع حجوزاتك.';
+  document.getElementById('link-login-booking').textContent = 'تسجيل الدخول';
+
+  document.getElementById('btn-back-3').textContent = 'رجوع';
+  document.getElementById('btn-confirm-txt').textContent = 'تأكيد الحجز';
+
+  document.getElementById('st-title-4').textContent = 'تم تأكيد الحجز!';
+  document.getElementById('st-sub-4').textContent = 'شكراً لاختيارك OreBooking. لقد استلمنا طلبك.';
+  document.getElementById('lbl-ref').textContent = 'رقم الحجز';
+  document.getElementById('btn-go-home').textContent = 'العودة للرئيسية';
+
+  document.getElementById('sum-title').textContent = 'ملخص الحجز';
+  document.getElementById('sum-night-lbl').textContent = 'ليلة';
+  document.getElementById('sum-placeholder').textContent = 'اختر التواريخ لرؤية السعر';
+  document.getElementById('txt-secure').textContent = 'حجز آمن ومشفر';
 }
