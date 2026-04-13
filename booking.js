@@ -1237,6 +1237,7 @@ async function handleSubmit(e) {
       serviceFee:      Number(bookingState.fee) || 0,
       totalPrice:      Number(bookingState.totalPrice) || 0,
       currency:        'DZD',
+      guests:          Number(bookingState.adults) + Number(bookingState.children),
       addons:          bookingState.addons || {},
       selectedAddons:  selectedAddons || [],
       restaurantPlan:  bookingState.addons && bookingState.addons.restaurant ? (bookingState.addons.restaurantPlan || 'breakfast') : null,
@@ -1421,5 +1422,3 @@ function translateBookingPage() {
   const sumPl = document.getElementById('sum-placeholder');
   if (sumPl) sumPl.textContent = 'اختر التواريخ لرؤية تفاصيل السعر';
 }
-
-// End of booking.js
