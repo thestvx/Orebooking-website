@@ -11,7 +11,10 @@ const firebaseConfig = {
   measurementId: "G-5GKMRMVHC3"
 };
 
-firebase.initializeApp(firebaseConfig);
+// تأكد من عدم التكرار في حال تحميل الملف مرتين
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
@@ -122,7 +125,7 @@ const translations = {
 // ==========================================
 const properties = [
   {
-    id: 1,
+    id: "1",  // ✅ string للتوافق مع Firestore doc IDs
     title_en: "Camp Palm Garden Resort",
     title_ar: "منتجع بالم قاردن",
     location_en: "Hai Al-Sharqiya, Taghzout - El Oued",
@@ -146,7 +149,7 @@ const properties = [
     lng: null
   },
   {
-    id: 2,
+    id: "2",
     title_en: "Modern Forest Cabin",
     title_ar: "كوخ عصري في الغابة",
     location_en: "Aspen, Colorado",
@@ -164,7 +167,7 @@ const properties = [
     lng: null
   },
   {
-    id: 3,
+    id: "3",
     title_en: "Minimalist Beach Villa",
     title_ar: "فيلا شاطئية بتصميم بسيط",
     location_en: "Bali, Indonesia",
@@ -215,7 +218,6 @@ function init() {
     loadPropertiesFromFirestore();
   }
 
-  // صفحة التفاصيل
   renderPropertyDetails();
 
   if (langBtn)    langBtn.addEventListener('click', toggleLanguage);
@@ -239,7 +241,7 @@ function init() {
 
   if (myFavoritesBtn) {
     myFavoritesBtn.addEventListener('click', () => {
-      profileDropdown.classList.remove('active');
+      if (profileDropdown) profileDropdown.classList.remove('active');
       state.currentView = 'favorites';
       const hero = document.getElementById('hero-section');
       const cats = document.getElementById('categories-container');
@@ -293,15 +295,16 @@ async function loadPropertiesFromFirestore() {
   `;
 
   try {
+    // ✅ استخدام == true بدلاً من != false لتجنب الحاجة لـ Composite Index
     const snapshot = await db.collection('properties')
-      .where('visible', '!=', false)
+      .where('visible', '==', true)
       .get();
 
     if (!snapshot.empty) {
       state.liveProperties = snapshot.docs.map(doc => {
         const d = doc.data();
         return {
-          id:          doc.id,
+          id:          String(doc.id),  // ✅ دائماً string
           title_en:    d.titleEn    || d.title_en    || '',
           title_ar:    d.titleAr    || d.title_ar    || '',
           location_en: d.locationEn || d.location_en || '',
@@ -315,16 +318,18 @@ async function loadPropertiesFromFirestore() {
           desc_ar:     d.descAr     || d.desc_ar     || '',
           features_en: d.featuresEn || d.features_en || [],
           features_ar: d.featuresAr || d.features_ar || [],
-          lat:         d.lat        || null,   // ✅ الإحداثيات
+          lat:         d.lat        || null,
           lng:         d.lng        || null,
         };
       });
     } else {
-      state.liveProperties = [];
+      // fallback للـ mock data إذا Firestore فارغ
+      state.liveProperties = properties;
     }
   } catch (err) {
     console.error('Firestore error:', err);
-    state.liveProperties = [];
+    // fallback للـ mock data عند الخطأ
+    state.liveProperties = properties;
   }
 
   renderListings();
@@ -395,7 +400,8 @@ function loadFavorites() {
   } else {
     state.favorites = [];
   }
-  if (document.getElementById('listings-grid') && state.liveProperties.length > 0) {
+  // ✅ استدعاء renderListings دائماً بعد تحميل المفضلة
+  if (document.getElementById('listings-grid')) {
     renderListings();
   }
 }
@@ -413,15 +419,16 @@ function toggleFavorite(e, id) {
     showMessage(state.lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً' : 'Please log in first', 'error');
     return;
   }
-  const index = state.favorites.indexOf(id);
+  const strId = String(id);  // ✅ توحيد النوع
+  const index = state.favorites.indexOf(strId);
   if (index > -1) state.favorites.splice(index, 1);
-  else state.favorites.push(id);
+  else state.favorites.push(strId);
   saveFavorites();
   renderListings();
 }
 
 function goToProperty(id) {
-  window.location.href = `property.html?id=${id}`;
+  window.location.href = `property.html?id=${String(id)}`;  // ✅ توحيد النوع
 }
 
 // ==========================================
@@ -431,12 +438,18 @@ function renderCategories() {
   const container = document.getElementById('categories-container');
   if (!container) return;
   container.innerHTML = categories.map((cat, index) => `
-    <div class="category-item ${index === 0 ? 'active' : ''}">
+    <div class="category-item ${index === 0 ? 'active' : ''}" onclick="selectCategory(this)">
       <i class="ph ${cat.icon}"></i>
       <span class="font-medium">${state.lang === 'en' ? cat.label_en : cat.label_ar}</span>
     </div>
   `).join('');
 }
+
+// ✅ إضافة دالة تفعيل الـ category عند النقر
+window.selectCategory = function(el) {
+  document.querySelectorAll('.category-item').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+};
 
 function renderListings() {
   const container = document.getElementById('listings-grid');
@@ -449,7 +462,8 @@ function renderListings() {
   let itemsToShow = allProps;
 
   if (state.currentView === 'favorites') {
-    itemsToShow = allProps.filter(p => state.favorites.includes(p.id));
+    // ✅ مقارنة String مع String
+    itemsToShow = allProps.filter(p => state.favorites.includes(String(p.id)));
     if (itemsToShow.length === 0) {
       container.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
@@ -472,7 +486,7 @@ function renderListings() {
   }
 
   container.innerHTML = itemsToShow.map(prop => {
-    const isFav    = state.favorites.includes(prop.id);
+    const isFav    = state.favorites.includes(String(prop.id));  // ✅ توحيد النوع
     const title    = state.lang === 'en' ? prop.title_en    : prop.title_ar;
     const location = state.lang === 'en' ? prop.location_en : prop.location_ar;
 
@@ -524,17 +538,15 @@ function renderPropertyDetails() {
   const propId    = urlParams.get('id');
   if (!propId) return;
 
-  // ابحث أولاً في الـ mock data
   let prop = properties.find(p => String(p.id) === String(propId));
 
   if (!prop) {
-    // جلب من Firestore
     db.collection('properties').doc(propId).get()
       .then(doc => {
         if (!doc.exists) return;
         const d = doc.data();
         _fillPropertyPage({
-          id:          doc.id,
+          id:          String(doc.id),
           title_en:    d.titleEn    || '',
           title_ar:    d.titleAr    || '',
           location_en: d.locationEn || '',
@@ -548,7 +560,7 @@ function renderPropertyDetails() {
           desc_ar:     d.descAr     || '',
           features_en: d.featuresEn || [],
           features_ar: d.featuresAr || [],
-          lat:         d.lat        || null,  // ✅ الإحداثيات
+          lat:         d.lat        || null,
           lng:         d.lng        || null,
         });
       })
@@ -590,9 +602,6 @@ function _fillPropertyPage(prop) {
     }
   }
 
-  // -----------------------------------------------
-  // 🖼️ Gallery Slider
-  // -----------------------------------------------
   if (trackEl && prop.images && prop.images.length) {
     currentPropImages       = prop.images;
     state.currentImageIndex = 0;
@@ -619,9 +628,6 @@ function _fillPropertyPage(prop) {
     }
   }
 
-  // -----------------------------------------------
-  // 🗺️ تفويض الخريطة لـ initPropertyMap في property.html
-  // -----------------------------------------------
   if (typeof window.initPropertyMap === 'function') {
     const locationName = state.lang === 'en' ? prop.location_en : prop.location_ar;
     setTimeout(() => {
@@ -657,10 +663,9 @@ window.goToSlide = function(e, index) {
 
 function updateSlider() {
   const trackEl = document.getElementById('slider-track');
-  const isRTL   = document.documentElement.getAttribute('dir') === 'rtl';
+  // ✅ الـ slider يتحرك دائماً بالسالب — CSS direction يتكفل بـ RTL تلقائياً
   if (trackEl) {
-    const multiplier = isRTL ? 1 : -1;
-    trackEl.style.transform = `translateX(${state.currentImageIndex * 100 * multiplier}%)`;
+    trackEl.style.transform = `translateX(${state.currentImageIndex * -100}%)`;
   }
   const lbImg = document.getElementById('lightbox-img');
   if (lbImg && document.getElementById('lightbox')?.classList.contains('active')) {
@@ -716,8 +721,8 @@ async function handleLogin(e) {
   e.preventDefault();
   const email    = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
-  const btn = loginForm.querySelector('button');
-  btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i>`;
+  const btn = loginForm.querySelector('button[type="submit"]');
+  btn.innerHTML = `<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;"></i>`;  // ✅ إصلاح أيقونة التحميل
   btn.disabled  = true;
   try {
     await auth.signInWithEmailAndPassword(email, password);
@@ -736,12 +741,14 @@ async function handleRegister(e) {
   const name     = document.getElementById('reg-name').value;
   const email    = document.getElementById('reg-email').value;
   const password = document.getElementById('reg-password').value;
-  const btn = registerForm.querySelector('button');
-  btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i>`;
+  const btn = registerForm.querySelector('button[type="submit"]');
+  btn.innerHTML = `<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;"></i>`;  // ✅ إصلاح أيقونة التحميل
   btn.disabled  = true;
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     await userCredential.user.updateProfile({ displayName: name });
+    // ✅ تحديث state يدوياً بعد updateProfile لأن onAuthStateChanged قد يُطلق قبله
+    state.user = auth.currentUser;
     closeModal();
     registerForm.reset();
     updateUserUI();
@@ -761,12 +768,14 @@ async function handleGoogleLogin() {
 
 function handleLogout() {
   auth.signOut().then(() => {
-    profileDropdown.classList.remove('active');
+    if (profileDropdown) profileDropdown.classList.remove('active');
     state.currentView = 'home';
     state.favorites   = [];
     if (document.getElementById('listings-grid')) {
-      document.getElementById('hero-section').style.display = 'block';
-      document.getElementById('categories-container').style.display = 'flex';
+      const heroEl = document.getElementById('hero-section');
+      const catsEl = document.getElementById('categories-container');
+      if (heroEl) heroEl.style.display = 'block';
+      if (catsEl) catsEl.style.display = 'flex';
       const sectionTitle = document.getElementById('section-main-title');
       if (sectionTitle) sectionTitle.setAttribute('data-i18n', 'trending');
       updateLanguageUI();
@@ -776,8 +785,11 @@ function handleLogout() {
 }
 
 function handleAuthButtonClick() {
-  if (state.user) profileDropdown.classList.toggle('active');
-  else openModal();
+  if (state.user) {
+    if (profileDropdown) profileDropdown.classList.toggle('active');
+  } else {
+    openModal();
+  }
 }
 
 function updateUserUI() {
@@ -787,31 +799,40 @@ function updateUserUI() {
       ? state.user.displayName.charAt(0).toUpperCase()
       : state.user.email.charAt(0).toUpperCase();
     openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
-    openAuthBtn.style.backgroundColor = 'var(--accent)';
+    // ✅ استخدام CSS class بدلاً من CSS variable في JS style
+    openAuthBtn.classList.add('auth-btn-logged');
+    openAuthBtn.classList.remove('auth-btn-guest');
     if (document.getElementById('dropdown-user-name')) {
       document.getElementById('dropdown-user-name').textContent  = state.user.displayName || 'OreBooking User';
       document.getElementById('dropdown-user-email').textContent = state.user.email || '';
     }
   } else {
     openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
-    openAuthBtn.style.backgroundColor = 'var(--primary)';
+    openAuthBtn.classList.add('auth-btn-guest');
+    openAuthBtn.classList.remove('auth-btn-logged');
     if (profileDropdown) profileDropdown.classList.remove('active');
   }
 }
 
 function openModal() {
+  if (!authModal) return;
   authModal.classList.add('active');
   document.body.classList.add('modal-open');
 }
 
 function closeModal() {
+  if (!authModal) return;
   authModal.classList.remove('active');
   document.body.classList.remove('modal-open');
   if (authMessage) authMessage.style.display = 'none';
-  setTimeout(() => switchForm('login'), 300);
+  // ✅ null check قبل switchForm لأن loginForm/registerForm قد لا تكون موجودة
+  if (loginForm && registerForm) {
+    setTimeout(() => switchForm('login'), 300);
+  }
 }
 
 function switchForm(type) {
+  if (!loginForm || !registerForm) return;  // ✅ null check
   if (type === 'register') {
     loginForm.classList.remove('active');
     registerForm.classList.add('active');
@@ -820,12 +841,5 @@ function switchForm(type) {
     loginForm.classList.add('active');
   }
 }
-
-// ==========================================
-// CSS لأنيميشن التحميل
-// ==========================================
-const spinStyle = document.createElement('style');
-spinStyle.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
-document.head.appendChild(spinStyle);
 
 document.addEventListener('DOMContentLoaded', init);
