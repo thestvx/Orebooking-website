@@ -701,8 +701,10 @@ async function loadBookedDates() {
     snap.forEach(docSnap => {
       const b = docSnap.data();
       if (!b.checkIn || !b.checkOut) return;
-      let curr = b.checkIn.toDate();
-      const end = b.checkOut.toDate();
+
+      let curr = b.checkInDate ? b.checkInDate.toDate() : (b.checkIn.toDate ? b.checkIn.toDate() : parseLocalDate(b.checkIn));
+      const end = b.checkOutDate ? b.checkOutDate.toDate() : (b.checkOut.toDate ? b.checkOut.toDate() : parseLocalDate(b.checkOut));
+
       curr.setHours(0,0,0,0);
       while (curr < end) {
         bookingState.bookedDates.push(formatDateStr(curr));
@@ -1223,8 +1225,10 @@ async function handleSubmit(e) {
     const bookingDoc = {
       propertyId:      String(bookingState.propertyId || ''),
       propertyTitle:   propTitle || '',
-      checkIn:         bookingState.checkIn ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)) : null,
-      checkOut:        bookingState.checkOut ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)) : null,
+      checkIn:         bookingState.checkIn,
+      checkInDate:     bookingState.checkIn ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)) : null,
+      checkOut:        bookingState.checkOut,
+      checkOutDate:    bookingState.checkOut ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)) : null,
       rooms:           Number(bookingState.rooms) || 1,
       adults:          Number(bookingState.adults) || 1,
       children:        Number(bookingState.children) || 0,
