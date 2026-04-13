@@ -35,13 +35,17 @@
       gap: 6px;
     }
 
-    #admin-map-picker {
+    #admin-map-picker, #edit-map-picker {
       width: 100%;
       height: 300px;
       border-radius: 12px;
       border: 1px solid var(--border-color);
       cursor: crosshair;
       z-index: 1;
+    }
+
+    #edit-map-picker {
+      height: 250px;
     }
 
     .coords-row {
@@ -111,6 +115,13 @@
 
     .map-picked-badge.visible {
       display: flex;
+    }
+
+    /* ===== Bookings Fix ===== */
+    .bookings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
     }
   </style>
 </head>
@@ -217,54 +228,36 @@
                 </label>
 
                 <div class="map-picker-wrapper">
-                  <!-- Search Box -->
                   <div class="map-search-row">
                     <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة...">
                     <button type="button" onclick="searchMapLocation()">
                       <i class="ph ph-magnifying-glass"></i> بحث
                     </button>
                   </div>
-
-                  <p class="map-picker-hint">
-                    <i class="ph ph-cursor-click"></i>
-                    انقر على الخريطة لتحديد الموقع بدقة
-                  </p>
-
-                  <!-- Map -->
+                  <p class="map-picker-hint"><i class="ph ph-cursor-click"></i> انقر على الخريطة لتحديد الموقع بدقة</p>
                   <div id="admin-map-picker"></div>
-
-                  <!-- Confirmed badge -->
                   <div class="map-picked-badge" id="map-picked-badge">
-                    <i class="ph-fill ph-check-circle"></i>
-                    تم تحديد الموقع بنجاح
+                    <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع بنجاح
                   </div>
-
-                  <!-- Coords inputs (readonly — تُملأ تلقائياً) -->
                   <div class="coords-row">
-                    <div class="input-group">
-                      <label>خط العرض (Latitude)</label>
-                      <input type="text" id="prop-lat" placeholder="مثال: 33.886" readonly>
-                    </div>
-                    <div class="input-group">
-                      <label>خط الطول (Longitude)</label>
-                      <input type="text" id="prop-lng" placeholder="مثال: 9.537" readonly>
-                    </div>
+                    <div class="input-group"><label>خط العرض</label><input type="text" id="prop-lat" placeholder="مثال: 33.886" readonly></div>
+                    <div class="input-group"><label>خط الطول</label><input type="text" id="prop-lng" placeholder="مثال: 9.537" readonly></div>
                   </div>
                 </div>
               </div>
-              <!-- END Map Picker -->
-
-              <button type="submit" class="primary-btn mt-4" id="submit-prop-btn">
-                <i class="ph ph-plus-circle"></i> إضافة العقار
-              </button>
+              <button type="submit" class="primary-btn mt-4" id="submit-prop-btn"><i class="ph ph-plus-circle"></i> إضافة العقار</button>
             </form>
           </div>
         </div>
 
-        <!-- Tab 3: Bookings -->
+        <!-- Tab 3: Bookings (🔥 THIS IS WHERE THE MAGIC HAPPENS 🔥) -->
         <div id="tab-bookings" class="tab-pane">
           <div class="admin-card">
-            <h3 class="font-bold text-center text-muted">سيتم ربط الحجوزات قريباً...</h3>
+            <h3 class="font-bold" style="margin-bottom: 20px;">إدارة الحجوزات</h3>
+            <!-- This ID is critical. JS will inject bookings here -->
+            <div id="bookings-container">
+               <p style="text-align:center;padding:40px;color:var(--text-muted)">جارٍ التحميل...</p>
+            </div>
           </div>
         </div>
 
@@ -292,19 +285,13 @@
           </label>
           <div class="map-picker-wrapper">
             <p class="map-picker-hint"><i class="ph ph-cursor-click"></i> انقر على الخريطة لتغيير الموقع</p>
-            <div id="edit-map-picker" style="width:100%; height:250px; border-radius:12px; border:1px solid var(--border-color); cursor:crosshair; z-index:1;"></div>
+            <div id="edit-map-picker"></div>
             <div class="map-picked-badge" id="edit-map-picked-badge">
               <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع
             </div>
             <div class="coords-row">
-              <div class="input-group">
-                <label>خط العرض</label>
-                <input type="text" id="edit-lat" placeholder="مثال: 33.886" readonly>
-              </div>
-              <div class="input-group">
-                <label>خط الطول</label>
-                <input type="text" id="edit-lng" placeholder="مثال: 9.537" readonly>
-              </div>
+              <div class="input-group"><label>خط العرض</label><input type="text" id="edit-lat" placeholder="مثال: 33.886" readonly></div>
+              <div class="input-group"><label>خط الطول</label><input type="text" id="edit-lng" placeholder="مثال: 9.537" readonly></div>
             </div>
           </div>
         </div>
@@ -314,7 +301,11 @@
     </div>
   </div>
 
+  <!-- ✅ Load BOTH JS FILES -->
+  <!-- 1. Core logic for auth, properties, UI -->
   <script src="admin.js"></script>
+  <!-- 2. The new robust bookings display logic (MUST BE LOADED AFTER admin.js) -->
+  <script src="admin_booking_addon.js"></script>
 
   <script>
   // ================================================
@@ -325,8 +316,8 @@
 
   // --- خريطة إضافة عقار ---
   function initAddMap() {
-    if (addMap) return; // لا تهيئ مرتين
-    addMap = L.map('admin-map-picker').setView([28.0, 3.0], 5); // الجزائر مركز البداية
+    if (addMap) return;
+    addMap = L.map('admin-map-picker').setView([28.0, 3.0], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors', maxZoom: 19
     }).addTo(addMap);
@@ -346,7 +337,6 @@
     document.getElementById('map-picked-badge').classList.add('visible');
   }
 
-  // --- بحث بالاسم ---
   async function searchMapLocation() {
     const query = document.getElementById('map-search-input').value.trim();
     if (!query) return;
@@ -368,9 +358,7 @@
 
   // --- خريطة تعديل عقار ---
   function initEditMap(existingLat, existingLng) {
-    const center = (existingLat && existingLng)
-      ? [existingLat, existingLng]
-      : [28.0, 3.0];
+    const center = (existingLat && existingLng) ? [existingLat, existingLng] : [28.0, 3.0];
     const zoom   = (existingLat && existingLng) ? 14 : 5;
 
     if (!editMap) {
@@ -393,7 +381,6 @@
       editMap.invalidateSize();
     }
 
-    // ضع ماركر للموقع الحالي إن وُجد
     if (existingLat && existingLng) {
       if (editMarker) editMap.removeLayer(editMarker);
       editMarker = L.marker([existingLat, existingLng]).addTo(editMap)
@@ -402,25 +389,25 @@
     }
   }
 
-  // تهيئة خريطة الإضافة عند الانتقال لتبويب "إضافة عقار"
-  const origSwitchTab = window.switchTab;
-  window.switchTab = function(tab) {
-    if (origSwitchTab) origSwitchTab(tab);
-    if (tab === 'add-property') {
-      setTimeout(() => {
-        initAddMap();
-        if (addMap) addMap.invalidateSize();
-      }, 100);
-    }
-  };
+  // --- ربط الخرائط بتبديل التبويبات ---
+  if (typeof window.switchTab === "function") {
+    const origSwitchTab = window.switchTab;
+    window.switchTab = function(tab) {
+      origSwitchTab(tab);
+      if (tab === 'add-property') {
+        setTimeout(() => {
+          initAddMap();
+          if (addMap) addMap.invalidateSize();
+        }, 100);
+      }
+    };
+  }
 
-  // تهيئة خريطة التعديل عند فتح Modal (تُستدعى من admin.js)
   window.initEditMapFromAdmin = function(lat, lng) {
     setTimeout(() => {
       initEditMap(lat || null, lng || null);
     }, 150);
   };
   </script>
-
 </body>
 </html>
