@@ -673,8 +673,19 @@ async function loadPropertyDetails() {
 
     document.title = `${t('Book','احجز')} — ${title || 'OreBooking'}`;
   } catch (err) {
-    console.error('[loadPropertyDetails]', err);
-    showGlobalAlert(t('Could not load property details.','تعذّر تحميل بيانات العقار.'), 'error');
+    console.error('[handleSubmit]', err);
+    let msg = t('Unexpected error. Please try again.', 'خطأ غير متوقع. يرجى المحاولة مجدداً.');
+    if (err.code === 'storage/unauthorized') {
+      msg = t('Upload failed: no permission.', 'فشل الرفع: غير مصرّح.');
+    } else if (err.code === 'permission-denied') {
+      msg = t('Permission denied. Please log in or check database rules.', 'تم رفض الإذن. يرجى تسجيل الدخول أو التأكد من صلاحيات قاعدة البيانات.');
+    } else if (err.message && err.message.includes('NaN')) {
+      msg = t('Invalid number in form. Please check your inputs.', 'رقم غير صحيح في النموذج. يرجى مراجعة المدخلات.');
+    } else if (err.message) {
+      msg += ` (${err.message})`;
+    }
+    showGlobalAlert(msg, 'error');
+    setButtonLoading(els.btnConfirm, false);
   }
 }
 
@@ -700,7 +711,19 @@ async function loadBookedDates() {
       }
     });
   } catch (err) {
-    console.error('[loadBookedDates]', err);
+    console.error('[handleSubmit]', err);
+    let msg = t('Unexpected error. Please try again.', 'خطأ غير متوقع. يرجى المحاولة مجدداً.');
+    if (err.code === 'storage/unauthorized') {
+      msg = t('Upload failed: no permission.', 'فشل الرفع: غير مصرّح.');
+    } else if (err.code === 'permission-denied') {
+      msg = t('Permission denied. Please log in or check database rules.', 'تم رفض الإذن. يرجى تسجيل الدخول أو التأكد من صلاحيات قاعدة البيانات.');
+    } else if (err.message && err.message.includes('NaN')) {
+      msg = t('Invalid number in form. Please check your inputs.', 'رقم غير صحيح في النموذج. يرجى مراجعة المدخلات.');
+    } else if (err.message) {
+      msg += ` (${err.message})`;
+    }
+    showGlobalAlert(msg, 'error');
+    setButtonLoading(els.btnConfirm, false);
   }
 }
 
@@ -1023,8 +1046,20 @@ function setupEventListeners() {
         icon.className = 'ph-fill ph-check-circle text-primary';
         setTimeout(() => { icon.className = originalClass; }, 2000);
       } catch (err) {
-        console.error('Failed to copy', err);
-      }
+    console.error('[handleSubmit]', err);
+    let msg = t('Unexpected error. Please try again.', 'خطأ غير متوقع. يرجى المحاولة مجدداً.');
+    if (err.code === 'storage/unauthorized') {
+      msg = t('Upload failed: no permission.', 'فشل الرفع: غير مصرّح.');
+    } else if (err.code === 'permission-denied') {
+      msg = t('Permission denied. Please log in or check database rules.', 'تم رفض الإذن. يرجى تسجيل الدخول أو التأكد من صلاحيات قاعدة البيانات.');
+    } else if (err.message && err.message.includes('NaN')) {
+      msg = t('Invalid number in form. Please check your inputs.', 'رقم غير صحيح في النموذج. يرجى مراجعة المدخلات.');
+    } else if (err.message) {
+      msg += ` (${err.message})`;
+    }
+    showGlobalAlert(msg, 'error');
+    setButtonLoading(els.btnConfirm, false);
+  }
     });
   });
 
@@ -1186,40 +1221,35 @@ async function handleSubmit(e) {
       .map(([k]) => k);
 
     const bookingDoc = {
-      propertyId:      String(bookingState.propertyId),
-      propertyTitle:   propTitle,
-      checkIn:         firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)),
-      checkOut:        firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)),
-      // Occupancy
-      rooms:           bookingState.rooms,
-      adults:          bookingState.adults,
-      children:        bookingState.children,
-      childAges:       bookingState.childAges,
-      bedConfig:       bookingState.bedConfig,
-      // Pricing
-      nights:          bookingState.nights,
-      basePrice:       bookingState.basePrice,
-      roomPrice:       bookingState.roomPrice,
-      addonsTotal:     bookingState.addonsTotal,
-      serviceFee:      bookingState.fee,
-      totalPrice:      bookingState.totalPrice,
+      propertyId:      String(bookingState.propertyId || ''),
+      propertyTitle:   propTitle || '',
+      checkIn:         bookingState.checkIn ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)) : null,
+      checkOut:        bookingState.checkOut ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)) : null,
+      rooms:           Number(bookingState.rooms) || 1,
+      adults:          Number(bookingState.adults) || 1,
+      children:        Number(bookingState.children) || 0,
+      childAges:       (bookingState.childAges || []).map(a => Number.isNaN(a) || a === '' ? 0 : Number(a)),
+      bedConfig:       bookingState.bedConfig || 'double',
+      nights:          Number(bookingState.nights) || 0,
+      basePrice:       Number(bookingState.basePrice) || 0,
+      roomPrice:       Number(bookingState.roomPrice) || 0,
+      addonsTotal:     Number(bookingState.addonsTotal) || 0,
+      serviceFee:      Number(bookingState.fee) || 0,
+      totalPrice:      Number(bookingState.totalPrice) || 0,
       currency:        'DZD',
-      // Add-ons
-      addons:          bookingState.addons,
-      selectedAddons:  selectedAddons,
-      restaurantPlan:  bookingState.addons.restaurant ? bookingState.addons.restaurantPlan : null,
-      // Guest Info
-      guestName:       els.gName.value.trim(),
-      guestEmail:      els.gEmail.value.trim().toLowerCase(),
-      guestPhone:      els.gPhone.value.trim(),
+      addons:          bookingState.addons || {},
+      selectedAddons:  selectedAddons || [],
+      restaurantPlan:  bookingState.addons && bookingState.addons.restaurant ? (bookingState.addons.restaurantPlan || 'breakfast') : null,
+      guestName:       els.gName?.value?.trim() || '',
+      guestEmail:      els.gEmail?.value?.trim().toLowerCase() || '',
+      guestPhone:      els.gPhone?.value?.trim() || '',
       nationality:     els.gNationality?.value || '',
       arrivalTime:     els.gArrival?.value || '',
-      notes:           els.gNotes?.value.trim().slice(0, 500) || '',
-      // Payment
-      paymentMethod:   payMethod,
+      notes:           els.gNotes?.value?.trim().slice(0, 500) || '',
+      paymentMethod:   payMethod || 'cash',
       receiptUrl:      receiptUrl || null,
       status:          'pending',
-      lang:            bookingState.lang,
+      lang:            bookingState.lang || 'en',
       userId:          currentUser ? currentUser.uid : null,
       userEmail:       currentUser ? currentUser.email : null,
       createdAt:       firebase.firestore.FieldValue.serverTimestamp()
@@ -1231,9 +1261,16 @@ async function handleSubmit(e) {
 
   } catch (err) {
     console.error('[handleSubmit]', err);
-    const msg = err.code === 'storage/unauthorized'
-      ? t('Upload failed: no permission.','فشل الرفع: غير مصرّح.')
-      : t('Unexpected error. Please try again.','خطأ غير متوقع. يرجى المحاولة مجدداً.');
+    let msg = t('Unexpected error. Please try again.', 'خطأ غير متوقع. يرجى المحاولة مجدداً.');
+    if (err.code === 'storage/unauthorized') {
+      msg = t('Upload failed: no permission.', 'فشل الرفع: غير مصرّح.');
+    } else if (err.code === 'permission-denied') {
+      msg = t('Permission denied. Please log in or check database rules.', 'تم رفض الإذن. يرجى تسجيل الدخول أو التأكد من صلاحيات قاعدة البيانات.');
+    } else if (err.message && err.message.includes('NaN')) {
+      msg = t('Invalid number in form. Please check your inputs.', 'رقم غير صحيح في النموذج. يرجى مراجعة المدخلات.');
+    } else if (err.message) {
+      msg += ` (${err.message})`;
+    }
     showGlobalAlert(msg, 'error');
     setButtonLoading(els.btnConfirm, false);
   }
@@ -1384,3 +1421,5 @@ function translateBookingPage() {
   const sumPl = document.getElementById('sum-placeholder');
   if (sumPl) sumPl.textContent = 'اختر التواريخ لرؤية تفاصيل السعر';
 }
+
+// End of booking.js
