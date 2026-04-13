@@ -1,22 +1,22 @@
 /* =========================================
    Complete Booking Page Styles — booking.css
+   OreBooking v2.0 — Full Rewrite with Add-ons,
+   Occupancy, Reviews, Hotel Info Cards
    ========================================= */
 
-/* ─── RTL / LTR Global Fixes ──────────────── */
-html[dir="rtl"] .booking-page {
-  text-align: right;
-  direction: rtl;
-}
-html[dir="ltr"] .booking-page {
-  text-align: left;
-  direction: ltr;
-}
+/* ═══════════════════════════════════════════
+   RTL / LTR Global
+═══════════════════════════════════════════ */
+html[dir="rtl"] .booking-page { text-align: right; direction: rtl; }
+html[dir="ltr"] .booking-page { text-align: left;  direction: ltr; }
 
-/* ─── Layout ─────────────────────────────── */
+/* ═══════════════════════════════════════════
+   Layout
+═══════════════════════════════════════════ */
 .booking-page {
   min-height: 100dvh;
   background-color: var(--bg-color);
-  padding-bottom: 60px;
+  padding-bottom: 80px;
 }
 
 .booking-wrapper {
@@ -29,7 +29,24 @@ html[dir="ltr"] .booking-page {
   align-items: start;
 }
 
-/* ─── Steps Header Container ──────────────── */
+@media (max-width: 900px) {
+  .booking-wrapper {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .booking-main-card { order: 1; }
+  .booking-sidebar   { order: 2; }
+}
+
+@media (max-width: 600px) {
+  .booking-wrapper { padding: 16px; }
+}
+
+/* ═══════════════════════════════════════════
+   Step Indicators
+═══════════════════════════════════════════ */
 .booking-steps-header {
   display: flex;
   align-items: center;
@@ -40,26 +57,17 @@ html[dir="ltr"] .booking-page {
   direction: ltr;
 }
 
-/* ─── Step Connector Line ─────────────────── */
-/* 
-  ✅ إصلاح: الأصل كان pseudo-element ::after على .step-indicator
-  لكن كان مكسوراً في RTL ومع الـ step-connector divs الجديدة في HTML.
-  الآن نستخدم .step-connector كـ element منفصل في HTML
-*/
 .step-connector {
   flex: 1;
   height: 2px;
   background: var(--border-color);
   transition: background 0.4s ease;
   min-width: 20px;
-  margin-bottom: 22px; /* ✅ يمحي مع step-num */
+  margin-bottom: 22px;
 }
 
-.step-connector.completed {
-  background: var(--primary);
-}
+.step-connector.completed { background: var(--primary); }
 
-/* ─── Step Indicator ──────────────────────── */
 .step-indicator {
   display: flex;
   flex-direction: column;
@@ -98,12 +106,8 @@ html[dir="ltr"] .booking-page {
   color: #fff;
 }
 
-/* ✅ إصلاح: عرض ✓ عند اكتمال الخطوة */
 .step-indicator.completed .step-num > span { display: none; }
-.step-indicator.completed .step-num::after {
-  content: "✓";
-  font-size: 0.9rem;
-}
+.step-indicator.completed .step-num::after { content: "✓"; font-size: 0.9rem; }
 
 .step-label {
   font-size: 0.7rem;
@@ -113,167 +117,18 @@ html[dir="ltr"] .booking-page {
   text-align: center;
 }
 
-.step-indicator.active .step-label {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.step-indicator.completed .step-label {
-  color: var(--primary);
-}
+.step-indicator.active    .step-label { color: var(--primary); font-weight: 700; }
+.step-indicator.completed .step-label { color: var(--primary); }
 
 @media (max-width: 600px) {
-  .step-label { display: none; }
-  .booking-steps-header { padding-bottom: 16px; margin-top: 16px; }
-  .step-connector { margin-bottom: 0; }
+  .step-label               { display: none; }
+  .booking-steps-header     { padding-bottom: 16px; margin-top: 16px; }
+  .step-connector           { margin-bottom: 0; }
 }
 
-/* ─── Responsive Layout ───────────────────── */
-@media (max-width: 900px) {
-  .booking-wrapper {
-    grid-template-columns: 1fr;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-  .booking-main-card { order: 1; }
-  .booking-sidebar   { order: 2; }
-}
-
-/* ─── Back Button ─────────────────────────── */
-/* ✅ لا نعيد تعريف .back-btn هنا لأنه معرّف بالكامل في style.css
-   نضيف فقط overrides خاصة بصفحة الحجز */
-.inner-nav .back-btn {
-  border-radius: 20px; /* تخصيص شكل الزر في هذه الصفحة */
-}
-
-@media (max-width: 600px) {
-  #nav-back-txt { display: none; }
-  .inner-nav .back-btn {
-    padding: 8px;
-    border-radius: 50%;
-    aspect-ratio: 1;
-    justify-content: center;
-  }
-  .booking-wrapper { padding: 20px 16px; }
-  .booking-steps-header { padding-inline: 16px; }
-}
-
-/* ─── Sticky Sidebar ──────────────────────── */
-.booking-sidebar {
-  position: sticky;
-  top: 90px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-@media (max-width: 900px) {
-  .booking-sidebar {
-    position: static;
-    width: 100%;
-  }
-}
-
-/* ─── Summary Card ────────────────────────── */
-.booking-summary-card {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-2xl);
-  padding: 20px;
-  box-shadow: var(--shadow-soft);
-}
-
-.summary-card-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 14px;
-}
-
-.booking-prop-summary {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.booking-prop-img {
-  width: 80px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 10px;
-  flex-shrink: 0;
-  background: var(--bg-color);
-}
-
-.booking-prop-info { min-width: 0; flex: 1; }
-
-.booking-prop-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 3px;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.booking-prop-location {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-
-.booking-prop-price { margin-top: 4px; }
-.booking-prop-price strong { color: var(--primary); font-size: 1rem; }
-.booking-prop-price span   { font-size: 0.78rem; color: var(--text-muted); }
-
-.summary-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 14px 0;
-}
-
-/* ─── Price Breakdown ─────────────────────── */
-#price-breakdown { display: flex; flex-direction: column; gap: 9px; }
-
-.price-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  gap: 8px;
-}
-
-.price-row span:last-child { font-variant-numeric: tabular-nums; }
-
-.price-row.total {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text-main);
-  padding-top: 10px;
-  border-top: 1px solid var(--border-color);
-  margin-top: 4px;
-}
-
-.sum-placeholder-txt {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  text-align: center;
-  padding: 12px 0;
-}
-
-/* ─── Main Card ───────────────────────────── */
+/* ═══════════════════════════════════════════
+   Main Card
+═══════════════════════════════════════════ */
 .booking-main-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -286,7 +141,6 @@ html[dir="ltr"] .booking-page {
   display: none;
   animation: bk-fadeIn 0.35s ease;
 }
-
 .booking-step.active { display: block; }
 
 @keyframes bk-fadeIn {
@@ -294,6 +148,7 @@ html[dir="ltr"] .booking-page {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Step Header ─────────────────────────── */
 .step-header {
   padding: 24px 28px 18px;
   border-bottom: 1px solid var(--border-color);
@@ -319,13 +174,7 @@ html[dir="ltr"] .booking-page {
   .step-title  { font-size: 1.05rem; }
 }
 
-/* ─── Step Action Buttons ─────────────────── */
-/*
-  ✅ إصلاح: booking.html يستخدم .step-actions مع .step-actions-end
-  و .step-actions-between — وكان الـ CSS يعتمد على .btn-ghost و .btn-primary
-  داخل .step-actions لكن الـ HTML يستخدم .ghost-btn و .primary-btn من style.css
-  الحل: نحذف التعريفات المكررة ونضيف فقط layout modifiers
-*/
+/* ─── Step Actions ────────────────────────── */
 .step-actions {
   display: flex;
   align-items: center;
@@ -338,10 +187,8 @@ html[dir="ltr"] .booking-page {
 .step-actions-end     { justify-content: flex-end; }
 .step-actions-between { justify-content: space-between; }
 
-/* ✅ إصلاح RTL — لا نعكس flex-direction بل نعتمد على inset-inline */
 html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
 
-/* primary-btn داخل step-actions تكون بعرض مرن */
 .step-actions .primary-btn {
   width: auto;
   flex: 1;
@@ -349,12 +196,48 @@ html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
 }
 
 @media (max-width: 600px) {
-  .step-actions { padding: 14px 18px; flex-wrap: wrap; }
+  .step-actions              { padding: 14px 18px; flex-wrap: wrap; }
   .step-actions .primary-btn { max-width: none; }
 }
 
-/* ─── Warning Banner ──────────────────────── */
-/* ✅ إصلاح: كان اسمه #min-nights-warning بـ class inline — الآن class موحّد */
+/* ═══════════════════════════════════════════
+   Navbar — Back Button Override
+═══════════════════════════════════════════ */
+.inner-nav .back-btn { border-radius: 20px; }
+
+@media (max-width: 600px) {
+  #nav-back-txt { display: none; }
+  .inner-nav .back-btn {
+    padding: 8px;
+    border-radius: 50%;
+    aspect-ratio: 1;
+    justify-content: center;
+  }
+  .booking-steps-header { padding-inline: 16px; }
+}
+
+/* ═══════════════════════════════════════════
+   Alerts & Warnings
+═══════════════════════════════════════════ */
+.booking-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-xl);
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  line-height: 1.5;
+  animation: bk-fadeIn 0.3s ease;
+}
+
+.booking-alert i { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
+
+.booking-alert.error   { background: color-mix(in srgb, #e11d48 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #e11d48 30%, transparent); color: #9f1239; }
+.booking-alert.warning { background: color-mix(in srgb, #f59e0b 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent); color: #92400e; }
+.booking-alert.success { background: color-mix(in srgb, #10b981 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #10b981 30%, transparent); color: #064e3b; }
+.booking-alert.info    { background: color-mix(in srgb, var(--primary) 8%, var(--bg-color)); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); color: var(--text-main); }
+
 .booking-warning {
   margin-top: 10px;
   padding: 10px 14px;
@@ -367,7 +250,9 @@ html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
   animation: bk-fadeIn 0.3s ease;
 }
 
-/* ─── Calendar ────────────────────────────── */
+/* ═══════════════════════════════════════════
+   STEP 1 — Calendar
+═══════════════════════════════════════════ */
 .calendar-section { margin-bottom: 28px; }
 
 .calendar-nav {
@@ -441,32 +326,11 @@ html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
   -webkit-tap-highlight-color: transparent;
 }
 
-.cal-cell.empty {
-  background: transparent;
-  cursor: default;
-  pointer-events: none;
-}
+.cal-cell.empty       { background: transparent; cursor: default; pointer-events: none; }
+.cal-cell.available:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.cal-cell.disabled    { color: var(--text-muted); opacity: 0.38; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
+.cal-cell.today       { font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--primary); color: var(--primary); }
 
-.cal-cell.available:hover {
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
-}
-
-.cal-cell.disabled {
-  color: var(--text-muted);
-  opacity: 0.38;
-  cursor: not-allowed;
-  text-decoration: line-through;
-  pointer-events: none;
-}
-
-.cal-cell.today {
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1.5px var(--primary);
-  color: var(--primary);
-}
-
-/* ✅ إصلاح border-radius لـ check-in/out في LTR و RTL */
 .cal-cell.check-in {
   background: var(--primary);
   color: #fff;
@@ -474,10 +338,7 @@ html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
   border-radius: 8px 0 0 8px;
   z-index: 1;
 }
-
-html[dir="rtl"] .cal-cell.check-in {
-  border-radius: 0 8px 8px 0;
-}
+html[dir="rtl"] .cal-cell.check-in { border-radius: 0 8px 8px 0; }
 
 .cal-cell.check-out {
   background: var(--primary);
@@ -486,15 +347,9 @@ html[dir="rtl"] .cal-cell.check-in {
   border-radius: 0 8px 8px 0;
   z-index: 1;
 }
+html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
 
-html[dir="rtl"] .cal-cell.check-out {
-  border-radius: 8px 0 0 8px;
-}
-
-/* ✅ check-in وcheck-out في نفس اليوم */
-.cal-cell.check-in.check-out {
-  border-radius: 8px !important;
-}
+.cal-cell.check-in.check-out { border-radius: 8px !important; }
 
 .cal-cell.in-range {
   background: color-mix(in srgb, var(--primary) 12%, transparent);
@@ -522,7 +377,6 @@ html[dir="rtl"] .cal-cell.check-out {
   text-align: center;
 }
 
-/* ✅ إصلاح: كان اسمه .date-summary-divider لكن booking.html يستخدم .date-summary-middle */
 .date-summary-middle {
   display: flex;
   flex-direction: column;
@@ -546,49 +400,104 @@ html[dir="rtl"] .cal-cell.check-out {
   color: var(--text-main);
 }
 
-/* ─── Guests Section ──────────────────────── */
-.guests-section { margin-top: 24px; }
-
-/* ✅ إصلاح: booking.html يستخدم .guests-section-title */
-.guests-section-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
+/* ═══════════════════════════════════════════
+   STEP 1 — Occupancy Section (NEW)
+═══════════════════════════════════════════ */
+.occupancy-section {
+  margin-top: 28px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
 }
 
-.guests-counter {
+.occupancy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.guests-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ─── Occupancy Badge ─────────────────────── */
+.occupancy-summary-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+/* ─── Occupancy Row ───────────────────────── */
+.occupancy-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
+  border-bottom: 1px solid var(--border-color);
+  gap: 12px;
+  transition: background 0.15s;
 }
 
-.guests-label {
+.occupancy-row:last-of-type { border-bottom: none; }
+
+.occupancy-row:hover {
+  background: color-mix(in srgb, var(--primary) 3%, var(--bg-color));
+}
+
+.occupancy-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.occupancy-label > i {
+  font-size: 1.3rem;
+  color: var(--primary);
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+}
+
+.occupancy-label div {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.guests-label span {
-  font-weight: 600;
-  font-size: 0.95rem;
+.occupancy-label .font-medium {
+  font-size: 0.92rem;
+  color: var(--text-main);
 }
 
-.guests-label small {
-  font-size: 0.76rem;
+.occupancy-label small {
+  font-size: 0.74rem;
   color: var(--text-muted);
 }
 
+/* ─── Counter Controls ────────────────────── */
 .counter-controls {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
 }
 
 .counter-btn {
@@ -598,7 +507,7 @@ html[dir="rtl"] .cal-cell.check-out {
   border: 2px solid var(--border-color);
   background: var(--surface-color);
   color: var(--text-main);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -615,32 +524,152 @@ html[dir="rtl"] .cal-cell.check-out {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
-.counter-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
+.counter-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .counter-value {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 700;
   min-width: 28px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  color: var(--text-main);
 }
 
-/* ─── Review Step (Step 2) ───────────────── */
-.review-list { display: flex; flex-direction: column; }
+/* ─── Child Ages Box ──────────────────────── */
+.child-ages-box {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--primary) 3%, var(--bg-color));
+  animation: bk-fadeIn 0.3s ease;
+}
+
+.child-ages-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.child-ages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.child-age-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.child-age-item label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.child-age-item label i {
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.child-age-select {
+  padding: 8px 10px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.child-age-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ─── Bed Config Row ──────────────────────── */
+.bed-config-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-color);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bed-config-row .occupancy-label { flex: 1; }
+
+.bed-select {
+  padding: 9px 14px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.bed-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ─── Max Guests Hint ─────────────────────── */
+.guests-max-hint {
+  margin: 0 18px 14px;
+  padding: 9px 14px;
+  background: color-mix(in srgb, #f59e0b 10%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  border-radius: var(--radius-xl);
+  font-size: 0.8rem;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: bk-fadeIn 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════
+   STEP 2 — Review List
+═══════════════════════════════════════════ */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
 
 .review-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 13px 0;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   gap: 16px;
+  background: var(--bg-color);
+  transition: background 0.15s;
 }
 
-.review-row:last-child { border-bottom: none; }
+.review-row:last-child  { border-bottom: none; }
+.review-row:hover       { background: var(--surface-color); }
 
 .review-label {
   font-size: 0.875rem;
@@ -656,7 +685,10 @@ html[dir="rtl"] .cal-cell.check-out {
   font-variant-numeric: tabular-nums;
 }
 
-/* ✅ إصلاح: كان .total-row لكن booking.html يستخدم .review-total-row */
+.review-total-row {
+  background: color-mix(in srgb, var(--primary) 4%, var(--bg-color)) !important;
+}
+
 .review-total-row .review-label,
 .review-total-row .review-value {
   font-weight: 700;
@@ -666,14 +698,196 @@ html[dir="rtl"] .cal-cell.check-out {
 
 .price-highlight { color: var(--primary); }
 
-/* ─── Payment Methods ─────────────────────── */
+/* ═══════════════════════════════════════════
+   STEP 2 — Add-ons Panel (NEW)
+═══════════════════════════════════════════ */
+.addons-panel {
+  margin-bottom: 24px;
+}
+
+.addons-panel-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addons-panel-title i {
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+/* Grid layout for add-on cards */
+.addons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .addons-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Add-on Card ─────────────────────────── */
+.addon-card {
+  position: relative;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--bg-color);
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.addon-card:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 3%, var(--bg-color));
+}
+
+.addon-card.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface-color));
+}
+
+/* Hidden checkbox drives the state */
+.addon-card input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.addon-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.addon-card-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.addon-card.selected .addon-card-icon-wrap {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.addon-card-icon-wrap i {
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+/* Checkmark badge */
+.addon-check-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  font-size: 0.7rem;
+  color: transparent;
+}
+
+.addon-card.selected .addon-check-badge {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.addon-card-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.addon-card-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.addon-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  gap: 6px;
+}
+
+.addon-card-price {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.addon-card-tag {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--border-color);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* Restaurant plan sub-select */
+.addon-plan-select {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  cursor: pointer;
+  display: none;
+}
+
+.addon-card.selected .addon-plan-select { display: block; }
+
+.addon-plan-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ═══════════════════════════════════════════
+   STEP 2 — Payment Methods
+═══════════════════════════════════════════ */
 .payment-methods-section {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid var(--border-color);
 }
 
-/* ✅ إصلاح: booking.html يستخدم .section-sub-title */
 .section-sub-title {
   font-size: 0.95rem;
   font-weight: 700;
@@ -702,23 +916,14 @@ html[dir="rtl"] .cal-cell.check-out {
   background: var(--surface-color);
 }
 
-/* ✅ :has() مدعوم في كل المتصفحات الحديثة */
-.payment-option:has(input[type="radio"]:checked) {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
-  background: color-mix(in srgb, var(--primary) 4%, var(--surface-color));
-}
-
-/* ✅ fallback للمتصفحات القديمة */
+.payment-option:has(input[type="radio"]:checked),
 .payment-option.selected {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
   background: color-mix(in srgb, var(--primary) 4%, var(--surface-color));
 }
 
-.payment-option input[type="radio"] {
-  display: none; /* ✅ إخفاء الـ radio الافتراضي واستخدام .pay-opt-check */
-}
+.payment-option input[type="radio"] { display: none; }
 
 .pay-opt-content {
   display: flex;
@@ -737,32 +942,13 @@ html[dir="rtl"] .cal-cell.check-out {
   color: var(--text-main);
 }
 
-.pay-opt-desc {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0;
-}
+.pay-opt-desc  { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+.pay-opt-icon  { font-size: 1.4rem; color: var(--primary); line-height: 1; margin-top: 2px; flex-shrink: 0; }
 
-.pay-opt-icon {
-  font-size: 1.4rem;
-  color: var(--primary);
-  line-height: 1;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-/* ✅ أيقونة التحقق عند الاختيار */
-.pay-opt-check {
-  font-size: 1.3rem;
-  color: var(--border-color);
-  transition: color 0.2s;
-  flex-shrink: 0;
-}
+.pay-opt-check { font-size: 1.3rem; color: var(--border-color); transition: color 0.2s; flex-shrink: 0; }
 
 .payment-option:has(input:checked) .pay-opt-check,
-.payment-option.selected .pay-opt-check {
-  color: var(--primary);
-}
+.payment-option.selected .pay-opt-check { color: var(--primary); }
 
 /* ─── Bank Transfer Box ───────────────────── */
 .transfer-box {
@@ -792,7 +978,7 @@ html[dir="rtl"] .cal-cell.check-out {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 0;
+  padding: 7px 0;
   font-size: 0.875rem;
   gap: 8px;
   border-bottom: 1px solid var(--border-color);
@@ -812,16 +998,33 @@ html[dir="rtl"] .cal-cell.check-out {
 .bank-val {
   font-size: 0.9rem;
   color: var(--text-main);
+  flex: 1;
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── File Upload ─────────────────────────── */
-.file-upload-wrapper {
-  position: relative;
+/* ─── Copy Button ─────────────────────────── */
+.copy-btn {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: var(--transition);
+  flex-shrink: 0;
 }
 
-/* ✅ إخفاء الـ input الافتراضي */
+.copy-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ─── File Upload ─────────────────────────── */
+.file-upload-wrapper { position: relative; }
+
 .file-upload-wrapper input[type="file"] {
   position: absolute;
   inset: 0;
@@ -852,7 +1055,6 @@ html[dir="rtl"] .cal-cell.check-out {
 
 .file-upload-label i { font-size: 1.6rem; color: var(--primary); }
 
-.file-upload-label:hover,
 .file-upload-wrapper:hover .file-upload-label {
   border-color: var(--primary);
   background: color-mix(in srgb, var(--primary) 5%, var(--bg-color));
@@ -873,7 +1075,6 @@ html[dir="rtl"] .cal-cell.check-out {
   border-top: 1px solid var(--border-color);
 }
 
-/* ✅ إصلاح: booking.html يستخدم .checkbox-policy-label */
 .checkbox-policy-label {
   display: flex;
   align-items: flex-start;
@@ -903,43 +1104,10 @@ html[dir="rtl"] .cal-cell.check-out {
   line-height: 1.55;
 }
 
-/* ─── Auth Prompt Box ─────────────────────── */
-.auth-prompt-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: color-mix(in srgb, var(--primary) 6%, var(--bg-color));
-  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
-  border-radius: var(--radius-xl);
-  margin-top: 4px;
-}
-
-.auth-prompt-icon {
-  font-size: 1.6rem;
-  color: var(--primary);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.auth-prompt-text {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  line-height: 1.5;
-}
-
-.auth-prompt-link {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.auth-prompt-link:hover { text-decoration: underline; }
-
-/* ─── Guest Form ──────────────────────────── */
-.guest-form { display: flex; flex-direction: column; gap: 18px; }
+/* ═══════════════════════════════════════════
+   STEP 3 — Guest Form
+═══════════════════════════════════════════ */
+.guest-form  { display: flex; flex-direction: column; gap: 18px; }
 
 .form-row {
   display: grid;
@@ -963,7 +1131,6 @@ html[dir="rtl"] .cal-cell.check-out {
   flex-wrap: wrap;
 }
 
-/* ✅ إصلاح: booking.html يستخدم .req-star بدلاً من .req */
 .req-star, .req { color: #e11d48; }
 
 .optional-tag {
@@ -990,14 +1157,8 @@ html[dir="rtl"] .cal-cell.check-out {
 
 html[dir="rtl"] .form-group input,
 html[dir="rtl"] .form-group textarea,
-html[dir="rtl"] .form-group select {
-  text-align: right;
-}
-
-/* ✅ Phone dir=ltr يبقى LTR حتى في RTL mode */
-html[dir="rtl"] .form-group input[dir="ltr"] {
-  text-align: left;
-}
+html[dir="rtl"] .form-group select   { text-align: right; }
+html[dir="rtl"] .form-group input[dir="ltr"] { text-align: left; }
 
 .form-group input:focus,
 .form-group textarea:focus,
@@ -1013,27 +1174,44 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
 }
 
-.form-error-msg {
-  font-size: 0.78rem;
-  color: #e11d48;
-  display: none;
-}
-
+.form-error-msg { font-size: 0.78rem; color: #e11d48; display: none; }
 .form-error-msg.visible { display: block; }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 90px;
+.form-group textarea { resize: vertical; min-height: 90px; }
+
+/* Notes footer (char counter) */
+.notes-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
-/* ─── Success Screen (Step 4) ────────────── */
-/* ✅ إصلاح: كان .confirm-container لكن booking.html يستخدم .success-screen */
+/* ─── Auth Prompt Box ─────────────────────── */
+.auth-prompt-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: var(--radius-xl);
+  margin-top: 4px;
+}
+
+.auth-prompt-icon  { font-size: 1.6rem; color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+.auth-prompt-text  { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; line-height: 1.5; }
+.auth-prompt-link  { font-size: 0.85rem; font-weight: 600; color: var(--primary); text-decoration: none; }
+.auth-prompt-link:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════
+   STEP 4 — Success / Confirmation
+═══════════════════════════════════════════ */
 .success-screen {
   text-align: center;
   padding: 48px 24px 40px;
 }
 
-/* ✅ أنيميشن دائرة النجاح */
 .success-animation {
   position: relative;
   width: 80px;
@@ -1087,7 +1265,6 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   line-height: 1.6;
 }
 
-/* ✅ إصلاح: booking.html يستخدم .booking-ref-box */
 .booking-ref-box {
   display: inline-block;
   padding: 14px 28px;
@@ -1112,7 +1289,6 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   color: var(--primary);
 }
 
-/* ✅ إصلاح: booking.html يستخدم .success-details-grid */
 .success-details-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1149,7 +1325,6 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   color: var(--text-main);
 }
 
-/* ✅ إصلاح: booking.html يستخدم .success-actions */
 .success-actions {
   display: flex;
   align-items: center;
@@ -1158,9 +1333,310 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   flex-wrap: wrap;
 }
 
-.success-home-btn {
-  width: auto;
-  display: inline-flex;
+.success-home-btn { width: auto; display: inline-flex; }
+
+/* ═══════════════════════════════════════════
+   REVIEWS SECTION (NEW)
+═══════════════════════════════════════════ */
+.reviews-wrapper {
+  border-top: 1px solid var(--border-color);
+  padding: 28px 28px 32px;
+  background: var(--bg-color);
+}
+
+@media (max-width: 600px) {
+  .reviews-wrapper { padding: 20px 18px 24px; }
+}
+
+.reviews-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.reviews-header-left { display: flex; flex-direction: column; gap: 4px; }
+
+.reviews-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.reviews-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Overall rating badge */
+.reviews-overall-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 10px 18px;
+  flex-shrink: 0;
+}
+
+.reviews-overall-score {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.reviews-overall-stars { font-size: 0.85rem; color: #f59e0b; letter-spacing: 1px; }
+.reviews-overall-count { font-size: 0.72rem; color: var(--text-muted); }
+
+/* Star distribution bars */
+.reviews-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 24px;
+}
+
+.reviews-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.reviews-bar-label {
+  width: 30px;
+  text-align: end;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.reviews-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reviews-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #f59e0b;
+  transition: width 0.6s ease;
+}
+
+.reviews-bar-count { width: 20px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* Individual review cards */
+.reviews-list { display: flex; flex-direction: column; gap: 16px; }
+
+.review-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 16px 18px;
+  transition: box-shadow 0.2s;
+  animation: bk-fadeIn 0.4s ease;
+}
+
+.review-card:hover { box-shadow: var(--shadow-soft); }
+
+/* Negative reviews get a subtle left border */
+.review-card.negative {
+  border-inline-start: 3px solid color-mix(in srgb, #e11d48 60%, transparent);
+}
+
+.review-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+/* Reviewer Avatar */
+.reviewer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  background: var(--primary);
+}
+
+.review-card-meta { flex: 1; min-width: 0; }
+
+.reviewer-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.reviewer-info {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reviewer-info span { display: flex; align-items: center; gap: 3px; }
+
+/* Star rating */
+.review-stars {
+  font-size: 0.85rem;
+  color: #f59e0b;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.review-card-text {
+  font-size: 0.875rem;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+/* Category tag */
+.review-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  margin-top: 10px;
+}
+
+.review-tag.positive { background: color-mix(in srgb, #10b981 12%, transparent); color: #065f46; }
+.review-tag.neutral  { background: color-mix(in srgb, #f59e0b 12%, transparent); color: #78350f; }
+.review-tag.negative { background: color-mix(in srgb, #e11d48 10%, transparent); color: #9f1239; }
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+.booking-sidebar {
+  position: sticky;
+  top: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .booking-sidebar { position: static; width: 100%; }
+}
+
+/* ─── Property Summary Card ───────────────── */
+.booking-summary-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
+}
+
+.summary-card-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.booking-prop-summary {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.booking-prop-img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--bg-color);
+}
+
+.booking-prop-info { min-width: 0; flex: 1; }
+
+.booking-prop-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.booking-prop-location {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.booking-prop-price { margin-top: 4px; }
+.booking-prop-price strong { color: var(--primary); font-size: 1rem; }
+.booking-prop-price span   { font-size: 0.78rem; color: var(--text-muted); }
+
+.summary-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 14px 0;
+}
+
+/* Price Breakdown */
+#price-breakdown { display: flex; flex-direction: column; gap: 9px; }
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  gap: 8px;
+}
+
+.price-row span:last-child { font-variant-numeric: tabular-nums; }
+
+.price-row.total {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-main);
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+
+.price-row.addon-line { font-size: 0.8rem; padding-inline-start: 10px; }
+.price-row.addon-line span:first-child::before { content: "+ "; color: var(--primary); }
+
+.sum-placeholder-txt {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
 }
 
 /* ─── Security Badge ──────────────────────── */
@@ -1177,13 +1653,114 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   border-radius: var(--radius-xl);
 }
 
-.security-icon {
-  font-size: 1rem;
-  color: #10b981;
+.security-icon { font-size: 1rem; color: #10b981; flex-shrink: 0; }
+
+/* ─── Hotel Info Cards (NEW) ──────────────── */
+.hotel-info-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  padding: 16px 18px;
+}
+
+.hotel-info-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hotel-info-title i { color: var(--primary); font-size: 1rem; }
+
+/* Amenities list */
+.hotel-amenities-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotel-amenities-list li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotel-amenities-list li i {
+  color: var(--primary);
+  font-size: 0.95rem;
+  width: 16px;
   flex-shrink: 0;
 }
 
-/* ─── Booking History Cards ───────────────── */
+/* Check-in list */
+.hotel-checkin-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.hotel-checkin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.hotel-checkin-list li:last-child { border-bottom: none; }
+
+.checkin-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.checkin-val {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: end;
+}
+
+/* ═══════════════════════════════════════════
+   Skeleton Loader
+═══════════════════════════════════════════ */
+@keyframes bk-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--border-color) 25%,
+    color-mix(in srgb, var(--border-color) 50%, var(--surface-color)) 50%,
+    var(--border-color) 75%
+  );
+  background-size: 800px 100%;
+  animation: bk-shimmer 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeleton-text  { height: 1em; margin-bottom: 8px; border-radius: 4px; }
+.skeleton-image { height: 60px; width: 80px; border-radius: 10px; }
+
+/* ═══════════════════════════════════════════
+   Booking History Cards
+═══════════════════════════════════════════ */
 .my-bookings-list { display: flex; flex-direction: column; gap: 16px; }
 
 .booking-history-card {
@@ -1264,47 +1841,9 @@ html[dir="rtl"] .form-group input[dir="ltr"] {
   }
 }
 
-/* ─── Alerts ──────────────────────────────── */
-.booking-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--radius-xl);
-  font-size: 0.85rem;
-  margin-bottom: 16px;
-  line-height: 1.5;
-  animation: bk-fadeIn 0.3s ease;
-}
-
-.booking-alert i { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
-
-.booking-alert.error   { background: color-mix(in srgb, #e11d48 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #e11d48 30%, transparent); color: #9f1239; }
-.booking-alert.warning { background: color-mix(in srgb, #f59e0b 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent); color: #92400e; }
-.booking-alert.success { background: color-mix(in srgb, #10b981 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #10b981 30%, transparent); color: #064e3b; }
-.booking-alert.info    { background: color-mix(in srgb, var(--primary) 8%, var(--bg-color)); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); color: var(--text-main); }
-
-/* ─── Skeleton Loader ─────────────────────── */
-@keyframes bk-shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position:  400px 0; }
-}
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--border-color) 25%,
-    color-mix(in srgb, var(--border-color) 50%, var(--surface-color)) 50%,
-    var(--border-color) 75%
-  );
-  background-size: 800px 100%;
-  animation: bk-shimmer 1.6s ease-in-out infinite;
-  border-radius: 8px;
-}
-
-.skeleton-text  { height: 1em; margin-bottom: 8px; border-radius: 4px; }
-.skeleton-image { height: 60px; width: 80px; border-radius: 10px; }
-
-/* ─── Utilities (Booking-specific) ───────── */
-.booking-warning-text { font-size: 0.8rem; color: #9f1239; }
+/* ═══════════════════════════════════════════
+   Utilities
+═══════════════════════════════════════════ */
 .d-none               { display: none !important; }
+.mt-16                { margin-top: 16px; }
+.booking-warning-text { font-size: 0.8rem; color: #9f1239; }
