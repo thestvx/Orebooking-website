@@ -61,7 +61,8 @@ function switchTab(tabId) {
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
 
-  document.getElementById("tab-" + tabId).classList.add("active");
+  const targetTab = document.getElementById("tab-" + tabId);
+  if (targetTab) targetTab.classList.add("active");
 
   const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
   if (activeBtn) activeBtn.classList.add("active");
@@ -71,9 +72,9 @@ function switchTab(tabId) {
     "add-property": "إضافة عقار جديد",
     "bookings":     "الحجوزات"
   };
-  document.getElementById("page-title").textContent = titles[tabId] || "";
+  const pageTitle = document.getElementById("page-title");
+  if (pageTitle) pageTitle.textContent = titles[tabId] || "";
 
-  // ✅ تحميل الحجوزات عند فتح تبويب الحجوزات
   if (tabId === 'bookings') {
     loadBookings();
   }
@@ -84,6 +85,7 @@ function switchTab(tabId) {
 // =========================================
 async function loadProperties() {
   const tbody = document.getElementById("properties-tbody");
+  if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">جارٍ التحميل...</td></tr>`;
 
   try {
@@ -99,7 +101,6 @@ async function loadProperties() {
     snapshot.forEach(doc => {
       const p = doc.data();
       const isVisible = p.visible !== false;
-      // ✅ عرض أيقونة الخريطة إذا كان الموقع محدداً
       const hasLocation = p.lat && p.lng;
       const mapBadge = hasLocation
         ? `<span title="الموقع محدد (${parseFloat(p.lat).toFixed(4)}, ${parseFloat(p.lng).toFixed(4)})" style="color:var(--primary); font-size:1rem;"><i class="ph-fill ph-map-pin"></i></span>`
@@ -164,66 +165,65 @@ const addForm      = document.getElementById("add-property-form");
 const submitBtn    = document.getElementById("submit-prop-btn");
 const uploadStatus = document.getElementById("upload-status");
 
-addForm.addEventListener("submit", async function (e) {
-  e.preventDefault();
+if (addForm) {
+  addForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-  const imageFile = document.getElementById("prop-image").files[0];
-  if (!imageFile) { alert("يرجى اختيار صورة"); return; }
+    const imageFile = document.getElementById("prop-image").files[0];
+    if (!imageFile) { alert("يرجى اختيار صورة"); return; }
 
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `<i class="ph ph-circle-notch ph-spin"></i> جارٍ الرفع...`;
-  uploadStatus.textContent = "جارٍ رفع الصورة...";
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="ph ph-circle-notch ph-spin"></i> جارٍ الرفع...`;
+    uploadStatus.textContent = "جارٍ رفع الصورة...";
 
-  try {
-    const imageUrl = await uploadToCloudinary(imageFile);
-    uploadStatus.textContent = "✅ تم رفع الصورة";
+    try {
+      const imageUrl = await uploadToCloudinary(imageFile);
+      uploadStatus.textContent = "✅ تم رفع الصورة";
 
-    // ✅ قراءة الإحداثيات من الخريطة (اختياري)
-    const latVal = document.getElementById("prop-lat").value;
-    const lngVal = document.getElementById("prop-lng").value;
+      const latVal = document.getElementById("prop-lat").value;
+      const lngVal = document.getElementById("prop-lng").value;
 
-    const newProperty = {
-      titleAr:    document.getElementById("prop-title-ar").value.trim(),
-      titleEn:    document.getElementById("prop-title-en").value.trim(),
-      locationAr: document.getElementById("prop-loc-ar").value.trim(),
-      locationEn: document.getElementById("prop-loc-en").value.trim(),
-      price:      Number(document.getElementById("prop-price").value),
-      descAr:     document.getElementById("prop-desc-ar").value.trim(),
-      descEn:     document.getElementById("prop-desc-en").value.trim(),
-      imageUrl:   imageUrl,
-      visible:    true,
-      createdAt:  firebase.firestore.FieldValue.serverTimestamp()
-    };
+      const newProperty = {
+        titleAr:    document.getElementById("prop-title-ar").value.trim(),
+        titleEn:    document.getElementById("prop-title-en").value.trim(),
+        locationAr: document.getElementById("prop-loc-ar").value.trim(),
+        locationEn: document.getElementById("prop-loc-en").value.trim(),
+        price:      Number(document.getElementById("prop-price").value),
+        descAr:     document.getElementById("prop-desc-ar").value.trim(),
+        descEn:     document.getElementById("prop-desc-en").value.trim(),
+        imageUrl:   imageUrl,
+        visible:    true,
+        createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+      };
 
-    // ✅ أضف lat/lng فقط إذا تم تحديدهما
-    if (latVal && lngVal) {
-      newProperty.lat = parseFloat(latVal);
-      newProperty.lng = parseFloat(lngVal);
+      if (latVal && lngVal) {
+        newProperty.lat = parseFloat(latVal);
+        newProperty.lng = parseFloat(lngVal);
+      }
+
+      await db.collection("properties").add(newProperty);
+
+      addForm.reset();
+      uploadStatus.textContent = "";
+      const badge = document.getElementById("map-picked-badge");
+      if (badge) badge.classList.remove("visible");
+      document.getElementById("prop-lat").value = "";
+      document.getElementById("prop-lng").value = "";
+
+      alert("✅ تم إضافة العقار بنجاح!");
+      switchTab("manage-props");
+      loadProperties();
+
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ: " + err.message);
+      uploadStatus.textContent = "❌ فشل الرفع";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i class="ph ph-plus-circle"></i> إضافة العقار`;
     }
-
-    await db.collection("properties").add(newProperty);
-
-    addForm.reset();
-    uploadStatus.textContent = "";
-    // إعادة تعيين badge الخريطة
-    const badge = document.getElementById("map-picked-badge");
-    if (badge) badge.classList.remove("visible");
-    document.getElementById("prop-lat").value = "";
-    document.getElementById("prop-lng").value = "";
-
-    alert("✅ تم إضافة العقار بنجاح!");
-    switchTab("manage-props");
-    loadProperties();
-
-  } catch (err) {
-    console.error(err);
-    alert("حدث خطأ: " + err.message);
-    uploadStatus.textContent = "❌ فشل الرفع";
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `<i class="ph ph-plus-circle"></i> إضافة العقار`;
-  }
-});
+  });
+}
 
 // =========================================
 //   Upload Image to Cloudinary
@@ -259,14 +259,12 @@ async function openEditModal(docId) {
     document.getElementById("edit-price").value    = p.price   || "";
     document.getElementById("edit-desc-ar").value  = p.descAr  || "";
 
-    // ✅ تحميل الإحداثيات الموجودة في حقول التعديل
     const existingLat = p.lat ? parseFloat(p.lat) : null;
     const existingLng = p.lng ? parseFloat(p.lng) : null;
 
     document.getElementById("edit-lat").value = existingLat || "";
     document.getElementById("edit-lng").value = existingLng || "";
 
-    // إظهار badge إذا كان الموقع محدداً مسبقاً
     const editBadge = document.getElementById("edit-map-picked-badge");
     if (editBadge) {
       editBadge.classList.toggle("visible", !!(existingLat && existingLng));
@@ -275,7 +273,6 @@ async function openEditModal(docId) {
     document.getElementById("edit-modal").classList.add("active");
     document.body.classList.add("modal-open");
 
-    // ✅ تهيئة خريطة التعديل مع الموقع الحالي
     if (typeof window.initEditMapFromAdmin === "function") {
       window.initEditMapFromAdmin(existingLat, existingLng);
     }
@@ -287,56 +284,59 @@ async function openEditModal(docId) {
 }
 
 function closeEditModal() {
-  document.getElementById("edit-modal").classList.remove("active");
+  const editModal = document.getElementById("edit-modal");
+  if (editModal) editModal.classList.remove("active");
   document.body.classList.remove("modal-open");
 }
 
 const editForm      = document.getElementById("edit-property-form");
 const submitEditBtn = document.getElementById("submit-edit-btn");
 
-editForm.addEventListener("submit", async function (e) {
-  e.preventDefault();
+if (editForm) {
+  editForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-  const docId = document.getElementById("edit-prop-id").value;
-  submitEditBtn.disabled    = true;
-  submitEditBtn.textContent = "جارٍ الحفظ...";
+    const docId = document.getElementById("edit-prop-id").value;
+    submitEditBtn.disabled    = true;
+    submitEditBtn.textContent = "جارٍ الحفظ...";
 
-  try {
-    // ✅ قراءة الإحداثيات المحدّثة من خريطة التعديل
-    const latVal = document.getElementById("edit-lat").value;
-    const lngVal = document.getElementById("edit-lng").value;
+    try {
+      const latVal = document.getElementById("edit-lat").value;
+      const lngVal = document.getElementById("edit-lng").value;
 
-    const updateData = {
-      titleAr: document.getElementById("edit-title-ar").value.trim(),
-      price:   Number(document.getElementById("edit-price").value),
-      descAr:  document.getElementById("edit-desc-ar").value.trim()
-    };
+      const updateData = {
+        titleAr: document.getElementById("edit-title-ar").value.trim(),
+        price:   Number(document.getElementById("edit-price").value),
+        descAr:  document.getElementById("edit-desc-ar").value.trim()
+      };
 
-    // ✅ أضف lat/lng إذا تم تحديدهما
-    if (latVal && lngVal) {
-      updateData.lat = parseFloat(latVal);
-      updateData.lng = parseFloat(lngVal);
+      if (latVal && lngVal) {
+        updateData.lat = parseFloat(latVal);
+        updateData.lng = parseFloat(lngVal);
+      }
+
+      await db.collection("properties").doc(docId).update(updateData);
+
+      closeEditModal();
+      loadProperties();
+      alert("✅ تم حفظ التعديلات بنجاح!");
+
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء الحفظ: " + err.message);
+    } finally {
+      submitEditBtn.disabled    = false;
+      submitEditBtn.textContent = "حفظ التعديلات";
     }
+  });
+}
 
-    await db.collection("properties").doc(docId).update(updateData);
-
-    closeEditModal();
-    loadProperties();
-    alert("✅ تم حفظ التعديلات بنجاح!");
-
-  } catch (err) {
-    console.error(err);
-    alert("حدث خطأ أثناء الحفظ: " + err.message);
-  } finally {
-    submitEditBtn.disabled    = false;
-    submitEditBtn.textContent = "حفظ التعديلات";
-  }
-});
-
-// إغلاق المودال عند الضغط خارجه
-document.getElementById("edit-modal").addEventListener("click", function (e) {
-  if (e.target === this) closeEditModal();
-});
+const editModalEl = document.getElementById("edit-modal");
+if (editModalEl) {
+  editModalEl.addEventListener("click", function (e) {
+    if (e.target === this) closeEditModal();
+  });
+}
 
 // =========================================
 //   Delete Property
@@ -354,7 +354,7 @@ async function deleteProperty(docId) {
 }
 
 // =========================================
-//   Admin — Bookings Tab
+//   Admin — Bookings Tab (UPDATED FOR NEW BOOKING SYSTEM)
 // =========================================
 async function loadBookings() {
   const container = document.getElementById('bookings-container');
@@ -374,57 +374,116 @@ async function loadBookings() {
     const statusLabel = { pending: 'قيد الانتظار', confirmed: 'مؤكد', cancelled: 'ملغي' };
     const statusClass = { pending: 'pending', confirmed: 'confirmed', cancelled: 'cancelled' };
 
-    container.innerHTML = `<div class="bookings-grid">` +
+    // Function to safely format dates (handles both strings and Firebase Timestamps)
+    const formatDate = (dateField) => {
+      if (!dateField) return '—';
+      if (typeof dateField === 'string') return dateField; // "2025-04-15"
+      if (dateField.toDate) return dateField.toDate().toLocaleDateString('ar-DZ'); // Timestamp
+      return '—';
+    };
+
+    container.innerHTML = `<div class="bookings-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">` +
       snap.docs.map(doc => {
         const b = doc.data();
-        const ci = b.checkIn?.toDate?.()?.toLocaleDateString('ar-DZ') || '—';
-        const co = b.checkOut?.toDate?.()?.toLocaleDateString('ar-DZ') || '—';
+
+        // Parse Dates
+        const ci = formatDate(b.checkInDate || b.checkIn);
+        const co = formatDate(b.checkOutDate || b.checkOut);
+        const createdAt = formatDate(b.createdAt);
+
         const st = b.status || 'pending';
-        const createdAt = b.createdAt?.toDate?.()?.toLocaleDateString('ar-DZ') || '—';
+        const docIdShort = doc.id.slice(0, 8).toUpperCase();
+
+        // Handle Occupancy 
+        let occupancyHtml = `<span>${b.guests || 1} ضيف</span>`;
+        if (b.rooms && (b.adults || b.children)) {
+            occupancyHtml = `
+              <div style="display:flex; flex-direction:column; gap:2px; font-size:0.8rem;">
+                <span style="font-weight:bold; color:var(--text-main);">${b.rooms} غرف · ${b.bedConfig === 'double' ? 'مزدوج' : b.bedConfig === 'twin' ? 'سريران' : b.bedConfig === 'king' ? 'كينج' : 'فردي'}</span>
+                <span style="color:var(--text-muted);">${b.adults} بالغين ${b.children > 0 ? ` + ${b.children} أطفال` : ''}</span>
+              </div>
+            `;
+        }
+
+        // Handle Addons
+        let addonsHtml = '';
+        if (b.selectedAddons && b.selectedAddons.length > 0) {
+            addonsHtml = `
+              <div class="booking-detail-row" style="margin-top:6px; background:color-mix(in srgb, var(--primary) 5%, transparent); padding:8px; border-radius:8px;">
+                <i class="ph-fill ph-plus-circle" style="color:var(--primary);"></i>
+                <div style="font-size:0.8rem; color:var(--primary); font-weight:600;">
+                  إضافات: ${b.selectedAddons.map(a => a === 'restaurant' ? 'المطعم (' + b.restaurantPlan + ')' : a).join('، ')}
+                </div>
+              </div>
+            `;
+        }
+
+        // Handle Transfer Receipt
+        let receiptHtml = '';
+        if (b.paymentMethod === 'transfer') {
+            receiptHtml = b.receiptUrl 
+              ? `<a href="${b.receiptUrl}" target="_blank" style="font-size:0.75rem; background:color-mix(in srgb, #f59e0b 15%, transparent); color:#d97706; padding:4px 8px; border-radius:12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:bold;"><i class="ph ph-receipt"></i> عرض الإيصال</a>`
+              : `<span style="font-size:0.75rem; color:#e11d48;"><i class="ph ph-warning"></i> الإيصال مفقود</span>`;
+        }
+
         return `
-          <div class="booking-card" id="bcard-${doc.id}">
-            <div class="booking-card-header">
+          <div class="booking-card" id="bcard-${doc.id}" style="background:var(--surface-color); border:1px solid var(--border-color); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+
+            <div class="booking-card-header" style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
               <div>
-                <div class="font-medium" style="font-size:0.9rem">${b.guestName || '—'}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted)">#${doc.id.slice(0,8).toUpperCase()}</div>
+                <div style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin-bottom:4px;">${b.guestName || '—'}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace; background:var(--bg-color); padding:2px 6px; border-radius:4px; display:inline-block;">#${docIdShort}</div>
               </div>
-              <span class="booking-status ${statusClass[st]}">${statusLabel[st] || st}</span>
-            </div>
-            <div class="booking-card-details">
-              <div class="booking-detail-row">
-                <i class="ph ph-buildings"></i>
-                <span>${b.propertyTitle || '—'}</span>
-              </div>
-              <div class="booking-detail-row">
-                <i class="ph ph-calendar-check"></i>
-                <span>${ci} → ${co}
-                  <strong>(${b.nights || 0} ليلة)</strong>
-                </span>
-              </div>
-              <div class="booking-detail-row">
-                <i class="ph ph-users"></i>
-                <span>${b.guests || 1} ضيف</span>
-              </div>
-              <div class="booking-detail-row">
-                <i class="ph ph-phone"></i>
-                <span>${b.guestPhone || '—'}</span>
-              </div>
-              <div class="booking-detail-row">
-                <i class="ph ph-envelope"></i>
-                <span dir="ltr">${b.guestEmail || '—'}</span>
-              </div>
-              <div class="booking-detail-row" style="font-size:0.92rem;font-weight:700;color:var(--primary)">
-                <i class="ph-fill ph-money"></i>
-                <span>${Number(b.totalPrice || 0).toLocaleString()} DZD</span>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                <span class="booking-status ${statusClass[st]}" style="font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:12px; text-transform:uppercase;">${statusLabel[st] || st}</span>
+                <span style="font-size:0.7rem; color:var(--text-muted);"><i class="ph ph-clock"></i> ${createdAt}</span>
               </div>
             </div>
+
+            <div class="booking-card-details" style="display:flex; flex-direction:column; gap:10px;">
+              <div class="booking-detail-row" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-main);">
+                <i class="ph-fill ph-buildings" style="color:var(--text-muted); font-size:1.1rem;"></i>
+                <span style="font-weight:600;">${b.propertyTitle || '—'}</span>
+              </div>
+
+              <div class="booking-detail-row" style="display:flex; align-items:flex-start; gap:8px; font-size:0.85rem; color:var(--text-main);">
+                <i class="ph-fill ph-calendar-check" style="color:var(--text-muted); font-size:1.1rem; margin-top:2px;"></i>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <span style="font-weight:600;">${ci} <i class="ph ph-arrow-left" style="font-size:0.7rem; margin:0 4px; color:var(--text-muted);"></i> ${co}</span>
+                  <span style="font-size:0.75rem; color:var(--primary); font-weight:700;">${b.nights || 0} ليالٍ</span>
+                </div>
+              </div>
+
+              <div class="booking-detail-row" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-main);">
+                <i class="ph-fill ph-users" style="color:var(--text-muted); font-size:1.1rem;"></i>
+                ${occupancyHtml}
+              </div>
+
+              <div class="booking-detail-row" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-main);">
+                <i class="ph-fill ph-phone" style="color:var(--text-muted); font-size:1.1rem;"></i>
+                <span dir="ltr">${b.guestPhone || '—'}</span>
+              </div>
+
+              ${addonsHtml}
+
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:12px; border-top:1px dashed var(--border-color);">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">الإجمالي</span>
+                  ${receiptHtml}
+                </div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--primary);">
+                  ${Number(b.totalPrice || 0).toLocaleString()} DZD
+                </div>
+              </div>
+            </div>
+
             ${st === 'pending' ? `
-            <div class="booking-card-actions">
-              <button class="btn-confirm-booking" onclick="updateBookingStatus('${doc.id}','confirmed')">
-                <i class="ph ph-check-circle"></i> تأكيد
+            <div class="booking-card-actions" style="display:flex; gap:8px; margin-top:8px;">
+              <button class="btn-confirm-booking" onclick="updateBookingStatus('${doc.id}','confirmed')" style="flex:1; padding:10px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:bold; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i class="ph ph-check-circle" style="font-size:1.1rem;"></i> تأكيد
               </button>
-              <button class="btn-cancel-booking" onclick="updateBookingStatus('${doc.id}','cancelled')">
-                <i class="ph ph-x-circle"></i> إلغاء
+              <button class="btn-cancel-booking" onclick="updateBookingStatus('${doc.id}','cancelled')" style="flex:1; padding:10px; border:none; border-radius:8px; background:color-mix(in srgb, #e11d48 10%, transparent); color:#e11d48; font-weight:bold; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i class="ph ph-x-circle" style="font-size:1.1rem;"></i> إلغاء
               </button>
             </div>` : ''}
           </div>
