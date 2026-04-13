@@ -29,6 +29,106 @@ html[dir="ltr"] .booking-page {
   align-items: start;
 }
 
+/* ─── Steps Header Container ──────────────── */
+.booking-steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 1100px;
+  margin: 24px auto 0;
+  padding: 0 24px 28px;
+  direction: ltr;
+}
+
+/* ─── Step Connector Line ─────────────────── */
+/* 
+  ✅ إصلاح: الأصل كان pseudo-element ::after على .step-indicator
+  لكن كان مكسوراً في RTL ومع الـ step-connector divs الجديدة في HTML.
+  الآن نستخدم .step-connector كـ element منفصل في HTML
+*/
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--border-color);
+  transition: background 0.4s ease;
+  min-width: 20px;
+  margin-bottom: 22px; /* ✅ يمحي مع step-num */
+}
+
+.step-connector.completed {
+  background: var(--primary);
+}
+
+/* ─── Step Indicator ──────────────────────── */
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-color);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+  z-index: 1;
+  position: relative;
+}
+
+.step-indicator.active .step-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.step-indicator.completed .step-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ✅ إصلاح: عرض ✓ عند اكتمال الخطوة */
+.step-indicator.completed .step-num > span { display: none; }
+.step-indicator.completed .step-num::after {
+  content: "✓";
+  font-size: 0.9rem;
+}
+
+.step-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.step-indicator.active .step-label {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.step-indicator.completed .step-label {
+  color: var(--primary);
+}
+
+@media (max-width: 600px) {
+  .step-label { display: none; }
+  .booking-steps-header { padding-bottom: 16px; margin-top: 16px; }
+  .step-connector { margin-bottom: 0; }
+}
+
+/* ─── Responsive Layout ───────────────────── */
 @media (max-width: 900px) {
   .booking-wrapper {
     grid-template-columns: 1fr;
@@ -40,40 +140,23 @@ html[dir="ltr"] .booking-page {
   .booking-sidebar   { order: 2; }
 }
 
-/* ─── Header & Back Button ────────────────── */
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  padding: 8px 16px;
-  border-radius: 20px;
-  color: var(--text-main);
-  cursor: pointer;
-  transition: var(--transition);
-  font-size: 0.9rem;
-  text-decoration: none;
-}
-
-.back-btn:hover {
-  background: var(--surface-color);
-  border-color: var(--text-muted);
+/* ─── Back Button ─────────────────────────── */
+/* ✅ لا نعيد تعريف .back-btn هنا لأنه معرّف بالكامل في style.css
+   نضيف فقط overrides خاصة بصفحة الحجز */
+.inner-nav .back-btn {
+  border-radius: 20px; /* تخصيص شكل الزر في هذه الصفحة */
 }
 
 @media (max-width: 600px) {
-  #nav-back-txt {
-    display: none;
-  }
-  .back-btn {
+  #nav-back-txt { display: none; }
+  .inner-nav .back-btn {
     padding: 8px;
     border-radius: 50%;
     aspect-ratio: 1;
     justify-content: center;
   }
-  .booking-wrapper {
-    padding: 20px 16px;
-  }
+  .booking-wrapper { padding: 20px 16px; }
+  .booking-steps-header { padding-inline: 16px; }
 }
 
 /* ─── Sticky Sidebar ──────────────────────── */
@@ -96,12 +179,12 @@ html[dir="ltr"] .booking-page {
 .booking-summary-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-2xl, 1.25rem);
+  border-radius: var(--radius-2xl);
   padding: 20px;
   box-shadow: var(--shadow-soft);
 }
 
-.booking-summary-card h4 {
+.summary-card-title {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -150,10 +233,17 @@ html[dir="ltr"] .booking-page {
   flex-wrap: wrap;
 }
 
+.booking-prop-price { margin-top: 4px; }
 .booking-prop-price strong { color: var(--primary); font-size: 1rem; }
 .booking-prop-price span   { font-size: 0.78rem; color: var(--text-muted); }
 
-/* Price Breakdown */
+.summary-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 14px 0;
+}
+
+/* ─── Price Breakdown ─────────────────────── */
 #price-breakdown { display: flex; flex-direction: column; gap: 9px; }
 
 .price-row {
@@ -176,106 +266,18 @@ html[dir="ltr"] .booking-page {
   margin-top: 4px;
 }
 
-.price-placeholder {
+.sum-placeholder-txt {
   font-size: 0.82rem;
   color: var(--text-muted);
   text-align: center;
   padding: 12px 0;
 }
 
-/* ─── Step Indicator ──────────────────────── */
-.booking-steps-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: 32px;
-  direction: ltr;
-}
-
-.step-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  position: relative;
-  flex: 1;
-}
-
-.step-indicator:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  top: 17px;
-  left: 58%;
-  width: 84%;
-  height: 2px;
-  background: var(--border-color);
-  z-index: 0;
-  transition: background 0.4s ease;
-}
-
-.step-indicator.completed:not(:last-child)::after {
-  background: var(--primary);
-}
-
-.step-num {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--bg-color);
-  border: 2px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  transition: all 0.3s ease;
-  z-index: 1;
-  position: relative;
-}
-
-.step-indicator.active .step-num {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
-}
-
-.step-indicator.completed .step-num {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-
-.step-indicator.completed .step-num > span { display: none; }
-.step-indicator.completed .step-num::after {
-  content: '✓';
-  font-size: 0.9rem;
-}
-
-.step-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.step-indicator.active .step-label {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-@media (max-width: 600px) {
-  .step-label { display: none; }
-  .booking-steps-header { margin-bottom: 20px; }
-}
-
 /* ─── Main Card ───────────────────────────── */
 .booking-main-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-2xl, 1.25rem);
+  border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
@@ -317,10 +319,15 @@ html[dir="ltr"] .booking-page {
   .step-title  { font-size: 1.05rem; }
 }
 
-/* ─── Navigation Buttons ──────────────────── */
+/* ─── Step Action Buttons ─────────────────── */
+/*
+  ✅ إصلاح: booking.html يستخدم .step-actions مع .step-actions-end
+  و .step-actions-between — وكان الـ CSS يعتمد على .btn-ghost و .btn-primary
+  داخل .step-actions لكن الـ HTML يستخدم .ghost-btn و .primary-btn من style.css
+  الحل: نحذف التعريفات المكررة ونضيف فقط layout modifiers
+*/
 .step-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 12px;
   padding: 18px 28px;
@@ -328,75 +335,40 @@ html[dir="ltr"] .booking-page {
   background: var(--bg-color);
 }
 
-html[dir="rtl"] .step-actions { flex-direction: row-reverse; }
+.step-actions-end     { justify-content: flex-end; }
+.step-actions-between { justify-content: space-between; }
 
-.step-actions .btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-  padding: 10px 20px;
-  border-radius: var(--radius-xl, 0.75rem);
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: var(--transition);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
+/* ✅ إصلاح RTL — لا نعكس flex-direction بل نعتمد على inset-inline */
+html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
 
-.step-actions .btn-ghost:hover {
-  background: var(--surface-color);
-  border-color: var(--text-muted);
-}
-
-.step-actions .btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 11px 24px;
-  border-radius: var(--radius-xl, 0.75rem);
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 700;
-  transition: var(--transition);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+/* primary-btn داخل step-actions تكون بعرض مرن */
+.step-actions .primary-btn {
+  width: auto;
   flex: 1;
-  justify-content: center;
   max-width: 280px;
-}
-
-.step-actions .btn-primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 35%, transparent);
-}
-
-.step-actions .btn-primary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
 @media (max-width: 600px) {
   .step-actions { padding: 14px 18px; flex-wrap: wrap; }
-  .step-actions .btn-primary { max-width: none; }
+  .step-actions .primary-btn { max-width: none; }
+}
+
+/* ─── Warning Banner ──────────────────────── */
+/* ✅ إصلاح: كان اسمه #min-nights-warning بـ class inline — الآن class موحّد */
+.booking-warning {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, #e11d48 8%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, #e11d48 30%, transparent);
+  border-radius: var(--radius-xl);
+  font-size: 0.83rem;
+  color: #9f1239;
+  text-align: center;
+  animation: bk-fadeIn 0.3s ease;
 }
 
 /* ─── Calendar ────────────────────────────── */
 .calendar-section { margin-bottom: 28px; }
-
-.calendar-section h3 {
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-bottom: 14px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 
 .calendar-nav {
   display: flex;
@@ -494,12 +466,17 @@ html[dir="rtl"] .step-actions { flex-direction: row-reverse; }
   color: var(--primary);
 }
 
+/* ✅ إصلاح border-radius لـ check-in/out في LTR و RTL */
 .cal-cell.check-in {
   background: var(--primary);
   color: #fff;
   font-weight: 700;
   border-radius: 8px 0 0 8px;
   z-index: 1;
+}
+
+html[dir="rtl"] .cal-cell.check-in {
+  border-radius: 0 8px 8px 0;
 }
 
 .cal-cell.check-out {
@@ -510,13 +487,14 @@ html[dir="rtl"] .step-actions { flex-direction: row-reverse; }
   z-index: 1;
 }
 
-/* إذا كان check-in وcheck-out في نفس اليوم */
-.cal-cell.check-in.check-out {
-  border-radius: 8px;
+html[dir="rtl"] .cal-cell.check-out {
+  border-radius: 8px 0 0 8px;
 }
 
-html[dir="rtl"] .cal-cell.check-in  { border-radius: 0 8px 8px 0; }
-html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
+/* ✅ check-in وcheck-out في نفس اليوم */
+.cal-cell.check-in.check-out {
+  border-radius: 8px !important;
+}
 
 .cal-cell.in-range {
   background: color-mix(in srgb, var(--primary) 12%, transparent);
@@ -532,7 +510,7 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   margin-top: 14px;
   padding: 14px 16px;
   background: var(--bg-color);
-  border-radius: var(--radius-xl, 0.75rem);
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border-color);
   align-items: center;
 }
@@ -544,11 +522,14 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   text-align: center;
 }
 
-.date-summary-divider {
-  width: 1px;
-  height: 32px;
-  background: var(--border-color);
-  margin: 0 auto;
+/* ✅ إصلاح: كان اسمه .date-summary-divider لكن booking.html يستخدم .date-summary-middle */
+.date-summary-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: center;
+  padding: 0 12px;
+  border-inline: 1px solid var(--border-color);
 }
 
 .date-summary-label {
@@ -565,10 +546,11 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   color: var(--text-main);
 }
 
-/* ─── Guests Counter ──────────────────────── */
+/* ─── Guests Section ──────────────────────── */
 .guests-section { margin-top: 24px; }
 
-.guests-section h3 {
+/* ✅ إصلاح: booking.html يستخدم .guests-section-title */
+.guests-section-title {
   font-size: 0.85rem;
   font-weight: 700;
   margin-bottom: 12px;
@@ -577,21 +559,25 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   color: var(--text-muted);
 }
 
-.guests-counter-row {
+.guests-counter {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
   background: var(--bg-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl, 0.75rem);
+  border-radius: var(--radius-xl);
+}
+
+.guests-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .guests-label span {
-  display: block;
   font-weight: 600;
   font-size: 0.95rem;
-  margin-bottom: 2px;
 }
 
 .guests-label small {
@@ -634,7 +620,7 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   cursor: not-allowed;
 }
 
-#guests-count {
+.counter-value {
   font-size: 1.2rem;
   font-weight: 700;
   min-width: 28px;
@@ -670,55 +656,80 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   font-variant-numeric: tabular-nums;
 }
 
-.total-row .review-label,
-.total-row .review-value {
+/* ✅ إصلاح: كان .total-row لكن booking.html يستخدم .review-total-row */
+.review-total-row .review-label,
+.review-total-row .review-value {
   font-weight: 700;
   font-size: 1.05rem;
   color: var(--text-main);
 }
 
-.price-highlight { color: var(--primary) !important; }
+.price-highlight { color: var(--primary); }
 
 /* ─── Payment Methods ─────────────────────── */
-.payment-options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.payment-methods-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ✅ إصلاح: booking.html يستخدم .section-sub-title */
+.section-sub-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text-main);
 }
 
 .payment-option {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: 14px 16px;
   border: 1.5px solid var(--border-color);
-  border-radius: var(--radius-xl, 0.75rem);
+  border-radius: var(--radius-xl);
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   background: var(--bg-color);
+  margin-bottom: 10px;
+  position: relative;
 }
+
+.payment-option:last-of-type { margin-bottom: 0; }
 
 .payment-option:hover {
   border-color: var(--primary);
   background: var(--surface-color);
 }
 
+/* ✅ :has() مدعوم في كل المتصفحات الحديثة */
 .payment-option:has(input[type="radio"]:checked) {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
   background: color-mix(in srgb, var(--primary) 4%, var(--surface-color));
 }
 
-.payment-option input[type="radio"] {
-  margin-top: 3px;
-  accent-color: var(--primary);
-  transform: scale(1.2);
-  flex-shrink: 0;
+/* ✅ fallback للمتصفحات القديمة */
+.payment-option.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface-color));
 }
 
-.pay-opt-content { flex: 1; }
+.payment-option input[type="radio"] {
+  display: none; /* ✅ إخفاء الـ radio الافتراضي واستخدام .pay-opt-check */
+}
 
-.pay-opt-content strong {
+.pay-opt-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.pay-opt-text { flex: 1; }
+
+.pay-opt-text strong {
   display: block;
   font-size: 0.95rem;
   font-weight: 600;
@@ -726,7 +737,7 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   color: var(--text-main);
 }
 
-.pay-opt-content p {
+.pay-opt-desc {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin: 0;
@@ -734,65 +745,200 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
 
 .pay-opt-icon {
   font-size: 1.4rem;
+  color: var(--primary);
   line-height: 1;
   margin-top: 2px;
   flex-shrink: 0;
 }
 
-/* Bank Transfer Details */
+/* ✅ أيقونة التحقق عند الاختيار */
+.pay-opt-check {
+  font-size: 1.3rem;
+  color: var(--border-color);
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.payment-option:has(input:checked) .pay-opt-check,
+.payment-option.selected .pay-opt-check {
+  color: var(--primary);
+}
+
+/* ─── Bank Transfer Box ───────────────────── */
 .transfer-box {
   margin-top: 12px;
   background: var(--bg-color);
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-xl, 0.75rem);
+  border-radius: var(--radius-xl);
   padding: 16px;
   animation: bk-fadeIn 0.3s ease;
-  display: none;
 }
 
-.transfer-box.visible { display: block; }
+.transfer-info-txt {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
 
 .bank-card {
   background: var(--surface-color);
   border-inline-start: 3px solid var(--primary);
   padding: 12px 16px;
   border-radius: 8px;
-  font-size: 0.875rem;
-  box-shadow: var(--shadow-sm);
-  line-height: 1.8;
+  margin-bottom: 14px;
 }
 
-/* Cancellation Policy */
-.policy-box {
-  margin-top: 20px;
-  padding: 14px 16px;
-  background: color-mix(in srgb, #f59e0b 8%, var(--bg-color));
-  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
-  border-radius: var(--radius-xl, 0.75rem);
-  font-size: 0.85rem;
-  color: var(--text-main);
-  line-height: 1.6;
-}
-
-.policy-box strong { color: #b45309; }
-
-.policy-check-row {
+.bank-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 14px;
-  font-size: 0.85rem;
-  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 0.875rem;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.policy-check-row input[type="checkbox"] {
-  margin-top: 3px;
-  accent-color: var(--primary);
-  transform: scale(1.15);
+.bank-row:last-child { border-bottom: none; }
+
+.bank-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   flex-shrink: 0;
 }
 
-/* ─── Guest Info Form (Step 3) ───────────── */
+.bank-val {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── File Upload ─────────────────────────── */
+.file-upload-wrapper {
+  position: relative;
+}
+
+/* ✅ إخفاء الـ input الافتراضي */
+.file-upload-wrapper input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+}
+
+.file-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--bg-color);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+  min-height: 80px;
+}
+
+.file-upload-label i { font-size: 1.6rem; color: var(--primary); }
+
+.file-upload-label:hover,
+.file-upload-wrapper:hover .file-upload-label {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-color));
+}
+
+.file-name-display {
+  font-size: 0.8rem;
+  color: var(--primary);
+  margin-top: 6px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+/* ─── Cancellation Policy ─────────────────── */
+.policy-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ✅ إصلاح: booking.html يستخدم .checkbox-policy-label */
+.checkbox-policy-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.checkbox-policy-label input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--primary);
+  transform: scale(1.2);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.policy-text { flex: 1; }
+
+.policy-title {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.policy-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ─── Auth Prompt Box ─────────────────────── */
+.auth-prompt-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: var(--radius-xl);
+  margin-top: 4px;
+}
+
+.auth-prompt-icon {
+  font-size: 1.6rem;
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.auth-prompt-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.auth-prompt-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.auth-prompt-link:hover { text-decoration: underline; }
+
+/* ─── Guest Form ──────────────────────────── */
 .guest-form { display: flex; flex-direction: column; gap: 18px; }
 
 .form-row {
@@ -811,15 +957,26 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-.form-group label .req { color: #e11d48; margin-inline-start: 2px; }
+/* ✅ إصلاح: booking.html يستخدم .req-star بدلاً من .req */
+.req-star, .req { color: #e11d48; }
+
+.optional-tag {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
 
 .form-group input,
 .form-group textarea,
 .form-group select {
   padding: 11px 14px;
-  border-radius: var(--radius-xl, 0.75rem);
+  border-radius: var(--radius-xl);
   border: 1.5px solid var(--border-color);
   background: var(--bg-color);
   color: var(--text-main);
@@ -828,12 +985,18 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   width: 100%;
+  -webkit-appearance: none;
 }
 
 html[dir="rtl"] .form-group input,
 html[dir="rtl"] .form-group textarea,
 html[dir="rtl"] .form-group select {
   text-align: right;
+}
+
+/* ✅ Phone dir=ltr يبقى LTR حتى في RTL mode */
+html[dir="rtl"] .form-group input[dir="ltr"] {
+  text-align: left;
 }
 
 .form-group input:focus,
@@ -863,46 +1026,44 @@ html[dir="rtl"] .form-group select {
   min-height: 90px;
 }
 
-.form-group input[type="file"] {
-  padding: 8px 10px;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-/* Phone input wrapper */
-.phone-input-wrapper {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.phone-input-wrapper select {
-  width: auto;
-  min-width: 90px;
-  flex-shrink: 0;
-  padding-inline-end: 6px;
-}
-
-.phone-input-wrapper input { flex: 1; }
-
-/* ─── Confirmation Step (Step 4) ─────────── */
-.confirm-container {
+/* ─── Success Screen (Step 4) ────────────── */
+/* ✅ إصلاح: كان .confirm-container لكن booking.html يستخدم .success-screen */
+.success-screen {
   text-align: center;
-  padding: 12px 8px 8px;
+  padding: 48px 24px 40px;
 }
 
-.confirm-icon {
-  width: 72px;
-  height: 72px;
+/* ✅ أنيميشن دائرة النجاح */
+.success-animation {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+}
+
+.success-ring {
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: color-mix(in srgb, #10b981 12%, transparent);
-  border: 2px solid #10b981;
+  border: 3px solid color-mix(in srgb, #10b981 30%, transparent);
+  position: absolute;
+  animation: bk-ringPulse 1.5s ease-out infinite;
+}
+
+@keyframes bk-ringPulse {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.success-check-icon {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
-  font-size: 2rem;
-  animation: bk-popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  font-size: 3.2rem;
+  color: #10b981;
+  animation: bk-popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.2s;
 }
 
 @keyframes bk-popIn {
@@ -910,51 +1071,66 @@ html[dir="rtl"] .form-group select {
   to   { transform: scale(1); opacity: 1; }
 }
 
-.confirm-title {
-  font-size: 1.3rem;
+.success-title {
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--text-main);
 }
 
-.confirm-subtitle {
+.success-subtitle {
   font-size: 0.9rem;
   color: var(--text-muted);
-  margin-bottom: 24px;
-  max-width: 340px;
+  margin-bottom: 28px;
+  max-width: 360px;
   margin-inline: auto;
+  line-height: 1.6;
 }
 
-.booking-ref-badge {
+/* ✅ إصلاح: booking.html يستخدم .booking-ref-box */
+.booking-ref-box {
   display: inline-block;
-  padding: 10px 24px;
+  padding: 14px 28px;
   background: var(--bg-color);
   border: 1.5px dashed var(--primary);
-  border-radius: var(--radius-xl, 0.75rem);
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--primary);
-  margin-bottom: 24px;
-  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-xl);
+  margin-bottom: 28px;
 }
 
-.confirm-details-grid {
+.ref-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.ref-number {
+  font-size: 1.3rem;
+  letter-spacing: 0.12em;
+  color: var(--primary);
+}
+
+/* ✅ إصلاح: booking.html يستخدم .success-details-grid */
+.success-details-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   text-align: start;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  max-width: 480px;
+  margin-inline: auto;
 }
 
 @media (max-width: 480px) {
-  .confirm-details-grid { grid-template-columns: 1fr; }
+  .success-details-grid { grid-template-columns: 1fr; }
 }
 
 .confirm-detail-card {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg, 0.75rem);
+  border-radius: var(--radius-xl);
   padding: 12px 14px;
 }
 
@@ -973,35 +1149,47 @@ html[dir="rtl"] .form-group select {
   color: var(--text-main);
 }
 
-.confirm-status-badge {
-  display: inline-flex;
+/* ✅ إصلاح: booking.html يستخدم .success-actions */
+.success-actions {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  border-radius: var(--radius-full, 9999px);
-  font-size: 0.78rem;
-  font-weight: 700;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.confirm-status-badge.pending {
-  background: color-mix(in srgb, #f59e0b 12%, transparent);
-  color: #b45309;
-  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+.success-home-btn {
+  width: auto;
+  display: inline-flex;
 }
 
-.confirm-status-badge.confirmed {
-  background: color-mix(in srgb, #10b981 12%, transparent);
-  color: #065f46;
-  border: 1px solid color-mix(in srgb, #10b981 30%, transparent);
+/* ─── Security Badge ──────────────────────── */
+.security-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
 }
 
-/* ─── My Bookings Panel ───────────────────── */
+.security-icon {
+  font-size: 1rem;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+/* ─── Booking History Cards ───────────────── */
 .my-bookings-list { display: flex; flex-direction: column; gap: 16px; }
 
 .booking-history-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl, 0.75rem);
+  border-radius: var(--radius-xl);
   padding: 16px 18px;
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -1010,9 +1198,7 @@ html[dir="rtl"] .form-group select {
   transition: box-shadow 0.2s;
 }
 
-.booking-history-card:hover {
-  box-shadow: var(--shadow-md);
-}
+.booking-history-card:hover { box-shadow: var(--shadow-soft); }
 
 .booking-history-img {
   width: 64px;
@@ -1045,32 +1231,17 @@ html[dir="rtl"] .form-group select {
   gap: 8px;
 }
 
-/* Status Badges */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full, 9999px);
-  font-size: 0.72rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.status-badge.pending   { background: color-mix(in srgb,#f59e0b 15%,transparent); color:#92400e; border:1px solid color-mix(in srgb,#f59e0b 30%,transparent); }
-.status-badge.confirmed { background: color-mix(in srgb,#10b981 15%,transparent); color:#064e3b; border:1px solid color-mix(in srgb,#10b981 30%,transparent); }
-.status-badge.cancelled { background: color-mix(in srgb,#e11d48 15%,transparent); color:#9f1239; border:1px solid color-mix(in srgb,#e11d48 30%,transparent); }
-
 .btn-cancel-booking {
   font-size: 0.78rem;
   color: #e11d48;
   background: transparent;
   border: 1px solid color-mix(in srgb, #e11d48 40%, transparent);
   padding: 5px 12px;
-  border-radius: var(--radius-full, 9999px);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
+  font-family: inherit;
 }
 
 .btn-cancel-booking:hover {
@@ -1099,34 +1270,19 @@ html[dir="rtl"] .form-group select {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: var(--radius-lg, 0.75rem);
+  border-radius: var(--radius-xl);
   font-size: 0.85rem;
   margin-bottom: 16px;
   line-height: 1.5;
   animation: bk-fadeIn 0.3s ease;
 }
 
-.booking-alert.error   { background: color-mix(in srgb,#e11d48 10%,var(--bg-color)); border:1px solid color-mix(in srgb,#e11d48 30%,transparent); color:#9f1239; }
-.booking-alert.warning { background: color-mix(in srgb,#f59e0b 10%,var(--bg-color)); border:1px solid color-mix(in srgb,#f59e0b 30%,transparent); color:#92400e; }
-.booking-alert.success { background: color-mix(in srgb,#10b981 10%,var(--bg-color)); border:1px solid color-mix(in srgb,#10b981 30%,transparent); color:#064e3b; }
-.booking-alert.info    { background: color-mix(in srgb,var(--primary) 8%,var(--bg-color)); border:1px solid color-mix(in srgb,var(--primary) 25%,transparent); color:var(--text-main); }
+.booking-alert i { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
 
-/* ─── Conflict Banner ─────────────────────── */
-.conflict-banner {
-  display: none;
-  background: color-mix(in srgb, #e11d48 8%, var(--bg-color));
-  border: 1.5px solid color-mix(in srgb, #e11d48 35%, transparent);
-  border-radius: var(--radius-xl, 0.75rem);
-  padding: 12px 16px;
-  font-size: 0.85rem;
-  color: #9f1239;
-  margin-top: 12px;
-  animation: bk-fadeIn 0.3s ease;
-  gap: 8px;
-  align-items: center;
-}
-
-.conflict-banner.visible { display: flex; }
+.booking-alert.error   { background: color-mix(in srgb, #e11d48 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #e11d48 30%, transparent); color: #9f1239; }
+.booking-alert.warning { background: color-mix(in srgb, #f59e0b 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent); color: #92400e; }
+.booking-alert.success { background: color-mix(in srgb, #10b981 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #10b981 30%, transparent); color: #064e3b; }
+.booking-alert.info    { background: color-mix(in srgb, var(--primary) 8%, var(--bg-color)); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); color: var(--text-main); }
 
 /* ─── Skeleton Loader ─────────────────────── */
 @keyframes bk-shimmer {
@@ -1135,28 +1291,20 @@ html[dir="rtl"] .form-group select {
 }
 
 .skeleton {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--border-color) 25%,
     color-mix(in srgb, var(--border-color) 50%, var(--surface-color)) 50%,
     var(--border-color) 75%
   );
   background-size: 800px 100%;
   animation: bk-shimmer 1.6s ease-in-out infinite;
-  border-radius: var(--radius-md, 0.5rem);
+  border-radius: 8px;
 }
 
 .skeleton-text  { height: 1em; margin-bottom: 8px; border-radius: 4px; }
 .skeleton-image { height: 60px; width: 80px; border-radius: 10px; }
 
-/* ─── Utilities ────────────────────────────── */
-.text-danger   { color: #e11d48; }
-.text-success  { color: #10b981; }
-.text-muted-sm { font-size: 0.8rem; color: var(--text-muted); }
-.fw-bold       { font-weight: 700; }
-.d-none        { display: none !important; }
-.d-flex        { display: flex; }
-.mt-8          { margin-top: 8px; }
-.mt-12         { margin-top: 12px; }
-.mt-16         { margin-top: 16px; }
-.gap-8         { gap: 8px; }
-.align-center  { align-items: center; }
+/* ─── Utilities (Booking-specific) ───────── */
+.booking-warning-text { font-size: 0.8rem; color: #9f1239; }
+.d-none               { display: none !important; }
