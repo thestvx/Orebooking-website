@@ -8,136 +8,86 @@
   <meta name="theme-color" content="#435abf">
   <title>Complete Booking — OreBooking</title>
 
-  <!-- Canonical -->
   <link rel="canonical" href="booking.html">
-
-  <!-- Favicon -->
   <link rel="icon" href="logos/favicon.ico" type="image/x-icon">
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="booking.css">
 </head>
 
 <body>
-
-  <!-- =========================================================
-       Navbar
-  ========================================================= -->
-  <nav class="navbar inner-nav" role="navigation" aria-label="Booking navigation">
-
-    <button id="back-btn" class="back-btn font-medium" type="button" aria-label="Back to property">
-      <i class="ph ph-arrow-left" aria-hidden="true"></i>
+  <nav class="navbar inner-nav" role="navigation">
+    <button id="back-btn" class="back-btn font-medium" type="button">
+      <i class="ph ph-arrow-left"></i>
       <span id="nav-back-txt">Back to Property</span>
     </button>
-
-    <a href="index.html" class="logo" aria-label="OreBooking Home">
+    <a href="index.html" class="logo">
       <img src="logos/orebooking.png" id="main-logo" alt="OreBooking" class="logo-img" width="160" height="56">
     </a>
-
     <div class="nav-actions">
-      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle dark mode">
-        <i class="ph ph-moon" aria-hidden="true"></i>
+      <button id="theme-toggle" class="icon-btn" type="button">
+        <i class="ph ph-moon"></i>
       </button>
-      <button id="lang-toggle" class="lang-btn font-medium" type="button" aria-label="Switch language">
+      <button id="lang-toggle" class="lang-btn font-medium" type="button">
         <span>العربية</span>
       </button>
     </div>
-
   </nav>
 
-  <!-- =========================================================
-       Main Booking Area
-  ========================================================= -->
   <main class="booking-page" id="booking-page" role="main">
 
-    <!-- ── Step Indicators ────────────────────────────────── -->
-    <div class="booking-steps-header" id="steps-header" role="list" aria-label="Booking steps">
-
-      <div class="step-indicator active" data-step="1" role="listitem" aria-current="step">
-        <div class="step-num" aria-hidden="true"><span>1</span></div>
-        <div class="step-label" id="lbl-step1">Dates &amp; Guests</div>
+    <div class="booking-steps-header" id="steps-header">
+      <div class="step-indicator active" data-step="1">
+        <div class="step-num"><span>1</span></div>
+        <div class="step-label" id="lbl-step1">Dates &amp; Rooms</div>
       </div>
-      <div class="step-connector" aria-hidden="true"></div>
-
-      <div class="step-indicator" data-step="2" role="listitem">
-        <div class="step-num" aria-hidden="true"><span>2</span></div>
-        <div class="step-label" id="lbl-step2">Review &amp; Pay</div>
+      <div class="step-connector"></div>
+      <div class="step-indicator" data-step="2">
+        <div class="step-num"><span>2</span></div>
+        <div class="step-label" id="lbl-step2">Add-ons &amp; Pay</div>
       </div>
-      <div class="step-connector" aria-hidden="true"></div>
-
-      <div class="step-indicator" data-step="3" role="listitem">
-        <div class="step-num" aria-hidden="true"><span>3</span></div>
+      <div class="step-connector"></div>
+      <div class="step-indicator" data-step="3">
+        <div class="step-num"><span>3</span></div>
         <div class="step-label" id="lbl-step3">Guest Details</div>
       </div>
-      <div class="step-connector" aria-hidden="true"></div>
-
-      <div class="step-indicator" data-step="4" role="listitem">
-        <div class="step-num" aria-hidden="true"><span>4</span></div>
+      <div class="step-connector"></div>
+      <div class="step-indicator" data-step="4">
+        <div class="step-num"><span>4</span></div>
         <div class="step-label" id="lbl-step4">Confirmation</div>
       </div>
-
     </div>
-    <!-- /steps-header -->
 
-    <!-- ── Content Wrapper ────────────────────────────────── -->
     <div class="booking-wrapper">
-
-      <!-- ═══════════════════════════════════════════════════
-           LEFT COLUMN — Step Cards
-      ═══════════════════════════════════════════════════ -->
       <div class="booking-main-card" id="booking-main-card">
+        <div id="booking-global-alert" class="booking-alert d-none"></div>
 
-        <!-- ── Global Alert (errors / info) ─── -->
-        <div id="booking-global-alert" class="booking-alert d-none" role="alert" aria-live="polite"></div>
-
-        <!-- ════════════════════════════════════
-             STEP 1 — Dates & Guests
-        ════════════════════════════════════ -->
-        <div class="booking-step active" id="step-1" role="tabpanel" aria-labelledby="lbl-step1">
-
+        <!-- STEP 1: Dates & Rooms -->
+        <div class="booking-step active" id="step-1">
           <div class="step-header">
             <h2 class="step-title" id="st-title-1">When are you traveling?</h2>
-            <p class="step-subtitle" id="st-sub-1">Select your check-in and check-out dates.</p>
+            <p class="step-subtitle" id="st-sub-1">Select your check-in dates and room preferences.</p>
           </div>
-
           <div class="step-body">
-
-            <!-- Calendar -->
             <div class="calendar-section">
-
-              <!-- Month Navigation -->
-              <div class="calendar-nav" role="group" aria-label="Month navigation">
-                <button class="cal-nav-btn" id="cal-prev" type="button" aria-label="Previous month">
-                  <i class="ph ph-caret-left" aria-hidden="true"></i>
-                </button>
-                <span id="calendar-month-label" class="font-medium" aria-live="polite" aria-atomic="true"></span>
-                <button class="cal-nav-btn" id="cal-next" type="button" aria-label="Next month">
-                  <i class="ph ph-caret-right" aria-hidden="true"></i>
-                </button>
+              <div class="calendar-nav">
+                <button class="cal-nav-btn" id="cal-prev" type="button"><i class="ph ph-caret-left"></i></button>
+                <span id="calendar-month-label" class="font-medium"></span>
+                <button class="cal-nav-btn" id="cal-next" type="button"><i class="ph ph-caret-right"></i></button>
               </div>
-
-              <!-- Calendar Grid -->
-              <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Date picker">
-                <!-- Injected by JS -->
-              </div>
-
-              <!-- Date Summary -->
-              <div class="date-summary" aria-live="polite">
+              <div class="calendar-grid" id="calendar-grid"></div>
+              <div class="date-summary">
                 <div class="date-summary-item">
                   <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
                   <span class="date-summary-value font-medium" id="disp-checkin">Add date</span>
@@ -151,139 +101,151 @@
                   <span class="date-summary-value font-medium" id="disp-checkout">Add date</span>
                 </div>
               </div>
-
-              <!-- Min Nights Warning -->
-              <div id="min-nights-warning" class="booking-warning d-none" role="alert" aria-live="assertive"></div>
-
+              <div id="min-nights-warning" class="booking-warning d-none"></div>
             </div>
-            <!-- /calendar-section -->
 
-            <!-- Guests Counter -->
-            <div class="guests-section">
-              <h3 class="guests-section-title" id="lbl-who-coming">Who's coming?</h3>
-              <div class="guests-counter">
-                <div class="guests-label">
-                  <span class="font-medium" id="lbl-guests-title">Guests</span>
-                  <small class="text-muted-color" id="lbl-guests-sub">Ages 2 or above</small>
+            <!-- Enhanced Occupancy Section -->
+            <div class="occupancy-section mt-24">
+              <div class="occupancy-header-flex">
+                <h3 class="section-sub-title" id="lbl-who-coming">Occupancy & Rooms</h3>
+                <div class="occupancy-badge" id="occupancy-summary-badge">1 room &middot; 2 adults</div>
+              </div>
+
+              <div class="occupancy-grid">
+                <!-- Rooms -->
+                <div class="guests-counter">
+                  <div class="guests-label">
+                    <span class="font-medium" id="lbl-rooms-title">Rooms</span>
+                    <small class="text-muted-color" id="lbl-rooms-sub">Max 5</small>
+                  </div>
+                  <div class="counter-controls">
+                    <button class="counter-btn" id="btn-minus-room" type="button" disabled><i class="ph ph-minus"></i></button>
+                    <output id="rooms-count" class="counter-value font-bold">1</output>
+                    <button class="counter-btn" id="btn-plus-room" type="button"><i class="ph ph-plus"></i></button>
+                  </div>
                 </div>
-                <div class="counter-controls" role="group" aria-label="Number of guests">
-                  <button class="counter-btn" id="btn-minus-guest" type="button"
-                          aria-label="Decrease guests" aria-controls="guests-count" disabled>
-                    <i class="ph ph-minus" aria-hidden="true"></i>
-                  </button>
-                  <output id="guests-count" class="counter-value font-bold" aria-live="polite"
-                          for="btn-minus-guest btn-plus-guest">1</output>
-                  <button class="counter-btn" id="btn-plus-guest" type="button"
-                          aria-label="Increase guests" aria-controls="guests-count">
-                    <i class="ph ph-plus" aria-hidden="true"></i>
-                  </button>
+
+                <!-- Adults -->
+                <div class="guests-counter">
+                  <div class="guests-label">
+                    <span class="font-medium" id="lbl-adults-title">Adults</span>
+                    <small class="text-muted-color" id="lbl-adults-sub">Ages 13+</small>
+                  </div>
+                  <div class="counter-controls">
+                    <button class="counter-btn" id="btn-minus-adult" type="button"><i class="ph ph-minus"></i></button>
+                    <output id="adults-count" class="counter-value font-bold">2</output>
+                    <button class="counter-btn" id="btn-plus-adult" type="button"><i class="ph ph-plus"></i></button>
+                  </div>
+                </div>
+
+                <!-- Children -->
+                <div class="guests-counter">
+                  <div class="guests-label">
+                    <span class="font-medium" id="lbl-children-title">Children</span>
+                    <small class="text-muted-color" id="lbl-children-sub">Ages 0-12</small>
+                  </div>
+                  <div class="counter-controls">
+                    <button class="counter-btn" id="btn-minus-child" type="button" disabled><i class="ph ph-minus"></i></button>
+                    <output id="children-count" class="counter-value font-bold">0</output>
+                    <button class="counter-btn" id="btn-plus-child" type="button"><i class="ph ph-plus"></i></button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Child Ages Box (Dynamic) -->
+              <div id="child-ages-box" class="child-ages-box d-none mt-16"></div>
+
+              <!-- Bed Configuration -->
+              <div class="form-group mt-16">
+                <label for="bed-config-select" id="lbl-bed-type">Bed Preference</label>
+                <div class="bed-select-wrapper">
+                  <i class="ph ph-bed bed-select-icon"></i>
+                  <select id="bed-config-select" class="icon-select">
+                    <option value="double" id="opt-bed-double">1 Double Bed</option>
+                    <option value="twin" id="opt-bed-twin">2 Twin Beds</option>
+                    <option value="king" id="opt-bed-king">1 King Bed</option>
+                    <option value="single" id="opt-bed-single">1 Single Bed</option>
+                  </select>
                 </div>
               </div>
             </div>
-            <!-- /guests-section -->
 
           </div>
-          <!-- /step-body -->
-
-          <!-- Step Actions -->
           <div class="step-actions step-actions-end">
-            <button class="primary-btn font-bold" id="btn-next-1" type="button" disabled aria-disabled="true">
+            <button class="primary-btn font-bold" id="btn-next-1" type="button" disabled>
               <span id="btn-next-1-txt">Next Step</span>
-              <i class="ph ph-arrow-right" aria-hidden="true"></i>
+              <i class="ph ph-arrow-right"></i>
             </button>
           </div>
-
         </div>
-        <!-- /step-1 -->
 
-        <!-- ════════════════════════════════════
-             STEP 2 — Review & Payment
-        ════════════════════════════════════ -->
-        <div class="booking-step" id="step-2" role="tabpanel" aria-labelledby="lbl-step2">
-
+        <!-- STEP 2: Add-ons & Pay -->
+        <div class="booking-step" id="step-2">
           <div class="step-header">
-            <h2 class="step-title" id="st-title-2">Review &amp; Payment</h2>
-            <p class="step-subtitle" id="st-sub-2">Check your details and choose a payment method.</p>
+            <h2 class="step-title" id="st-title-2">Enhance &amp; Pay</h2>
+            <p class="step-subtitle" id="st-sub-2">Customize your stay and choose payment.</p>
           </div>
-
           <div class="step-body">
 
-            <!-- Booking Summary Review -->
-            <div class="review-list" role="list" aria-label="Booking summary">
-              <div class="review-row" role="listitem">
-                <span class="review-label" id="rev-dates">Dates</span>
-                <span class="review-value font-medium" id="rev-val-dates">—</span>
-              </div>
-              <div class="review-row" role="listitem">
-                <span class="review-label" id="rev-nights-lbl">Nights</span>
-                <span class="review-value font-medium" id="rev-val-nights">—</span>
-              </div>
-              <div class="review-row" role="listitem">
-                <span class="review-label" id="rev-guests">Guests</span>
-                <span class="review-value font-medium" id="rev-val-guests">—</span>
-              </div>
-              <div class="review-row" role="listitem">
-                <span class="review-label" id="rev-base">Subtotal</span>
-                <span class="review-value font-medium" id="rev-val-base">0 DZD</span>
-              </div>
-              <div class="review-row" role="listitem">
-                <span class="review-label" id="rev-fees">Service Fees (8%)</span>
-                <span class="review-value font-medium" id="rev-val-fees">0 DZD</span>
-              </div>
-              <div class="review-row review-total-row" role="listitem">
-                <span class="review-label font-bold" id="rev-total">Total</span>
-                <span class="review-value price-highlight font-bold" id="rev-val-total">0 DZD</span>
-              </div>
+            <!-- Dynamic Add-ons Panel -->
+            <div id="addons-panel" class="addons-wrapper mb-32">
+              <!-- Injected by booking.js (WiFi, Spa, Meals, etc) -->
             </div>
 
-            <!-- Payment Methods -->
+            <div class="review-list">
+              <div class="review-row"><span class="review-label" id="rev-dates">Dates</span><span class="review-value font-medium" id="rev-val-dates">—</span></div>
+              <div class="review-row"><span class="review-label" id="rev-nights-lbl">Nights</span><span class="review-value font-medium" id="rev-val-nights">—</span></div>
+              <div class="review-row"><span class="review-label" id="rev-rooms">Rooms</span><span class="review-value font-medium" id="rev-val-rooms">—</span></div>
+              <div class="review-row"><span class="review-label" id="rev-guests">Guests</span><span class="review-value font-medium" id="rev-val-guests">—</span></div>
+              <div class="review-row"><span class="review-label" id="rev-addons">Add-ons</span><span class="review-value font-medium" id="rev-val-addons">—</span></div>
+              <div class="review-row"><span class="review-label" id="rev-base">Subtotal</span><span class="review-value font-medium" id="rev-val-base">0 DZD</span></div>
+              <div class="review-row"><span class="review-label" id="rev-fees">Service Fees (8%)</span><span class="review-value font-medium" id="rev-val-fees">0 DZD</span></div>
+              <div class="review-row review-total-row"><span class="review-label font-bold" id="rev-total">Total</span><span class="review-value price-highlight font-bold" id="rev-val-total">0 DZD</span></div>
+            </div>
+
             <div class="payment-methods-section">
               <h3 class="section-sub-title" id="lbl-pay-method">Payment Method</h3>
-
-              <div role="radiogroup" aria-labelledby="lbl-pay-method">
-
-                <!-- Option: Cash -->
-                <label class="payment-option selected" id="opt-cash" for="pay-radio-cash">
-                  <input type="radio" id="pay-radio-cash" name="pay_method" value="cash" checked>
+              <div role="radiogroup">
+                <label class="payment-option selected" id="opt-cash">
+                  <input type="radio" name="pay_method" value="cash" checked>
                   <div class="pay-opt-content">
-                    <i class="ph ph-money pay-opt-icon" aria-hidden="true"></i>
+                    <i class="ph ph-money pay-opt-icon"></i>
                     <div class="pay-opt-text">
                       <strong id="lbl-pay-cash">Pay at Property</strong>
                       <p class="pay-opt-desc" id="desc-pay-cash">Pay the full amount when you arrive.</p>
                     </div>
                   </div>
-                  <i class="ph-fill ph-check-circle pay-opt-check" aria-hidden="true"></i>
+                  <i class="ph-fill ph-check-circle pay-opt-check"></i>
                 </label>
-
-                <!-- Option: Bank Transfer -->
-                <label class="payment-option" id="opt-transfer" for="pay-radio-transfer">
-                  <input type="radio" id="pay-radio-transfer" name="pay_method" value="transfer">
+                <label class="payment-option" id="opt-transfer">
+                  <input type="radio" name="pay_method" value="transfer">
                   <div class="pay-opt-content">
-                    <i class="ph ph-bank pay-opt-icon" aria-hidden="true"></i>
+                    <i class="ph ph-bank pay-opt-icon"></i>
                     <div class="pay-opt-text">
                       <strong id="lbl-pay-transfer">Bank / CCP Transfer</strong>
                       <p class="pay-opt-desc" id="desc-pay-transfer">Transfer to our account and upload your receipt.</p>
                     </div>
                   </div>
-                  <i class="ph-fill ph-check-circle pay-opt-check" aria-hidden="true"></i>
+                  <i class="ph-fill ph-check-circle pay-opt-check"></i>
                 </label>
-
               </div>
-              <!-- /radiogroup -->
 
-              <!-- Bank Transfer Details (shown when transfer selected) -->
-              <div id="transfer-details" class="transfer-box d-none" aria-live="polite">
-                <p class="transfer-info-txt" id="txt-bank-info">
-                  Please transfer the total amount to the following account:
-                </p>
+              <div id="transfer-details" class="transfer-box d-none">
+                <p class="transfer-info-txt" id="txt-bank-info">Please transfer the total amount to the following account:</p>
                 <div class="bank-card">
                   <div class="bank-row">
                     <span class="bank-label">CCP</span>
-                    <span class="bank-val font-bold" dir="ltr">123456789 00</span>
+                    <div class="bank-val-copy">
+                      <span class="bank-val font-bold" dir="ltr">123456789 00</span>
+                      <button type="button" class="copy-btn" onclick="navigator.clipboard.writeText('123456789 00')"><i class="ph ph-copy"></i></button>
+                    </div>
                   </div>
                   <div class="bank-row">
                     <span class="bank-label">RIP</span>
-                    <span class="bank-val font-bold" dir="ltr">007 99999 123456789 00</span>
+                    <div class="bank-val-copy">
+                      <span class="bank-val font-bold" dir="ltr">007 99999 123456789 00</span>
+                      <button type="button" class="copy-btn" onclick="navigator.clipboard.writeText('007 99999 123456789 00')"><i class="ph ph-copy"></i></button>
+                    </div>
                   </div>
                   <div class="bank-row">
                     <span class="bank-label" id="lbl-bank-name">Account Name</span>
@@ -291,315 +253,222 @@
                   </div>
                 </div>
 
-                <!-- Receipt Upload -->
                 <div class="form-group mt-16">
-                  <label for="receipt-file" id="lbl-receipt">
-                    Upload Receipt <span class="req-star">*</span>
-                  </label>
+                  <label for="receipt-file" id="lbl-receipt">Upload Receipt <span class="req-star">*</span></label>
                   <div class="file-upload-wrapper">
-                    <input type="file" id="receipt-file" name="receipt" accept="image/*,application/pdf"
-                           aria-describedby="receipt-hint">
+                    <input type="file" id="receipt-file" accept="image/*,application/pdf">
                     <label for="receipt-file" class="file-upload-label">
-                      <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                      <i class="ph ph-upload-simple"></i>
                       <span id="file-upload-hint">Click or drag to upload receipt</span>
                       <span class="text-sm text-muted-color">JPG, PNG, PDF — Max 5 MB</span>
                     </label>
                   </div>
-                  <p id="receipt-file-name" class="file-name-display" aria-live="polite"></p>
+                  <p id="receipt-file-name" class="file-name-display"></p>
                 </div>
-
               </div>
-              <!-- /transfer-details -->
-
             </div>
-            <!-- /payment-methods-section -->
 
-            <!-- Cancellation Policy -->
-            <div class="policy-section" role="group" aria-labelledby="lbl-policy-title">
+            <div class="policy-section">
               <label class="checkbox-policy-label">
-                <input type="checkbox" id="agree-policy" aria-required="true">
+                <input type="checkbox" id="agree-policy">
                 <div class="policy-text">
-                  <span class="font-bold policy-title" id="lbl-policy-title">
-                    I agree to the Cancellation Policy
-                  </span>
-                  <p class="policy-desc" id="lbl-policy-desc">
-                    Free cancellation up to 48 hours before check-in.
-                    After that, the first night's fee is non-refundable.
-                  </p>
+                  <span class="font-bold policy-title" id="lbl-policy-title">I agree to the Cancellation Policy</span>
+                  <p class="policy-desc" id="lbl-policy-desc">Free cancellation up to 48 hours before check-in. After that, the first night's fee is non-refundable.</p>
                 </div>
               </label>
             </div>
-
           </div>
-          <!-- /step-body -->
-
-          <!-- Step Actions -->
           <div class="step-actions step-actions-between">
             <button class="ghost-btn font-medium" id="btn-prev-2" type="button">
-              <i class="ph ph-arrow-left" aria-hidden="true"></i>
+              <i class="ph ph-arrow-left"></i>
               <span id="btn-back-2">Back</span>
             </button>
-            <button class="primary-btn font-bold" id="btn-next-2" type="button" disabled aria-disabled="true">
+            <button class="primary-btn font-bold" id="btn-next-2" type="button" disabled>
               <span id="btn-next-2-txt">Next Step</span>
-              <i class="ph ph-arrow-right" aria-hidden="true"></i>
+              <i class="ph ph-arrow-right"></i>
             </button>
           </div>
-
         </div>
-        <!-- /step-2 -->
 
-        <!-- ════════════════════════════════════
-             STEP 3 — Guest Details
-        ════════════════════════════════════ -->
-        <div class="booking-step" id="step-3" role="tabpanel" aria-labelledby="lbl-step3">
-
+        <!-- STEP 3: Guest Details -->
+        <div class="booking-step" id="step-3">
           <div class="step-header">
             <h2 class="step-title" id="st-title-3">Who is booking?</h2>
             <p class="step-subtitle" id="st-sub-3">Enter your contact details so we can reach you.</p>
           </div>
-
           <div class="step-body">
-
-            <form id="guest-form" class="guest-form" novalidate autocomplete="on"
-                  aria-label="Guest information form">
-
-              <!-- Full Name -->
+            <form id="guest-form" class="guest-form" novalidate autocomplete="on">
               <div class="form-group">
-                <label for="g-name" id="lbl-fname">
-                  Full Name <span class="req-star" aria-hidden="true">*</span>
-                </label>
-                <input type="text" id="g-name" name="fullName" required
-                       placeholder="John Doe"
-                       autocomplete="name"
-                       aria-required="true"
-                       aria-describedby="g-name-err">
-                <span class="form-error-msg" id="g-name-err" role="alert"></span>
+                <label for="g-name" id="lbl-fname">Full Name <span class="req-star">*</span></label>
+                <input type="text" id="g-name" required placeholder="John Doe" autocomplete="name">
+                <span class="form-error-msg" id="g-name-err"></span>
               </div>
-
-              <!-- Email + Phone -->
               <div class="form-row">
                 <div class="form-group">
-                  <label for="g-email" id="lbl-email">
-                    Email <span class="req-star" aria-hidden="true">*</span>
-                  </label>
-                  <input type="email" id="g-email" name="email" required
-                         placeholder="john@example.com"
-                         autocomplete="email"
-                         inputmode="email"
-                         aria-required="true"
-                         aria-describedby="g-email-err">
-                  <span class="form-error-msg" id="g-email-err" role="alert"></span>
+                  <label for="g-email" id="lbl-email">Email <span class="req-star">*</span></label>
+                  <input type="email" id="g-email" required placeholder="john@example.com" autocomplete="email">
+                  <span class="form-error-msg" id="g-email-err"></span>
                 </div>
-
                 <div class="form-group">
-                  <label for="g-phone" id="lbl-phone">
-                    Phone <span class="req-star" aria-hidden="true">*</span>
-                  </label>
-                  <input type="tel" id="g-phone" name="phone" required
-                         placeholder="+213 555 000 000"
-                         dir="ltr"
-                         autocomplete="tel"
-                         inputmode="tel"
-                         aria-required="true"
-                         aria-describedby="g-phone-err">
-                  <span class="form-error-msg" id="g-phone-err" role="alert"></span>
+                  <label for="g-phone" id="lbl-phone">Phone <span class="req-star">*</span></label>
+                  <input type="tel" id="g-phone" required placeholder="+213 555 000 000" dir="ltr" autocomplete="tel">
+                  <span class="form-error-msg" id="g-phone-err"></span>
                 </div>
               </div>
-
-              <!-- Nationality (optional) -->
-              <div class="form-group">
-                <label for="g-nationality" id="lbl-nationality">
-                  Nationality
-                  <span class="optional-tag" id="lbl-optional-nat">(Optional)</span>
-                </label>
-                <select id="g-nationality" name="nationality" autocomplete="country-name">
-                  <option value="" id="opt-select-country">Select your country…</option>
-                  <option value="DZ">Algeria 🇩🇿</option>
-                  <option value="TN">Tunisia 🇹🇳</option>
-                  <option value="MA">Morocco 🇲🇦</option>
-                  <option value="LY">Libya 🇱🇾</option>
-                  <option value="EG">Egypt 🇪🇬</option>
-                  <option value="SA">Saudi Arabia 🇸🇦</option>
-                  <option value="AE">UAE 🇦🇪</option>
-                  <option value="FR">France 🇫🇷</option>
-                  <option value="GB">United Kingdom 🇬🇧</option>
-                  <option value="DE">Germany 🇩🇪</option>
-                  <option value="OTHER" id="opt-other-country">Other</option>
-                </select>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="g-nationality" id="lbl-nationality">Nationality <span class="optional-tag" id="lbl-optional-nat">(Optional)</span></label>
+                  <select id="g-nationality" autocomplete="country-name">
+                    <option value="" id="opt-select-country">Select your country…</option>
+                    <option value="DZ">Algeria 🇩🇿</option>
+                    <option value="TN">Tunisia 🇹🇳</option>
+                    <option value="MA">Morocco 🇲🇦</option>
+                    <option value="LY">Libya 🇱🇾</option>
+                    <option value="FR">France 🇫🇷</option>
+                    <option value="GB">UK 🇬🇧</option>
+                    <option value="OTHER" id="opt-other-country">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="g-arrival-time" id="lbl-arrival">Arrival Time <span class="optional-tag">(Optional)</span></label>
+                  <select id="g-arrival-time">
+                    <option value="">I don't know</option>
+                    <option value="12:00 - 14:00">12:00 PM - 2:00 PM</option>
+                    <option value="14:00 - 16:00">2:00 PM - 4:00 PM</option>
+                    <option value="16:00 - 18:00">4:00 PM - 6:00 PM</option>
+                    <option value="18:00 - 20:00">6:00 PM - 8:00 PM</option>
+                    <option value="20:00 - 00:00">8:00 PM - 12:00 AM</option>
+                  </select>
+                </div>
               </div>
-
-              <!-- Special Requests -->
               <div class="form-group">
-                <label for="g-notes" id="lbl-notes">
-                  Special Requests
-                  <span class="optional-tag" id="lbl-optional">(Optional)</span>
-                </label>
-                <textarea id="g-notes" name="notes" rows="3"
-                          placeholder="Any special needs or estimated arrival time?"
-                          maxlength="500"
-                          aria-describedby="g-notes-hint"></textarea>
-                <small class="text-muted-color text-sm" id="g-notes-hint">
-                  Max 500 characters. Requests are not guaranteed.
-                </small>
+                <label for="g-notes" id="lbl-notes">Special Requests <span class="optional-tag" id="lbl-optional">(Optional)</span></label>
+                <div class="textarea-wrapper">
+                  <textarea id="g-notes" rows="3" placeholder="Any special needs?" maxlength="500"></textarea>
+                  <div class="notes-footer">
+                    <span id="g-notes-hint">Max 500 chars.</span>
+                    <span id="g-notes-counter">0 / 500</span>
+                  </div>
+                </div>
               </div>
-
-              <!-- Auth Prompt (shown if not logged in) -->
-              <div id="auth-prompt" class="auth-prompt-box d-none" role="complementary" aria-live="polite">
-                <i class="ph ph-user-circle auth-prompt-icon" aria-hidden="true"></i>
+              <div id="auth-prompt" class="auth-prompt-box d-none">
+                <i class="ph ph-user-circle auth-prompt-icon"></i>
                 <div>
-                  <p class="auth-prompt-text" id="txt-auth-prompt">
-                    Have an account? Log in for faster booking and to track your reservations.
-                  </p>
-                  <a href="#" id="link-login-booking" class="auth-prompt-link">
-                    Log In / Register
-                  </a>
+                  <p class="auth-prompt-text" id="txt-auth-prompt">Have an account? Log in for faster booking and tracking.</p>
+                  <a href="#" id="link-login-booking" class="auth-prompt-link">Log In / Register</a>
                 </div>
               </div>
-
-              <!-- Step Actions (inside form) -->
               <div class="step-actions step-actions-between">
                 <button type="button" class="ghost-btn font-medium" id="btn-prev-3">
-                  <i class="ph ph-arrow-left" aria-hidden="true"></i>
+                  <i class="ph ph-arrow-left"></i>
                   <span id="btn-back-3">Back</span>
                 </button>
                 <button type="submit" class="primary-btn font-bold" id="btn-confirm-book">
-                  <i class="ph ph-check-circle" aria-hidden="true"></i>
+                  <i class="ph ph-check-circle"></i>
                   <span id="btn-confirm-txt">Confirm Booking</span>
                 </button>
               </div>
-
             </form>
-            <!-- /guest-form -->
-
           </div>
-          <!-- /step-body -->
-
         </div>
-        <!-- /step-3 -->
 
-        <!-- ════════════════════════════════════
-             STEP 4 — Success / Confirmation
-        ════════════════════════════════════ -->
-        <div class="booking-step" id="step-4" role="tabpanel" aria-labelledby="lbl-step4">
-
+        <!-- STEP 4: Success -->
+        <div class="booking-step" id="step-4">
           <div class="step-body success-screen">
-
-            <!-- Success Animation -->
-            <div class="success-animation" aria-hidden="true">
+            <div class="success-animation">
               <div class="success-ring"></div>
               <i class="ph-fill ph-check-circle success-check-icon"></i>
             </div>
-
             <h2 class="success-title font-bold" id="st-title-4">Booking Received!</h2>
-            <p class="success-subtitle" id="st-sub-4">
-              Thank you for choosing OreBooking.
-              We've received your request and will confirm it shortly.
-            </p>
-
-            <!-- Booking Reference -->
-            <div class="booking-ref-box" aria-label="Booking reference number">
+            <p class="success-subtitle" id="st-sub-4">Thank you for choosing OreBooking. We've received your request.</p>
+            <div class="booking-ref-box">
               <p class="ref-label font-bold text-uppercase" id="lbl-ref">Booking Reference</p>
               <h3 class="ref-number font-bold" id="ref-number">#---</h3>
             </div>
-
-            <!-- Confirmation Details Grid -->
-            <div class="success-details-grid" id="success-details-grid" aria-live="polite">
-              <!-- Filled by JS — example structure:
-              <div class="confirm-detail-card">
-                <p class="confirm-detail-label">Check-in</p>
-                <p class="confirm-detail-value">15 July 2025</p>
-              </div>
-              -->
-            </div>
-
-            <!-- Payment Status Badge (filled by JS) -->
+            <div class="success-details-grid" id="success-details-grid"></div>
             <div id="success-payment-badge" class="mt-16"></div>
-
-            <!-- Action Buttons -->
             <div class="success-actions">
-              <a href="index.html"
-                 class="primary-btn font-bold success-home-btn"
-                 style="text-decoration: none;"
-                 aria-label="Return to homepage">
-                <i class="ph ph-house" aria-hidden="true"></i>
-                <span id="btn-go-home">Return to Home</span>
+              <a href="index.html" class="primary-btn font-bold success-home-btn" style="text-decoration: none;">
+                <i class="ph ph-house"></i><span id="btn-go-home">Return to Home</span>
               </a>
-              <button class="ghost-btn font-medium" id="btn-print-booking"
-                      type="button" onclick="window.print()">
-                <i class="ph ph-printer" aria-hidden="true"></i>
-                <span id="btn-print-txt">Print</span>
+              <button class="ghost-btn font-medium" id="btn-print-booking" type="button" onclick="window.print()">
+                <i class="ph ph-printer"></i><span id="btn-print-txt">Print</span>
               </button>
             </div>
-
           </div>
-          <!-- /success-screen -->
-
         </div>
-        <!-- /step-4 -->
-
       </div>
-      <!-- /booking-main-card -->
 
-      <!-- ═══════════════════════════════════════════════════
-           RIGHT COLUMN — Property Summary Sidebar
-      ═══════════════════════════════════════════════════ -->
-      <aside class="booking-sidebar" aria-label="Booking summary">
-
-        <!-- Property Summary Card -->
-        <div class="booking-summary-card">
-          <h4 class="font-bold summary-card-title" id="sum-title">Booking Summary</h4>
-
-          <div class="booking-prop-summary">
-            <img src="logos/placeholder.png"
-                 id="sum-img"
-                 alt="Property photo"
-                 class="booking-prop-img"
-                 width="80" height="60"
-                 loading="lazy">
-            <div class="booking-prop-info">
-              <div class="booking-prop-location" id="sum-loc">
-                <i class="ph ph-map-pin" aria-hidden="true"></i>
-                <span>Loading…</span>
+      <!-- RIGHT COLUMN -->
+      <div class="sidebar-wrapper">
+        <aside class="booking-sidebar">
+          <div class="booking-summary-card mb-16">
+            <h4 class="font-bold summary-card-title" id="sum-title">Booking Summary</h4>
+            <div class="booking-prop-summary">
+              <img src="logos/placeholder.png" id="sum-img" alt="Property photo" class="booking-prop-img">
+              <div class="booking-prop-info">
+                <div class="booking-prop-location" id="sum-loc"><i class="ph ph-map-pin"></i><span>Loading…</span></div>
+                <div class="booking-prop-title font-bold" id="sum-name">Loading property…</div>
+                <div class="booking-prop-price">
+                  <strong id="sum-price-night">—</strong>
+                  <span class="text-muted-color"> / <span id="sum-night-lbl">night</span></span>
+                </div>
               </div>
-              <div class="booking-prop-title font-bold" id="sum-name">Loading property…</div>
-              <div class="booking-prop-price">
-                <strong id="sum-price-night">—</strong>
-                <span class="text-muted-color">
-                  <span aria-hidden="true"> / </span>
-                  <span id="sum-night-lbl">night</span>
-                </span>
-              </div>
+            </div>
+            <div class="summary-divider"></div>
+            <div id="price-breakdown">
+              <p class="sum-placeholder-txt" id="sum-placeholder">Select dates to see price details</p>
             </div>
           </div>
 
-          <div class="summary-divider" aria-hidden="true"></div>
-
-          <!-- Price Breakdown (filled by JS) -->
-          <div id="price-breakdown" aria-live="polite" aria-label="Price breakdown">
-            <p class="sum-placeholder-txt" id="sum-placeholder">
-              Select dates to see price details
-            </p>
+          <!-- Hotel Highlights Card -->
+          <div class="hotel-info-card mb-16">
+            <h4 class="hotel-info-title"><i class="ph ph-star"></i> <span id="lbl-hotel-high">Hotel Highlights</span></h4>
+            <ul class="hotel-highlights-list">
+              <li><i class="ph ph-swimming-pool"></i> <span>Outdoor & Indoor Pools</span></li>
+              <li><i class="ph ph-fork-knife"></i> <span>3 Gourmet Restaurants</span></li>
+              <li><i class="ph ph-wifi-high"></i> <span>Free High-Speed WiFi</span></li>
+              <li><i class="ph ph-barbell"></i> <span>Fitness Center & Spa</span></li>
+            </ul>
           </div>
-        </div>
-        <!-- /booking-summary-card -->
 
-        <!-- Security Badge -->
-        <div class="security-badge" role="note">
-          <i class="ph ph-lock-key security-icon" aria-hidden="true"></i>
-          <span id="txt-secure">Secure &amp; encrypted booking</span>
-        </div>
+          <!-- Check-in / Out Info -->
+          <div class="hotel-info-card mb-16">
+            <h4 class="hotel-info-title"><i class="ph ph-clock"></i> <span id="lbl-check-rules">Check-in Info</span></h4>
+            <div class="check-rules-grid">
+              <div class="check-rule-item">
+                <span class="check-rule-lbl">Check-in</span>
+                <span class="check-rule-val">From 14:00</span>
+              </div>
+              <div class="check-rule-item">
+                <span class="check-rule-lbl">Check-out</span>
+                <span class="check-rule-val">Until 11:30</span>
+              </div>
+            </div>
+            <ul class="hotel-rules-list mt-12">
+              <li><i class="ph ph-paw-print text-muted-color"></i> <span>Pets are not allowed.</span></li>
+              <li><i class="ph ph-cigarette-slash text-muted-color"></i> <span>No smoking in rooms.</span></li>
+            </ul>
+          </div>
 
-      </aside>
-      <!-- /booking-sidebar -->
+          <div class="security-badge">
+            <i class="ph ph-lock-key security-icon"></i>
+            <span id="txt-secure">Secure &amp; encrypted booking</span>
+          </div>
+        </aside>
+      </div>
 
     </div>
-    <!-- /booking-wrapper -->
+
+    <!-- Reviews Section Wrapper -->
+    <div class="reviews-wrapper mt-48">
+      <div id="reviews-section" class="reviews-container">
+        <!-- Injected by booking.js -->
+      </div>
+    </div>
 
   </main>
-  <!-- /booking-page -->
 
-  <!-- ⚠️ booking.js handles Firebase init — do NOT include script.js here -->
   <script src="booking.js" defer></script>
-
 </body>
 </html>
