@@ -1009,6 +1009,25 @@ function validateGuestForm() {
 
 // ─── Event Listeners ─────────────────────────
 function setupEventListeners() {
+
+  // ─── Bank Copy Buttons ─────────────────────
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const valEl = e.currentTarget.previousElementSibling;
+      if (!valEl) return;
+      const textToCopy = valEl.textContent.trim().replace(/\s+/g, '');
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+        icon.className = 'ph-fill ph-check-circle text-primary';
+        setTimeout(() => { icon.className = originalClass; }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+    });
+  });
+
   // Calendar
   els.calPrev?.addEventListener('click', () => { calViewDate.setMonth(calViewDate.getMonth()-1); renderCalendar(); });
   els.calNext?.addEventListener('click', () => { calViewDate.setMonth(calViewDate.getMonth()+1); renderCalendar(); });
@@ -1083,6 +1102,11 @@ function setupEventListeners() {
   els.gPhone?.addEventListener('blur', () => validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v), t('Valid phone required.','رقم هاتف صحيح مطلوب.')));
 
   // Notes char counter
+  
+  els.gArrival?.addEventListener('change', e => {
+    bookingState.arrivalTime = e.target.value;
+  });
+
   els.gNotes?.addEventListener('input', () => {
     const counter = document.getElementById('g-notes-counter');
     if (counter) counter.textContent = `${els.gNotes.value.length} / 500`;
