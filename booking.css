@@ -1,1386 +1,437 @@
-// =========================================
-//   Advanced Booking Logic — booking.js
-//   OreBooking © 2025 | Hotel Edition
-// =========================================
+/* =========================================
+   Complete Booking Page Styles — booking.css
+   OreBooking v2.0 — Full Rewrite with Add-ons,
+   Occupancy, Reviews, Hotel Info Cards
+   ========================================= */
 
-// ─── Firebase Config ───────────────────────
-const firebaseConfig = {
-  apiKey:            "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-  authDomain:        "orebooking-website.firebaseapp.com",
-  projectId:         "orebooking-website",
-  storageBucket:     "orebooking-website.firebasestorage.app",
-  messagingSenderId: "1012887567747",
-  appId:             "1:1012887567747:web:153b57b60cb143d88acab6",
-  measurementId:     "G-5GKMRMVHC3"
-};
+/* ═══════════════════════════════════════════
+   RTL / LTR Global
+═══════════════════════════════════════════ */
+html[dir="rtl"] .booking-page { text-align: right; direction: rtl; }
+html[dir="ltr"] .booking-page { text-align: left;  direction: ltr; }
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+/* ═══════════════════════════════════════════
+   Layout
+═══════════════════════════════════════════ */
+.booking-page {
+  min-height: 100dvh;
+  background-color: var(--bg-color);
+  padding-bottom: 80px;
 }
 
-const db      = firebase.firestore();
-const auth    = firebase.auth();
-const storage = firebase.storage();
+.booking-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  align-items: start;
+}
 
-// ─── Static Reviews Data ───────────────────
-const STATIC_REVIEWS = [
-  {
-    name: "Karim B.",
-    avatar: "KB",
-    rating: 5,
-    date: "2025-03-15",
-    stay: "3 nights · March 2025",
-    text_en: "Exceptional stay. The room was spotless, the staff incredibly welcoming. The restaurant breakfast was outstanding — fresh juices, variety of pastries. Will definitely return.",
-    text_ar: "إقامة استثنائية. الغرفة كانت نظيفة جداً والطاقم رائع في الاستقبال. إفطار المطعم كان رائعاً — عصائر طازجة وتشكيلة متنوعة من المعجنات. سأعود بالتأكيد.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "positive"
-  },
-  {
-    name: "Siham M.",
-    avatar: "SM",
-    rating: 4,
-    date: "2025-02-20",
-    stay: "2 nights · February 2025",
-    text_en: "Very comfortable rooms and the WiFi was fast and stable throughout our stay. The only downside was that the pool area could use more loungers during peak hours. Overall a great experience.",
-    text_ar: "غرف مريحة جداً والواي فاي كان سريعاً ومستقراً طوال إقامتنا. السلبية الوحيدة أن منطقة المسبح تحتاج مزيداً من الكراسي في أوقات الذروة. تجربة رائعة بشكل عام.",
-    country: "Tunisia",
-    flag: "🇹🇳",
-    type: "constructive"
-  },
-  {
-    name: "Youcef A.",
-    avatar: "YA",
-    rating: 3,
-    date: "2025-01-08",
-    stay: "4 nights · January 2025",
-    text_en: "The hotel has great potential. Location is perfect and the events team organised a lovely evening. However, room service was slow and our room wasn't cleaned one afternoon. Management should address this.",
-    text_ar: "الفندق لديه إمكانات كبيرة. الموقع ممتاز وفريق الفعاليات نظّم أمسية جميلة. لكن خدمة الغرف كانت بطيئة ولم تُنظّف غرفتنا في أحد الأيام. على الإدارة معالجة هذا الأمر.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "mixed"
-  },
-  {
-    name: "Nadia L.",
-    avatar: "NL",
-    rating: 5,
-    date: "2024-12-28",
-    stay: "5 nights · December 2024",
-    text_en: "We celebrated New Year's here and it was magical. The New Year's Eve event was incredible — live music, fireworks, amazing food. Staff went above and beyond for us. Highly recommend.",
-    text_ar: "احتفلنا بالسنة الجديدة هنا وكانت تجربة سحرية. حفلة رأس السنة كانت مذهلة — موسيقى حية، ألعاب نارية، طعام رائع. الطاقم قدّم كل ما يمكن من أجلنا. أنصح به بشدة.",
-    country: "France",
-    flag: "🇫🇷",
-    type: "positive"
-  },
-  {
-    name: "Mourad T.",
-    avatar: "MT",
-    rating: 2,
-    date: "2024-11-12",
-    stay: "1 night · November 2024",
-    text_en: "Disappointed with this visit. The air conditioning in our room was broken and despite reporting it twice, it wasn't fixed. The TV also had issues. Front desk staff were polite but couldn't resolve our problems. Not what I expected for this price.",
-    text_ar: "خرجت مخيّباً من هذه الزيارة. مكيف الهواء في غرفتنا كان معطلاً وبالرغم من إبلاغهم مرتين لم يُصلح. التلفاز أيضاً به مشاكل. موظفو الاستقبال كانوا مؤدبين لكن لم يحلّوا مشاكلنا. لم أتوقع هذا بهذا السعر.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "negative"
-  },
-  {
-    name: "Amira K.",
-    avatar: "AK",
-    rating: 4,
-    date: "2024-10-05",
-    stay: "3 nights · October 2025",
-    text_en: "Beautiful hotel, very clean and modern. The restaurant demi-pension option was worth it — dinner buffet was diverse and delicious. WiFi speed could be improved in the upper floors though.",
-    text_ar: "فندق جميل ونظيف وعصري. خيار نصف الإقامة في المطعم كان يستحق — بوفيه العشاء متنوع ولذيذ. لكن سرعة الواي فاي في الطوابق العليا تحتاج تحسيناً.",
-    country: "Morocco",
-    flag: "🇲🇦",
-    type: "constructive"
-  },
-  {
-    name: "Salim R.",
-    avatar: "SR",
-    rating: 5,
-    date: "2024-09-18",
-    stay: "7 nights · September 2024",
-    text_en: "Best hotel stay I've had in years. Came with family including two kids — the animation team kept the children entertained every evening. Kids club is excellent. The suite was enormous and the view stunning.",
-    text_ar: "أفضل إقامة فندقية منذ سنوات. جئنا مع العائلة بما فيها طفلين — فريق الأنيماسيون أبقى الأطفال مسلّيين كل مساء. نادي الأطفال ممتاز. الجناح كان فسيحاً جداً والمنظر رائع.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "positive"
-  },
-  {
-    name: "Leila F.",
-    avatar: "LF",
-    rating: 3,
-    date: "2024-08-22",
-    stay: "2 nights · August 2024",
-    text_en: "The hotel is in a great location and check-in was smooth. However, the restaurant lunch service felt rushed and the portions were small for the price. The pool area and spa were highlights though.",
-    text_ar: "الفندق في موقع ممتاز وتسجيل الوصول كان سلساً. لكن خدمة الغداء في المطعم بدت متسرّعة والأجزاء كانت صغيرة مقارنة بالسعر. منطقة المسبح والسبا كانا مميزَين.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "mixed"
+@media (max-width: 900px) {
+  .booking-wrapper {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
-];
-
-// ─── Booking State ─────────────────────────
-let currentUser = null;
-
-const bookingState = {
-  propertyId:   null,
-  property:     null,
-  checkIn:      null,
-  checkOut:     null,
-  // Room & Occupancy
-  rooms:        1,
-  adults:       2,
-  children:     0,
-  childAges:    [],   // array of ages for each child
-  beds:         1,    // preferred bed configuration
-  // Pricing
-  nights:       0,
-  totalPrice:   0,
-  basePrice:    0,
-  roomPrice:    0,    // basePrice * rooms
-  fee:          0,
-  addonsTotal:  0,
-  // Limits
-  maxGuests:    10,
-  maxRooms:     5,
-  minNights:    1,
-  // Availability
-  bookedDates:  [],
-  // Add-ons / Amenities
-  addons: {
-    restaurant:   false,   // مطعم (breakfast / half-board)
-    restaurantPlan: 'breakfast', // 'breakfast' | 'halfboard' | 'fullboard'
-    wifi:         false,
-    parking:      false,
-    airportTransfer: false,
-    spa:          false,
-    lateCheckout: false,
-    extraBed:     false,
-    events:       false,
-  },
-  // Misc
-  bedConfig:    'double',  // 'double' | 'twin' | 'king' | 'single'
-  lang:         localStorage.getItem('ore_lang') || 'en',
-  nationality:  '',
-  arrivalTime:  '',
-  specialRequests: ''
-};
-
-// ─── Add-on Prices (per night per room) ────
-const ADDON_PRICES = {
-  restaurant_breakfast: 800,
-  restaurant_halfboard: 1800,
-  restaurant_fullboard: 3200,
-  wifi:                 300,
-  parking:              500,
-  airportTransfer:      2500,
-  spa:                  2000,
-  lateCheckout:         1200,
-  extraBed:             1000,
-  events:               500,
-};
-
-// ─── Cached DOM Elements ───────────────────
-const els = {
-  step1: document.getElementById('step-1'),
-  step2: document.getElementById('step-2'),
-  step3: document.getElementById('step-3'),
-  step4: document.getElementById('step-4'),
-
-  btnNext1:   document.getElementById('btn-next-1'),
-  btnNext2:   document.getElementById('btn-next-2'),
-  btnPrev2:   document.getElementById('btn-prev-2'),
-  btnPrev3:   document.getElementById('btn-prev-3'),
-  btnConfirm: document.getElementById('btn-confirm-book'),
-
-  // Room & Occupancy Controls
-  btnRoomMinus:    document.getElementById('btn-minus-room'),
-  btnRoomPlus:     document.getElementById('btn-plus-room'),
-  roomCount:       document.getElementById('rooms-count'),
-  btnAdultMinus:   document.getElementById('btn-minus-adult'),
-  btnAdultPlus:    document.getElementById('btn-plus-adult'),
-  adultCount:      document.getElementById('adults-count'),
-  btnChildMinus:   document.getElementById('btn-minus-child'),
-  btnChildPlus:    document.getElementById('btn-plus-child'),
-  childCount:      document.getElementById('children-count'),
-  childAgesBox:    document.getElementById('child-ages-box'),
-  bedSelect:       document.getElementById('bed-config-select'),
-
-  // Calendar
-  calPrev:     document.getElementById('cal-prev'),
-  calNext:     document.getElementById('cal-next'),
-  calGrid:     document.getElementById('calendar-grid'),
-  monthLabel:  document.getElementById('calendar-month-label'),
-
-  // Forms
-  guestForm:    document.getElementById('guest-form'),
-  agreePolicy:  document.getElementById('agree-policy'),
-  payRadios:    document.getElementsByName('pay_method'),
-  receiptFile:  document.getElementById('receipt-file'),
-  transferBox:  document.getElementById('transfer-details'),
-
-  // Display
-  dispCheckin:     document.getElementById('disp-checkin'),
-  dispCheckout:    document.getElementById('disp-checkout'),
-  dispNights:      document.getElementById('disp-nights'),
-  warnEl:          document.getElementById('min-nights-warning'),
-  globalAlert:     document.getElementById('booking-global-alert'),
-  priceBreakdown:  document.getElementById('price-breakdown'),
-
-  // Guest Form
-  gName:       document.getElementById('g-name'),
-  gEmail:      document.getElementById('g-email'),
-  gPhone:      document.getElementById('g-phone'),
-  gNotes:      document.getElementById('g-notes'),
-  gArrival:    document.getElementById('g-arrival-time'),
-  gNationality:document.getElementById('g-nationality'),
-  authPrompt:  document.getElementById('auth-prompt'),
-  linkLogin:   document.getElementById('link-login-booking'),
-};
-
-// ─── Calendar State ────────────────────────
-let calViewDate = new Date();
-calViewDate.setDate(1);
-
-// ─── Helpers ───────────────────────────────
-const t = (en, ar) => bookingState.lang === 'ar' ? ar : en;
-
-function formatDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  .booking-main-card { order: 1; }
+  .booking-sidebar   { order: 2; }
 }
 
-function parseLocalDate(str) {
-  const [y, m, d] = str.split('-').map(Number);
-  return new Date(y, m - 1, d);
+@media (max-width: 600px) {
+  .booking-wrapper { padding: 16px; }
 }
 
-function formatDisplayDate(str) {
-  if (!str) return t('Add date', 'أضف تاريخ');
-  return parseLocalDate(str).toLocaleDateString(
-    bookingState.lang === 'ar' ? 'ar-DZ' : 'en-GB',
-    { day: '2-digit', month: 'short', year: 'numeric' }
-  );
+/* ═══════════════════════════════════════════
+   Step Indicators
+═══════════════════════════════════════════ */
+.booking-steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 1100px;
+  margin: 24px auto 0;
+  padding: 0 24px 28px;
+  direction: ltr;
 }
 
-function showGlobalAlert(msg, type = 'error') {
-  const el = els.globalAlert;
-  if (!el) return;
-  const icons = { error: 'warning', success: 'check-circle', info: 'info' };
-  el.className = `booking-alert ${type}`;
-  el.innerHTML = `<i class="ph ph-${icons[type] || 'info'}" aria-hidden="true"></i><span>${msg}</span>`;
-  el.classList.remove('d-none');
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--border-color);
+  transition: background 0.4s ease;
+  min-width: 20px;
+  margin-bottom: 22px;
 }
 
-function hideGlobalAlert() {
-  els.globalAlert?.classList.add('d-none');
+.step-connector.completed { background: var(--primary); }
+
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-function showWarn(msg) {
-  if (!els.warnEl) return;
-  els.warnEl.textContent = msg;
-  els.warnEl.classList.remove('d-none');
+.step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-color);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+  z-index: 1;
+  position: relative;
 }
 
-function hideWarn() {
-  els.warnEl?.classList.add('d-none');
+.step-indicator.active .step-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
-function setButtonLoading(btn, loading) {
-  if (!btn) return;
-  btn.disabled = loading;
-  btn.setAttribute('aria-disabled', String(loading));
-  if (loading) {
-    btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-circle-notch ph-spin" aria-hidden="true"></i> ${t('Processing…','جارٍ المعالجة…')}`;
-  } else {
-    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+.step-indicator.completed .step-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.step-indicator.completed .step-num > span { display: none; }
+.step-indicator.completed .step-num::after { content: "✓"; font-size: 0.9rem; }
+
+.step-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.step-indicator.active    .step-label { color: var(--primary); font-weight: 700; }
+.step-indicator.completed .step-label { color: var(--primary); }
+
+@media (max-width: 600px) {
+  .step-label               { display: none; }
+  .booking-steps-header     { padding-bottom: 16px; margin-top: 16px; }
+  .step-connector           { margin-bottom: 0; }
+}
+
+/* ═══════════════════════════════════════════
+   Main Card
+═══════════════════════════════════════════ */
+.booking-main-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.booking-step {
+  display: none;
+  animation: bk-fadeIn 0.35s ease;
+}
+.booking-step.active { display: block; }
+
+@keyframes bk-fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Step Header ─────────────────────────── */
+.step-header {
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.step-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text-main);
+}
+
+.step-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.step-body { padding: 24px 28px; }
+
+@media (max-width: 600px) {
+  .step-header { padding: 18px 18px 14px; }
+  .step-body   { padding: 18px; }
+  .step-title  { font-size: 1.05rem; }
+}
+
+/* ─── Step Actions ────────────────────────── */
+.step-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 28px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-color);
+}
+
+.step-actions-end     { justify-content: flex-end; }
+.step-actions-between { justify-content: space-between; }
+
+html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
+
+.step-actions .primary-btn {
+  width: auto;
+  flex: 1;
+  max-width: 280px;
+}
+
+@media (max-width: 600px) {
+  .step-actions              { padding: 14px 18px; flex-wrap: wrap; }
+  .step-actions .primary-btn { max-width: none; }
+}
+
+/* ═══════════════════════════════════════════
+   Navbar — Back Button Override
+═══════════════════════════════════════════ */
+.inner-nav .back-btn { border-radius: 20px; }
+
+@media (max-width: 600px) {
+  #nav-back-txt { display: none; }
+  .inner-nav .back-btn {
+    padding: 8px;
+    border-radius: 50%;
+    aspect-ratio: 1;
+    justify-content: center;
   }
+  .booking-steps-header { padding-inline: 16px; }
 }
 
-function applyStoredTheme() {
-  const theme = localStorage.getItem('ore_theme');
-  const icon  = document.querySelector('#theme-toggle i');
-  if (theme === 'dark') {
-    document.documentElement.classList.add('dark');
-    if (icon) icon.className = 'ph ph-sun';
-  } else {
-    document.documentElement.classList.remove('dark');
-    if (icon) icon.className = 'ph ph-moon';
-  }
+/* ═══════════════════════════════════════════
+   Alerts & Warnings
+═══════════════════════════════════════════ */
+.booking-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-xl);
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  line-height: 1.5;
+  animation: bk-fadeIn 0.3s ease;
 }
 
-function showSidebarSkeleton() {
-  const ids = ['sum-name', 'sum-loc', 'sum-price-night'];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '<span class="skeleton skeleton-text" style="width:60%;display:inline-block;height:0.9em;"></span>';
-  });
-  const imgEl = document.getElementById('sum-img');
-  if (imgEl) imgEl.classList.add('skeleton');
+.booking-alert i { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
+
+.booking-alert.error   { background: color-mix(in srgb, #e11d48 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #e11d48 30%, transparent); color: #9f1239; }
+.booking-alert.warning { background: color-mix(in srgb, #f59e0b 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent); color: #92400e; }
+.booking-alert.success { background: color-mix(in srgb, #10b981 10%, var(--bg-color)); border: 1px solid color-mix(in srgb, #10b981 30%, transparent); color: #064e3b; }
+.booking-alert.info    { background: color-mix(in srgb, var(--primary) 8%, var(--bg-color)); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); color: var(--text-main); }
+
+.booking-warning {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, #e11d48 8%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, #e11d48 30%, transparent);
+  border-radius: var(--radius-xl);
+  font-size: 0.83rem;
+  color: #9f1239;
+  text-align: center;
+  animation: bk-fadeIn 0.3s ease;
 }
 
-// ─── Calculate Add-ons Total ────────────────
-function calcAddonsTotal() {
-  let total = 0;
-  const s = bookingState.addons;
-  const nights = bookingState.nights || 0;
-  const rooms  = bookingState.rooms;
+/* ═══════════════════════════════════════════
+   STEP 1 — Calendar
+═══════════════════════════════════════════ */
+.calendar-section { margin-bottom: 28px; }
 
-  if (s.restaurant) {
-    const plan = `restaurant_${s.restaurantPlan}`;
-    total += (ADDON_PRICES[plan] || 0) * nights * (bookingState.adults + bookingState.children);
-  }
-  if (s.wifi)            total += ADDON_PRICES.wifi * nights * rooms;
-  if (s.parking)         total += ADDON_PRICES.parking * nights;
-  if (s.airportTransfer) total += ADDON_PRICES.airportTransfer;
-  if (s.spa)             total += ADDON_PRICES.spa * nights;
-  if (s.lateCheckout)    total += ADDON_PRICES.lateCheckout * rooms;
-  if (s.extraBed)        total += ADDON_PRICES.extraBed * nights * rooms;
-  if (s.events)          total += ADDON_PRICES.events * nights * (bookingState.adults + bookingState.children);
-
-  bookingState.addonsTotal = total;
-  return total;
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+  direction: ltr;
 }
 
-// ─── Render Child Ages Inputs ───────────────
-function renderChildAges() {
-  const box = els.childAgesBox;
-  if (!box) return;
-  if (bookingState.children === 0) {
-    box.classList.add('d-none');
-    return;
-  }
-  box.classList.remove('d-none');
-  const isAr = bookingState.lang === 'ar';
-
-  let html = `<p class="child-ages-title">${t("Children's ages (at check-in)","أعمار الأطفال (عند الوصول)")}</p>`;
-  html += '<div class="child-ages-grid">';
-  for (let i = 0; i < bookingState.children; i++) {
-    const currentAge = bookingState.childAges[i] ?? '';
-    html += `
-      <div class="child-age-field">
-        <label for="child-age-${i}">${t('Child','طفل')} ${i + 1}</label>
-        <select id="child-age-${i}" class="child-age-select" data-child-index="${i}" aria-label="${t('Age of child','عمر الطفل')} ${i+1}">
-          <option value="">${t('Age?','العمر؟')}</option>
-          ${Array.from({length:18},(_,j)=>
-            `<option value="${j}" ${currentAge==j?'selected':''}>${j === 0 ? t('< 1 yr','أقل من سنة') : j + (isAr ? ' سنوات':' yrs')}</option>`
-          ).join('')}
-        </select>
-      </div>`;
-  }
-  html += '</div>';
-  box.innerHTML = html;
-
-  box.querySelectorAll('.child-age-select').forEach(sel => {
-    sel.addEventListener('change', e => {
-      const idx = parseInt(e.target.dataset.childIndex, 10);
-      bookingState.childAges[idx] = parseInt(e.target.value, 10);
-    });
-  });
+.cal-nav-btn {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: var(--transition);
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
-// ─── Render Addons Panel ────────────────────
-function renderAddonsPanel() {
-  const container = document.getElementById('addons-panel');
-  if (!container) return;
-
-  const isAr = bookingState.lang === 'ar';
-  const curr = isAr ? 'د.ج' : 'DZD';
-
-  const addonItems = [
-    {
-      key: 'restaurant',
-      icon: 'ph-fork-knife',
-      label: t('Restaurant', 'المطعم'),
-      desc: t('Add meal plan for all guests', 'أضف خطة وجبات لجميع الضيوف'),
-      badge: null,
-      subOptions: true
-    },
-    {
-      key: 'wifi',
-      icon: 'ph-wifi-high',
-      label: t('High-Speed WiFi', 'واي فاي عالي السرعة'),
-      desc: t(`${ADDON_PRICES.wifi.toLocaleString()} ${curr}/room/night`, `${ADDON_PRICES.wifi.toLocaleString()} ${curr} / غرفة / ليلة`),
-      badge: t('Included in suite', 'مشمول في الجناح')
-    },
-    {
-      key: 'parking',
-      icon: 'ph-car',
-      label: t('Secure Parking', 'موقف سيارات آمن'),
-      desc: t(`${ADDON_PRICES.parking.toLocaleString()} ${curr}/night`, `${ADDON_PRICES.parking.toLocaleString()} ${curr} / ليلة`),
-      badge: null
-    },
-    {
-      key: 'airportTransfer',
-      icon: 'ph-airplane-takeoff',
-      label: t('Airport Transfer', 'نقل المطار'),
-      desc: t(`${ADDON_PRICES.airportTransfer.toLocaleString()} ${curr} one-way`, `${ADDON_PRICES.airportTransfer.toLocaleString()} ${curr} ذهاباً`),
-      badge: null
-    },
-    {
-      key: 'spa',
-      icon: 'ph-flower-lotus',
-      label: t('Spa & Wellness', 'السبا والعافية'),
-      desc: t(`${ADDON_PRICES.spa.toLocaleString()} ${curr}/person/night`, `${ADDON_PRICES.spa.toLocaleString()} ${curr} / شخص / ليلة`),
-      badge: null
-    },
-    {
-      key: 'lateCheckout',
-      icon: 'ph-clock-countdown',
-      label: t('Late Checkout (until 4PM)', 'مغادرة متأخرة (حتى 4م)'),
-      desc: t(`${ADDON_PRICES.lateCheckout.toLocaleString()} ${curr}/room`, `${ADDON_PRICES.lateCheckout.toLocaleString()} ${curr} / غرفة`),
-      badge: t('Subject to availability','حسب التوفر')
-    },
-    {
-      key: 'extraBed',
-      icon: 'ph-bed',
-      label: t('Extra Bed', 'سرير إضافي'),
-      desc: t(`${ADDON_PRICES.extraBed.toLocaleString()} ${curr}/room/night`, `${ADDON_PRICES.extraBed.toLocaleString()} ${curr} / غرفة / ليلة`),
-      badge: null
-    },
-    {
-      key: 'events',
-      icon: 'ph-confetti',
-      label: t('Entertainment & Events', 'الترفيه والفعاليات'),
-      desc: t('Nightly shows, pool parties, cultural evenings', 'عروض مسائية، حفلات المسبح، أمسيات ثقافية'),
-      badge: t('Popular', 'مشهور')
-    }
-  ];
-
-  let html = `<h3 class="addons-title">${t('Enhance Your Stay','حسّن إقامتك')}</h3>`;
-  html += '<div class="addons-grid">';
-
-  addonItems.forEach(item => {
-    const checked = bookingState.addons[item.key];
-    html += `
-      <label class="addon-card ${checked ? 'selected' : ''}" for="addon-${item.key}">
-        <div class="addon-card-header">
-          <div class="addon-icon"><i class="ph ${item.icon}" aria-hidden="true"></i></div>
-          <div class="addon-info">
-            <span class="addon-label">${item.label}</span>
-            ${item.badge ? `<span class="addon-badge">${item.badge}</span>` : ''}
-            <span class="addon-desc">${item.desc}</span>
-          </div>
-          <input type="checkbox" id="addon-${item.key}" class="addon-checkbox" data-key="${item.key}" ${checked ? 'checked' : ''} aria-label="${item.label}">
-        </div>
-        ${item.subOptions && checked ? `
-          <div class="addon-sub-options">
-            <p class="sub-label">${t('Meal Plan:', 'خطة الوجبات:')}</p>
-            <div class="sub-radio-group">
-              <label class="sub-radio ${bookingState.addons.restaurantPlan === 'breakfast' ? 'active' : ''}">
-                <input type="radio" name="restaurant_plan" value="breakfast" ${bookingState.addons.restaurantPlan === 'breakfast' ? 'checked' : ''}>
-                <span>${t('Breakfast','إفطار')}</span>
-                <small>${ADDON_PRICES.restaurant_breakfast.toLocaleString()} ${curr}/${t('pers','شخص')}</small>
-              </label>
-              <label class="sub-radio ${bookingState.addons.restaurantPlan === 'halfboard' ? 'active' : ''}">
-                <input type="radio" name="restaurant_plan" value="halfboard" ${bookingState.addons.restaurantPlan === 'halfboard' ? 'checked' : ''}>
-                <span>${t('Half-Board','نصف إقامة')}</span>
-                <small>${ADDON_PRICES.restaurant_halfboard.toLocaleString()} ${curr}/${t('pers','شخص')}</small>
-              </label>
-              <label class="sub-radio ${bookingState.addons.restaurantPlan === 'fullboard' ? 'active' : ''}">
-                <input type="radio" name="restaurant_plan" value="fullboard" ${bookingState.addons.restaurantPlan === 'fullboard' ? 'checked' : ''}>
-                <span>${t('Full-Board','إقامة كاملة')}</span>
-                <small>${ADDON_PRICES.restaurant_fullboard.toLocaleString()} ${curr}/${t('pers','شخص')}</small>
-              </label>
-            </div>
-          </div>` : ''}
-      </label>`;
-  });
-
-  html += '</div>';
-  container.innerHTML = html;
-
-  // Wire up checkboxes
-  container.querySelectorAll('.addon-checkbox').forEach(cb => {
-    cb.addEventListener('change', e => {
-      const key = e.target.dataset.key;
-      bookingState.addons[key] = e.target.checked;
-      renderAddonsPanel();
-      updateBookingSummary();
-    });
-  });
-
-  // Wire up restaurant plan radios
-  container.querySelectorAll('input[name="restaurant_plan"]').forEach(r => {
-    r.addEventListener('change', e => {
-      bookingState.addons.restaurantPlan = e.target.value;
-      renderAddonsPanel();
-      updateBookingSummary();
-    });
-  });
+.cal-nav-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 
-// ─── Render Reviews ─────────────────────────
-function renderReviews() {
-  const container = document.getElementById('reviews-section');
-  if (!container) return;
-
-  const isAr = bookingState.lang === 'ar';
-  const reviews = STATIC_REVIEWS;
-
-  const totalRatings = reviews.reduce((sum, r) => sum + r.rating, 0);
-  const avgRating = (totalRatings / reviews.length).toFixed(1);
-
-  const ratingDist = [5,4,3,2,1].map(star => ({
-    star,
-    count: reviews.filter(r => r.rating === star).length,
-    pct: Math.round((reviews.filter(r => r.rating === star).length / reviews.length) * 100)
-  }));
-
-  const starsHtml = (rating) => Array.from({length:5}, (_,i) =>
-    `<i class="ph-fill ph-star ${i < rating ? 'star-filled' : 'star-empty'}" aria-hidden="true"></i>`
-  ).join('');
-
-  let html = `
-    <div class="reviews-header">
-      <h3 class="reviews-title">${t('Guest Reviews','آراء الضيوف')}</h3>
-      <div class="reviews-overview">
-        <div class="reviews-score">
-          <span class="score-big">${avgRating}</span>
-          <div class="score-meta">
-            <div class="stars-row">${starsHtml(Math.round(avgRating))}</div>
-            <span class="score-count">${reviews.length} ${t('reviews','تقييم')}</span>
-          </div>
-        </div>
-        <div class="rating-bars">
-          ${ratingDist.map(d => `
-            <div class="rating-bar-row">
-              <span class="bar-label">${d.star} <i class="ph-fill ph-star star-filled" aria-hidden="true"></i></span>
-              <div class="bar-track"><div class="bar-fill" style="width:${d.pct}%"></div></div>
-              <span class="bar-count">${d.count}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-    <div class="reviews-list">`;
-
-  reviews.forEach(rev => {
-    const text = isAr ? rev.text_ar : rev.text_en;
-    const typeClass = { positive: 'rev-positive', negative: 'rev-negative', mixed: 'rev-mixed', constructive: 'rev-constructive' }[rev.type] || '';
-    const date = parseLocalDate(rev.date).toLocaleDateString(isAr ? 'ar-DZ' : 'en-GB', {month:'long', year:'numeric'});
-    html += `
-      <div class="review-card ${typeClass}">
-        <div class="review-top">
-          <div class="reviewer-avatar">${rev.avatar}</div>
-          <div class="reviewer-info">
-            <span class="reviewer-name">${rev.name} <span class="reviewer-flag">${rev.flag}</span></span>
-            <span class="reviewer-stay">${rev.stay}</span>
-          </div>
-          <div class="review-rating">${starsHtml(rev.rating)}</div>
-        </div>
-        <p class="review-text">${text}</p>
-        <span class="review-date">${date}</span>
-      </div>`;
-  });
-
-  html += '</div>';
-  container.innerHTML = html;
+#calendar-month-label {
+  font-weight: 700;
+  font-size: 0.975rem;
+  flex: 1;
+  text-align: center;
 }
 
-// ─── Initialization ─────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  bookingState.propertyId = params.get('id');
-
-  if (!bookingState.propertyId) {
-    showGlobalAlert(t('No property selected. Redirecting…','لم يتم تحديد عقار. جارٍ التحويل…'), 'error');
-    setTimeout(() => { window.location.href = 'index.html'; }, 2000);
-    return;
-  }
-
-  applyStoredTheme();
-  translateBookingPage();
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (user) {
-      if (els.gName  && !els.gName.value)  els.gName.value  = user.displayName || '';
-      if (els.gEmail && !els.gEmail.value) els.gEmail.value = user.email       || '';
-      els.authPrompt?.classList.add('d-none');
-    } else {
-      els.authPrompt?.classList.remove('d-none');
-    }
-  });
-
-  document.getElementById('back-btn')?.addEventListener('click', () => {
-    if (document.referrer && document.referrer.includes(window.location.hostname)) {
-      history.back();
-    } else {
-      window.location.href = `index.html${bookingState.propertyId ? '#prop-' + bookingState.propertyId : ''}`;
-    }
-  });
-
-  els.linkLogin?.addEventListener('click', e => {
-    e.preventDefault();
-    if (window.opener) window.opener.postMessage('open-auth-modal', '*');
-    else window.location.href = 'index.html?login=1';
-  });
-
-  setupEventListeners();
-  showSidebarSkeleton();
-
-  await loadPropertyDetails();
-  await loadBookedDates();
-
-  updateOccupancyCounters();
-  renderChildAges();
-  renderAddonsPanel();
-  updatePaymentUI();
-  updateBookingSummary();
-  renderCalendar();
-  renderReviews();
-});
-
-// ─── Load Property Data ─────────────────────
-async function loadPropertyDetails() {
-  try {
-    const doc = await db.collection('properties').doc(String(bookingState.propertyId)).get();
-    if (!doc.exists) throw new Error('not-found');
-
-    const p = doc.data();
-    bookingState.property  = p;
-    bookingState.basePrice = Number(p.price || 0);
-    bookingState.minNights = Number(p.minNights || 1);
-    bookingState.maxGuests = Number(p.maxGuests || 10);
-    bookingState.maxRooms  = Number(p.maxRooms  || 5);
-
-    const isAr  = bookingState.lang === 'ar';
-    const title = isAr ? (p.titleAr || p.titleEn) : (p.titleEn || p.titleAr);
-    const loc   = isAr ? (p.locationAr || p.locationEn) : (p.locationEn || p.locationAr);
-
-    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    const curr = isAr ? 'د.ج' : 'DZD';
-
-    setTxt('sum-name', title || '—');
-    setTxt('sum-price-night', `${bookingState.basePrice.toLocaleString()} ${curr}`);
-
-    const locEl = document.getElementById('sum-loc');
-    if (locEl) locEl.innerHTML = `<i class="ph ph-map-pin" aria-hidden="true"></i><span>${loc || ''}</span>`;
-
-    const imgEl = document.getElementById('sum-img');
-    if (imgEl) {
-      const src = p.imageUrl || (Array.isArray(p.images) ? p.images[0] : '') || 'images/placeholder.jpg';
-      imgEl.src = src;
-      imgEl.alt = title || 'Property';
-      imgEl.onerror = () => { imgEl.src = 'images/placeholder.jpg'; };
-      imgEl.classList.remove('skeleton');
-    }
-
-    document.title = `${t('Book','احجز')} — ${title || 'OreBooking'}`;
-  } catch (err) {
-    console.error('[loadPropertyDetails]', err);
-    showGlobalAlert(t('Could not load property details.','تعذّر تحميل بيانات العقار.'), 'error');
-  }
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  direction: ltr;
 }
 
-// ─── Load Booked Dates ──────────────────────
-async function loadBookedDates() {
-  try {
-    const snap = await db.collection('bookings')
-      .where('propertyId', '==', String(bookingState.propertyId))
-      .where('status', 'in', ['pending', 'confirmed'])
-      .get();
-
-    bookingState.bookedDates = [];
-    snap.forEach(docSnap => {
-      const b = docSnap.data();
-      if (!b.checkIn || !b.checkOut) return;
-      let curr = b.checkIn.toDate();
-      const end = b.checkOut.toDate();
-      curr.setHours(0,0,0,0);
-      while (curr < end) {
-        bookingState.bookedDates.push(formatDateStr(curr));
-        curr = new Date(curr);
-        curr.setDate(curr.getDate() + 1);
-      }
-    });
-  } catch (err) {
-    console.error('[loadBookedDates]', err);
-  }
+.cal-day-name {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-function isDateBooked(dateStr) { return bookingState.bookedDates.includes(dateStr); }
-
-function hasBookedDatesInRange(startStr, endStr) {
-  let curr = parseLocalDate(startStr);
-  const end = parseLocalDate(endStr);
-  while (curr < end) {
-    if (isDateBooked(formatDateStr(curr))) return true;
-    curr.setDate(curr.getDate() + 1);
-  }
-  return false;
+.cal-cell {
+  aspect-ratio: 1;
+  min-height: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-// ─── Calendar ──────────────────────────────
-const MONTH_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTH_AR = ['جانفي','فيفري','مارس','أفريل','ماي','جوان','جويلية','أوت','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-const DAYS_EN  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-const DAYS_AR  = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+.cal-cell.empty       { background: transparent; cursor: default; pointer-events: none; }
+.cal-cell.available:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.cal-cell.disabled    { color: var(--text-muted); opacity: 0.38; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
+.cal-cell.today       { font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--primary); color: var(--primary); }
 
-function renderCalendar() {
-  const grid = els.calGrid;
-  if (!grid) return;
-  grid.innerHTML = '';
-  const isAr = bookingState.lang === 'ar';
-  const m = calViewDate.getMonth();
-  const y = calViewDate.getFullYear();
+.cal-cell.check-in {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 8px 0 0 8px;
+  z-index: 1;
+}
+html[dir="rtl"] .cal-cell.check-in { border-radius: 0 8px 8px 0; }
 
-  if (els.monthLabel) els.monthLabel.textContent = `${isAr ? MONTH_AR[m] : MONTH_EN[m]} ${y}`;
+.cal-cell.check-out {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0 8px 8px 0;
+  z-index: 1;
+}
+html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
 
-  const now = new Date(); now.setHours(0,0,0,0);
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (els.calPrev) els.calPrev.disabled = new Date(y, m, 1) <= currentMonthStart;
+.cal-cell.check-in.check-out { border-radius: 8px !important; }
 
-  (isAr ? DAYS_AR : DAYS_EN).forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'cal-day-name'; el.textContent = d;
-    el.setAttribute('aria-hidden','true'); grid.appendChild(el);
-  });
-
-  const firstDay = new Date(y, m, 1).getDay();
-  const daysInMonth = new Date(y, m+1, 0).getDate();
-
-  for (let i = 0; i < firstDay; i++) {
-    const e = document.createElement('div');
-    e.className = 'cal-cell empty'; e.setAttribute('aria-hidden','true'); grid.appendChild(e);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const cellDate = new Date(y, m, d);
-    const dateStr  = formatDateStr(cellDate);
-    const isPast   = cellDate < now;
-    const isBooked = isDateBooked(dateStr);
-    const isToday  = dateStr === formatDateStr(now);
-
-    const cell = document.createElement('div');
-    cell.setAttribute('data-date', dateStr);
-    cell.setAttribute('role', 'gridcell');
-
-    const classes = ['cal-cell'];
-    if (isToday) classes.push('today');
-
-    if (isPast || isBooked) {
-      classes.push('disabled');
-      cell.setAttribute('aria-disabled','true');
-      cell.setAttribute('tabindex','-1');
-      cell.setAttribute('aria-label', `${dateStr} — ${isBooked ? t('Booked','محجوز') : t('Unavailable','غير متاح')}`);
-    } else {
-      cell.setAttribute('tabindex','0');
-      let label = dateStr;
-      if (dateStr === bookingState.checkIn && !bookingState.checkOut) {
-        classes.push('check-in'); label += ` (${t('Check-in','وصول')})`;
-      } else if (dateStr === bookingState.checkIn) {
-        classes.push('check-in'); label += ` (${t('Check-in','وصول')})`;
-      } else if (dateStr === bookingState.checkOut) {
-        classes.push('check-out'); label += ` (${t('Checkout','مغادرة')})`;
-      } else if (bookingState.checkIn && bookingState.checkOut && dateStr > bookingState.checkIn && dateStr < bookingState.checkOut) {
-        classes.push('in-range'); label += ` (${t('Selected','محدد')})`;
-      } else {
-        classes.push('available');
-      }
-      cell.setAttribute('aria-label', label);
-      cell.addEventListener('click', () => handleDateClick(dateStr));
-      cell.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDateClick(dateStr); }});
-    }
-
-    cell.className = classes.join(' ');
-    cell.innerHTML = `<span aria-hidden="true">${d}</span>`;
-    grid.appendChild(cell);
-  }
+.cal-cell.in-range {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 0;
+  color: var(--primary);
 }
 
-function handleDateClick(dateStr) {
-  hideWarn();
-  const bothSelected = bookingState.checkIn && bookingState.checkOut;
-  const noneSelected = !bookingState.checkIn;
-
-  if (noneSelected || bothSelected) {
-    bookingState.checkIn = dateStr;
-    bookingState.checkOut = null;
-  } else {
-    if (dateStr <= bookingState.checkIn) {
-      bookingState.checkIn = dateStr;
-      bookingState.checkOut = null;
-    } else if (hasBookedDatesInRange(bookingState.checkIn, dateStr)) {
-      showWarn(t('Booked dates exist in this range. Choose different dates.','يوجد تواريخ محجوزة في هذه الفترة. اختر تواريخ أخرى.'));
-      return;
-    } else {
-      bookingState.checkOut = dateStr;
-    }
-  }
-
-  updateBookingSummary();
-  renderCalendar();
+/* ─── Date Summary Bar ────────────────────── */
+.date-summary {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--bg-color);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  align-items: center;
 }
 
-// ─── Occupancy Counters ─────────────────────
-function updateOccupancyCounters() {
-  if (els.roomCount) els.roomCount.textContent = bookingState.rooms;
-  if (els.adultCount) els.adultCount.textContent = bookingState.adults;
-  if (els.childCount) els.childCount.textContent = bookingState.children;
-
-  if (els.btnRoomMinus)  els.btnRoomMinus.disabled  = bookingState.rooms <= 1;
-  if (els.btnRoomPlus)   els.btnRoomPlus.disabled   = bookingState.rooms >= bookingState.maxRooms;
-  if (els.btnAdultMinus) els.btnAdultMinus.disabled  = bookingState.adults <= 1;
-  if (els.btnAdultPlus)  els.btnAdultPlus.disabled   = (bookingState.adults + bookingState.children) >= bookingState.maxGuests;
-  if (els.btnChildMinus) els.btnChildMinus.disabled  = bookingState.children <= 0;
-  if (els.btnChildPlus)  els.btnChildPlus.disabled   = (bookingState.adults + bookingState.children) >= bookingState.maxGuests;
-
-  // Occupancy summary badge
-  const badge = document.getElementById('occupancy-summary-badge');
-  if (badge) {
-    const isAr = bookingState.lang === 'ar';
-    badge.textContent = `${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''} · ${bookingState.adults} ${t('adult','بالغ')}${bookingState.adults>1&&!isAr?'s':''} ${bookingState.children > 0 ? `· ${bookingState.children} ${t('child','طفل')}${bookingState.children>1&&!isAr?'ren':''}` : ''}`;
-  }
+.date-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: center;
 }
 
-// ─── Price & Summary Update ─────────────────
-function updateBookingSummary() {
-  const isAr = bookingState.lang === 'ar';
-  const curr = isAr ? 'د.ج' : 'DZD';
-
-  if (els.dispCheckin)  els.dispCheckin.textContent  = formatDisplayDate(bookingState.checkIn);
-  if (els.dispCheckout) els.dispCheckout.textContent = formatDisplayDate(bookingState.checkOut);
-
-  if (!bookingState.checkIn || !bookingState.checkOut) {
-    if (els.dispNights) els.dispNights.textContent = '—';
-    if (els.btnNext1)   { els.btnNext1.disabled = true; els.btnNext1.setAttribute('aria-disabled','true'); }
-    renderSidebarPlaceholder();
-    return;
-  }
-
-  const d1 = parseLocalDate(bookingState.checkIn);
-  const d2 = parseLocalDate(bookingState.checkOut);
-  bookingState.nights = Math.round((d2 - d1) / 86400000);
-  if (els.dispNights) els.dispNights.textContent = bookingState.nights;
-
-  if (bookingState.nights < bookingState.minNights) {
-    showWarn(t(`Minimum stay: ${bookingState.minNights} night(s).`, `الحد الأدنى: ${bookingState.minNights} ليالٍ.`));
-    if (els.btnNext1) { els.btnNext1.disabled = true; els.btnNext1.setAttribute('aria-disabled','true'); }
-    renderSidebarPlaceholder();
-    return;
-  }
-
-  hideWarn();
-  if (els.btnNext1) { els.btnNext1.disabled = false; els.btnNext1.removeAttribute('aria-disabled'); }
-
-  bookingState.roomPrice = bookingState.basePrice * bookingState.rooms;
-  const subtotal = bookingState.roomPrice * bookingState.nights;
-  calcAddonsTotal();
-  bookingState.fee = Math.round((subtotal + bookingState.addonsTotal) * 0.08);
-  bookingState.totalPrice = subtotal + bookingState.addonsTotal + bookingState.fee;
-
-  // Sidebar breakdown
-  if (els.priceBreakdown) {
-    const addonLines = [];
-    const ad = bookingState.addons;
-    if (ad.restaurant) {
-      const planKey = `restaurant_${ad.restaurantPlan}`;
-      const planCost = (ADDON_PRICES[planKey] || 0) * bookingState.nights * (bookingState.adults + bookingState.children);
-      const planLabel = {breakfast: t('Breakfast','إفطار'), halfboard: t('Half-Board','نصف إقامة'), fullboard: t('Full-Board','إقامة كاملة')}[ad.restaurantPlan];
-      addonLines.push([`${t('Restaurant','المطعم')} (${planLabel})`, planCost]);
-    }
-    if (ad.wifi)            addonLines.push([t('WiFi','واي فاي'), ADDON_PRICES.wifi * bookingState.nights * bookingState.rooms]);
-    if (ad.parking)         addonLines.push([t('Parking','موقف'), ADDON_PRICES.parking * bookingState.nights]);
-    if (ad.airportTransfer) addonLines.push([t('Airport Transfer','نقل المطار'), ADDON_PRICES.airportTransfer]);
-    if (ad.spa)             addonLines.push([t('Spa','السبا'), ADDON_PRICES.spa * bookingState.nights]);
-    if (ad.lateCheckout)    addonLines.push([t('Late Checkout','مغادرة متأخرة'), ADDON_PRICES.lateCheckout * bookingState.rooms]);
-    if (ad.extraBed)        addonLines.push([t('Extra Bed','سرير إضافي'), ADDON_PRICES.extraBed * bookingState.nights * bookingState.rooms]);
-    if (ad.events)          addonLines.push([t('Events','فعاليات'), ADDON_PRICES.events * bookingState.nights * (bookingState.adults + bookingState.children)]);
-
-    els.priceBreakdown.innerHTML = `
-      <div class="price-row">
-        <span>${bookingState.basePrice.toLocaleString()} ${curr} × ${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''} × ${bookingState.nights} ${t('nights','ليالٍ')}</span>
-        <span>${subtotal.toLocaleString()} ${curr}</span>
-      </div>
-      ${addonLines.map(([label, cost]) => `
-        <div class="price-row price-row--addon">
-          <span>+ ${label}</span><span>${cost.toLocaleString()} ${curr}</span>
-        </div>`).join('')}
-      <div class="price-row price-row--fee">
-        <span>${t('Service Fee (8%)','رسوم الخدمة (8%)')}</span>
-        <span>${bookingState.fee.toLocaleString()} ${curr}</span>
-      </div>
-      <div class="price-row price-row--total">
-        <span>${t('Total','الإجمالي')}</span>
-        <span class="price-highlight">${bookingState.totalPrice.toLocaleString()} ${curr}</span>
-      </div>`;
-  }
-
-  // Step 2 review fields
-  const locale = isAr ? 'ar-DZ' : 'en-GB';
-  const fmtOpts = { day:'2-digit', month:'short', year:'numeric' };
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-
-  set('rev-val-dates',   `${parseLocalDate(bookingState.checkIn).toLocaleDateString(locale, fmtOpts)} → ${parseLocalDate(bookingState.checkOut).toLocaleDateString(locale, fmtOpts)}`);
-  set('rev-val-nights',  `${bookingState.nights} ${t('nights','ليالٍ')}`);
-  set('rev-val-rooms',   `${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''} · ${bookingState.bedConfig === 'double' ? t('Double','مزدوج') : bookingState.bedConfig === 'twin' ? t('Twin','سريران') : bookingState.bedConfig === 'king' ? t('King','كينج') : t('Single','فردي')}`);
-  set('rev-val-guests',  `${bookingState.adults} ${t('adults','بالغين')}${bookingState.children > 0 ? ` + ${bookingState.children} ${t('children','أطفال')}` : ''}`);
-  set('rev-val-addons',  bookingState.addonsTotal > 0 ? `${bookingState.addonsTotal.toLocaleString()} ${curr}` : t('None','لا شيء'));
-  set('rev-val-base',    `${subtotal.toLocaleString()} ${curr}`);
-  set('rev-val-fees',    `${bookingState.fee.toLocaleString()} ${curr}`);
-  set('rev-val-total',   `${bookingState.totalPrice.toLocaleString()} ${curr}`);
+.date-summary-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: center;
+  padding: 0 12px;
+  border-inline: 1px solid var(--border-color);
 }
 
-function renderSidebarPlaceholder() {
-  if (els.priceBreakdown) {
-    const isAr = bookingState.lang === 'ar';
-    els.priceBreakdown.innerHTML = `<p class="sum-placeholder-txt">${t('Select dates to see price details','اختر التواريخ لرؤية تفاصيل السعر')}</p>`;
-  }
+.date-summary-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-// ─── Step Navigation ─────────────────────────
-function updateStepConnectors(activeTo) {
-  document.querySelectorAll('.step-connector').forEach((con, idx) => {
-    con.classList.toggle('completed', idx < activeTo - 1);
-  });
+.date-summary-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
 }
 
-function switchStep(from, to) {
-  const fromEl = document.getElementById(`step-${from}`);
-  const toEl   = document.getElementById(`step-${to}`);
-  if (!fromEl || !toEl) return;
-  fromEl.classList.remove('active');
-  toEl.classList.add('active');
-
-  document.querySelectorAll('.step-indicator').forEach(ind => {
-    const n = parseInt(ind.getAttribute('data-step'), 10);
-    ind.classList.remove('active','completed');
-    ind.removeAttribute('aria-current');
-    if (n < to) ind.classList.add('completed');
-    if (n === to) { ind.classList.add('active'); ind.setAttribute('aria-current','step'); }
-  });
-
-  updateStepConnectors(to);
-  hideGlobalAlert();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  if (to === 2) renderAddonsPanel();
+/* ═══════════════════════════════════════════
+   STEP 1 — Occupancy Section (NEW)
+═══════════════════════════════════════════ */
+.occupancy-section {
+  margin-top: 28px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
 }
 
-// ─── Payment Method Toggle ──────────────────
-function updatePaymentUI() {
-  const selected = document.querySelector('input[name="pay_method"]:checked')?.value || 'cash';
-  document.querySelectorAll('.payment-option').forEach(opt => {
-    const radio = opt.querySelector('input[type="radio"]');
-    opt.classList.toggle('selected', radio?.value === selected);
-  });
-  if (els.transferBox) els.transferBox.classList.toggle('d-none', selected !== 'transfer');
-}
-
-// ─── Receipt File ────────────────────────────
-function handleReceiptChange() {
-  const file = els.receiptFile?.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) {
-    showGlobalAlert(t('File too large. Max 5MB.','الملف كبير جداً. الحد 5MB.'), 'error');
-    els.receiptFile.value = ''; return;
-  }
-  if (!file.type.startsWith('image/')) {
-    showGlobalAlert(t('Only image files accepted.','الوصل يجب أن يكون صورة.'), 'error');
-    els.receiptFile.value = ''; return;
-  }
-  const hint = document.getElementById('file-upload-hint');
-  if (hint) hint.textContent = `✔ ${file.name}`;
-}
-
-// ─── Form Validation ─────────────────────────
-function validateField(input, errId, validFn, msg) {
-  if (!input) return true;
-  const errEl = document.getElementById(errId);
-  const valid = validFn(input.value.trim());
-  input.classList.toggle('invalid', !valid);
-  if (errEl) { errEl.textContent = valid ? '' : msg; errEl.classList.toggle('visible', !valid); }
-  return valid;
-}
-
-function validateGuestForm() {
-  let ok = true;
-  ok = validateField(els.gName, 'g-name-err', v => v.length >= 2, t('Full name required.','الاسم الكامل مطلوب.')) && ok;
-  ok = validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), t('Valid email required.','بريد صحيح مطلوب.')) && ok;
-  ok = validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v), t('Valid phone required.','رقم هاتف صحيح مطلوب.')) && ok;
-  return ok;
-}
-
-// ─── Event Listeners ─────────────────────────
-function setupEventListeners() {
-  // Calendar
-  els.calPrev?.addEventListener('click', () => { calViewDate.setMonth(calViewDate.getMonth()-1); renderCalendar(); });
-  els.calNext?.addEventListener('click', () => { calViewDate.setMonth(calViewDate.getMonth()+1); renderCalendar(); });
-
-  // Rooms
-  els.btnRoomMinus?.addEventListener('click', () => {
-    if (bookingState.rooms > 1) { bookingState.rooms--; updateOccupancyCounters(); updateBookingSummary(); }
-  });
-  els.btnRoomPlus?.addEventListener('click', () => {
-    if (bookingState.rooms < bookingState.maxRooms) { bookingState.rooms++; updateOccupancyCounters(); updateBookingSummary(); }
-  });
-
-  // Adults
-  els.btnAdultMinus?.addEventListener('click', () => {
-    if (bookingState.adults > 1) { bookingState.adults--; updateOccupancyCounters(); updateBookingSummary(); }
-  });
-  els.btnAdultPlus?.addEventListener('click', () => {
-    if ((bookingState.adults + bookingState.children) < bookingState.maxGuests) {
-      bookingState.adults++; updateOccupancyCounters(); updateBookingSummary();
-    }
-  });
-
-  // Children
-  els.btnChildMinus?.addEventListener('click', () => {
-    if (bookingState.children > 0) {
-      bookingState.children--;
-      bookingState.childAges.pop();
-      updateOccupancyCounters();
-      renderChildAges();
-      updateBookingSummary();
-    }
-  });
-  els.btnChildPlus?.addEventListener('click', () => {
-    if ((bookingState.adults + bookingState.children) < bookingState.maxGuests) {
-      bookingState.children++;
-      bookingState.childAges.push('');
-      updateOccupancyCounters();
-      renderChildAges();
-      updateBookingSummary();
-    }
-  });
-
-  // Bed config
-  els.bedSelect?.addEventListener('change', e => { bookingState.bedConfig = e.target.value; updateBookingSummary(); });
-
-  // Steps
-  els.btnNext1?.addEventListener('click', () => switchStep(1, 2));
-  els.btnPrev2?.addEventListener('click', () => switchStep(2, 1));
-  els.btnNext2?.addEventListener('click', () => switchStep(2, 3));
-  els.btnPrev3?.addEventListener('click', () => switchStep(3, 2));
-
-  // Policy checkbox
-  els.agreePolicy?.addEventListener('change', e => {
-    if (els.btnNext2) { els.btnNext2.disabled = !e.target.checked; els.btnNext2.setAttribute('aria-disabled', String(!e.target.checked)); }
-  });
-
-  // Payment
-  els.payRadios.forEach(r => r.addEventListener('change', updatePaymentUI));
-  document.querySelectorAll('.payment-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      const r = opt.querySelector('input[type="radio"]');
-      if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
-    });
-  });
-
-  // Receipt
-  els.receiptFile?.addEventListener('change', handleReceiptChange);
-
-  // Blur validation
-  els.gName?.addEventListener('blur',  () => validateField(els.gName,  'g-name-err',  v => v.length >= 2, t('Full name required.','الاسم الكامل مطلوب.')));
-  els.gEmail?.addEventListener('blur', () => validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), t('Valid email required.','بريد صحيح مطلوب.')));
-  els.gPhone?.addEventListener('blur', () => validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v), t('Valid phone required.','رقم هاتف صحيح مطلوب.')));
-
-  // Notes char counter
-  els.gNotes?.addEventListener('input', () => {
-    const counter = document.getElementById('g-notes-counter');
-    if (counter) counter.textContent = `${els.gNotes.value.length} / 500`;
-  });
-
-  // Arrival time
-  els.gArrival?.addEventListener('change', e => { bookingState.arrivalTime = e.target.value; });
-
-  // Theme
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('ore_theme', isDark ? 'dark' : 'light');
-    const icon = document.querySelector('#theme-toggle i');
-    if (icon) icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
-  });
-
-  // Language
-  document.getElementById('lang-toggle')?.addEventListener('click', () => {
-    localStorage.setItem('ore_lang', bookingState.lang === 'ar' ? 'en' : 'ar');
-    location.reload();
-  });
-
-  // Print
-  document.getElementById('btn-print')?.addEventListener('click', () => window.print());
-
-  // Form submit
-  els.guestForm?.addEventListener('submit', handleSubmit);
-}
-
-// ─── Form Submission ─────────────────────────
-async function handleSubmit(e) {
-  e.preventDefault();
-  hideGlobalAlert();
-
-  if (!validateGuestForm()) {
-    showGlobalAlert(t('Please fix the errors above.','يرجى تصحيح الأخطاء أعلاه.'), 'error');
-    els.guestForm.querySelector('.invalid')?.focus();
-    return;
-  }
-
-  const payMethod  = document.querySelector('input[name="pay_method"]:checked')?.value || 'cash';
-  const isTransfer = payMethod === 'transfer';
-  let receiptUrl   = null;
-
-  setButtonLoading(els.btnConfirm, true);
-
-  try {
-    // Real-time conflict check
-    await loadBookedDates();
-    if (hasBookedDatesInRange(bookingState.checkIn, bookingState.checkOut)) {
-      showGlobalAlert(t('These dates were just booked. Please choose new dates.','تم حجز هذه التواريخ للتو. اختر تواريخ جديدة.'), 'error');
-      setButtonLoading(els.btnConfirm, false);
-      setTimeout(() => switchStep(3, 1), 2500);
-      return;
-    }
-
-    // Upload receipt
-    if (isTransfer) {
-      const file = els.receiptFile?.files[0];
-      if (!file) {
-        showGlobalAlert(t('Please upload your transfer receipt.','يرجى رفع صورة وصل التحويل.'), 'error');
-        setButtonLoading(els.btnConfirm, false);
-        return;
-      }
-      const ref  = storage.ref(`receipts/${Date.now()}_${file.name}`);
-      const snap = await ref.put(file);
-      receiptUrl = await snap.ref.getDownloadURL();
-    }
-
-    const isAr = bookingState.lang === 'ar';
-    const prop  = bookingState.property;
-    const propTitle = isAr ? (prop?.titleAr || prop?.titleEn || '') : (prop?.titleEn || prop?.titleAr || '');
-
-    // Build selected addons list for storage
-    const selectedAddons = Object.entries(bookingState.addons)
-      .filter(([k, v]) => v === true)
-      .map(([k]) => k);
-
-    const bookingDoc = {
-      propertyId:      String(bookingState.propertyId),
-      propertyTitle:   propTitle,
-      checkIn:         firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)),
-      checkOut:        firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)),
-      // Occupancy
-      rooms:           bookingState.rooms,
-      adults:          bookingState.adults,
-      children:        bookingState.children,
-      childAges:       bookingState.childAges,
-      bedConfig:       bookingState.bedConfig,
-      // Pricing
-      nights:          bookingState.nights,
-      basePrice:       bookingState.basePrice,
-      roomPrice:       bookingState.roomPrice,
-      addonsTotal:     bookingState.addonsTotal,
-      serviceFee:      bookingState.fee,
-      totalPrice:      bookingState.totalPrice,
-      currency:        'DZD',
-      // Add-ons
-      addons:          bookingState.addons,
-      selectedAddons:  selectedAddons,
-      restaurantPlan:  bookingState.addons.restaurant ? bookingState.addons.restaurantPlan : null,
-      // Guest Info
-      guestName:       els.gName.value.trim(),
-      guestEmail:      els.gEmail.value.trim().toLowerCase(),
-      guestPhone:      els.gPhone.value.trim(),
-      nationality:     els.gNationality?.value || '',
-      arrivalTime:     els.gArrival?.value || '',
-      notes:           els.gNotes?.value.trim().slice(0, 500) || '',
-      // Payment
-      paymentMethod:   payMethod,
-      receiptUrl:      receiptUrl || null,
-      status:          'pending',
-      lang:            bookingState.lang,
-      userId:          currentUser ? currentUser.uid : null,
-      userEmail:       currentUser ? currentUser.email : null,
-      createdAt:       firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    const docRef = await db.collection('bookings').add(bookingDoc);
-    populateSuccessScreen(docRef.id, bookingDoc, isAr);
-    switchStep(3, 4);
-
-  } catch (err) {
-    console.error('[handleSubmit]', err);
-    const msg = err.code === 'storage/unauthorized'
-      ? t('Upload failed: no permission.','فشل الرفع: غير مصرّح.')
-      : t('Unexpected error. Please try again.','خطأ غير متوقع. يرجى المحاولة مجدداً.');
-    showGlobalAlert(msg, 'error');
-    setButtonLoading(els.btnConfirm, false);
-  }
-}
-
-// ─── Success Screen ───────────────────────────
-function populateSuccessScreen(docId, data, isAr) {
-  const refEl = document.getElementById('ref-number');
-  if (refEl) refEl.textContent = '#' + docId.slice(0, 8).toUpperCase();
-
-  const grid = document.getElementById('success-details-grid');
-  if (!grid) return;
-
-  const curr   = isAr ? 'د.ج' : 'DZD';
-  const locale = isAr ? 'ar-DZ' : 'en-GB';
-  const fmtLong = { day:'2-digit', month:'long', year:'numeric' };
-  const ciDate  = parseLocalDate(bookingState.checkIn).toLocaleDateString(locale, fmtLong);
-  const coDate  = parseLocalDate(bookingState.checkOut).toLocaleDateString(locale, fmtLong);
-
-  const planLabels = { breakfast: t('Breakfast','إفطار'), halfboard: t('Half-Board','نصف إقامة'), fullboard: t('Full-Board','إقامة كاملة') };
-  const addonsStr  = data.selectedAddons && data.selectedAddons.length
-    ? data.selectedAddons.map(k => t(k,k)).join(', ')
-    : t('None','لا شيء');
-
-  const cards = [
-    [t('Check-in','الوصول'),       ciDate],
-    [t('Checkout','المغادرة'),      coDate],
-    [t('Rooms','الغرف'),           `${data.rooms} · ${data.bedConfig}`],
-    [t('Guests','الضيوف'),          `${data.adults} ${t('adults','بالغين')}${data.children>0?` + ${data.children} ${t('children','أطفال')}`:''}` ],
-    [t('Nights','الليالي'),         `${data.nights}`],
-    [t('Add-ons','الإضافات'),       data.restaurantPlan ? `${t('Restaurant','المطعم')}: ${planLabels[data.restaurantPlan] || ''}` : addonsStr],
-    [t('Total','الإجمالي'),         `${data.totalPrice.toLocaleString()} ${curr}`],
-    [t('Payment','الدفع'),          data.paymentMethod === 'cash' ? t('Pay at Property','عند الوصول') : t('Bank Transfer','تحويل بنكي')],
-    [t('Status','الحالة'),          `<span class="status-badge pending"><i class="ph-fill ph-clock" aria-hidden="true"></i> ${t('Pending','قيد الانتظار')}</span>`],
-    [t('Name','الاسم'),             data.guestName],
-    [t('Email','البريد'),           data.guestEmail],
-    [t('Phone','الهاتف'),           data.guestPhone],
-    ...(data.arrivalTime ? [[t('Arrival','وقت الوصول'), data.arrivalTime]] : []),
-  ];
-
-  grid.innerHTML = cards.map(([label, value]) => `
-    <div class="confirm-detail-card">
-      <p class="confirm-detail-label">${label}</p>
-      <p class="confirm-detail-value">${value}</p>
-    </div>`).join('');
-}
-
-// ─── Translations ────────────────────────────
-function translateBookingPage() {
-  if (bookingState.lang !== 'ar') return;
-  document.documentElement.setAttribute('dir','rtl');
-  document.documentElement.setAttribute('lang','ar');
-
-  const s = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-  const h = (id, htm) => { const el = document.getElementById(id); if (el) el.innerHTML  = htm; };
-
-  s('nav-back-txt', 'العودة للعقار');
-  const langBtn = document.getElementById('lang-toggle');
-  if (langBtn) { const sp = langBtn.querySelector('span'); if (sp) sp.textContent = 'English'; }
-
-  // Step labels
-  s('lbl-step1', 'التواريخ والغرف');
-  s('lbl-step2', 'الإضافات والدفع');
-  s('lbl-step3', 'بيانات الضيف');
-  s('lbl-step4', 'التأكيد');
-
-  // Step 1
-  s('st-title-1', 'متى ستسافر ومع من؟');
-  s('st-sub-1', 'اختر التواريخ، عدد الغرف، والضيوف.');
-  s('lbl-chk-in', 'تاريخ الوصول');
-  s('lbl-nights', 'الليالي');
-  s('lbl-chk-out', 'تاريخ المغادرة');
-  s('lbl-rooms-section', 'الغرف والضيوف');
-  s('lbl-rooms-title', 'الغرف');
-  s('lbl-rooms-sub', 'عدد الغرف المطلوبة');
-  s('lbl-adults-title', 'البالغون');
-  s('lbl-adults-sub', '13 سنة فأكثر');
-  s('lbl-children-title', 'الأطفال');
-  s('lbl-children-sub', 'من 0 إلى 12 سنة');
-  s('lbl-bed-config', 'نوع الأسرّة المفضّل');
-
-  // Bed options
-  const bedSel = document.getElementById('bed-config-select');
-  if (bedSel) {
-    bedSel.options[0] && (bedSel.options[0].text = 'سرير مزدوج (Double)');
-    bedSel.options[1] && (bedSel.options[1].text = 'سريران منفصلان (Twin)');
-    bedSel.options[2] && (bedSel.options[2].text = 'سرير كبير (King)');
-    bedSel.options[3] && (bedSel.options[3].text = 'سرير فردي (Single)');
-  }
-
-  h('btn-next-1-txt', 'الخطوة التالية');
-
-  // Step 2
-  s('st-title-2', 'الإضافات والدفع');
-  s('st-sub-2', 'خصّص إقامتك واختر طريقة الدفع.');
-  s('rev-dates', 'التواريخ');
-  s('rev-nights-lbl', 'الليالي');
-  s('rev-rooms-lbl', 'الغرف');
-  s('rev-guests', 'الضيوف');
-  s('rev-addons-lbl', 'الإضافات');
-  s('rev-base', 'المجموع الفرعي');
-  s('rev-fees', 'رسوم الخدمة (8%)');
-  s('rev-total', 'الإجمالي');
-  s('lbl-pay-method', 'طريقة الدفع');
-  s('lbl-pay-cash', 'الدفع عند الوصول');
-  s('desc-pay-cash', 'ادفع المبلغ كاملاً عند وصولك للعقار.');
-  s('lbl-pay-transfer', 'تحويل بنكي / بريدي');
-  s('desc-pay-transfer', 'قم بالتحويل لحسابنا وارفع صورة الوصل.');
-  s('txt-bank-info', 'يرجى تحويل المبلغ الإجمالي إلى الحساب التالي:');
-  s('lbl-receipt', 'رفع صورة الوصل');
-  s('file-upload-hint', 'انقر أو اسحب لرفع الوصل');
-  s('lbl-policy-title', 'أوافق على سياسة الإلغاء');
-  s('lbl-policy-desc', 'إلغاء مجاني حتى 48 ساعة قبل الوصول. بعد ذلك تُستقطع رسوم أول ليلة.');
-  s('btn-back-2', 'رجوع');
-  h('btn-next-2-txt', 'الخطوة التالية');
-
-  // Step 3
-  s('st-title-3', 'من يقوم بالحجز؟');
-  s('st-sub-3', 'أدخل بيانات الضيف الرئيسي.');
-  h('lbl-fname', 'الاسم الكامل <span class="req-star" aria-hidden="true">*</span>');
-  h('lbl-email', 'البريد الإلكتروني <span class="req-star" aria-hidden="true">*</span>');
-  h('lbl-phone', 'رقم الهاتف <span class="req-star" aria-hidden="true">*</span>');
-  h('lbl-nationality', 'الجنسية');
-  s('lbl-arrival-time', 'وقت الوصول المتوقع');
-  h('lbl-notes', 'طلبات خاصة <span class="optional-tag">(اختياري)</span>');
-  document.getElementById('g-name')?.setAttribute('placeholder','محمد الأمين');
-  document.getElementById('g-email')?.setAttribute('placeholder','example@email.com');
-  document.getElementById('g-phone')?.setAttribute('placeholder','+213 5XX XXX XXX');
-  document.getElementById('g-notes')?.setAttribute('placeholder','أي احتياجات خاصة، وقت وصول متوقع؟');
-  const notesHint = document.getElementById('g-notes-hint');
-  if (notesHint) notesHint.textContent = 'الحد الأقصى 500 حرف. الطلبات غير مضمونة.';
-  s('txt-auth-prompt','هل لديك حساب؟ سجّل الدخول لحجز أسرع.');
-  s('link-login-booking','تسجيل الدخول / إنشاء حساب');
-  s('btn-back-3','رجوع');
-  s('btn-confirm-txt','تأكيد الحجز');
-
-  // Step 4
-  s('st-title-4','تم استلام طلبك!');
-  s('st-sub-4','شكراً لاختيارك OreBooking. سنؤكد حجزك قريباً.');
-  s('lbl-ref','رقم الحجز');
-  s('btn-go-home','العودة للرئيسية');
-  s('btn-print-txt','طباعة التأكيد');
-
-  // Sidebar
-  s('sum-title','ملخص الحجز');
-  s('sum-night-lbl','ليلة');
-  s('txt-secure','حجز آمن ومشفر');
-  const sumPl = document.getElementById('sum-placeholder');
-  if (sumPl) sumPl.textContent = 'اختر التواريخ لرؤية تفاصيل السعر';
-}
-
-
-.mt-12 { margin-top: 12px; }
-.mt-24 { margin-top: 24px; }
-.mt-32 { margin-top: 32px; }
-.mt-48 { margin-top: 48px; }
-.mb-16 { margin-bottom: 16px; }
-.mb-32 { margin-bottom: 32px; }
-
-/* ─── Occupancy Enhancements ──────────────── */
-.occupancy-header-flex {
+.occupancy-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 18px;
+  padding: 14px 18px 12px;
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 
-.occupancy-badge {
+.guests-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ─── Occupancy Badge ─────────────────────── */
+.occupancy-summary-badge {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--primary);
@@ -1392,240 +443,1492 @@ function translateBookingPage() {
   transition: all 0.2s ease;
 }
 
-.occupancy-grid {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Bed Select */
-.bed-select-wrapper {
-  position: relative;
+/* ─── Occupancy Row ───────────────────────── */
+.occupancy-row {
   display: flex;
   align-items: center;
-}
-
-.bed-select-icon {
-  position: absolute;
-  left: 14px;
-  font-size: 1.2rem;
-  color: var(--primary);
-  pointer-events: none;
-}
-
-html[dir="rtl"] .bed-select-icon {
-  left: auto;
-  right: 14px;
-}
-
-.icon-select {
-  padding: 11px 14px 11px 40px !important;
-  cursor: pointer;
-}
-
-html[dir="rtl"] .icon-select {
-  padding: 11px 40px 11px 14px !important;
-}
-
-
-/* ─── Bank Copy Button ────────────────────── */
-.bank-val-copy {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-/* ─── Textarea Footer ─────────────────────── */
-.textarea-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.notes-footer {
-  display: flex;
   justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 12px;
+  transition: background 0.15s;
+}
+
+.occupancy-row:last-of-type { border-bottom: none; }
+
+.occupancy-row:hover {
+  background: color-mix(in srgb, var(--primary) 3%, var(--bg-color));
+}
+
+.occupancy-label {
+  display: flex;
   align-items: center;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  padding: 0 4px;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
-#g-notes-counter {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+.occupancy-label > i {
+  font-size: 1.3rem;
+  color: var(--primary);
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
 }
 
-/* ─── Hotel Info Cards (Sidebar) ──────────── */
-.hotel-highlights-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.occupancy-label div {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
 }
 
-.hotel-highlights-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.85rem;
+.occupancy-label .font-medium {
+  font-size: 0.92rem;
   color: var(--text-main);
 }
 
-.hotel-highlights-list li i {
-  color: var(--primary);
-  font-size: 1.1rem;
+.occupancy-label small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+/* ─── Counter Controls ────────────────────── */
+.counter-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   flex-shrink: 0;
 }
 
-.check-rules-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  padding: 12px;
-}
-
-.check-rule-item {
+.counter-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-size: 1rem;
+  font-weight: 700;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-.check-rule-lbl {
-  font-size: 0.7rem;
+.counter-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.counter-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.counter-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+
+/* ─── Child Ages Box ──────────────────────── */
+.child-ages-box {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--primary) 3%, var(--bg-color));
+  animation: bk-fadeIn 0.3s ease;
+}
+
+.child-ages-title {
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
 }
 
-.check-rule-val {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-main);
+.child-ages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
 }
 
-.hotel-rules-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.child-age-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 
-.hotel-rules-list li {
+.child-age-item label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.child-age-item label i {
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.child-age-select {
+  padding: 8px 10px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.child-age-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ─── Bed Config Row ──────────────────────── */
+.bed-config-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-color);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bed-config-row .occupancy-label { flex: 1; }
+
+.bed-select {
+  padding: 9px 14px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.bed-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ─── Max Guests Hint ─────────────────────── */
+.guests-max-hint {
+  margin: 0 18px 14px;
+  padding: 9px 14px;
+  background: color-mix(in srgb, #f59e0b 10%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  border-radius: var(--radius-xl);
+  font-size: 0.8rem;
+  color: #92400e;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
-  color: var(--text-main);
-}
-
-.hotel-rules-list li i {
-  font-size: 1rem;
-}
-
-/* ─── Reviews Container ───────────────────── */
-.reviews-container {
-  max-width: 1100px;
-  margin: 0 auto;
+  animation: bk-fadeIn 0.3s ease;
 }
 
 /* ═══════════════════════════════════════════
-   SMOOTH ANIMATIONS & HOVER EFFECTS (NEW)
+   STEP 2 — Review List
 ═══════════════════════════════════════════ */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
 
-/* Add-ons hover floating */
+.review-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 16px;
+  background: var(--bg-color);
+  transition: background 0.15s;
+}
+
+.review-row:last-child  { border-bottom: none; }
+.review-row:hover       { background: var(--surface-color); }
+
+.review-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.review-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-main);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.review-total-row {
+  background: color-mix(in srgb, var(--primary) 4%, var(--bg-color)) !important;
+}
+
+.review-total-row .review-label,
+.review-total-row .review-value {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+
+.price-highlight { color: var(--primary); }
+
+/* ═══════════════════════════════════════════
+   STEP 2 — Add-ons Panel (NEW)
+═══════════════════════════════════════════ */
+.addons-panel {
+  margin-bottom: 24px;
+}
+
+.addons-panel-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addons-panel-title i {
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+/* Grid layout for add-on cards */
+.addons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .addons-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Add-on Card ─────────────────────────── */
 .addon-card {
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  position: relative;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--bg-color);
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .addon-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 3%, var(--bg-color));
 }
 
 .addon-card.selected {
-  transform: scale(1.02);
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
   background: color-mix(in srgb, var(--primary) 5%, var(--surface-color));
 }
 
-/* Sidebar floating cards */
-.hotel-info-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+/* Hidden checkbox drives the state */
+.addon-card input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
 }
 
-.hotel-info-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-soft);
+.addon-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-/* Copy button feedback */
-.copy-btn:active {
-  transform: scale(0.9);
+.addon-card-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.addon-card.selected .addon-card-icon-wrap {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.addon-card-icon-wrap i {
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+/* Checkmark badge */
+.addon-check-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  font-size: 0.7rem;
+  color: transparent;
+}
+
+.addon-card.selected .addon-check-badge {
+  border-color: var(--primary);
   background: var(--primary);
   color: #fff;
 }
 
-/* Reviews appearance */
-.review-card {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+.addon-card-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.3;
 }
 
-.review-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+.addon-card-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
-/* Inputs focus animation */
-.form-group input, 
-.form-group textarea, 
-.form-group select {
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, transform 0.2s ease;
+.addon-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  gap: 6px;
 }
 
-.form-group input:focus, 
-.form-group textarea:focus, 
-.form-group select:focus {
-  transform: scale(1.01);
-}
-
-/* Bed select icon animation */
-.bed-select-wrapper select:focus + i, 
-.bed-select-wrapper select:hover + i {
+.addon-card-price {
+  font-size: 0.82rem;
+  font-weight: 700;
   color: var(--primary);
-  transform: scale(1.1);
-  transition: transform 0.2s ease, color 0.2s ease;
 }
 
-.bed-select-icon {
-  transition: transform 0.2s ease, color 0.2s ease;
+.addon-card-tag {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--border-color);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
-/* Success Icon pulsing */
+/* Restaurant plan sub-select */
+.addon-plan-select {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  cursor: pointer;
+  display: none;
+}
+
+.addon-card.selected .addon-plan-select { display: block; }
+
+.addon-plan-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ═══════════════════════════════════════════
+   STEP 2 — Payment Methods
+═══════════════════════════════════════════ */
+.payment-methods-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.section-sub-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text-main);
+}
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  background: var(--bg-color);
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.payment-option:last-of-type { margin-bottom: 0; }
+
+.payment-option:hover {
+  border-color: var(--primary);
+  background: var(--surface-color);
+}
+
+.payment-option:has(input[type="radio"]:checked),
+.payment-option.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface-color));
+}
+
+.payment-option input[type="radio"] { display: none; }
+
+.pay-opt-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.pay-opt-text { flex: 1; }
+
+.pay-opt-text strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: var(--text-main);
+}
+
+.pay-opt-desc  { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+.pay-opt-icon  { font-size: 1.4rem; color: var(--primary); line-height: 1; margin-top: 2px; flex-shrink: 0; }
+
+.pay-opt-check { font-size: 1.3rem; color: var(--border-color); transition: color 0.2s; flex-shrink: 0; }
+
+.payment-option:has(input:checked) .pay-opt-check,
+.payment-option.selected .pay-opt-check { color: var(--primary); }
+
+/* ─── Bank Transfer Box ───────────────────── */
+.transfer-box {
+  margin-top: 12px;
+  background: var(--bg-color);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  animation: bk-fadeIn 0.3s ease;
+}
+
+.transfer-info-txt {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.bank-card {
+  background: var(--surface-color);
+  border-inline-start: 3px solid var(--primary);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.bank-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 0.875rem;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bank-row:last-child { border-bottom: none; }
+
+.bank-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.bank-val {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  flex: 1;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Copy Button ─────────────────────────── */
+.copy-btn {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.copy-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ─── File Upload ─────────────────────────── */
+.file-upload-wrapper { position: relative; }
+
+.file-upload-wrapper input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+}
+
+.file-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--bg-color);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+  min-height: 80px;
+}
+
+.file-upload-label i { font-size: 1.6rem; color: var(--primary); }
+
+.file-upload-wrapper:hover .file-upload-label {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-color));
+}
+
+.file-name-display {
+  font-size: 0.8rem;
+  color: var(--primary);
+  margin-top: 6px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+/* ─── Cancellation Policy ─────────────────── */
+.policy-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.checkbox-policy-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.checkbox-policy-label input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--primary);
+  transform: scale(1.2);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.policy-text { flex: 1; }
+
+.policy-title {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.policy-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ═══════════════════════════════════════════
+   STEP 3 — Guest Form
+═══════════════════════════════════════════ */
+.guest-form  { display: flex; flex-direction: column; gap: 18px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.req-star, .req { color: #e11d48; }
+
+.optional-tag {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  padding: 11px 14px;
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  width: 100%;
+  -webkit-appearance: none;
+}
+
+html[dir="rtl"] .form-group input,
+html[dir="rtl"] .form-group textarea,
+html[dir="rtl"] .form-group select   { text-align: right; }
+html[dir="rtl"] .form-group input[dir="ltr"] { text-align: left; }
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+  background: var(--surface-color);
+}
+
+.form-group input.invalid,
+.form-group textarea.invalid {
+  border-color: #e11d48;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
+}
+
+.form-error-msg { font-size: 0.78rem; color: #e11d48; display: none; }
+.form-error-msg.visible { display: block; }
+
+.form-group textarea { resize: vertical; min-height: 90px; }
+
+/* Notes footer (char counter) */
+.notes-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Auth Prompt Box ─────────────────────── */
+.auth-prompt-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: var(--radius-xl);
+  margin-top: 4px;
+}
+
+.auth-prompt-icon  { font-size: 1.6rem; color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+.auth-prompt-text  { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; line-height: 1.5; }
+.auth-prompt-link  { font-size: 0.85rem; font-weight: 600; color: var(--primary); text-decoration: none; }
+.auth-prompt-link:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════
+   STEP 4 — Success / Confirmation
+═══════════════════════════════════════════ */
+.success-screen {
+  text-align: center;
+  padding: 48px 24px 40px;
+}
+
+.success-animation {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+}
+
+.success-ring {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, #10b981 30%, transparent);
+  position: absolute;
+  animation: bk-ringPulse 1.5s ease-out infinite;
+}
+
+@keyframes bk-ringPulse {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
 .success-check-icon {
-  animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.2s, pulseGlow 2s infinite 1s;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.2rem;
+  color: #10b981;
+  animation: bk-popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.2s;
 }
 
-@keyframes pulseGlow {
-  0% { filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); }
-  50% { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.5)); }
-  100% { filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); }
+@keyframes bk-popIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
-/* Fade in for dynamic panels */
-.child-ages-box, .transfer-box {
-  animation: bk-slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+.success-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-main);
 }
 
-@keyframes bk-slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.success-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+  max-width: 360px;
+  margin-inline: auto;
+  line-height: 1.6;
 }
+
+.booking-ref-box {
+  display: inline-block;
+  padding: 14px 28px;
+  background: var(--bg-color);
+  border: 1.5px dashed var(--primary);
+  border-radius: var(--radius-xl);
+  margin-bottom: 28px;
+}
+
+.ref-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.ref-number {
+  font-size: 1.3rem;
+  letter-spacing: 0.12em;
+  color: var(--primary);
+}
+
+.success-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  text-align: start;
+  margin-bottom: 28px;
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+@media (max-width: 480px) {
+  .success-details-grid { grid-template-columns: 1fr; }
+}
+
+.confirm-detail-card {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 12px 14px;
+}
+
+.confirm-detail-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.confirm-detail-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.success-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.success-home-btn { width: auto; display: inline-flex; }
+
+/* ═══════════════════════════════════════════
+   REVIEWS SECTION (NEW)
+═══════════════════════════════════════════ */
+.reviews-wrapper {
+  border-top: 1px solid var(--border-color);
+  padding: 28px 28px 32px;
+  background: var(--bg-color);
+}
+
+@media (max-width: 600px) {
+  .reviews-wrapper { padding: 20px 18px 24px; }
+}
+
+.reviews-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.reviews-header-left { display: flex; flex-direction: column; gap: 4px; }
+
+.reviews-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.reviews-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Overall rating badge */
+.reviews-overall-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 10px 18px;
+  flex-shrink: 0;
+}
+
+.reviews-overall-score {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.reviews-overall-stars { font-size: 0.85rem; color: #f59e0b; letter-spacing: 1px; }
+.reviews-overall-count { font-size: 0.72rem; color: var(--text-muted); }
+
+/* Star distribution bars */
+.reviews-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 24px;
+}
+
+.reviews-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.reviews-bar-label {
+  width: 30px;
+  text-align: end;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.reviews-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reviews-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #f59e0b;
+  transition: width 0.6s ease;
+}
+
+.reviews-bar-count { width: 20px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* Individual review cards */
+.reviews-list { display: flex; flex-direction: column; gap: 16px; }
+
+.review-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 16px 18px;
+  transition: box-shadow 0.2s;
+  animation: bk-fadeIn 0.4s ease;
+}
+
+.review-card:hover { box-shadow: var(--shadow-soft); }
+
+/* Negative reviews get a subtle left border */
+.review-card.negative {
+  border-inline-start: 3px solid color-mix(in srgb, #e11d48 60%, transparent);
+}
+
+.review-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+/* Reviewer Avatar */
+.reviewer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  background: var(--primary);
+}
+
+.review-card-meta { flex: 1; min-width: 0; }
+
+.reviewer-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.reviewer-info {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reviewer-info span { display: flex; align-items: center; gap: 3px; }
+
+/* Star rating */
+.review-stars {
+  font-size: 0.85rem;
+  color: #f59e0b;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.review-card-text {
+  font-size: 0.875rem;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+/* Category tag */
+.review-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  margin-top: 10px;
+}
+
+.review-tag.positive { background: color-mix(in srgb, #10b981 12%, transparent); color: #065f46; }
+.review-tag.neutral  { background: color-mix(in srgb, #f59e0b 12%, transparent); color: #78350f; }
+.review-tag.negative { background: color-mix(in srgb, #e11d48 10%, transparent); color: #9f1239; }
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+.booking-sidebar {
+  position: sticky;
+  top: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .booking-sidebar { position: static; width: 100%; }
+}
+
+/* ─── Property Summary Card ───────────────── */
+.booking-summary-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
+}
+
+.summary-card-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.booking-prop-summary {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.booking-prop-img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--bg-color);
+}
+
+.booking-prop-info { min-width: 0; flex: 1; }
+
+.booking-prop-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.booking-prop-location {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.booking-prop-price { margin-top: 4px; }
+.booking-prop-price strong { color: var(--primary); font-size: 1rem; }
+.booking-prop-price span   { font-size: 0.78rem; color: var(--text-muted); }
+
+.summary-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 14px 0;
+}
+
+/* Price Breakdown */
+#price-breakdown { display: flex; flex-direction: column; gap: 9px; }
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  gap: 8px;
+}
+
+.price-row span:last-child { font-variant-numeric: tabular-nums; }
+
+.price-row.total {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-main);
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+
+.price-row.addon-line { font-size: 0.8rem; padding-inline-start: 10px; }
+.price-row.addon-line span:first-child::before { content: "+ "; color: var(--primary); }
+
+.sum-placeholder-txt {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+/* ─── Security Badge ──────────────────────── */
+.security-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+}
+
+.security-icon { font-size: 1rem; color: #10b981; flex-shrink: 0; }
+
+/* ─── Hotel Info Cards (NEW) ──────────────── */
+.hotel-info-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  padding: 16px 18px;
+}
+
+.hotel-info-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hotel-info-title i { color: var(--primary); font-size: 1rem; }
+
+/* Amenities list */
+.hotel-amenities-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotel-amenities-list li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotel-amenities-list li i {
+  color: var(--primary);
+  font-size: 0.95rem;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+/* Check-in list */
+.hotel-checkin-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.hotel-checkin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.hotel-checkin-list li:last-child { border-bottom: none; }
+
+.checkin-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.checkin-val {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: end;
+}
+
+/* ═══════════════════════════════════════════
+   Skeleton Loader
+═══════════════════════════════════════════ */
+@keyframes bk-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--border-color) 25%,
+    color-mix(in srgb, var(--border-color) 50%, var(--surface-color)) 50%,
+    var(--border-color) 75%
+  );
+  background-size: 800px 100%;
+  animation: bk-shimmer 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeleton-text  { height: 1em; margin-bottom: 8px; border-radius: 4px; }
+.skeleton-image { height: 60px; width: 80px; border-radius: 10px; }
+
+/* ═══════════════════════════════════════════
+   Booking History Cards
+═══════════════════════════════════════════ */
+.my-bookings-list { display: flex; flex-direction: column; gap: 16px; }
+
+.booking-history-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+
+.booking-history-card:hover { box-shadow: var(--shadow-soft); }
+
+.booking-history-img {
+  width: 64px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--bg-color);
+}
+
+.booking-history-info h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.booking-history-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.booking-history-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.btn-cancel-booking {
+  font-size: 0.78rem;
+  color: #e11d48;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, #e11d48 40%, transparent);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn-cancel-booking:hover {
+  background: color-mix(in srgb, #e11d48 10%, transparent);
+}
+
+@media (max-width: 600px) {
+  .booking-history-card {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+  }
+  .booking-history-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Utilities
+═══════════════════════════════════════════ */
+.d-none               { display: none !important; }
+.mt-16                { margin-top: 16px; }
+.booking-warning-text { font-size: 0.8rem; color: #9f1239; }
+
+
+/* ═══════════════════════════════════════════
+   ADDED MISSING STYLES (UTILITIES & COMPONENTS)
+═══════════════════════════════════════════ */
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mt-32 { margin-top: 32px; }
+.mt-48 { margin-top: 48px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-32 { margin-bottom: 32px; }
+.d-none { display: none !important; }
+.text-primary { color: var(--primary); }
+
+/* ─── Occupancy Enhancements ──────────────── */
+.occupancy-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+.occupancy-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.occupancy-grid { display: flex; flex-direction: column; }
+
+/* Bed Select */
+.bed-select-wrapper { position: relative; display: flex; align-items: center; }
+.bed-select-icon { position: absolute; left: 14px; font-size: 1.2rem; color: var(--primary); pointer-events: none; }
+html[dir="rtl"] .bed-select-icon { left: auto; right: 14px; }
+.icon-select { padding: 11px 14px 11px 40px !important; cursor: pointer; }
+html[dir="rtl"] .icon-select { padding: 11px 40px 11px 14px !important; }
+
+/* ─── Bank Copy Button ────────────────────── */
+.bank-val-copy { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; }
+.textarea-wrapper { display: flex; flex-direction: column; gap: 6px; }
+.notes-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); padding: 0 4px; }
+#g-notes-counter { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* ─── Hotel Info Cards (Sidebar) ──────────── */
+.hotel-highlights-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.hotel-highlights-list li { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text-main); }
+.hotel-highlights-list li i { color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }
+.check-rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 12px; }
+.check-rule-item { display: flex; flex-direction: column; gap: 4px; }
+.check-rule-lbl { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.check-rule-val { font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+.hotel-rules-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.hotel-rules-list li { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-main); }
+.hotel-rules-list li i { font-size: 1rem; }
+
+/* ─── Reviews Container ───────────────────── */
+.reviews-container { max-width: 1100px; margin: 0 auto; }
+
+/* ═══════════════════════════════════════════
+   SMOOTH ANIMATIONS & HOVER EFFECTS (NEW)
+═══════════════════════════════════════════ */
+.addon-card { transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease; }
+.addon-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.addon-card.selected { transform: scale(1.02); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 5%, var(--surface-color)); }
+.hotel-info-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.hotel-info-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-soft); }
+.copy-btn:active { transform: scale(0.9); background: var(--primary); color: #fff; }
+.review-card { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease; }
+.review-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+.form-group input, .form-group textarea, .form-group select { transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, transform 0.2s ease; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { transform: scale(1.01); }
+.bed-select-wrapper select:focus + i, .bed-select-wrapper select:hover + i { color: var(--primary); transform: scale(1.1); transition: transform 0.2s ease, color 0.2s ease; }
+.bed-select-icon { transition: transform 0.2s ease, color 0.2s ease; }
+.success-check-icon { animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.2s, pulseGlow 2s infinite 1s; }
+@keyframes pulseGlow { 0% { filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); } 50% { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.5)); } 100% { filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); } }
+.child-ages-box, .transfer-box { animation: bk-slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes bk-slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
