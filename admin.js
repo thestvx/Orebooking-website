@@ -440,21 +440,25 @@ async function loadBookings() {
       const st = b.status || 'pending';
       const docIdShort = doc.id.slice(0, 8).toUpperCase();
 
-      // معالجة الضيوف والغرف
+      // معالجة الضيوف والغرف الجديدة
       let occupancyHtml = `<span>${b.guests || 1} ضيف</span>`;
-      if (b.rooms && (b.adults || b.children)) {
+      if (b.rooms && (b.adults || b.children !== undefined)) {
           const bedType = b.bedConfig === 'double' ? 'سرير مزدوج' : 
                           b.bedConfig === 'twin' ? 'سريران منفصلان' : 
-                          b.bedConfig === 'king' ? 'سرير كينج' : 'سرير فردي';
+                          b.bedConfig === 'king' ? 'سرير كينج' : 
+                          b.bedConfig === 'single' ? 'سرير فردي' : '';
+          
+          let bedHtml = bedType ? ` · ${bedType}` : '';
+          
           occupancyHtml = `
             <div style="display:flex; flex-direction:column; gap:3px; font-size:0.85rem;">
-              <span style="font-weight:700; color:var(--text-main);">${b.rooms} غرف · ${bedType}</span>
+              <span style="font-weight:700; color:var(--text-main);">${b.rooms} غرف${bedHtml}</span>
               <span style="color:var(--text-muted);">${b.adults} بالغين ${b.children > 0 ? ` + ${b.children} أطفال` : ''}</span>
             </div>
           `;
       }
 
-      // معالجة الإضافات
+      // معالجة الإضافات الجديدة
       let addonsHtml = '';
       if (b.selectedAddons && b.selectedAddons.length > 0) {
           const addOnLabels = {
@@ -462,12 +466,14 @@ async function loadBookings() {
             'wifi': 'إنترنت عالي السرعة',
             'spa': 'جلسة سبا',
             'parking': 'موقف سيارات',
-            'airport': 'نقل المطار',
+            'airportTransfer': 'نقل المطار',
+            'lateCheckout': 'تسجيل خروج متأخر',
+            'extraBed': 'سرير إضافي',
             'events': 'تنسيق فعاليات'
           };
           const translatedAddons = b.selectedAddons.map(a => addOnLabels[a] || a).join('، ');
           addonsHtml = `
-            <div style="margin-top:10px; background:#f8fafc; padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0;">
+            <div style="margin-top:10px; background:var(--bg-color); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color);">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
                 <i class="ph-fill ph-plus-circle" style="color:var(--primary);"></i>
                 <span style="font-size:0.8rem; font-weight:700; color:var(--primary);">إضافات مختارة:</span>
@@ -486,15 +492,19 @@ async function loadBookings() {
             ? `<a href="${b.receiptUrl}" target="_blank" style="background:#fef3c7; color:#d97706; padding:6px 12px; border-radius:8px; font-size:0.8rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; border:1px solid #fde68a;"><i class="ph ph-receipt"></i> عرض إيصال الدفع</a>`
             : `<span style="color:#e11d48; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;"><i class="ph-fill ph-warning-circle"></i> الإيصال مفقود</span>`;
       } else if (b.paymentMethod === 'cash') {
-          receiptHtml = `<span style="background:#f1f5f9; color:#64748b; padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:600; border:1px solid #e2e8f0;"><i class="ph ph-money"></i> الدفع نقداً عند الوصول</span>`;
+          receiptHtml = `<span style="background:var(--bg-color); color:var(--text-muted); padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:600; border:1px solid var(--border-color);"><i class="ph ph-money"></i> الدفع نقداً عند الوصول</span>`;
       }
 
-      // ملاحظات الضيف
+      // ملاحظات الضيف ووقت الوصول
       let notesHtml = '';
-      if (b.notes && b.notes.trim() !== '') {
+      if ((b.notes && b.notes.trim() !== '') || b.arrivalTime) {
+        let arrivalHtml = b.arrivalTime ? `<div style="margin-bottom: 4px;"><strong>وقت الوصول المتوقع:</strong> ${b.arrivalTime}</div>` : '';
+        let userNoteHtml = (b.notes && b.notes.trim() !== '') ? `<div><strong>ملاحظة الضيف:</strong> ${b.notes}</div>` : '';
+        
         notesHtml = `
-          <div style="margin-top:10px; font-size:0.8rem; color:var(--text-muted); background:#fffbeb; padding:8px 10px; border-left:3px solid #f59e0b; border-radius:0 6px 6px 0;">
-            <strong>ملاحظة الضيف:</strong> ${b.notes}
+          <div style="margin-top:10px; font-size:0.8rem; color:var(--text-muted); background:rgba(245, 158, 11, 0.1); padding:10px; border-inline-start:3px solid #f59e0b; border-radius:6px;">
+            ${arrivalHtml}
+            ${userNoteHtml}
           </div>
         `;
       }
@@ -527,7 +537,7 @@ async function loadBookings() {
               <i class="ph-fill ph-calendar-blank" style="color:var(--text-muted); font-size:1.2rem; margin-top:2px;"></i>
               <div style="display:flex; flex-direction:column; gap:3px;">
                 <span style="font-weight:600;">${ci} <i class="ph ph-arrow-left" style="font-size:0.7rem; color:var(--text-muted); margin:0 4px;"></i> ${co}</span>
-                <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600; background:#f1f5f9; padding:2px 8px; border-radius:4px; display:inline-block; width:fit-content;">${b.nights || 0} ليالٍ إقامة</span>
+                <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600; background:var(--bg-color); padding:2px 8px; border-radius:4px; display:inline-block; width:fit-content;">${b.nights || 0} ليالٍ إقامة</span>
               </div>
             </div>
 
