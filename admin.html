@@ -21,108 +21,141 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* ===== Map Picker ===== */
-    .map-picker-wrapper {
-      margin-top: 8px;
+    /* =========================================
+       ✨ تحسينات لوحة التحكم الاحترافية ✨
+       ========================================= */
+    .admin-body {
+      background-color: #f8fafc;
     }
 
-    .map-picker-hint {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+    /* ===== نموذج إضافة عقار (النسخة الاحترافية) ===== */
+    .modern-form-wrapper {
+      display: grid;
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .modern-section {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .modern-section:hover {
+      box-shadow: 0 8px 32px rgba(67, 90, 191, 0.08);
+    }
+
+    .modern-section-header {
       display: flex;
       align-items: center;
-      gap: 6px;
-    }
-
-    #admin-map-picker, #edit-map-picker {
-      width: 100%;
-      height: 300px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      cursor: crosshair;
-      z-index: 1;
-    }
-
-    #edit-map-picker {
-      height: 250px;
-    }
-
-    .coords-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
       gap: 12px;
-      margin-top: 10px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
     }
 
-    .coords-row .input-group {
-      margin-top: 0;
+    .modern-section-header i {
+      font-size: 1.6rem;
+      color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      padding: 10px;
+      border-radius: 12px;
     }
 
-    .coords-row input {
-      background-color: var(--bg-color);
+    .modern-section-header h4 {
+      font-size: 1.2rem;
+      font-weight: 700;
       color: var(--text-main);
+      margin: 0;
     }
 
-    .map-search-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .map-search-row input {
-      flex: 1;
-      padding: 10px 14px;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--surface-color);
-      color: var(--text-main);
-      font-family: inherit;
-      font-size: 0.9rem;
-    }
-
-    .map-search-row button {
-      padding: 10px 16px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
+    /* منطقة رفع الصور الاحترافية */
+    .upload-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 16px;
+      padding: 40px 20px;
+      text-align: center;
+      background: #fcfcfc;
+      position: relative;
       cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.2s;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
 
-    .map-search-row button:hover {
-      background: var(--primary-hover);
+    .upload-zone:hover {
+      border-color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 4%, transparent);
     }
+
+    .upload-zone i {
+      font-size: 3rem;
+      color: var(--primary);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-zone-text {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .upload-zone-sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* ===== Map Picker ===== */
+    .map-picker-wrapper { margin-top: 8px; }
+    .map-picker-hint { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    
+    #admin-map-picker, #edit-map-picker {
+      width: 100%; height: 350px; border-radius: 16px; border: 1px solid var(--border-color); cursor: crosshair; z-index: 1;
+    }
+    #edit-map-picker { height: 250px; }
+
+    .coords-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    .coords-row input { background-color: var(--bg-color); font-family: monospace; font-weight: bold; color: var(--primary); }
+
+    .map-search-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .map-search-row input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.95rem; }
+    .map-search-row button { padding: 12px 20px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .map-search-row button:hover { background: black; }
 
     .map-picked-badge {
-      display: none;
-      align-items: center;
-      gap: 6px;
-      margin-top: 10px;
-      padding: 8px 14px;
-      background: color-mix(in oklch, var(--primary) 12%, transparent);
-      border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
-      border-radius: 8px;
-      font-size: 0.85rem;
-      color: var(--primary);
-      font-weight: 600;
+      display: none; align-items: center; gap: 8px; margin-top: 16px; padding: 12px 16px;
+      background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; color: #059669; font-weight: 700;
     }
+    .map-picked-badge.visible { display: flex; }
 
-    .map-picked-badge.visible {
-      display: flex;
+    /* ===== أزرار قبول ورفض الحجوزات (ستُستخدم من قبل JS) ===== */
+    .booking-actions-row {
+      display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);
     }
+    .btn-approve, .btn-reject {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px; border-radius: 10px; font-weight: 700; font-size: 0.9rem; border: none; cursor: pointer; transition: 0.3s;
+    }
+    .btn-approve { background: #ecfdf5; color: #059669; border: 1px solid #10b981; }
+    .btn-approve:hover { background: #10b981; color: white; }
+    
+    .btn-reject { background: #fef2f2; color: #e11d48; border: 1px solid #ef4444; }
+    .btn-reject:hover { background: #ef4444; color: white; }
 
-    /* ===== Bookings Fix ===== */
-    .bookings-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
-    }
   </style>
 </head>
 <body class="admin-body">
@@ -130,8 +163,10 @@
   <!-- 🔐 Admin Login Screen -->
   <div id="admin-login-screen" class="admin-login-screen">
     <div class="admin-login-card">
-      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height: 50px; margin: 0 auto 20px; display: block;">
-      <h2 class="font-bold" style="text-align: center; margin-bottom: 24px;">تسجيل دخول الإدارة</h2>
+      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height: 55px; margin: 0 auto 24px; display: block;">
+      <h2 class="font-bold" style="text-align: center; margin-bottom: 8px;">تسجيل الدخول</h2>
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 24px; font-size: 0.9rem;">لوحة تحكم الإدارة وأصحاب العقارات</p>
+      
       <form id="admin-login-form">
         <div class="input-group">
           <label>اسم المستخدم</label>
@@ -141,7 +176,9 @@
           <label>كلمة المرور</label>
           <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور">
         </div>
-        <button type="submit" class="primary-btn mt-4">تسجيل الدخول <i class="ph ph-sign-in"></i></button>
+        <button type="submit" class="primary-btn mt-4" style="height: 50px;">
+          تسجيل الدخول <i class="ph ph-sign-in" style="font-size: 1.2rem;"></i>
+        </button>
       </form>
     </div>
   </div>
@@ -152,23 +189,25 @@
     <aside class="admin-sidebar">
       <div class="sidebar-logo">
         <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height: 40px;">
-        <span class="font-bold">Admin Panel</span>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="switchTab('manage-props')"><i class="ph ph-list-dashes"></i> إدارة العقارات</button>
-        <button class="nav-item" onclick="switchTab('add-property')"><i class="ph ph-plus-circle"></i> إضافة عقار جديد</button>
+        <button class="nav-item active" onclick="switchTab('manage-props')"><i class="ph ph-buildings"></i> إدارة العقارات</button>
+        <button class="nav-item" id="nav-add-property" onclick="switchTab('add-property')"><i class="ph ph-plus-square"></i> إضافة عقار جديد</button>
         <button class="nav-item" onclick="switchTab('bookings')"><i class="ph ph-calendar-check"></i> الحجوزات</button>
-        <a href="index.html" class="nav-item" style="margin-top: auto; color: var(--text-danger);"><i class="ph ph-sign-out"></i> خروج من اللوحة</a>
+        <a href="#" onclick="logoutAdmin()" class="nav-item" style="margin-top: auto; color: #e11d48; background: #fef2f2;"><i class="ph ph-sign-out"></i> تسجيل الخروج</a>
       </nav>
     </aside>
 
     <!-- Main Content -->
     <main class="admin-main">
       <header class="admin-header">
-        <h2 id="page-title" class="font-bold">إدارة العقارات</h2>
+        <h2 id="page-title" class="font-bold" style="font-size: 1.4rem;">إدارة العقارات</h2>
         <div class="admin-profile">
-          <span class="font-medium">المدير</span>
-          <div class="avatar"><i class="ph-fill ph-user-gear"></i></div>
+          <div style="text-align: left; line-height: 1.2;">
+            <span class="font-bold" id="admin-profile-name" style="display: block; font-size: 0.95rem;">مدير النظام</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="admin-profile-role">بصلاحيات كاملة</span>
+          </div>
+          <div class="avatar" style="background: var(--primary); color: white;"><i class="ph-fill ph-user-circle"></i></div>
         </div>
       </header>
 
@@ -198,65 +237,93 @@
           </div>
         </div>
 
-        <!-- Tab 2: Add Property -->
+        <!-- Tab 2: Add Property (🔥 THE NEW MASTERPIECE DESIGN 🔥) -->
         <div id="tab-add-property" class="tab-pane">
-          <div class="admin-card">
-            <h3 class="font-bold" style="margin-bottom: 24px;">إدخال تفاصيل العقار الجديد</h3>
-            <form id="add-property-form" class="admin-form">
+          <form id="add-property-form" class="modern-form-wrapper">
+            
+            <!-- Section 1: Basic Info -->
+            <div class="modern-section">
+              <div class="modern-section-header">
+                <i class="ph-fill ph-text-aa"></i>
+                <h4>المعلومات الأساسية</h4>
+              </div>
               <div class="form-grid">
-                <div class="input-group"><label>الاسم (عربي)</label><input type="text" id="prop-title-ar" required></div>
-                <div class="input-group"><label>الاسم (إنجليزي)</label><input type="text" id="prop-title-en" required></div>
-                <div class="input-group"><label>الموقع (عربي)</label><input type="text" id="prop-loc-ar" required></div>
-                <div class="input-group"><label>الموقع (إنجليزي)</label><input type="text" id="prop-loc-en" required></div>
-                <div class="input-group"><label>السعر (DZD)</label><input type="number" id="prop-price" required></div>
+                <div class="input-group"><label>اسم العقار (عربي) <span class="text-danger">*</span></label><input type="text" id="prop-title-ar" placeholder="مثال: شاليه الأحلام" required></div>
+                <div class="input-group"><label>اسم العقار (إنجليزي) <span class="text-danger">*</span></label><input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" required></div>
+                <div class="input-group" style="grid-column: 1 / -1;"><label>وصف العقار (عربي) <span class="text-danger">*</span></label><textarea id="prop-desc-ar" rows="3" placeholder="اكتب وصفاً جذاباً لعقارك..." required></textarea></div>
+                <div class="input-group" style="grid-column: 1 / -1;"><label>وصف العقار (إنجليزي) <span class="text-danger">*</span></label><textarea id="prop-desc-en" rows="3" placeholder="Write an attractive description..." required></textarea></div>
+              </div>
+            </div>
+
+            <!-- Section 2: Pricing & Media -->
+            <div class="modern-section">
+              <div class="modern-section-header">
+                <i class="ph-fill ph-money"></i>
+                <h4>التسعير والصور</h4>
+              </div>
+              <div class="form-grid" style="align-items: center;">
                 <div class="input-group">
-                  <label>صورة العقار</label>
-                  <input type="file" id="prop-image" accept="image/*" required>
-                  <small id="upload-status" class="text-primary"></small>
+                  <label>السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
+                  <input type="number" id="prop-price" placeholder="مثال: 15000" style="font-size: 1.2rem; font-weight: bold; color: var(--primary);" required>
+                </div>
+                <div class="input-group">
+                  <label>الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
+                  <div class="upload-zone">
+                    <i class="ph ph-cloud-arrow-up"></i>
+                    <span class="upload-zone-text">اضغط هنا أو اسحب الصورة</span>
+                    <span class="upload-zone-sub">PNG, JPG, JPEG (الحد الأقصى 5 ميجابايت)</span>
+                    <input type="file" id="prop-image" accept="image/*" required>
+                  </div>
+                  <small id="upload-status" class="text-primary mt-2" style="display:block; text-align:center; font-weight:bold;"></small>
                 </div>
               </div>
+            </div>
 
-              <div class="input-group" style="margin-top: 20px;"><label>الوصف (عربي)</label><textarea id="prop-desc-ar" rows="3" required></textarea></div>
-              <div class="input-group"><label>الوصف (إنجليزي)</label><textarea id="prop-desc-en" rows="3" required></textarea></div>
+            <!-- Section 3: Location & Map -->
+            <div class="modern-section">
+              <div class="modern-section-header">
+                <i class="ph-fill ph-map-pin-line"></i>
+                <h4>الموقع الجغرافي للخريطة</h4>
+              </div>
+              <div class="form-grid" style="margin-bottom: 24px;">
+                <div class="input-group"><label>العنوان النصي (عربي) <span class="text-danger">*</span></label><input type="text" id="prop-loc-ar" placeholder="مثال: حي الرياض، الجزائر العاصمة" required></div>
+                <div class="input-group"><label>العنوان النصي (إنجليزي) <span class="text-danger">*</span></label><input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" required></div>
+              </div>
 
-              <!-- 🗺️ Map Picker Section -->
-              <div class="input-group" style="margin-top: 24px;">
-                <label style="display:flex; align-items:center; gap:8px;">
-                  <i class="ph ph-map-trifold" style="color:var(--primary); font-size:1.1rem;"></i>
-                  تحديد موقع العقار على الخريطة
-                  <span style="font-size:0.78rem; color:var(--text-muted); font-weight:400;">(اختياري)</span>
-                </label>
-
-                <div class="map-picker-wrapper">
-                  <div class="map-search-row">
-                    <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة...">
-                    <button type="button" onclick="searchMapLocation()">
-                      <i class="ph ph-magnifying-glass"></i> بحث
-                    </button>
-                  </div>
-                  <p class="map-picker-hint"><i class="ph ph-cursor-click"></i> انقر على الخريطة لتحديد الموقع بدقة</p>
-                  <div id="admin-map-picker"></div>
-                  <div class="map-picked-badge" id="map-picked-badge">
-                    <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع بنجاح
-                  </div>
-                  <div class="coords-row">
-                    <div class="input-group"><label>خط العرض</label><input type="text" id="prop-lat" placeholder="مثال: 33.886" readonly></div>
-                    <div class="input-group"><label>خط الطول</label><input type="text" id="prop-lng" placeholder="مثال: 9.537" readonly></div>
-                  </div>
+              <div class="map-picker-wrapper">
+                <div class="map-search-row">
+                  <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة...">
+                  <button type="button" onclick="searchMapLocation()"><i class="ph ph-magnifying-glass"></i> بحث ذكي</button>
+                </div>
+                <p class="map-picker-hint"><i class="ph-fill ph-info"></i> اسحب الخريطة وانقر بدقة لتحديد الإحداثيات الدقيقة للعقار الخاص بك.</p>
+                <div id="admin-map-picker"></div>
+                <div class="map-picked-badge" id="map-picked-badge">
+                  <i class="ph-fill ph-check-circle"></i> تم التقاط الإحداثيات بنجاح
+                </div>
+                <div class="coords-row">
+                  <div class="input-group"><label>خط العرض (Latitude)</label><input type="text" id="prop-lat" placeholder="سيتم تعبئته تلقائياً" readonly></div>
+                  <div class="input-group"><label>خط الطول (Longitude)</label><input type="text" id="prop-lng" placeholder="سيتم تعبئته تلقائياً" readonly></div>
                 </div>
               </div>
-              <button type="submit" class="primary-btn mt-4" id="submit-prop-btn"><i class="ph ph-plus-circle"></i> إضافة العقار</button>
-            </form>
-          </div>
+            </div>
+
+            <!-- Submit Action -->
+            <div style="text-align: left; margin-top: 10px;">
+              <button type="submit" class="primary-btn" id="submit-prop-btn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; display: inline-flex;">
+                <i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة
+              </button>
+            </div>
+          </form>
         </div>
 
-        <!-- Tab 3: Bookings (🔥 THIS IS WHERE THE MAGIC HAPPENS 🔥) -->
+        <!-- Tab 3: Bookings -->
         <div id="tab-bookings" class="tab-pane">
-          <div class="admin-card">
-            <h3 class="font-bold" style="margin-bottom: 20px;">إدارة الحجوزات</h3>
-            <!-- This ID is critical. JS will inject bookings here -->
-            <div id="bookings-container">
-               <p style="text-align:center;padding:40px;color:var(--text-muted)">جارٍ التحميل...</p>
+          <div class="admin-card" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+            <h3 class="font-bold" style="margin-bottom: 20px; display:flex; align-items:center; gap:8px;">
+              <i class="ph-fill ph-calendar-check" style="color:var(--primary)"></i> طلبات الحجوزات
+            </h3>
+            <div id="bookings-container" class="bookings-grid">
+               <p style="text-align:center;padding:40px;color:var(--text-muted);width:100%">جارٍ التحميل...</p>
             </div>
           </div>
         </div>
@@ -267,49 +334,154 @@
 
   <!-- ✏️ Edit Modal -->
   <div class="modal-overlay" id="edit-modal">
-    <div class="modal-content admin-card">
+    <div class="modal-content admin-card" style="max-width: 600px;">
       <button class="close-modal-btn" onclick="closeEditModal()"><i class="ph ph-x"></i></button>
-      <h3 class="font-bold" style="margin-bottom: 20px;">تعديل العقار</h3>
+      <h3 class="font-bold" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; color: var(--primary);">تعديل العقار</h3>
       <form id="edit-property-form" class="admin-form">
         <input type="hidden" id="edit-prop-id">
-        <div class="input-group"><label>الاسم (عربي)</label><input type="text" id="edit-title-ar" required></div>
-        <div class="input-group"><label>السعر (DZD)</label><input type="number" id="edit-price" required></div>
+        <div class="form-grid">
+          <div class="input-group"><label>الاسم (عربي)</label><input type="text" id="edit-title-ar" required></div>
+          <div class="input-group"><label>السعر (DZD)</label><input type="number" id="edit-price" required></div>
+        </div>
         <div class="input-group"><label>الوصف (عربي)</label><textarea id="edit-desc-ar" rows="3" required></textarea></div>
 
         <!-- 🗺️ Map Picker in Edit Modal -->
         <div class="input-group" style="margin-top: 20px;">
           <label style="display:flex; align-items:center; gap:8px;">
-            <i class="ph ph-map-trifold" style="color:var(--primary); font-size:1.1rem;"></i>
+            <i class="ph-fill ph-map-pin" style="color:var(--primary); font-size:1.1rem;"></i>
             تعديل موقع العقار
-            <span style="font-size:0.78rem; color:var(--text-muted); font-weight:400;">(اختياري)</span>
           </label>
           <div class="map-picker-wrapper">
-            <p class="map-picker-hint"><i class="ph ph-cursor-click"></i> انقر على الخريطة لتغيير الموقع</p>
             <div id="edit-map-picker"></div>
             <div class="map-picked-badge" id="edit-map-picked-badge">
               <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع
             </div>
             <div class="coords-row">
-              <div class="input-group"><label>خط العرض</label><input type="text" id="edit-lat" placeholder="مثال: 33.886" readonly></div>
-              <div class="input-group"><label>خط الطول</label><input type="text" id="edit-lng" placeholder="مثال: 9.537" readonly></div>
+              <div class="input-group"><label>خط العرض</label><input type="text" id="edit-lat" readonly></div>
+              <div class="input-group"><label>خط الطول</label><input type="text" id="edit-lng" readonly></div>
             </div>
           </div>
         </div>
 
-        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn">حفظ التعديلات</button>
+        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn" style="height: 50px;">حفظ التعديلات <i class="ph ph-floppy-disk"></i></button>
       </form>
     </div>
   </div>
 
+
+  <!-- ================================================
+       🛡️ نظام حماية وصلاحيات الملاك (RBAC INJECTION)
+       ================================================ -->
+  <script>
+    // اعتراض نموذج تسجيل الدخول لفرض الصلاحيات المخصصة قبل Firebase
+    document.addEventListener("DOMContentLoaded", () => {
+      const loginForm = document.getElementById('admin-login-form');
+      if(loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+          const u = document.getElementById('admin-user').value.trim();
+          const p = document.getElementById('admin-pass').value.trim();
+
+          // التحقق من حساب مالك "بالم جاردن"
+          if (u === 'palmadmin' && p === 'palmadmin') {
+            e.preventDefault(); e.stopImmediatePropagation();
+            setupOwnerSession('1', 'مالك عقار: بالم قاردن'); // 1 هو ID الخاص بالعقار
+          } 
+          // التحقق من حساب مالك "التجاني"
+          else if (u === 'tedjaniadmin' && p === 'tedjaniadmin') {
+            e.preventDefault(); e.stopImmediatePropagation();
+            setupOwnerSession('2', 'مالك عقار: التجاني'); // قم بتغيير 2 إلى الـ ID الحقيقي
+          } 
+          // إدارة عامة (يمر بشكل طبيعي ليتم معالجته عبر admin.js / Firebase)
+          else {
+            localStorage.removeItem('ownerPropId');
+            localStorage.removeItem('ownerPropName');
+          }
+        }, true); // Use capture phase to intercept early
+      }
+
+      // إذا كان المالك مسجل دخول مسبقاً
+      if (localStorage.getItem('ownerPropId')) {
+        setupOwnerUI(localStorage.getItem('ownerPropName'));
+      }
+    });
+
+    function setupOwnerSession(propId, displayName) {
+      localStorage.setItem('ownerPropId', propId);
+      localStorage.setItem('ownerPropName', displayName);
+      
+      document.getElementById('admin-login-screen').style.display = 'none';
+      document.getElementById('admin-layout').style.display = 'flex';
+      setupOwnerUI(displayName);
+      
+      // تشغيل دوال الجلب إذا كانت موجودة في admin.js
+      if(typeof fetchProperties === 'function') fetchProperties();
+      if(typeof loadBookings === 'function') loadBookings();
+    }
+
+    function setupOwnerUI(displayName) {
+      // إخفاء زر إضافة عقار للملاك
+      const navAdd = document.getElementById('nav-add-property');
+      if(navAdd) navAdd.style.display = 'none';
+
+      // تحديث اسم المالك في الهيدر
+      document.getElementById('admin-profile-name').textContent = displayName;
+      document.getElementById('admin-profile-role').textContent = "صلاحيات محدودة";
+
+      // مراقب دائم لفلترة العقارات والحجوزات المعروضة في الشاشة
+      setInterval(filterOwnerContent, 800);
+    }
+
+    function filterOwnerContent() {
+      const propId = localStorage.getItem('ownerPropId');
+      if(!propId) return;
+
+      // 1. تصفية جدول العقارات (إخفاء أي عقار لا يطابق الـ ID الخاص بالمالك)
+      const propRows = document.querySelectorAll('#properties-tbody tr');
+      propRows.forEach(row => {
+        const editBtn = row.querySelector('.edit-btn');
+        if(editBtn) {
+          const btnHtml = editBtn.outerHTML;
+          // يبحث عن ID العقار داخل دالة onclick="editProperty('ID')"
+          if(!btnHtml.includes(`'${propId}'`) && !btnHtml.includes(`"${propId}"`)) {
+            row.style.display = 'none';
+          } else {
+            row.style.display = '';
+          }
+        }
+      });
+
+      // 2. تصفية الحجوزات المعروضة (حسب الاسم كإجراء احتياطي أو لو كان الكارد يحتوي على بيانات)
+      const bookingCards = document.querySelectorAll('.booking-card');
+      bookingCards.forEach(card => {
+        const textContent = card.innerText || '';
+        if (propId === '1' && !textContent.includes('بالم')) {
+          card.style.display = 'none';
+        }
+        else if (propId === '2' && !textContent.includes('التجاني')) {
+          card.style.display = 'none';
+        }
+        else {
+          card.style.display = '';
+        }
+      });
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem('ownerPropId');
+      localStorage.removeItem('ownerPropName');
+      window.location.reload();
+    }
+  </script>
+
   <!-- ✅ Load BOTH JS FILES -->
   <!-- 1. Core logic for auth, properties, UI -->
   <script src="admin.js"></script>
-  <!-- 2. The new robust bookings display logic (MUST BE LOADED AFTER admin.js) -->
+  <!-- 2. The new robust bookings display logic -->
   <script src="admin_booking_addon.js"></script>
 
   <script>
   // ================================================
-  //  🗺️ Admin Map Pickers
+  //  🗺️ Admin Map Pickers (Leaflet)
   // ================================================
   let addMap = null, addMarker = null;
   let editMap = null, editMarker = null;
@@ -330,8 +502,7 @@
 
   function placeAddMarker(lat, lng) {
     if (addMarker) addMap.removeLayer(addMarker);
-    addMarker = L.marker([lat, lng]).addTo(addMap)
-      .bindPopup('📍 الموقع المحدد').openPopup();
+    addMarker = L.marker([lat, lng]).addTo(addMap).bindPopup('📍 تم تحديد الموقع').openPopup();
     document.getElementById('prop-lat').value = lat.toFixed(6);
     document.getElementById('prop-lng').value = lng.toFixed(6);
     document.getElementById('map-picked-badge').classList.add('visible');
@@ -349,10 +520,10 @@
         addMap.setView([lat, lng], 14);
         placeAddMarker(lat, lng);
       } else {
-        alert('لم يتم العثور على الموقع، حاول بكلمات أخرى.');
+        alert('لم يتم العثور على الموقع بدقة، جرب كتابة اسم الولاية.');
       }
     } catch(e) {
-      alert('حدث خطأ أثناء البحث.');
+      alert('حدث خطأ أثناء البحث عن الموقع.');
     }
   }
 
@@ -363,15 +534,12 @@
 
     if (!editMap) {
       editMap = L.map('edit-map-picker').setView(center, zoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors', maxZoom: 19
-      }).addTo(editMap);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(editMap);
 
       editMap.on('click', function(e) {
         const { lat, lng } = e.latlng;
         if (editMarker) editMap.removeLayer(editMarker);
-        editMarker = L.marker([lat, lng]).addTo(editMap)
-          .bindPopup('📍 الموقع الجديد').openPopup();
+        editMarker = L.marker([lat, lng]).addTo(editMap).bindPopup('📍 الموقع الجديد').openPopup();
         document.getElementById('edit-lat').value = lat.toFixed(6);
         document.getElementById('edit-lng').value = lng.toFixed(6);
         document.getElementById('edit-map-picked-badge').classList.add('visible');
@@ -383,8 +551,7 @@
 
     if (existingLat && existingLng) {
       if (editMarker) editMap.removeLayer(editMarker);
-      editMarker = L.marker([existingLat, existingLng]).addTo(editMap)
-        .bindPopup('📍 الموقع الحالي').openPopup();
+      editMarker = L.marker([existingLat, existingLng]).addTo(editMap).bindPopup('📍 الموقع الحالي').openPopup();
       document.getElementById('edit-map-picked-badge').classList.add('visible');
     }
   }
@@ -408,6 +575,18 @@
       initEditMap(lat || null, lng || null);
     }, 150);
   };
+
+  // تفاعل بصري مع رفع الصور
+  const fileInput = document.getElementById('prop-image');
+  if(fileInput) {
+    fileInput.addEventListener('change', function() {
+      if(this.files && this.files[0]) {
+        document.querySelector('.upload-zone-text').textContent = "تم اختيار الصورة: " + this.files[0].name;
+        document.querySelector('.upload-zone-text').style.color = "var(--primary)";
+        document.querySelector('.upload-zone i').className = "ph-fill ph-check-circle";
+      }
+    });
+  }
   </script>
 </body>
 </html>
