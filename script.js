@@ -123,7 +123,7 @@ const translations = {
 };
 
 // ==========================================
-// 🏠 3. STATIC MOCK DATA
+// 🏠 3. STATIC MOCK DATA & WILAYAS
 // ==========================================
 const properties = [
   {
@@ -172,6 +172,38 @@ const categories = [
   { icon: 'ph-house',          label_en: 'Villas',     label_ar: 'فلل' },
   { icon: 'ph-tree-evergreen', label_en: 'Resorts',    label_ar: 'منتجعات' },
   { icon: 'ph-swimming-pool',  label_en: 'Pools',      label_ar: 'مسابح' },
+];
+
+const algerianWilayas = [
+  { id: 1, ar: "أدرار", en: "Adrar" }, { id: 2, ar: "الشلف", en: "Chlef" },
+  { id: 3, ar: "الأغواط", en: "Laghouat" }, { id: 4, ar: "أم البواقي", en: "Oum El Bouaghi" },
+  { id: 5, ar: "باتنة", en: "Batna" }, { id: 6, ar: "بجاية", en: "Béjaïa" },
+  { id: 7, ar: "بسكرة", en: "Biskra" }, { id: 8, ar: "بشار", en: "Béchar" },
+  { id: 9, ar: "البليدة", en: "Blida" }, { id: 10, ar: "البويرة", en: "Bouira" },
+  { id: 11, ar: "تمنراست", en: "Tamanrasset" }, { id: 12, ar: "تبسة", en: "Tébessa" },
+  { id: 13, ar: "تلمسان", en: "Tlemcen" }, { id: 14, ar: "تيارت", en: "Tiaret" },
+  { id: 15, ar: "تيزي وزو", en: "Tizi Ouzou" }, { id: 16, ar: "الجزائر", en: "Algiers" },
+  { id: 17, ar: "الجلفة", en: "Djelfa" }, { id: 18, ar: "جيجل", en: "Jijel" },
+  { id: 19, ar: "سطيف", en: "Sétif" }, { id: 20, ar: "سعيدة", en: "Saïda" },
+  { id: 21, ar: "سكيكدة", en: "Skikda" }, { id: 22, ar: "سيدي بلعباس", en: "Sidi Bel Abbès" },
+  { id: 23, ar: "عنابة", en: "Annaba" }, { id: 24, ar: "قالمة", en: "Guelma" },
+  { id: 25, ar: "قسنطينة", en: "Constantine" }, { id: 26, ar: "المدية", en: "Médéa" },
+  { id: 27, ar: "مستغانم", en: "Mostaganem" }, { id: 28, ar: "المسيلة", en: "M'Sila" },
+  { id: 29, ar: "معسكر", en: "Mascara" }, { id: 30, ar: "ورقلة", en: "Ouargla" },
+  { id: 31, ar: "وهران", en: "Oran" }, { id: 32, ar: "البيض", en: "El Bayadh" },
+  { id: 33, ar: "إليزي", en: "Illizi" }, { id: 34, ar: "برج بوعريريج", en: "Bordj Bou Arréridj" },
+  { id: 35, ar: "بومرداس", en: "Boumerdès" }, { id: 36, ar: "الطارف", en: "El Tarf" },
+  { id: 37, ar: "تندوف", en: "Tindouf" }, { id: 38, ar: "تيسمسيلت", en: "Tissemsilt" },
+  { id: 39, ar: "الوادي", en: "El Oued" }, { id: 40, ar: "خنشلة", en: "Khenchela" },
+  { id: 41, ar: "سوق أهراس", en: "Souk Ahras" }, { id: 42, ar: "تيبازة", en: "Tipaza" },
+  { id: 43, ar: "ميلة", en: "Mila" }, { id: 44, ar: "عين الدفلى", en: "Aïn Defla" },
+  { id: 45, ar: "النعامة", en: "Naâma" }, { id: 46, ar: "عين تموشنت", en: "Aïn Témouchent" },
+  { id: 47, ar: "غرداية", en: "Ghardaïa" }, { id: 48, ar: "غليزان", en: "Relizane" },
+  { id: 49, ar: "تيميمون", en: "Timimoun" }, { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar" },
+  { id: 51, ar: "أولاد جلال", en: "Ouled Djellal" }, { id: 52, ar: "بني عباس", en: "Béni Abbès" },
+  { id: 53, ar: "إن صالح", en: "In Salah" }, { id: 54, ar: "إن قزام", en: "In Guezzam" },
+  { id: 55, ar: "تقرت", en: "Touggourt" }, { id: 56, ar: "جانت", en: "Djanet" },
+  { id: 57, ar: "المغير", en: "El M'Ghair" }, { id: 58, ar: "المنيعة", en: "El Meniaa" }
 ];
 
 // ==========================================
@@ -261,7 +293,7 @@ function init() {
 }
 
 // ==========================================
-// 🔍 4.5. SMART SEARCH (البحث الذكي)
+// 🔍 4.5. SMART SEARCH WITH WILAYAS
 // ==========================================
 function initSmartSearch() {
   const searchInput = document.querySelector('.search-field input[type="text"]');
@@ -270,33 +302,32 @@ function initSmartSearch() {
 
   if (!searchInput || !searchDropdown) return;
 
-  searchInput.addEventListener('input', (e) => {
-    const val = e.target.value.toLowerCase().trim();
+  const renderWilayas = (wilayas) => {
+    let html = '';
     
-    if (!val) {
-      searchDropdown.classList.remove('active');
-      return;
-    }
+    // إضافة خيار "الكل" في بداية القائمة دائماً
+    html += `
+      <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom: 1px solid var(--border-color);">
+        <div class="search-icon-box" style="color: var(--text-main);"><i class="ph ph-globe-hemisphere-west"></i></div>
+        <div class="search-item-info">
+          <span class="search-item-title">${state.lang === 'en' ? 'All Wilayas' : 'كل الولايات'}</span>
+          <span class="search-item-sub">${state.lang === 'en' ? 'Show all properties' : 'عرض جميع العقارات'}</span>
+        </div>
+      </div>
+    `;
 
-    const filtered = state.liveProperties.filter(p =>
-      (p.title_en && p.title_en.toLowerCase().includes(val)) ||
-      (p.title_ar && p.title_ar.includes(val)) ||
-      (p.location_en && p.location_en.toLowerCase().includes(val)) ||
-      (p.location_ar && p.location_ar.includes(val))
-    ).slice(0, 5); // أقصى حد 5 نتائج في الدروب داون
-
-    if (filtered.length > 0) {
-      searchDropdown.innerHTML = filtered.map(p => `
-        <div class="search-item" onclick="goToProperty('${p.id}')">
+    if (wilayas.length > 0) {
+      html += wilayas.map(w => `
+        <div class="search-item" onclick="selectWilaya('${w.ar}', '${w.en}')">
           <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
           <div class="search-item-info">
-            <span class="search-item-title">${state.lang === 'en' ? p.title_en : p.title_ar}</span>
-            <span class="search-item-sub">${state.lang === 'en' ? p.location_en : p.location_ar}</span>
+            <span class="search-item-title">${state.lang === 'en' ? w.en : w.ar}</span>
+            <span class="search-item-sub">${state.lang === 'en' ? 'Algeria' : 'الجزائر'} - ${w.id}</span>
           </div>
         </div>
       `).join('');
     } else {
-      searchDropdown.innerHTML = `
+      html += `
         <div class="no-results">
           <i class="ph ph-magnifying-glass"></i>
           <span>${translations[state.lang].no_results}</span>
@@ -304,7 +335,26 @@ function initSmartSearch() {
       `;
     }
     
+    searchDropdown.innerHTML = html;
     searchDropdown.classList.add('active');
+  };
+
+  // إظهار القائمة كاملة عند النقر أو التركيز على الحقل
+  searchInput.addEventListener('focus', () => renderWilayas(algerianWilayas));
+  searchInput.addEventListener('click', () => renderWilayas(algerianWilayas));
+
+  // الفلترة عند الكتابة
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value.toLowerCase().trim();
+    if (!val) {
+      renderWilayas(algerianWilayas);
+      return;
+    }
+
+    const filtered = algerianWilayas.filter(w =>
+      w.ar.includes(val) || w.en.toLowerCase().includes(val) || String(w.id) === val
+    );
+    renderWilayas(filtered);
   });
 
   // إغلاق القائمة عند النقر خارجها
@@ -314,7 +364,26 @@ function initSmartSearch() {
     }
   });
 
-  // عند الضغط على زر البحث، يتم فلترة الشبكة الرئيسية (Grid)
+  // الدالة التي يتم استدعاؤها عند اختيار ولاية من القائمة
+  window.selectWilaya = function(arName, enName) {
+    searchDropdown.classList.remove('active');
+
+    // إذا اختار "الكل"، نفرغ الحقل ونعرض كل العقارات
+    if (!arName && !enName) {
+      searchInput.value = '';
+      renderListings();
+      document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    // تعيين الاسم المختار في الحقل حسب لغة الموقع
+    searchInput.value = state.lang === 'en' ? enName : arName;
+    
+    // فلترة العقارات لتطابق الولاية المختارة فقط
+    filterAndRender(enName, arName);
+  };
+
+  // وظيفة زر البحث الأساسي
   if (searchBtn) {
     searchBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -332,10 +401,19 @@ function initSmartSearch() {
       } else {
         renderListings();
       }
-      
-      // التمرير السلس إلى قسم النتائج
       document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+  }
+
+  // دالة مساعدة لتصفية العقارات وعرضها بناءً على الولاية
+  function filterAndRender(enName, arName) {
+    const enLower = enName.toLowerCase();
+    const filteredGrid = state.liveProperties.filter(p => {
+      return (p.location_en && p.location_en.toLowerCase().includes(enLower)) ||
+             (p.location_ar && p.location_ar.includes(arName));
+    });
+    renderListings(filteredGrid);
+    document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -486,7 +564,6 @@ function toggleFavorite(e, id) {
   const isSearchActive = document.querySelector('.search-field input')?.value.trim() !== "";
   if (!isSearchActive) renderListings();
   else {
-    // نعتمد على الكلاس لتحديث شكل القلب محلياً بدون تدمير بحث المستخدم
     const btn = e.currentTarget;
     if(index > -1) {
       btn.classList.remove('active');
@@ -521,7 +598,6 @@ window.selectCategory = function(el) {
   el.classList.add('active');
 };
 
-// الدالة تقبل optional مصفوفة لتتمكن من عرض نتائج البحث بسهولة
 function renderListings(customArray = null) {
   const container = document.getElementById('listings-grid');
   if (!container) return;
@@ -529,7 +605,6 @@ function renderListings(customArray = null) {
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
   
-  // إذا مررنا customArray (كالتي تأتي من البحث)، نستخدمها
   let itemsToShow = customArray || state.liveProperties;
 
   if (state.currentView === 'favorites' && !customArray) {
@@ -734,7 +809,6 @@ window.goToSlide = function(e, index) {
 function updateSlider() {
   const trackEl = document.getElementById('slider-track');
   if (trackEl) {
-    // في الـ RTL (العربية)، الـ translateX الإيجابي ينقل العنصر لليسار للكشف عما يقع لليمين.
     const direction = state.lang === 'ar' ? 100 : -100;
     trackEl.style.transform = `translateX(${state.currentImageIndex * direction}%)`;
   }
