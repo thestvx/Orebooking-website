@@ -73,7 +73,8 @@ const translations = {
     wont_charged: "You won't be charged yet",
     loading: "Loading properties...",
     no_props: "No properties available yet.",
-    location_on_map: "Location on Map"
+    location_on_map: "Location on Map",
+    no_results: "No results found"
   },
   ar: {
     hero_title: "اكتشف إقامتك المثالية القادمة",
@@ -116,7 +117,8 @@ const translations = {
     wont_charged: "لن يتم خصم المبلغ الآن",
     loading: "جارٍ تحميل العقارات...",
     no_props: "لا توجد عقارات متاحة بعد.",
-    location_on_map: "الموقع على الخريطة"
+    location_on_map: "الموقع على الخريطة",
+    no_results: "لا توجد نتائج مطابقة"
   }
 };
 
@@ -125,7 +127,7 @@ const translations = {
 // ==========================================
 const properties = [
   {
-    id: "1",  // ✅ string للتوافق مع Firestore doc IDs
+    id: "1",
     title_en: "Camp Palm Garden Resort",
     title_ar: "منتجع بالم قاردن",
     location_en: "Hai Al-Sharqiya, Taghzout - El Oued",
@@ -135,10 +137,7 @@ const properties = [
     image: "images/palmgarden/01.jpg",
     images: [
       "images/palmgarden/01.jpg","images/palmgarden/02.jpg",
-      "images/palmgarden/03.jpg","images/palmgarden/04.jpg",
-      "images/palmgarden/05.jpg","images/palmgarden/06.jpg",
-      "images/palmgarden/07.jpg","images/palmgarden/08.jpg",
-      "images/palmgarden/09.jpg","images/palmgarden/10.jpg"
+      "images/palmgarden/03.jpg","images/palmgarden/04.jpg"
     ],
     urgency: "hot",
     desc_en: "Where to find peace and comfort as if you are away from the bustle... but without feeling like you are in the desert! At Palm Garden you will find comfortable rooms, a breakfast fit for royalty, green lawns, and a safe family space.",
@@ -163,24 +162,6 @@ const properties = [
     desc_ar: "ملاذ عصري مثالي في قلب الطبيعة.",
     features_ar: ["غرفتين نوم","مطبخ مجهز","مدفأة حطب"],
     features_en: ["2 Bedrooms","Equipped Kitchen","Fireplace"],
-    lat: null,
-    lng: null
-  },
-  {
-    id: "3",
-    title_en: "Minimalist Beach Villa",
-    title_ar: "فيلا شاطئية بتصميم بسيط",
-    location_en: "Bali, Indonesia",
-    location_ar: "بالي، إندونيسيا",
-    price: 62000,
-    rating: 4.92,
-    image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80",
-    images: ["https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80"],
-    urgency: null,
-    desc_en: "Wake up to the sound of waves in this beautiful villa.",
-    desc_ar: "استيقظ على صوت الأمواج في هذه الفيلا الجميلة.",
-    features_ar: ["إطلالة على البحر","مسبح خاص","واي فاي سريع"],
-    features_en: ["Sea View","Private Pool","Fast WiFi"],
     lat: null,
     lng: null
   }
@@ -216,6 +197,7 @@ function init() {
   if (document.getElementById('categories-container')) {
     renderCategories();
     loadPropertiesFromFirestore();
+    initSmartSearch(); // تفعيل البحث الذكي
   }
 
   renderPropertyDetails();
@@ -279,6 +261,85 @@ function init() {
 }
 
 // ==========================================
+// 🔍 4.5. SMART SEARCH (البحث الذكي)
+// ==========================================
+function initSmartSearch() {
+  const searchInput = document.querySelector('.search-field input[type="text"]');
+  const searchDropdown = document.querySelector('.search-dropdown');
+  const searchBtn = document.querySelector('.search-btn');
+
+  if (!searchInput || !searchDropdown) return;
+
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value.toLowerCase().trim();
+    
+    if (!val) {
+      searchDropdown.classList.remove('active');
+      return;
+    }
+
+    const filtered = state.liveProperties.filter(p =>
+      (p.title_en && p.title_en.toLowerCase().includes(val)) ||
+      (p.title_ar && p.title_ar.includes(val)) ||
+      (p.location_en && p.location_en.toLowerCase().includes(val)) ||
+      (p.location_ar && p.location_ar.includes(val))
+    ).slice(0, 5); // أقصى حد 5 نتائج في الدروب داون
+
+    if (filtered.length > 0) {
+      searchDropdown.innerHTML = filtered.map(p => `
+        <div class="search-item" onclick="goToProperty('${p.id}')">
+          <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
+          <div class="search-item-info">
+            <span class="search-item-title">${state.lang === 'en' ? p.title_en : p.title_ar}</span>
+            <span class="search-item-sub">${state.lang === 'en' ? p.location_en : p.location_ar}</span>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      searchDropdown.innerHTML = `
+        <div class="no-results">
+          <i class="ph ph-magnifying-glass"></i>
+          <span>${translations[state.lang].no_results}</span>
+        </div>
+      `;
+    }
+    
+    searchDropdown.classList.add('active');
+  });
+
+  // إغلاق القائمة عند النقر خارجها
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper') && !e.target.closest('.search-bar')) {
+      searchDropdown.classList.remove('active');
+    }
+  });
+
+  // عند الضغط على زر البحث، يتم فلترة الشبكة الرئيسية (Grid)
+  if (searchBtn) {
+    searchBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      searchDropdown.classList.remove('active');
+      const val = searchInput.value.toLowerCase().trim();
+      
+      if (val) {
+        const filteredGrid = state.liveProperties.filter(p =>
+          (p.title_en && p.title_en.toLowerCase().includes(val)) ||
+          (p.title_ar && p.title_ar.includes(val)) ||
+          (p.location_en && p.location_en.toLowerCase().includes(val)) ||
+          (p.location_ar && p.location_ar.includes(val))
+        );
+        renderListings(filteredGrid);
+      } else {
+        renderListings();
+      }
+      
+      // التمرير السلس إلى قسم النتائج
+      document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+}
+
+// ==========================================
 // 🔥 5. جلب العقارات من Firestore
 // ==========================================
 async function loadPropertiesFromFirestore() {
@@ -289,13 +350,12 @@ async function loadPropertiesFromFirestore() {
 
   container.innerHTML = `
     <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
-      <i class="ph ph-circle-notch" style="font-size:2rem; display:block; margin-bottom:12px; animation: spin 1s linear infinite;"></i>
+      <i class="ph ph-circle-notch spin" style="font-size:2.5rem; display:block; margin-bottom:16px;"></i>
       ${dict.loading}
     </div>
   `;
 
   try {
-    // ✅ استخدام == true بدلاً من != false لتجنب الحاجة لـ Composite Index
     const snapshot = await db.collection('properties')
       .where('visible', '==', true)
       .get();
@@ -304,7 +364,7 @@ async function loadPropertiesFromFirestore() {
       state.liveProperties = snapshot.docs.map(doc => {
         const d = doc.data();
         return {
-          id:          String(doc.id),  // ✅ دائماً string
+          id:          String(doc.id),
           title_en:    d.titleEn    || d.title_en    || '',
           title_ar:    d.titleAr    || d.title_ar    || '',
           location_en: d.locationEn || d.location_en || '',
@@ -323,12 +383,10 @@ async function loadPropertiesFromFirestore() {
         };
       });
     } else {
-      // fallback للـ mock data إذا Firestore فارغ
       state.liveProperties = properties;
     }
   } catch (err) {
     console.error('Firestore error:', err);
-    // fallback للـ mock data عند الخطأ
     state.liveProperties = properties;
   }
 
@@ -400,7 +458,6 @@ function loadFavorites() {
   } else {
     state.favorites = [];
   }
-  // ✅ استدعاء renderListings دائماً بعد تحميل المفضلة
   if (document.getElementById('listings-grid')) {
     renderListings();
   }
@@ -419,16 +476,30 @@ function toggleFavorite(e, id) {
     showMessage(state.lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً' : 'Please log in first', 'error');
     return;
   }
-  const strId = String(id);  // ✅ توحيد النوع
+  const strId = String(id);
   const index = state.favorites.indexOf(strId);
   if (index > -1) state.favorites.splice(index, 1);
   else state.favorites.push(strId);
   saveFavorites();
-  renderListings();
+  
+  // إعادة التحميل مع الحفاظ على البيانات المفلترة في حال كنا نبحث
+  const isSearchActive = document.querySelector('.search-field input')?.value.trim() !== "";
+  if (!isSearchActive) renderListings();
+  else {
+    // نعتمد على الكلاس لتحديث شكل القلب محلياً بدون تدمير بحث المستخدم
+    const btn = e.currentTarget;
+    if(index > -1) {
+      btn.classList.remove('active');
+      btn.innerHTML = `<i class="ph ph-heart"></i>`;
+    } else {
+      btn.classList.add('active');
+      btn.innerHTML = `<i class="ph-fill ph-heart"></i>`;
+    }
+  }
 }
 
 function goToProperty(id) {
-  window.location.href = `property.html?id=${String(id)}`;  // ✅ توحيد النوع
+  window.location.href = `property.html?id=${String(id)}`;
 }
 
 // ==========================================
@@ -438,36 +509,35 @@ function renderCategories() {
   const container = document.getElementById('categories-container');
   if (!container) return;
   container.innerHTML = categories.map((cat, index) => `
-    <div class="category-item ${index === 0 ? 'active' : ''}" onclick="selectCategory(this)">
+    <button class="category-item ${index === 0 ? 'active' : ''}" onclick="selectCategory(this)">
       <i class="ph ${cat.icon}"></i>
       <span class="font-medium">${state.lang === 'en' ? cat.label_en : cat.label_ar}</span>
-    </div>
+    </button>
   `).join('');
 }
 
-// ✅ إضافة دالة تفعيل الـ category عند النقر
 window.selectCategory = function(el) {
   document.querySelectorAll('.category-item').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
 };
 
-function renderListings() {
+// الدالة تقبل optional مصفوفة لتتمكن من عرض نتائج البحث بسهولة
+function renderListings(customArray = null) {
   const container = document.getElementById('listings-grid');
   if (!container) return;
 
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
-  const allProps = state.liveProperties;
+  
+  // إذا مررنا customArray (كالتي تأتي من البحث)، نستخدمها
+  let itemsToShow = customArray || state.liveProperties;
 
-  let itemsToShow = allProps;
-
-  if (state.currentView === 'favorites') {
-    // ✅ مقارنة String مع String
-    itemsToShow = allProps.filter(p => state.favorites.includes(String(p.id)));
+  if (state.currentView === 'favorites' && !customArray) {
+    itemsToShow = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
     if (itemsToShow.length === 0) {
       container.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
-          <i class="ph ph-heart-break" style="font-size:3rem; color:var(--text-muted); margin-bottom:16px; display:block;"></i>
+          <i class="ph ph-heart-break" style="font-size:3.5rem; color:var(--text-muted); margin-bottom:16px; display:block; opacity: 0.5;"></i>
           <p style="font-size:1.1rem; color:var(--text-muted);">${dict.no_favorites}</p>
         </div>
       `;
@@ -478,15 +548,15 @@ function renderListings() {
   if (itemsToShow.length === 0) {
     container.innerHTML = `
       <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
-        <i class="ph ph-house-line" style="font-size:3rem; display:block; margin-bottom:12px;"></i>
-        <p>${dict.no_props}</p>
+        <i class="ph ph-house-line" style="font-size:3.5rem; display:block; margin-bottom:16px; opacity: 0.5;"></i>
+        <p style="font-size:1.1rem;">${customArray ? dict.no_results : dict.no_props}</p>
       </div>
     `;
     return;
   }
 
   container.innerHTML = itemsToShow.map(prop => {
-    const isFav    = state.favorites.includes(String(prop.id));  // ✅ توحيد النوع
+    const isFav    = state.favorites.includes(String(prop.id));
     const title    = state.lang === 'en' ? prop.title_en    : prop.title_ar;
     const location = state.lang === 'en' ? prop.location_en : prop.location_ar;
 
@@ -612,7 +682,7 @@ function _fillPropertyPage(prop) {
 
     if (dotsEl) {
       dotsEl.innerHTML = currentPropImages.map((img, i) =>
-        `<div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(event, ${i})"></div>`
+        `<button class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(event, ${i})"></button>`
       ).join('');
     }
 
@@ -663,15 +733,18 @@ window.goToSlide = function(e, index) {
 
 function updateSlider() {
   const trackEl = document.getElementById('slider-track');
-  // ✅ الـ slider يتحرك دائماً بالسالب — CSS direction يتكفل بـ RTL تلقائياً
   if (trackEl) {
-    trackEl.style.transform = `translateX(${state.currentImageIndex * -100}%)`;
+    // في الـ RTL (العربية)، الـ translateX الإيجابي ينقل العنصر لليسار للكشف عما يقع لليمين.
+    const direction = state.lang === 'ar' ? 100 : -100;
+    trackEl.style.transform = `translateX(${state.currentImageIndex * direction}%)`;
   }
+  
   const lbImg = document.getElementById('lightbox-img');
   if (lbImg && document.getElementById('lightbox')?.classList.contains('active')) {
     lbImg.src = currentPropImages[state.currentImageIndex];
     lbImg.classList.remove('zoomed');
   }
+  
   document.querySelectorAll('.slider-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === state.currentImageIndex);
   });
@@ -695,7 +768,7 @@ window.closeLightbox = function() {
   const lbImg = document.getElementById('lightbox-img');
   if (lb) {
     lb.classList.remove('active');
-    document.body.style.overflow = 'auto';
+    document.body.style.overflow = '';
     if (lbImg) lbImg.classList.remove('zoomed');
   }
 };
@@ -722,8 +795,10 @@ async function handleLogin(e) {
   const email    = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const btn = loginForm.querySelector('button[type="submit"]');
-  btn.innerHTML = `<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;"></i>`;  // ✅ إصلاح أيقونة التحميل
+  
+  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`; // Spinner
   btn.disabled  = true;
+  
   try {
     await auth.signInWithEmailAndPassword(email, password);
     closeModal();
@@ -742,12 +817,13 @@ async function handleRegister(e) {
   const email    = document.getElementById('reg-email').value;
   const password = document.getElementById('reg-password').value;
   const btn = registerForm.querySelector('button[type="submit"]');
-  btn.innerHTML = `<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;"></i>`;  // ✅ إصلاح أيقونة التحميل
+  
+  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`; // Spinner
   btn.disabled  = true;
+  
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     await userCredential.user.updateProfile({ displayName: name });
-    // ✅ تحديث state يدوياً بعد updateProfile لأن onAuthStateChanged قد يُطلق قبله
     state.user = auth.currentUser;
     closeModal();
     registerForm.reset();
@@ -798,10 +874,11 @@ function updateUserUI() {
     const initial = state.user.displayName
       ? state.user.displayName.charAt(0).toUpperCase()
       : state.user.email.charAt(0).toUpperCase();
+    
     openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
-    // ✅ استخدام CSS class بدلاً من CSS variable في JS style
     openAuthBtn.classList.add('auth-btn-logged');
     openAuthBtn.classList.remove('auth-btn-guest');
+    
     if (document.getElementById('dropdown-user-name')) {
       document.getElementById('dropdown-user-name').textContent  = state.user.displayName || 'OreBooking User';
       document.getElementById('dropdown-user-email').textContent = state.user.email || '';
@@ -825,14 +902,13 @@ function closeModal() {
   authModal.classList.remove('active');
   document.body.classList.remove('modal-open');
   if (authMessage) authMessage.style.display = 'none';
-  // ✅ null check قبل switchForm لأن loginForm/registerForm قد لا تكون موجودة
   if (loginForm && registerForm) {
     setTimeout(() => switchForm('login'), 300);
   }
 }
 
 function switchForm(type) {
-  if (!loginForm || !registerForm) return;  // ✅ null check
+  if (!loginForm || !registerForm) return;
   if (type === 'register') {
     loginForm.classList.remove('active');
     registerForm.classList.add('active');
