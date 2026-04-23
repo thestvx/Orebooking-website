@@ -352,7 +352,9 @@ function initSmartSearch() {
     }
 
     const filtered = algerianWilayas.filter(w =>
-      w.ar.includes(val) || w.en.toLowerCase().includes(val) || String(w.id) === val
+      (w.ar && w.ar.includes(val)) || 
+      (w.en && w.en.toLowerCase().includes(val)) || 
+      String(w.id) === val
     );
     renderWilayas(filtered);
   });
@@ -407,10 +409,12 @@ function initSmartSearch() {
 
   // دالة مساعدة لتصفية العقارات وعرضها بناءً على الولاية
   function filterAndRender(enName, arName) {
-    const enLower = enName.toLowerCase();
+    const enLower = enName ? enName.toLowerCase() : "";
+    const arLower = arName || "";
+    
     const filteredGrid = state.liveProperties.filter(p => {
       return (p.location_en && p.location_en.toLowerCase().includes(enLower)) ||
-             (p.location_ar && p.location_ar.includes(arName));
+             (p.location_ar && p.location_ar.includes(arLower));
     });
     renderListings(filteredGrid);
     document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -450,12 +454,12 @@ async function loadPropertiesFromFirestore() {
           price:       d.price      || 0,
           rating:      d.rating     || 4.80,
           image:       d.imageUrl   || d.image       || '',
-          images:      d.images     || [d.imageUrl   || d.image || ''],
+          images:      Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ''],
           urgency:     d.urgency    || null,
           desc_en:     d.descEn     || d.desc_en     || '',
           desc_ar:     d.descAr     || d.desc_ar     || '',
-          features_en: d.featuresEn || d.features_en || [],
-          features_ar: d.featuresAr || d.features_ar || [],
+          features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
+          features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
           lat:         d.lat        || null,
           lng:         d.lng        || null,
         };
@@ -531,8 +535,13 @@ function updateLanguageUI() {
 // ==========================================
 function loadFavorites() {
   if (state.user) {
-    const saved = localStorage.getItem(`ore_favs_${state.user.uid}`);
-    state.favorites = saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(`ore_favs_${state.user.uid}`);
+      state.favorites = saved ? JSON.parse(saved) : [];
+    } catch(e) {
+      console.warn("Could not parse favorites", e);
+      state.favorites = [];
+    }
   } else {
     state.favorites = [];
   }
@@ -632,8 +641,8 @@ function renderListings(customArray = null) {
 
   container.innerHTML = itemsToShow.map(prop => {
     const isFav    = state.favorites.includes(String(prop.id));
-    const title    = state.lang === 'en' ? prop.title_en    : prop.title_ar;
-    const location = state.lang === 'en' ? prop.location_en : prop.location_ar;
+    const title    = state.lang === 'en' ? (prop.title_en || '') : (prop.title_ar || '');
+    const location = state.lang === 'en' ? (prop.location_en || '') : (prop.location_ar || '');
 
     let urgencyHtml = '';
     if (prop.urgency) {
@@ -644,7 +653,7 @@ function renderListings(customArray = null) {
     return `
       <div class="card" onclick="goToProperty('${prop.id}')">
         <div class="card-img-wrapper">
-          <img src="${prop.image}" alt="${title}" class="card-img" loading="lazy">
+          <img src="${prop.image}" alt="${title}" class="card-img" loading="lazy" onerror="this.src='images/placeholder.jpg'">
           ${urgencyHtml}
           <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, '${prop.id}')">
             <i class="${isFav ? 'ph-fill' : 'ph'} ph-heart"></i>
@@ -699,12 +708,12 @@ function renderPropertyDetails() {
           price:       d.price      || 0,
           rating:      d.rating     || 4.80,
           image:       d.imageUrl   || '',
-          images:      d.images     || [d.imageUrl || ''],
+          images:      Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || ''],
           urgency:     d.urgency    || null,
           desc_en:     d.descEn     || '',
           desc_ar:     d.descAr     || '',
-          features_en: d.featuresEn || [],
-          features_ar: d.featuresAr || [],
+          features_en: Array.isArray(d.featuresEn) ? d.featuresEn : [],
+          features_ar: Array.isArray(d.featuresAr) ? d.featuresAr : [],
           lat:         d.lat        || null,
           lng:         d.lng        || null,
         });
@@ -740,19 +749,19 @@ function _fillPropertyPage(prop) {
 
   if (featuresEl) {
     const features = state.lang === 'en' ? prop.features_en : prop.features_ar;
-    if (features && features.length) {
+    if (features && Array.isArray(features) && features.length) {
       featuresEl.innerHTML = features.map(f =>
         `<li><i class="ph-fill ph-check-circle"></i> ${f}</li>`
       ).join('');
     }
   }
 
-  if (trackEl && prop.images && prop.images.length) {
+  if (trackEl && Array.isArray(prop.images) && prop.images.length) {
     currentPropImages       = prop.images;
     state.currentImageIndex = 0;
 
     trackEl.innerHTML = currentPropImages.map(img =>
-      `<img src="${img}" alt="Property Image" onclick="openLightbox()" loading="lazy">`
+      `<img src="${img}" alt="Property Image" onclick="openLightbox()" loading="lazy" onerror="this.src='images/placeholder.jpg'">`
     ).join('');
 
     if (dotsEl) {
@@ -786,6 +795,7 @@ function _fillPropertyPage(prop) {
 // ==========================================
 window.prevSlide = function(e) {
   if (e) e.stopPropagation();
+  if (!currentPropImages.length) return;
   state.currentImageIndex = state.currentImageIndex > 0
     ? state.currentImageIndex - 1
     : currentPropImages.length - 1;
@@ -794,6 +804,7 @@ window.prevSlide = function(e) {
 
 window.nextSlide = function(e) {
   if (e) e.stopPropagation();
+  if (!currentPropImages.length) return;
   state.currentImageIndex = state.currentImageIndex < currentPropImages.length - 1
     ? state.currentImageIndex + 1
     : 0;
@@ -802,6 +813,7 @@ window.nextSlide = function(e) {
 
 window.goToSlide = function(e, index) {
   if (e) e.stopPropagation();
+  if (!currentPropImages.length || index < 0 || index >= currentPropImages.length) return;
   state.currentImageIndex = index;
   updateSlider();
 };
@@ -815,8 +827,10 @@ function updateSlider() {
   
   const lbImg = document.getElementById('lightbox-img');
   if (lbImg && document.getElementById('lightbox')?.classList.contains('active')) {
-    lbImg.src = currentPropImages[state.currentImageIndex];
-    lbImg.classList.remove('zoomed');
+    if (currentPropImages[state.currentImageIndex]) {
+      lbImg.src = currentPropImages[state.currentImageIndex];
+      lbImg.classList.remove('zoomed');
+    }
   }
   
   document.querySelectorAll('.slider-dot').forEach((dot, i) => {
@@ -830,7 +844,7 @@ function updateSlider() {
 window.openLightbox = function() {
   const lb    = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
-  if (lb && lbImg) {
+  if (lb && lbImg && currentPropImages.length > 0) {
     lbImg.src = currentPropImages[state.currentImageIndex];
     lb.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -861,6 +875,8 @@ function showMessage(msg, type = 'error') {
   authMessage.textContent   = msg;
   authMessage.className     = `auth-message ${type}`;
   authMessage.style.display = 'block';
+  // التمرير أعلى المودال إذا لم يكن مرئيًا
+  if (authModal) authModal.querySelector('.modal-content')?.scrollTo({top: 0, behavior: 'smooth'});
   setTimeout(() => { authMessage.style.display = 'none'; }, 5000);
 }
 
@@ -878,7 +894,14 @@ async function handleLogin(e) {
     closeModal();
     loginForm.reset();
   } catch (error) {
-    showMessage(state.lang === 'ar' ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password', 'error');
+    // توفير رسائل أكثر تفصيلاً 
+    let errorMsg = state.lang === 'ar' ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password';
+    if (error.code === 'auth/user-not-found') {
+      errorMsg = state.lang === 'ar' ? 'لا يوجد حساب مسجل بهذا البريد' : 'No account found with this email';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMsg = state.lang === 'ar' ? 'تم حظر الحساب مؤقتاً بسبب محاولات كثيرة خاطئة' : 'Account temporarily disabled due to many failed login attempts';
+    }
+    showMessage(errorMsg, 'error');
   } finally {
     btn.innerHTML = `<span data-i18n="sign_in">${state.lang === 'en' ? 'Sign In' : 'تسجيل الدخول'}</span>`;
     btn.disabled  = false;
@@ -898,12 +921,20 @@ async function handleRegister(e) {
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     await userCredential.user.updateProfile({ displayName: name });
+    // إجبار التحديث
+    await userCredential.user.reload();
     state.user = auth.currentUser;
     closeModal();
     registerForm.reset();
     updateUserUI();
   } catch (error) {
-    showMessage(error.message, 'error');
+    let errorMsg = error.message;
+    if (error.code === 'auth/email-already-in-use') {
+      errorMsg = state.lang === 'ar' ? 'البريد الإلكتروني مسجل مسبقاً' : 'Email is already in use';
+    } else if (error.code === 'auth/weak-password') {
+      errorMsg = state.lang === 'ar' ? 'كلمة المرور ضعيفة (يجب أن تكون 6 أحرف على الأقل)' : 'Password is too weak (minimum 6 characters)';
+    }
+    showMessage(errorMsg, 'error');
   } finally {
     btn.innerHTML = `<span data-i18n="sign_up_btn">${state.lang === 'en' ? 'Create Account' : 'إنشاء الحساب'}</span>`;
     btn.disabled  = false;
@@ -912,8 +943,13 @@ async function handleRegister(e) {
 
 async function handleGoogleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  try { await auth.signInWithPopup(provider); closeModal(); }
-  catch (error) { showMessage(error.message, 'error'); }
+  try { 
+    await auth.signInWithPopup(provider); 
+    closeModal(); 
+  } catch (error) { 
+    console.error("Google Auth Error:", error);
+    showMessage(state.lang === 'ar' ? 'حدث خطأ أثناء تسجيل الدخول بواسطة جوجل' : 'Error signing in with Google', 'error'); 
+  }
 }
 
 function handleLogout() {
@@ -947,14 +983,14 @@ function updateUserUI() {
   if (state.user) {
     const initial = state.user.displayName
       ? state.user.displayName.charAt(0).toUpperCase()
-      : state.user.email.charAt(0).toUpperCase();
+      : (state.user.email ? state.user.email.charAt(0).toUpperCase() : 'U');
     
     openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
     openAuthBtn.classList.add('auth-btn-logged');
     openAuthBtn.classList.remove('auth-btn-guest');
     
     if (document.getElementById('dropdown-user-name')) {
-      document.getElementById('dropdown-user-name').textContent  = state.user.displayName || 'OreBooking User';
+      document.getElementById('dropdown-user-name').textContent  = state.user.displayName || (state.lang === 'ar' ? 'مستخدم' : 'User');
       document.getElementById('dropdown-user-email').textContent = state.user.email || '';
     }
   } else {
