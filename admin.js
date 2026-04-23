@@ -23,6 +23,9 @@ const db = firebase.firestore();
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
 
+// متغير لمعرفة ما إذا كان المستخدم الحالي مديراً عاماً أم مالك عقار
+let isSuperAdmin = false;
+
 // =========================================
 //   Login Logic
 // =========================================
@@ -44,6 +47,7 @@ if (loginForm) {
       // تنظيف أي بيانات تخص الملاك
       localStorage.removeItem('ownerPropId');
       localStorage.removeItem('ownerPropName');
+      isSuperAdmin = true;
 
       loginScreen.style.display = "none";
       adminLayout.style.display = "flex";
@@ -73,6 +77,7 @@ function showLoginError(msg) {
 // الدخول التلقائي إذا كان هناك جلسة مفتوحة (حساب مالك تم التقاطه)
 document.addEventListener("DOMContentLoaded", () => {
   if (localStorage.getItem('ownerPropId')) {
+    isSuperAdmin = false; // المستخدم مالك عقار وليس أدمن عام
     loginScreen.style.display = "none";
     adminLayout.style.display = "flex";
     loadProperties();
@@ -115,16 +120,40 @@ async function loadProperties() {
   tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);"><i class="ph ph-circle-notch ph-spin" style="font-size: 2rem;"></i><br>جارٍ التحميل...</td></tr>`;
 
   try {
-    const snapshot = await db.collection("properties").get();
+    let query = db.collection("properties");
+    
+    // 🔴 التصحيح: إذا كان المستخدم مالكاً، اجلب عقاره فقط
+    if (!isSuperAdmin) {
+       const ownerPropId = localStorage.getItem('ownerPropId');
+       // نستخدم get() على الـ document مباشرة أو نبحث بـ id
+       const doc = await db.collection("properties").doc(ownerPropId).get();
+       if (!doc.exists) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">عقارك غير موجود أو تم حذفه</td></tr>`;
+          return;
+       }
+       renderPropertiesTable([doc]); // دالة مساعدة بنيناها أسفله
+       return;
+    }
 
+    const snapshot = await query.get();
     if (snapshot.empty) {
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">لا توجد عقارات مضافة بعد</td></tr>`;
       return;
     }
+    
+    renderPropertiesTable(snapshot.docs);
 
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:#e11d48;">حدث خطأ أثناء تحميل العقارات</td></tr>`;
+  }
+}
+
+function renderPropertiesTable(docsArray) {
+    const tbody = document.getElementById("properties-tbody");
     tbody.innerHTML = "";
 
-    snapshot.forEach(doc => {
+    docsArray.forEach(doc => {
       const p = doc.data();
       const isVisible = p.visible !== false;
       const hasLocation = p.lat && p.lng;
@@ -133,7 +162,6 @@ async function loadProperties() {
         : `<span title="لا يوجد موقع" style="color:var(--text-muted); font-size:1rem;"><i class="ph ph-map-pin-slash"></i> بدون خريطة</span>`;
 
       const tr = document.createElement("tr");
-      // وضعنا الـ id الخاص بالعقار في الداتا ليسهل فلترته بواسطة RBAC
       tr.setAttribute('data-prop-id', doc.id); 
       tr.innerHTML = `
         <td>
@@ -150,7 +178,7 @@ async function loadProperties() {
         <td class="font-bold" style="color:var(--primary); font-size: 1.1rem;">${Number(p.price || 0).toLocaleString()} DZD</td>
         <td>
           <label class="switch">
-            <input type="checkbox" ${isVisible ? "checked" : ""} onchange="toggleVisibility('${doc.id}', this.checked)">
+            <input type="checkbox" ${isVisible ? "checked" : ""} onchange="toggleVisibility('${doc.id}', this.checked, this)">
             <span class="slider round"></span>
           </label>
         </td>
@@ -167,22 +195,22 @@ async function loadProperties() {
       `;
       tbody.appendChild(tr);
     });
-
-  } catch (err) {
-    console.error(err);
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:#e11d48;">حدث خطأ أثناء تحميل العقارات</td></tr>`;
-  }
 }
 
 // =========================================
 //   Toggle Property Visibility
 // =========================================
-async function toggleVisibility(docId, isVisible) {
+// 🔴 تم التصحيح: إضافة معالجة الفشل لإرجاع حالة الزر، وتمرير الـ element
+async function toggleVisibility(docId, isVisible, checkboxEl) {
   try {
+    checkboxEl.disabled = true; // تعطيل الزر لتجنب التكرار
     await db.collection("properties").doc(docId).update({ visible: isVisible });
   } catch (err) {
     console.error("Toggle error:", err);
     alert("حدث خطأ أثناء تحديث حالة الظهور");
+    checkboxEl.checked = !isVisible; // إرجاع الزر لحالته القديمة في حال الفشل
+  } finally {
+    checkboxEl.disabled = false;
   }
 }
 
@@ -378,7 +406,7 @@ if (editModalEl) {
 //   Delete Property
 // =========================================
 async function deleteProperty(docId) {
-  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\nسيتم مسحه من المنصة ولا يمكن التراجع عن هذا الإجراء.")) return;
+  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\\nسيتم مسحه من المنصة ولا يمكن التراجع عن هذا الإجراء.")) return;
 
   try {
     await db.collection("properties").doc(docId).delete();
@@ -398,9 +426,17 @@ async function loadBookings() {
   container.innerHTML = `<p style="text-align:center;padding:60px;color:var(--text-muted)"><i class="ph ph-circle-notch ph-spin" style="font-size: 2.5rem; color:var(--primary); margin-bottom:16px; display:block;"></i>جارٍ جلب الحجوزات...</p>`;
 
   try {
-    const snap = await db.collection('bookings')
-      .orderBy('createdAt', 'desc')
-      .get();
+    let query = db.collection('bookings');
+    
+    // 🔴 التصحيح: جلب الحجوزات الخاصة بصاحب العقار فقط
+    if (!isSuperAdmin) {
+       const ownerPropId = localStorage.getItem('ownerPropId');
+       query = query.where('propertyId', '==', ownerPropId);
+    } else {
+       query = query.orderBy('createdAt', 'desc');
+    }
+
+    const snap = await query.get();
 
     if (snap.empty) {
       container.innerHTML = `
@@ -410,6 +446,13 @@ async function loadBookings() {
         </div>`;
       return;
     }
+
+    // إذا كان الاستعلام لا يستخدم orderBy، نرتبها في الكلاينت هنا لتجنب الحاجة إلى index في الفايربيز
+    const docsArray = snap.docs.sort((a,b) => {
+        const da = a.data().createdAt ? (a.data().createdAt.toDate ? a.data().createdAt.toDate() : new Date(a.data().createdAt)) : new Date(0);
+        const dbTime = b.data().createdAt ? (b.data().createdAt.toDate ? b.data().createdAt.toDate() : new Date(b.data().createdAt)) : new Date(0);
+        return dbTime - da;
+    });
 
     const statusLabel = { pending: 'قيد الانتظار', confirmed: 'تم التأكيد', cancelled: 'تم الإلغاء' };
     const statusColor = { pending: '#d97706', confirmed: '#059669', cancelled: '#e11d48' };
@@ -424,7 +467,7 @@ async function loadBookings() {
 
     let html = `<div class="bookings-grid">`;
 
-    snap.docs.forEach(doc => {
+    docsArray.forEach(doc => {
       const b = doc.data();
 
       // معالجة التواريخ
@@ -589,6 +632,7 @@ async function loadBookings() {
   }
 }
 
+// 🔴 تم التصحيح: إضافة async/await بالشكل الصحيح والتعامل مع تحديث الـ DOM
 window.updateBookingStatus = async function(docId, newStatus) {
   const isConfirm = newStatus === 'confirmed';
   const labelText = isConfirm ? 'تأكيد وقبول' : 'رفض وإلغاء';
@@ -599,6 +643,7 @@ window.updateBookingStatus = async function(docId, newStatus) {
   if (!confirm(confirmMsg)) return;
 
   try {
+    // استخدمنا await للتأكد من إنهاء العملية في Firestore
     await db.collection('bookings').doc(docId).update({ status: newStatus });
     alert(`✅ تم ${labelText} الحجز بنجاح.`);
     loadBookings(); // تحديث العرض فوراً
