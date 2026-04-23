@@ -10,7 +10,7 @@
   --surface-color: #ffffff;
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --text-muted-color: #64748b; /* alias للاستخدام في booking */
+  --text-muted-color: #64748b;
   --border-color: #e2e8f0;
 
   --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
@@ -30,6 +30,7 @@
   --text-muted-color: #94a3b8;
   --border-color: #334155;
   --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.4);
+  --shadow-hover: 0 20px 40px -10px rgba(67, 90, 191, 0.25);
 }
 
 /* =========================================
@@ -58,6 +59,8 @@ html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
 
 img { display: block; max-width: 100%; }
 
+a { color: inherit; }
+
 .font-regular { font-weight: 400; }
 .font-medium  { font-weight: 500; }
 .font-bold    { font-weight: 700; }
@@ -68,6 +71,7 @@ img { display: block; max-width: 100%; }
 .text-center  { text-align: center; }
 .text-success { color: #059669; }
 .text-uppercase { text-transform: uppercase; }
+.d-none { display: none !important; }
 
 .text-primary {
   color: var(--primary);
@@ -76,27 +80,30 @@ img { display: block; max-width: 100%; }
 .text-primary:hover { text-decoration: underline; }
 
 /* Spacing utilities */
-.mt-1 { margin-top: 4px; }
-.mt-2 { margin-top: 8px; }
-.mt-3 { margin-top: 16px; }
-.mt-4 { margin-top: 24px; }
-.mb-1 { margin-bottom: 4px; }
-.mb-2 { margin-bottom: 8px; }
-.mb-3 { margin-bottom: 16px; }
-.mb-4 { margin-bottom: 24px; }
-.pt-4 { padding-top: 24px; }
-.p-3  { padding: 16px; }
-.p-4  { padding: 24px; }
+.mt-1  { margin-top: 4px; }
+.mt-2  { margin-top: 8px; }
+.mt-3  { margin-top: 16px; }
+.mt-4  { margin-top: 24px; }
+.mt-16 { margin-top: 16px; }
+.mb-1  { margin-bottom: 4px; }
+.mb-2  { margin-bottom: 8px; }
+.mb-3  { margin-bottom: 16px; }
+.mb-4  { margin-bottom: 24px; }
+.pt-4  { padding-top: 24px; }
+.p-3   { padding: 16px; }
+.p-4   { padding: 24px; }
 
-/* Auth button states (from script.js) */
+/* Auth button states */
 .auth-btn-logged { background-color: var(--accent) !important; }
 .auth-btn-guest  { background-color: var(--primary) !important; }
 
-/* Spin animation — used in loading spinners */
+/* Spin animation */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+.spin { animation: spin 0.8s linear infinite; }
 
 .container {
   max-width: 1280px;
@@ -295,6 +302,13 @@ img { display: block; max-width: 100%; }
   line-height: 1.6;
 }
 
+.search-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
 .search-bar {
   display: inline-flex;
   align-items: center;
@@ -305,6 +319,12 @@ img { display: block; max-width: 100%; }
   border: 1px solid var(--border-color);
   max-width: 800px;
   width: 100%;
+  transition: var(--transition);
+}
+
+.search-bar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67, 90, 191, 0.1), var(--shadow-soft);
 }
 
 html[dir="rtl"] .search-bar {
@@ -318,6 +338,7 @@ html[dir="rtl"] .search-bar {
   flex: 1;
   padding: 4px 16px;
   min-width: 0;
+  position: relative;
 }
 
 .search-field label {
@@ -371,6 +392,119 @@ html[dir="rtl"] .search-bar {
 }
 
 /* =========================================
+   --- Smart Search Dropdown ---
+   ========================================= */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hover);
+  z-index: 200;
+  max-height: 340px;
+  overflow-y: auto;
+  display: none;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.search-dropdown.active {
+  display: block;
+  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-dropdown-section-title {
+  padding: 8px 16px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.search-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s;
+}
+
+.search-item:hover,
+.search-item.selected {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.search-icon-box {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: var(--bg-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.search-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.search-item-title {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-item-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-item-price {
+  margin-inline-start: auto;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.no-results {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.no-results i {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.4;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
    --- Categories ---
    ========================================= */
 .categories {
@@ -398,6 +532,9 @@ html[dir="rtl"] .search-bar {
   padding: 4px 8px;
   border-radius: var(--radius-xl);
   min-width: 60px;
+  border: none;
+  background: none;
+  font-family: inherit;
 }
 
 .category-item:hover,
@@ -425,6 +562,21 @@ html[dir="rtl"] .search-bar {
   grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 24px;
   padding-bottom: 60px;
+}
+
+/* Empty / Loading State */
+.listings-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.listings-empty i {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.35;
+  display: block;
 }
 
 .card {
@@ -500,6 +652,9 @@ html[dir="rtl"] .search-bar {
 .fav-btn:hover { background: white; transform: scale(1.1); }
 .fav-btn.active { color: #e11d48; }
 
+.dark .fav-btn { background: rgba(15, 23, 42, 0.75); color: var(--text-main); }
+.dark .fav-btn:hover { background: var(--surface-color); }
+
 .card-content { padding: 16px 18px 18px; }
 
 .card-header {
@@ -528,6 +683,9 @@ html[dir="rtl"] .search-bar {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .card-price {
@@ -677,6 +835,9 @@ html[dir="rtl"] .search-bar {
   display: block;
 }
 
+.dark .auth-message.error   { background-color: rgba(225,29,72,0.12); border-color: rgba(225,29,72,0.3); }
+.dark .auth-message.success { background-color: rgba(5,150,105,0.12);  border-color: rgba(5,150,105,0.3); }
+
 .input-group { margin-bottom: 18px; }
 
 .input-group label {
@@ -806,7 +967,7 @@ html[dir="rtl"] .search-bar {
 
 .primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 
-/* Ghost button — استخدم في booking.html */
+/* Ghost button */
 .ghost-btn {
   display: inline-flex;
   align-items: center;
@@ -1176,6 +1337,7 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   background-color: rgba(255,255,255,0.5);
   cursor: pointer;
   transition: var(--transition);
+  border: none;
 }
 
 .slider-dot.active {
@@ -1550,9 +1712,11 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
 
 .edit-btn   { background-color: #f59e0b; }
 .delete-btn { background-color: #e11d48; }
+.view-btn   { background-color: var(--primary); }
 
 .edit-btn:hover   { background-color: #d97706; transform: scale(1.08); }
 .delete-btn:hover { background-color: #be123c; transform: scale(1.08); }
+.view-btn:hover   { background-color: var(--primary-hover); transform: scale(1.08); }
 
 /* =========================================
    --- Toggle Switch ---
@@ -1606,10 +1770,8 @@ input:checked + .slider:before { transform: translateX(21px); }
   white-space: nowrap;
 }
 
-.status-badge.active { background-color: rgba(16,185,129,0.1); color: #059669; }
-.status-badge.hidden { background-color: rgba(100,116,139,0.1); color: var(--text-muted); }
-
-/* Pending/confirmed statuses for bookings */
+.status-badge.active    { background-color: rgba(16,185,129,0.1);  color: #059669; }
+.status-badge.hidden    { background-color: rgba(100,116,139,0.1); color: var(--text-muted); }
 .status-badge.pending   { background-color: rgba(245,158,11,0.12); color: #d97706; }
 .status-badge.confirmed { background-color: rgba(16,185,129,0.1);  color: #059669; }
 .status-badge.cancelled { background-color: rgba(225,29,72,0.1);   color: #e11d48; }
@@ -1629,7 +1791,9 @@ input:checked + .slider:before { transform: translateX(21px); }
 .nav-item:focus-visible,
 .close-modal-btn:focus-visible,
 .close-lightbox:focus-visible,
-.back-btn:focus-visible {
+.back-btn:focus-visible,
+.category-item:focus-visible,
+.profile-menu:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
@@ -1732,6 +1896,10 @@ input:checked + .slider:before { transform: translateX(21px); }
     padding: 13px;
   }
 
+  .search-dropdown {
+    border-radius: var(--radius-xl);
+  }
+
   .categories {
     gap: 16px;
     padding: 20px 16px;
@@ -1814,7 +1982,6 @@ input:checked + .slider:before { transform: translateX(21px); }
   .navbar { padding: 10px 12px; }
   .logo-img { height: 38px; max-width: 120px; }
 
-  /* إخفاء النص وإبقاء الحجم الصحيح للزر */
   .lang-btn {
     padding: 0;
     width: 44px;
