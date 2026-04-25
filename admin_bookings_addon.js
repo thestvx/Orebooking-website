@@ -1,8 +1,10 @@
 // =========================================
 //   Admin — Bookings Tab (Addon)
-//   FIX: RBAC support + owner filtering +
-//        updatedAt on status update +
-//        index error handling
+//   FIX v2:
+//     - RBAC: مطابقة ownerPropId مع propertyId
+//     - Grid أفقي يملأ الشاشة (3 أعمدة)
+//     - updatedAt + تعطيل أزرار
+//     - رسالة Firestore Index واضحة
 // =========================================
 
 const BOOKING_STATUS_META = {
@@ -135,14 +137,9 @@ function formatMoney(value) {
 
 function translateAddon(key) {
   const dic = {
-    wifi:            'واي فاي',
-    parking:         'موقف سيارات',
-    airportTransfer: 'نقل مطار',
-    spa:             'سبا',
-    lateCheckout:    'مغادرة متأخرة',
-    extraBed:        'سرير إضافي',
-    events:          'فعاليات',
-    restaurant:      'المطعم'
+    wifi: 'واي فاي', parking: 'موقف سيارات', airportTransfer: 'نقل مطار',
+    spa: 'سبا', lateCheckout: 'مغادرة متأخرة', extraBed: 'سرير إضافي',
+    events: 'فعاليات', restaurant: 'المطعم'
   };
   return dic[key] || normalizeText(key) || 'غير محدد';
 }
@@ -159,10 +156,10 @@ function translateBed(bed) {
 
 function getStatusMeta(status) {
   return BOOKING_STATUS_META[status] || {
-    label:     normalizeText(status) || 'غير معروف',
+    label: normalizeText(status) || 'غير معروف',
     className: 'pending',
-    bg:        '#e2e8f0',
-    color:     '#475569'
+    bg: '#e2e8f0',
+    color: '#475569'
   };
 }
 
@@ -180,13 +177,12 @@ function buildOccupancyHtml(booking) {
   if (rooms > 0) {
     return `
       <div style="display:flex; flex-direction:column; line-height:1.4;">
-        <span class="font-medium" style="color:var(--text-main); font-weight:700;">${rooms} غرف · ${bedLabel}</span>
+        <span style="color:var(--text-main); font-weight:700;">${rooms} غرف · ${bedLabel}</span>
         <span style="font-size:0.75rem; color:var(--text-muted);">
           ${adults} بالغين${children > 0 ? ` + ${children} أطفال` : ''}
         </span>
       </div>`;
   }
-
   return `<span>${guests} ضيف</span>`;
 }
 
@@ -274,223 +270,262 @@ function buildArrivalHtml(booking) {
 // =========================================
 
 function renderBookingCard(doc) {
-  const booking      = doc.data() || {};
-  const statusKey    = normalizeText(booking.status) || 'pending';
-  const status       = getStatusMeta(statusKey);
-  const checkIn      = formatDateField(booking.checkInDate  || booking.checkIn);
-  const checkOut     = formatDateField(booking.checkOutDate || booking.checkOut);
-  const createdAt    = formatDateTimeField(booking.createdAt);
-  const docIdShort   = safeText(String(doc.id).slice(0, 8).toUpperCase());
-  const payment      = buildPaymentHtml(booking);
-  const guestName    = safeText(booking.guestName);
+  const booking       = doc.data() || {};
+  const statusKey     = normalizeText(booking.status) || 'pending';
+  const status        = getStatusMeta(statusKey);
+  const checkIn       = formatDateField(booking.checkInDate  || booking.checkIn);
+  const checkOut      = formatDateField(booking.checkOutDate || booking.checkOut);
+  const createdAt     = formatDateTimeField(booking.createdAt);
+  const docIdShort    = safeText(String(doc.id).slice(0, 8).toUpperCase());
+  const payment       = buildPaymentHtml(booking);
+  const guestName     = safeText(booking.guestName);
   const propertyTitle = safeText(booking.propertyTitle);
-  const guestPhone   = safeText(booking.guestPhone);
-  const guestEmail   = safeText(booking.guestEmail);
-  const totalPrice   = formatMoney(booking.totalPrice);
-  const nights       = safeNumber(booking.nights, 0);
+  const guestPhone    = safeText(booking.guestPhone);
+  const guestEmail    = safeText(booking.guestEmail);
+  const totalPrice    = formatMoney(booking.totalPrice);
+  const nights        = safeNumber(booking.nights, 0);
 
   return `
     <div class="booking-card"
-         id="bcard-${encodeURIComponent(doc.id)}"
-         style="background:var(--surface-color); border:1px solid var(--border-color);
-                border-radius:16px; padding:20px; display:flex; flex-direction:column;
-                gap:12px; box-shadow:var(--shadow-soft);">
+         id="bcard-${encodeURIComponent(doc.id)}">
 
-      <!-- هيدر الكارد -->
+      <!-- ── هيدر الكارد ── -->
       <div style="display:flex; justify-content:space-between; align-items:flex-start;
                   border-bottom:1px solid var(--border-color); padding-bottom:14px; gap:12px;">
-        <div style="min-width:0;">
-          <div style="font-size:1.15rem; font-weight:700; color:var(--text-main);
-                      margin-bottom:4px; word-break:break-word;">
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:1.05rem; font-weight:700; color:var(--text-main);
+                      margin-bottom:4px; word-break:break-word; line-height:1.3;">
             ${guestName}
           </div>
           <div style="margin-bottom:6px;">${payment.badge}</div>
-          <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;
-                      background:var(--bg-color); padding:3px 8px; border-radius:6px; display:inline-block;">
-            رقم: #${docIdShort}
+          <div style="font-size:0.72rem; color:var(--text-muted); font-family:monospace;
+                      background:var(--bg-color); padding:2px 7px; border-radius:5px;
+                      display:inline-block;">
+            #${docIdShort}
           </div>
         </div>
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0;">
           <span class="status-badge ${status.className}"
-                style="font-size:0.75rem; font-weight:700; padding:6px 12px; border-radius:8px;
-                       background:${status.bg}; color:${status.color}; border:1px solid ${status.color}40;">
+                style="background:${status.bg}; color:${status.color}; border:1px solid ${status.color}40;">
             ${escapeHtml(status.label)}
           </span>
-          <span style="font-size:0.7rem; color:var(--text-muted);">
+          <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">
             <i class="ph ph-clock"></i> ${createdAt}
           </span>
         </div>
       </div>
 
-      <!-- تفاصيل الحجز -->
-      <div style="display:flex; flex-direction:column; gap:12px;">
+      <!-- ── تفاصيل الحجز ── -->
+      <div style="display:flex; flex-direction:column; gap:10px; flex:1;">
 
-        <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-main);">
-          <i class="ph-fill ph-buildings" style="color:var(--text-muted); font-size:1.2rem;"></i>
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem;">
+          <i class="ph-fill ph-buildings" style="color:var(--primary); font-size:1.1rem; flex-shrink:0;"></i>
           <span style="font-weight:700; color:var(--primary); word-break:break-word;">${propertyTitle}</span>
         </div>
 
-        <div style="display:flex; align-items:flex-start; gap:10px; font-size:0.9rem; color:var(--text-main);">
-          <i class="ph-fill ph-calendar-check" style="color:var(--text-muted); font-size:1.2rem; margin-top:2px;"></i>
-          <div style="display:flex; flex-direction:column; gap:3px;">
-            <span style="font-weight:600;">
-              ${checkIn}
-              <i class="ph ph-arrow-left" style="font-size:0.7rem; color:var(--text-muted); margin:0 4px;"></i>
-              ${checkOut}
-            </span>
-            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;
-                         background:#f1f5f9; padding:2px 8px; border-radius:4px;
-                         display:inline-block; width:fit-content;">
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-main);">
+          <i class="ph-fill ph-calendar-check" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-weight:600;">${checkIn} ← ${checkOut}</span>
+            <span style="font-size:0.72rem; color:var(--text-muted); background:#f1f5f9;
+                         padding:1px 7px; border-radius:4px; width:fit-content;">
               ${nights} ليالٍ
             </span>
           </div>
         </div>
 
-        <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-main);">
-          <i class="ph-fill ph-users" style="color:var(--text-muted); font-size:1.2rem;"></i>
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-main);">
+          <i class="ph-fill ph-users" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
           ${buildOccupancyHtml(booking)}
         </div>
 
-        <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem;
-                    color:var(--text-main); min-width:0;">
-          <i class="ph-fill ph-phone" style="color:var(--text-muted); font-size:1.2rem;"></i>
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; min-width:0;">
+          <i class="ph-fill ph-phone" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
           <span dir="ltr" style="font-family:monospace; font-weight:600; overflow-wrap:anywhere;">
             ${guestPhone}
           </span>
         </div>
 
-        <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem;
-                    color:var(--text-main); min-width:0;">
-          <i class="ph-fill ph-envelope" style="color:var(--text-muted); font-size:1.2rem;"></i>
-          <span dir="ltr" style="overflow-wrap:anywhere;">${guestEmail}</span>
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; min-width:0;">
+          <i class="ph-fill ph-envelope" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
+          <span dir="ltr" style="overflow-wrap:anywhere; color:var(--text-muted);">${guestEmail}</span>
         </div>
 
         ${buildArrivalHtml(booking)}
         ${buildAddonsHtml(booking)}
         ${buildNotesHtml(booking)}
 
-        <!-- السعر وطريقة الدفع -->
+        <!-- ── الإجمالي وطريقة الدفع ── -->
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;
-                    margin-top:8px; padding-top:14px; border-top:1px dashed var(--border-color); flex-wrap:wrap;">
+                    margin-top:auto; padding-top:12px;
+                    border-top:1px dashed var(--border-color); flex-wrap:wrap;">
           <div>${payment.receipt}</div>
-          <div style="text-align:left; flex:1; min-width:140px;">
-            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">الإجمالي</div>
-            <span style="font-size:1.25rem; font-weight:800; color:var(--primary);">${totalPrice} DZD</span>
+          <div style="text-align:end;">
+            <div style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+              الإجمالي
+            </div>
+            <span style="font-size:1.2rem; font-weight:800; color:var(--primary);">${totalPrice} DZD</span>
           </div>
         </div>
       </div>
 
-      <!-- أزرار القبول والرفض -->
+      <!-- ── أزرار القبول والرفض (pending فقط) ── -->
       ${statusKey === 'pending' ? `
-        <div class="booking-actions-row"
-             style="display:flex; gap:10px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border-color);">
+        <div class="booking-actions-row">
           <button type="button"
                   class="btn-approve"
                   data-booking-action="confirmed"
-                  data-doc-id="${escapeHtml(doc.id)}"
-                  style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
-                         padding:10px; border-radius:10px; font-weight:700; font-size:0.9rem;
-                         cursor:pointer; background:#ecfdf5; color:#059669;
-                         border:1px solid #10b981; font-family:inherit; transition:0.2s;"
-                  onmouseover="this.style.background='#10b981'; this.style.color='white';"
-                  onmouseout="this.style.background='#ecfdf5'; this.style.color='#059669';">
-            <i class="ph-fill ph-check-circle" style="font-size:1.1rem;"></i> قبول الحجز
+                  data-doc-id="${escapeHtml(doc.id)}">
+            <i class="ph-fill ph-check-circle"></i> قبول الحجز
           </button>
           <button type="button"
                   class="btn-reject"
                   data-booking-action="cancelled"
-                  data-doc-id="${escapeHtml(doc.id)}"
-                  style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
-                         padding:10px; border-radius:10px; font-weight:700; font-size:0.9rem;
-                         cursor:pointer; background:#fef2f2; color:#e11d48;
-                         border:1px solid #ef4444; font-family:inherit; transition:0.2s;"
-                  onmouseover="this.style.background='#ef4444'; this.style.color='white';"
-                  onmouseout="this.style.background='#fef2f2'; this.style.color='#e11d48';">
-            <i class="ph-fill ph-x-circle" style="font-size:1.1rem;"></i> رفض الحجز
+                  data-doc-id="${escapeHtml(doc.id)}">
+            <i class="ph-fill ph-x-circle"></i> رفض الحجز
           </button>
         </div>` : ''}
     </div>`;
 }
 
 // =========================================
-//   Load Bookings
-//   FIX: دعم RBAC (owner vs super admin)
-//        + client-side sort fallback
-//        + Firestore index error message
+//   FIX: جلب ownerPropId بطريقة موثوقة
+//   يدعم: localStorage / window.ADMIN_CONFIG
+//   / dataset على body
+// =========================================
+function getOwnerPropId() {
+  // 1. من window.ADMIN_CONFIG إذا موجود
+  if (window.ADMIN_CONFIG && window.ADMIN_CONFIG.ownerPropId) {
+    return normalizeText(window.ADMIN_CONFIG.ownerPropId);
+  }
+
+  // 2. من localStorage
+  const fromStorage = normalizeText(localStorage.getItem('ownerPropId'));
+  if (fromStorage) return fromStorage;
+
+  // 3. من data attribute على الـ body
+  const fromBody = normalizeText(document.body.dataset.ownerPropId);
+  if (fromBody) return fromBody;
+
+  return ''; // أدمن عام
+}
+
+// =========================================
+//   FIX: بناء الـ Query حسب الصلاحية
+//   المالك: يفلتر بـ propertyId فقط (بدون
+//   orderBy لتجنب composite index)
+//   الأدمن: يجلب الكل مع orderBy
+// =========================================
+async function fetchBookingDocs(ownerPropId) {
+  if (ownerPropId) {
+    // ── مالك عقار: جلب حجوزاته فقط ──────
+    // FIX: نجرب أولاً propertyId، وإذا ما رجع نتائج نجرب propId و propertyDocId
+    // (لأن بعض الكود يحفظ الـ ID بأسماء مختلفة)
+    const fields = ['propertyId', 'propId', 'propertyDocId'];
+    let docs = [];
+
+    for (const field of fields) {
+      try {
+        const snap = await db.collection('bookings')
+          .where(field, '==', ownerPropId)
+          .get();
+        if (!snap.empty) {
+          docs = snap.docs;
+          console.info(`[loadBookings] Matched on field: "${field}" → ${docs.length} booking(s)`);
+          break;
+        }
+      } catch (fieldErr) {
+        // هذا الحقل غير مفهرس — تجاهل وجرب التالي
+        console.warn(`[loadBookings] Field "${field}" error:`, fieldErr.message);
+      }
+    }
+
+    // إذا كل الحقول فشلت → fallback: جلب الكل وفلترة على الكلاينت
+    if (!docs.length) {
+      console.warn('[loadBookings] No indexed field matched. Falling back to client-side filter.');
+      const allSnap = await db.collection('bookings').get();
+      docs = allSnap.docs.filter(d => {
+        const data = d.data() || {};
+        return fields.some(f => normalizeText(data[f]) === ownerPropId);
+      });
+    }
+
+    // ترتيب الكلاينت تنازلياً
+    return docs.sort((a, b) =>
+      toTimestampMs((b.data() || {}).createdAt) -
+      toTimestampMs((a.data() || {}).createdAt)
+    );
+
+  } else {
+    // ── أدمن عام: جلب الكل ───────────────
+    try {
+      const snap = await db.collection('bookings').orderBy('createdAt', 'desc').get();
+      return snap.docs;
+    } catch (orderErr) {
+      console.warn('[loadBookings] orderBy failed, client-side sort:', orderErr.message);
+      const fallback = await db.collection('bookings').get();
+      return fallback.docs.sort((a, b) =>
+        toTimestampMs((b.data() || {}).createdAt) -
+        toTimestampMs((a.data() || {}).createdAt)
+      );
+    }
+  }
+}
+
+// =========================================
+//   Load Bookings — الدالة الرئيسية
 // =========================================
 async function loadBookings() {
   const container = document.getElementById('bookings-container');
   if (!container) return;
 
   container.innerHTML = `
-    <p style="text-align:center; padding:60px; color:var(--text-muted);">
+    <div style="text-align:center; padding:60px; color:var(--text-muted);">
       <i class="ph ph-circle-notch ph-spin"
          style="font-size:2.5rem; color:var(--primary); margin-bottom:16px; display:block;"></i>
       جارٍ جلب الحجوزات...
-    </p>`;
+    </div>`;
 
   try {
-    let docs = [];
-
-    // FIX: تحديد ما إذا كان المستخدم مالكاً أم أدمن عام
-    const ownerPropId  = localStorage.getItem('ownerPropId');
+    const ownerPropId  = getOwnerPropId();
     const isSuperAdmin = !ownerPropId;
 
-    if (!isSuperAdmin) {
-      // =============================================
-      // مالك عقار: جلب حجوزاته فقط بدون orderBy
-      // (لتفادي الحاجة لـ Firestore composite index)
-      // =============================================
-      const snap = await db.collection('bookings')
-        .where('propertyId', '==', ownerPropId)
-        .get();
+    console.info(`[loadBookings] Role: ${isSuperAdmin ? 'Super Admin' : `Owner (${ownerPropId})`}`);
 
-      // ترتيب الكلاينت بعد الجلب
-      docs = snap.docs.sort((a, b) => {
-        return toTimestampMs((b.data() || {}).createdAt) -
-               toTimestampMs((a.data() || {}).createdAt);
-      });
-
-    } else {
-      // =============================================
-      // أدمن عام: جلب كل الحجوزات مع orderBy
-      // مع fallback للكلاينت إذا لم يوجد index
-      // =============================================
-      try {
-        const snap = await db.collection('bookings').orderBy('createdAt', 'desc').get();
-        docs = snap.docs;
-      } catch (orderErr) {
-        console.warn('[loadBookings] orderBy failed, using client-side sort:', orderErr.message);
-        const fallbackSnap = await db.collection('bookings').get();
-        docs = fallbackSnap.docs.sort((a, b) => {
-          return toTimestampMs((b.data() || {}).createdAt) -
-                 toTimestampMs((a.data() || {}).createdAt);
-        });
-      }
-    }
+    const docs = await fetchBookingDocs(ownerPropId);
 
     if (!docs.length) {
       container.innerHTML = `
         <div style="text-align:center; padding:80px; color:var(--text-muted);">
-          <i class="ph ph-calendar-blank" style="font-size:4rem; margin-bottom:16px; opacity:0.3; display:block;"></i>
-          <p style="font-size:1.1rem;">
-            ${isSuperAdmin ? 'لا توجد حجوزات مسجلة حتى الآن.' : 'لا توجد حجوزات لعقارك حتى الآن.'}
+          <i class="ph ph-calendar-blank"
+             style="font-size:4rem; margin-bottom:16px; opacity:0.3; display:block;"></i>
+          <p style="font-size:1.05rem;">
+            ${isSuperAdmin
+              ? 'لا توجد حجوزات مسجلة حتى الآن.'
+              : 'لا توجد حجوزات لعقارك حتى الآن.'}
           </p>
+          ${!isSuperAdmin ? `
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px; font-family:monospace;">
+              Property ID: ${escapeHtml(ownerPropId)}
+            </p>` : ''}
         </div>`;
       return;
     }
 
-    let html = `
-      <div class="bookings-grid"
-           style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));
-                  gap:20px; width:100%;">`;
+    // FIX: grid أفقي يملأ الشاشة — 3 أعمدة على الديسكتوب
+    // minmax(0, 1fr) بدل minmax(320px, 1fr) لمنع التراص العمودي
+    container.innerHTML = `
+      <div style="
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+        width: 100%;
+        align-items: start;
+      ">
+        ${docs.map(doc => renderBookingCard(doc)).join('')}
+      </div>`;
 
-    docs.forEach(doc => { html += renderBookingCard(doc); });
-    html += `</div>`;
-
-    container.innerHTML = html;
-
-    // تفويض الأحداث لأزرار القبول والرفض
+    // تفويض الأحداث
     container.onclick = event => {
       const button = event.target.closest('[data-booking-action][data-doc-id]');
       if (!button || !container.contains(button)) return;
@@ -498,29 +533,29 @@ async function loadBookings() {
     };
 
   } catch (err) {
-    console.error('[loadBookings] Error:', err);
+    console.error('[loadBookings] Fatal:', err);
 
-    // FIX: رسالة مخصصة لخطأ Firestore Index
-    const isIndexError = err.code === 'failed-precondition' ||
+    const isIndexError =
+      err.code === 'failed-precondition' ||
       (err.message && err.message.toLowerCase().includes('index'));
 
     if (isIndexError) {
       container.innerHTML = `
-        <div style="text-align:center; padding:40px; color:#d97706; background:#fef3c7;
-                    border-radius:12px; border:1px solid #fde68a;">
+        <div style="padding:32px; color:#d97706; background:#fef3c7;
+                    border-radius:14px; border:1px solid #fde68a; text-align:center;">
           <i class="ph ph-warning" style="font-size:2.5rem; display:block; margin-bottom:12px;"></i>
           <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
             يحتاج هذا الاستعلام إلى إنشاء Index في Firestore
           </div>
-          <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
+          <p style="font-size:0.85rem; color:var(--text-muted);">
             افتح الـ Console (F12) وانقر على الرابط الأزرق لإنشاء الـ Index تلقائياً،
             ثم أعد تحميل الصفحة.
           </p>
         </div>`;
     } else {
       container.innerHTML = `
-        <div style="text-align:center; padding:40px; color:#e11d48; background:#ffe4e6;
-                    border-radius:12px; font-weight:bold;">
+        <div style="padding:32px; color:#e11d48; background:#ffe4e6;
+                    border-radius:14px; font-weight:bold; text-align:center;">
           خطأ في تحميل الحجوزات: ${safeText(err?.message || 'Unknown error')}
         </div>`;
     }
@@ -529,8 +564,7 @@ async function loadBookings() {
 
 // =========================================
 //   Update Booking Status
-//   FIX: إضافة updatedAt + تعطيل الأزرار
-//        أثناء المعالجة لمنع الضغط المزدوج
+//   FIX: updatedAt + تعطيل الأزرار
 // =========================================
 window.updateBookingStatus = async function updateBookingStatus(docId, newStatus) {
   const allowedStatuses = ['pending', 'confirmed', 'cancelled'];
@@ -546,11 +580,11 @@ window.updateBookingStatus = async function updateBookingStatus(docId, newStatus
 
   BOOKING_STATUS_LOCKS.add(docId);
 
-  // FIX: تعطيل الأزرار المرتبطة بهذا الحجز أثناء المعالجة
-  const cardEl = document.getElementById(`bcard-${encodeURIComponent(docId)}`);
+  // تعطيل الأزرار أثناء المعالجة
+  const cardEl     = document.getElementById(`bcard-${encodeURIComponent(docId)}`);
   const actionBtns = cardEl ? cardEl.querySelectorAll('[data-booking-action]') : [];
   actionBtns.forEach(btn => {
-    btn.disabled = true;
+    btn.disabled      = true;
     btn.style.opacity = '0.5';
     btn.style.cursor  = 'not-allowed';
   });
@@ -558,17 +592,16 @@ window.updateBookingStatus = async function updateBookingStatus(docId, newStatus
   try {
     await db.collection('bookings').doc(docId).update({
       status:    newStatus,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp() // FIX: تتبع وقت التحديث
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     alert(`✅ تم ${isConfirm ? 'قبول' : 'رفض'} الحجز بنجاح.`);
     await loadBookings();
   } catch (err) {
-    console.error('[updateBookingStatus] Error:', err);
+    console.error('[updateBookingStatus]', err);
     alert('حدث خطأ أثناء التحديث: ' + (err?.message || 'Unknown error'));
-
-    // إعادة تفعيل الأزرار في حال الفشل
+    // إعادة تفعيل الأزرار عند الفشل
     actionBtns.forEach(btn => {
-      btn.disabled = false;
+      btn.disabled      = false;
       btn.style.opacity = '1';
       btn.style.cursor  = 'pointer';
     });
