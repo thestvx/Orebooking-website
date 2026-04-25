@@ -88,26 +88,21 @@ const bookingState = {
   property:        null,
   checkIn:         null,
   checkOut:        null,
-  // Room & Occupancy
   rooms:           1,
   adults:          2,
   children:        0,
   childAges:       [],
   beds:            1,
-  // Pricing
   nights:          0,
   totalPrice:      0,
   basePrice:       0,
   roomPrice:       0,
   fee:             0,
   addonsTotal:     0,
-  // Limits
   maxGuests:       10,
   maxRooms:        5,
   minNights:       1,
-  // Availability
   bookedDates:     [],
-  // Add-ons
   addons: {
     restaurant:      false,
     restaurantPlan:  'breakfast',
@@ -119,7 +114,6 @@ const bookingState = {
     extraBed:        false,
     events:          false,
   },
-  // Misc
   bedConfig:       'double',
   purposeOfVisit:  'leisure',
   lang:            localStorage.getItem('ore_lang') || 'en',
@@ -128,7 +122,7 @@ const bookingState = {
   specialRequests: ''
 };
 
-// ─── Add-on Prices (per night/person/room) ─
+// ─── Add-on Prices ──────────────────────────
 const ADDON_PRICES = {
   restaurant_breakfast: 800,
   restaurant_halfboard: 1800,
@@ -155,7 +149,6 @@ const els = {
   btnPrev3:   document.getElementById('btn-prev-3'),
   btnConfirm: document.getElementById('btn-confirm-book'),
 
-  // Occupancy
   btnRoomMinus:  document.getElementById('btn-minus-room'),
   btnRoomPlus:   document.getElementById('btn-plus-room'),
   roomCount:     document.getElementById('rooms-count'),
@@ -168,20 +161,17 @@ const els = {
   childAgesBox:  document.getElementById('child-ages-box'),
   bedSelect:     document.getElementById('bed-config-select'),
 
-  // Calendar
   calPrev:    document.getElementById('cal-prev'),
   calNext:    document.getElementById('cal-next'),
   calGrid:    document.getElementById('calendar-grid'),
   monthLabel: document.getElementById('calendar-month-label'),
 
-  // Forms
   guestForm:    document.getElementById('guest-form'),
   agreePolicy:  document.getElementById('agree-policy'),
   payRadios:    document.getElementsByName('pay_method'),
   receiptFile:  document.getElementById('receipt-file'),
   transferBox:  document.getElementById('transfer-details'),
 
-  // Display
   dispCheckin:    document.getElementById('disp-checkin'),
   dispCheckout:   document.getElementById('disp-checkout'),
   dispNights:     document.getElementById('disp-nights'),
@@ -189,7 +179,6 @@ const els = {
   globalAlert:    document.getElementById('booking-global-alert'),
   priceBreakdown: document.getElementById('price-breakdown'),
 
-  // Guest Form
   gName:        document.getElementById('g-name'),
   gEmail:       document.getElementById('g-email'),
   gPhone:       document.getElementById('g-phone'),
@@ -200,7 +189,6 @@ const els = {
   authPrompt:   document.getElementById('auth-prompt'),
   linkLogin:    document.getElementById('link-login-booking'),
 
-  // Step-4 new elements
   btnCopyRef:      document.getElementById('btn-copy-ref'),
   btnShareBooking: document.getElementById('btn-share-booking'),
 };
@@ -285,7 +273,6 @@ function showSidebarSkeleton() {
   document.getElementById('sum-img')?.classList.add('skeleton');
 }
 
-// ─── Show copy toast (global) ──────────────
 function showCopyToast(msg) {
   const toast = document.getElementById('copy-toast');
   const txt   = document.getElementById('copy-toast-txt');
@@ -303,16 +290,14 @@ function calcAddonsTotal() {
   const rooms  = bookingState.rooms;
   const guests = bookingState.adults + bookingState.children;
 
-  if (s.restaurant) {
-    total += (ADDON_PRICES[`restaurant_${s.restaurantPlan}`] || 0) * nights * guests;
-  }
-  if (s.wifi)            total += ADDON_PRICES.wifi            * nights * rooms;
-  if (s.parking)         total += ADDON_PRICES.parking         * nights;
+  if (s.restaurant)    total += (ADDON_PRICES[`restaurant_${s.restaurantPlan}`] || 0) * nights * guests;
+  if (s.wifi)          total += ADDON_PRICES.wifi            * nights * rooms;
+  if (s.parking)       total += ADDON_PRICES.parking         * nights;
   if (s.airportTransfer) total += ADDON_PRICES.airportTransfer;
-  if (s.spa)             total += ADDON_PRICES.spa             * nights;
-  if (s.lateCheckout)    total += ADDON_PRICES.lateCheckout    * rooms;
-  if (s.extraBed)        total += ADDON_PRICES.extraBed        * nights * rooms;
-  if (s.events)          total += ADDON_PRICES.events          * nights * guests;
+  if (s.spa)           total += ADDON_PRICES.spa             * nights;
+  if (s.lateCheckout)  total += ADDON_PRICES.lateCheckout    * rooms;
+  if (s.extraBed)      total += ADDON_PRICES.extraBed        * nights * rooms;
+  if (s.events)        total += ADDON_PRICES.events          * nights * guests;
 
   bookingState.addonsTotal = total;
   return total;
@@ -478,7 +463,7 @@ function renderReviews() {
   const container = document.getElementById('reviews-section');
   if (!container) return;
 
-  const isAr    = bookingState.lang === 'ar';
+  const isAr     = bookingState.lang === 'ar';
   const reviews  = STATIC_REVIEWS;
   const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
 
@@ -537,7 +522,6 @@ function renderReviews() {
   html += '</div>';
   container.innerHTML = html;
 
-  // Update sidebar rating strip
   const ratingStrip  = document.getElementById('sum-rating');
   const reviewsCount = document.getElementById('sum-reviews-count');
   if (ratingStrip)  ratingStrip.textContent  = avgRating;
@@ -648,11 +632,9 @@ async function loadBookedDates() {
     snap.forEach(docSnap => {
       const b = docSnap.data();
       if (!b.checkIn || !b.checkOut) return;
-
       let curr = b.checkInDate  ? b.checkInDate.toDate()  : (b.checkIn.toDate  ? b.checkIn.toDate()  : parseLocalDate(b.checkIn));
       const end = b.checkOutDate ? b.checkOutDate.toDate() : (b.checkOut.toDate ? b.checkOut.toDate() : parseLocalDate(b.checkOut));
       curr.setHours(0,0,0,0);
-
       while (curr < end) {
         bookingState.bookedDates.push(formatDateStr(curr));
         curr = new Date(curr);
@@ -676,11 +658,11 @@ function hasBookedDatesInRange(startStr, endStr) {
   return false;
 }
 
-// ─── Centralised Error Handler ─────────────
+// ─── Error Handler ──────────────────────────
 function handleError(err, context = '') {
   console.error(context, err);
   let msg = t('Unexpected error. Please try again.', 'خطأ غير متوقع. يرجى المحاولة مجدداً.');
-  if (err.code === 'storage/unauthorized')  msg = t('Upload failed: no permission.', 'فشل الرفع: غير مصرّح.');
+  if (err.code === 'storage/unauthorized')   msg = t('Upload failed: no permission.', 'فشل الرفع: غير مصرّح.');
   else if (err.code === 'permission-denied') msg = t('Permission denied. Please log in.', 'تم رفض الإذن. يرجى تسجيل الدخول.');
   else if (err.message?.includes('NaN'))     msg = t('Invalid number in form.', 'رقم غير صحيح في النموذج.');
   else if (err.message === 'not-found')      msg = t('Property not found.', 'العقار غير موجود.');
@@ -805,7 +787,7 @@ function updateOccupancyCounters() {
 
   const badge = document.getElementById('occupancy-summary-badge');
   if (badge) {
-    const isAr = bookingState.lang === 'ar';
+    const isAr    = bookingState.lang === 'ar';
     const roomTxt  = `${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''}`;
     const adultTxt = `${bookingState.adults} ${t('adult','بالغ')}${bookingState.adults>1&&!isAr?'s':''}`;
     const childTxt = bookingState.children > 0
@@ -851,7 +833,7 @@ function updateBookingSummary() {
   bookingState.fee        = Math.round((subtotal + bookingState.addonsTotal) * 0.08);
   bookingState.totalPrice = subtotal + bookingState.addonsTotal + bookingState.fee;
 
-  // Sidebar breakdown
+  // ── Sidebar Breakdown ───────────────────
   if (els.priceBreakdown) {
     const ad = bookingState.addons;
     const addonLines = [];
@@ -862,13 +844,13 @@ function updateBookingSummary() {
       const planLabel = { breakfast: t('Breakfast','إفطار'), halfboard: t('Half-Board','نصف إقامة'), fullboard: t('Full-Board','إقامة كاملة') }[ad.restaurantPlan];
       addonLines.push([`${t('Restaurant','المطعم')} (${planLabel})`, planCost]);
     }
-    if (ad.wifi)            addonLines.push([t('WiFi','واي فاي'),           ADDON_PRICES.wifi * bookingState.nights * bookingState.rooms]);
-    if (ad.parking)         addonLines.push([t('Parking','موقف'),           ADDON_PRICES.parking * bookingState.nights]);
+    if (ad.wifi)            addonLines.push([t('WiFi','واي فاي'),                ADDON_PRICES.wifi * bookingState.nights * bookingState.rooms]);
+    if (ad.parking)         addonLines.push([t('Parking','موقف'),                ADDON_PRICES.parking * bookingState.nights]);
     if (ad.airportTransfer) addonLines.push([t('Airport Transfer','نقل المطار'), ADDON_PRICES.airportTransfer]);
-    if (ad.spa)             addonLines.push([t('Spa','السبا'),              ADDON_PRICES.spa * bookingState.nights]);
+    if (ad.spa)             addonLines.push([t('Spa','السبا'),                   ADDON_PRICES.spa * bookingState.nights]);
     if (ad.lateCheckout)    addonLines.push([t('Late Checkout','مغادرة متأخرة'), ADDON_PRICES.lateCheckout * bookingState.rooms]);
-    if (ad.extraBed)        addonLines.push([t('Extra Bed','سرير إضافي'),   ADDON_PRICES.extraBed * bookingState.nights * bookingState.rooms]);
-    if (ad.events)          addonLines.push([t('Events','فعاليات'),         ADDON_PRICES.events * bookingState.nights * (bookingState.adults + bookingState.children)]);
+    if (ad.extraBed)        addonLines.push([t('Extra Bed','سرير إضافي'),        ADDON_PRICES.extraBed * bookingState.nights * bookingState.rooms]);
+    if (ad.events)          addonLines.push([t('Events','فعاليات'),              ADDON_PRICES.events * bookingState.nights * (bookingState.adults + bookingState.children)]);
 
     els.priceBreakdown.innerHTML = `
       <div class="price-row">
@@ -889,14 +871,21 @@ function updateBookingSummary() {
       </div>`;
   }
 
-  // Step 2 review fields
-  const locale   = isAr ? 'ar-DZ' : 'en-GB';
-  const fmtOpts  = { day:'2-digit', month:'short', year:'numeric' };
+  // ── Step 2 Review Fields ────────────────
+  const locale  = isAr ? 'ar-DZ' : 'en-GB';
+  const fmtOpts = { day:'2-digit', month:'short', year:'numeric' };
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+  const bedLabel = {
+    double: t('Double','مزدوج'),
+    twin:   t('Twin','سريران'),
+    king:   t('King','كينج'),
+    single: t('Single','فردي')
+  }[bookingState.bedConfig] || '';
 
   set('rev-val-dates',  `${parseLocalDate(bookingState.checkIn).toLocaleDateString(locale,fmtOpts)} → ${parseLocalDate(bookingState.checkOut).toLocaleDateString(locale,fmtOpts)}`);
   set('rev-val-nights', `${bookingState.nights} ${t('nights','ليالٍ')}`);
-  set('rev-val-rooms',  `${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''} · ${bookingState.bedConfig === 'double' ? t('Double','مزدوج') : bookingState.bedConfig === 'twin' ? t('Twin','سريران') : bookingState.bedConfig === 'king' ? t('King','كينج') : t('Single','فردي')}`);
+  set('rev-val-rooms',  `${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''} · ${bedLabel}`);
   set('rev-val-guests', `${bookingState.adults} ${t('adults','بالغين')}${bookingState.children > 0 ? ` + ${bookingState.children} ${t('children','أطفال')}` : ''}`);
   set('rev-val-addons', bookingState.addonsTotal > 0 ? `${bookingState.addonsTotal.toLocaleString()} ${curr}` : t('None','لا شيء'));
   set('rev-val-base',   `${subtotal.toLocaleString()} ${curr}`);
@@ -929,7 +918,7 @@ function switchStep(from, to) {
     const n = parseInt(ind.getAttribute('data-step'), 10);
     ind.classList.remove('active','completed');
     ind.removeAttribute('aria-current');
-    if (n < to) ind.classList.add('completed');
+    if (n < to)  ind.classList.add('completed');
     if (n === to) { ind.classList.add('active'); ind.setAttribute('aria-current','step'); }
   });
 
@@ -968,7 +957,6 @@ function handleReceiptChange() {
     return;
   }
 
-  // Preview
   const previewWrap = document.getElementById('receipt-preview-wrap');
   const fileNameEl  = document.getElementById('receipt-file-name');
   if (fileNameEl)  fileNameEl.textContent = file.name;
@@ -990,7 +978,7 @@ function validateField(input, errId, validFn, msg) {
 
 function validateGuestForm() {
   let ok = true;
-  ok = validateField(els.gName,  'g-name-err',  v => v.length >= 2,                             t('Full name required.','الاسم الكامل مطلوب.'))  && ok;
+  ok = validateField(els.gName,  'g-name-err',  v => v.length >= 2,                              t('Full name required.','الاسم الكامل مطلوب.'))  && ok;
   ok = validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),       t('Valid email required.','بريد صحيح مطلوب.'))     && ok;
   ok = validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v), t('Valid phone required.','رقم هاتف صحيح مطلوب.')) && ok;
   return ok;
@@ -1098,7 +1086,6 @@ function setupEventListeners() {
   // ── Receipt ───────────────────────────────
   els.receiptFile?.addEventListener('change', handleReceiptChange);
 
-  // Remove receipt
   document.getElementById('btn-remove-receipt')?.addEventListener('click', () => {
     if (els.receiptFile) els.receiptFile.value = '';
     const previewWrap = document.getElementById('receipt-preview-wrap');
@@ -1109,7 +1096,7 @@ function setupEventListeners() {
     if (hint) hint.textContent = t('Click or drag & drop your receipt','انقر أو اسحب لرفع الوصل');
   });
 
-  // ── Drag & drop receipt ───────────────────
+  // ── Drag & Drop ───────────────────────────
   const dropZone = document.getElementById('file-drop-zone');
   if (dropZone && els.receiptFile) {
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -1126,21 +1113,21 @@ function setupEventListeners() {
     });
   }
 
-  // ── Blur validation ───────────────────────
-  els.gName?.addEventListener('blur',  () => validateField(els.gName,  'g-name-err',  v => v.length >= 2,                              t('Full name required.','الاسم الكامل مطلوب.')));
-  els.gEmail?.addEventListener('blur', () => validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),        t('Valid email required.','بريد صحيح مطلوب.')));
-  els.gPhone?.addEventListener('blur', () => validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v), t('Valid phone required.','رقم هاتف صحيح مطلوب.')));
+  // ── Blur Validation ───────────────────────
+  els.gName?.addEventListener('blur',  () => validateField(els.gName,  'g-name-err',  v => v.length >= 2,                               t('Full name required.','الاسم الكامل مطلوب.')));
+  els.gEmail?.addEventListener('blur', () => validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),         t('Valid email required.','بريد صحيح مطلوب.')));
+  els.gPhone?.addEventListener('blur', () => validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v),  t('Valid phone required.','رقم هاتف صحيح مطلوب.')));
 
-  // ── Notes counter ─────────────────────────
+  // ── Notes Counter ─────────────────────────
   els.gNotes?.addEventListener('input', () => {
     const counter = document.getElementById('g-notes-counter');
     if (counter) counter.textContent = `${els.gNotes.value.length} / 500`;
   });
 
-  // ── Arrival time ──────────────────────────
+  // ── Arrival Time ──────────────────────────
   els.gArrival?.addEventListener('change', e => { bookingState.arrivalTime = e.target.value; });
 
-  // ── Theme toggle ──────────────────────────
+  // ── Theme Toggle ──────────────────────────
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('ore_theme', isDark ? 'dark' : 'light');
@@ -1148,13 +1135,13 @@ function setupEventListeners() {
     if (icon) icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
   });
 
-  // ── Language toggle ───────────────────────
+  // ── Language Toggle ───────────────────────
   document.getElementById('lang-toggle')?.addEventListener('click', () => {
     localStorage.setItem('ore_lang', bookingState.lang === 'ar' ? 'en' : 'ar');
     location.reload();
   });
 
-  // ── Step-4 copy reference ─────────────────
+  // ── Step-4 Copy Reference ─────────────────
   els.btnCopyRef?.addEventListener('click', () => {
     const ref = document.getElementById('ref-number')?.textContent || '';
     navigator.clipboard.writeText(ref).then(() => {
@@ -1164,7 +1151,7 @@ function setupEventListeners() {
     }).catch(() => {});
   });
 
-  // ── Step-4 share ──────────────────────────
+  // ── Step-4 Share ──────────────────────────
   els.btnShareBooking?.addEventListener('click', () => {
     const ref = document.getElementById('ref-number')?.textContent || '';
     if (navigator.share) {
@@ -1174,11 +1161,13 @@ function setupEventListeners() {
         url:   window.location.href
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href).then(() => showCopyToast(t('Link copied!','تم نسخ الرابط!'))).catch(() => {});
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => showCopyToast(t('Link copied!','تم نسخ الرابط!')))
+        .catch(() => {});
     }
   });
 
-  // ── Form submit ───────────────────────────
+  // ── Form Submit ───────────────────────────
   els.guestForm?.addEventListener('submit', handleSubmit);
 }
 
@@ -1200,7 +1189,6 @@ async function handleSubmit(e) {
   setButtonLoading(els.btnConfirm, true);
 
   try {
-    // Real-time conflict check
     await loadBookedDates();
     if (hasBookedDatesInRange(bookingState.checkIn, bookingState.checkOut)) {
       showGlobalAlert(t('These dates were just booked. Please choose new dates.','تم حجز هذه التواريخ للتو. اختر تواريخ جديدة.'), 'error');
@@ -1209,7 +1197,6 @@ async function handleSubmit(e) {
       return;
     }
 
-    // Upload receipt if transfer
     if (isTransfer) {
       const file = els.receiptFile?.files[0];
       if (!file) {
@@ -1222,9 +1209,9 @@ async function handleSubmit(e) {
       receiptUrl = await snap.ref.getDownloadURL();
     }
 
-    const isAr     = bookingState.lang === 'ar';
-    const prop      = bookingState.property;
-    const propTitle = isAr ? (prop?.titleAr || prop?.titleEn || '') : (prop?.titleEn || prop?.titleAr || '');
+    const isAr      = bookingState.lang === 'ar';
+    const prop       = bookingState.property;
+    const propTitle  = isAr ? (prop?.titleAr || prop?.titleEn || '') : (prop?.titleEn || prop?.titleAr || '');
 
     const selectedAddons = Object.entries(bookingState.addons)
       .filter(([k, v]) => v === true)
@@ -1254,14 +1241,14 @@ async function handleSubmit(e) {
       selectedAddons: selectedAddons       || [],
       restaurantPlan: bookingState.addons?.restaurant ? (bookingState.addons.restaurantPlan || 'breakfast') : null,
       purposeOfVisit: bookingState.purposeOfVisit || 'leisure',
-      guestName:      els.gName?.value?.trim()              || '',
+      guestName:      els.gName?.value?.trim()               || '',
       guestEmail:     els.gEmail?.value?.trim().toLowerCase() || '',
-      guestPhone:     els.gPhone?.value?.trim()             || '',
-      nationality:    els.gNationality?.value               || '',
-      arrivalTime:    els.gArrival?.value                   || '',
-      notes:          els.gNotes?.value?.trim().slice(0,500) || '',
-      paymentMethod:  payMethod   || 'cash',
-      receiptUrl:     receiptUrl  || null,
+      guestPhone:     els.gPhone?.value?.trim()              || '',
+      nationality:    els.gNationality?.value                || '',
+      arrivalTime:    els.gArrival?.value                    || '',
+      notes:          els.gNotes?.value?.trim().slice(0,500)  || '',
+      paymentMethod:  payMethod  || 'cash',
+      receiptUrl:     receiptUrl || null,
       status:         'pending',
       lang:           bookingState.lang || 'en',
       userId:         currentUser ? currentUser.uid   : null,
@@ -1286,11 +1273,11 @@ function populateSuccessScreen(docId, data, isAr) {
   const grid = document.getElementById('success-details-grid');
   if (!grid) return;
 
-  const curr     = isAr ? 'د.ج' : 'DZD';
-  const locale   = isAr ? 'ar-DZ' : 'en-GB';
-  const fmtLong  = { day:'2-digit', month:'long', year:'numeric' };
-  const ciDate   = parseLocalDate(bookingState.checkIn).toLocaleDateString(locale, fmtLong);
-  const coDate   = parseLocalDate(bookingState.checkOut).toLocaleDateString(locale, fmtLong);
+  const curr    = isAr ? 'د.ج' : 'DZD';
+  const locale  = isAr ? 'ar-DZ' : 'en-GB';
+  const fmtLong = { day:'2-digit', month:'long', year:'numeric' };
+  const ciDate  = parseLocalDate(bookingState.checkIn).toLocaleDateString(locale, fmtLong);
+  const coDate  = parseLocalDate(bookingState.checkOut).toLocaleDateString(locale, fmtLong);
 
   const planLabels = {
     breakfast: t('Breakfast','إفطار'),
@@ -1310,21 +1297,21 @@ function populateSuccessScreen(docId, data, isAr) {
   };
 
   const cards = [
-    [t('Check-in','الوصول'),         ciDate],
-    [t('Check-out','المغادرة'),       coDate],
-    [t('Nights','الليالي'),           `${data.nights}`],
-    [t('Rooms','الغرف'),              `${data.rooms} · ${data.bedConfig}`],
-    [t('Guests','الضيوف'),            `${data.adults} ${t('adults','بالغين')}${data.children>0?` + ${data.children} ${t('children','أطفال')}`:''}`],
-    [t('Add-ons','الإضافات'),         data.restaurantPlan ? `${t('Restaurant','المطعم')}: ${planLabels[data.restaurantPlan]||''}` : addonsStr],
-    [t('Purpose','غرض الزيارة'),      purposeLabels[data.purposeOfVisit] || '—'],
-    [t('Total','الإجمالي'),           `${data.totalPrice.toLocaleString()} ${curr}`],
-    [t('Payment','الدفع'),            data.paymentMethod === 'cash' ? t('Pay at Property','عند الوصول') : t('Bank Transfer','تحويل بنكي')],
-    [t('Status','الحالة'),            `<span class="status-badge pending"><i class="ph-fill ph-clock" aria-hidden="true"></i> ${t('Pending','قيد الانتظار')}</span>`],
-    [t('Name','الاسم'),               data.guestName],
-    [t('Email','البريد'),             data.guestEmail],
-    [t('Phone','الهاتف'),             data.guestPhone],
+    [t('Check-in','الوصول'),       ciDate],
+    [t('Check-out','المغادرة'),     coDate],
+    [t('Nights','الليالي'),         `${data.nights}`],
+    [t('Rooms','الغرف'),            `${data.rooms} · ${data.bedConfig}`],
+    [t('Guests','الضيوف'),          `${data.adults} ${t('adults','بالغين')}${data.children>0 ? ` + ${data.children} ${t('children','أطفال')}` : ''}`],
+    [t('Add-ons','الإضافات'),       data.restaurantPlan ? `${t('Restaurant','المطعم')}: ${planLabels[data.restaurantPlan]||''}` : addonsStr],
+    [t('Purpose','غرض الزيارة'),    purposeLabels[data.purposeOfVisit] || '—'],
+    [t('Total','الإجمالي'),         `${data.totalPrice.toLocaleString()} ${curr}`],
+    [t('Payment','الدفع'),          data.paymentMethod === 'cash' ? t('Pay at Property','عند الوصول') : t('Bank Transfer','تحويل بنكي')],
+    [t('Status','الحالة'),          `<span class="status-badge pending"><i class="ph-fill ph-clock" aria-hidden="true"></i> ${t('Pending','قيد الانتظار')}</span>`],
+    [t('Name','الاسم'),             data.guestName],
+    [t('Email','البريد'),           data.guestEmail],
+    [t('Phone','الهاتف'),           data.guestPhone],
     ...(data.arrivalTime ? [[t('Arrival Time','وقت الوصول'), data.arrivalTime]] : []),
-    ...(data.notes       ? [[t('Requests','الطلبات'),        data.notes]]        : []),
+    ...(data.notes       ? [[t('Requests','الطلبات'),        data.notes]]       : []),
   ];
 
   grid.innerHTML = cards.map(([label, value]) => `
@@ -1333,7 +1320,6 @@ function populateSuccessScreen(docId, data, isAr) {
       <p class="confirm-detail-value">${value}</p>
     </div>`).join('');
 
-  // Payment badge
   const badge = document.getElementById('success-payment-badge');
   if (badge) {
     const isCash = data.paymentMethod === 'cash';
@@ -1342,7 +1328,7 @@ function populateSuccessScreen(docId, data, isAr) {
         <i class="ph ${isCash ? 'ph-money' : 'ph-bank'}" aria-hidden="true"></i>
         ${isCash
           ? t('Pay at property — no upfront charge.','الدفع عند الوصول — لا رسوم مسبقة.')
-          : t('Transfer receipt received. We\'ll confirm soon.','تم استلام وصل التحويل. سنؤكد قريباً.')}
+          : t("Transfer receipt received. We'll confirm soon.",'تم استلام وصل التحويل. سنؤكد قريباً.')}
       </div>`;
   }
 }
@@ -1354,7 +1340,6 @@ function translateBookingPage() {
   document.documentElement.setAttribute('lang', 'ar');
 
   const s = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-  const h = (id, htm) => { const el = document.getElementById(id); if (el) el.innerHTML  = htm; };
 
   s('nav-back-txt', 'العودة للعقار');
   const langBtn = document.getElementById('lang-toggle');
@@ -1367,21 +1352,21 @@ function translateBookingPage() {
   s('lbl-step4', 'التأكيد');
 
   // Step 1
-  s('st-title-1', 'متى ستسافر؟');
-  s('st-sub-1',   'اختر تواريخ وصولك ومغادرتك، وتفضيلات الغرف.');
-  s('lbl-chk-in',        'تاريخ الوصول');
-  s('lbl-nights',        'الليالي');
-  s('lbl-chk-out',       'تاريخ المغادرة');
-  s('lbl-who-coming',    'الغرف والضيوف');
-  s('lbl-rooms-title',   'الغرف');
-  s('lbl-rooms-sub',     'عدد الغرف المطلوبة');
-  s('lbl-adults-title',  'البالغون');
-  s('lbl-adults-sub',    '13 سنة فأكثر');
+  s('st-title-1',      'متى ستسافر؟');
+  s('st-sub-1',        'اختر تواريخ وصولك ومغادرتك، وتفضيلات الغرف.');
+  s('lbl-chk-in',      'تاريخ الوصول');
+  s('lbl-nights',      'الليالي');
+  s('lbl-chk-out',     'تاريخ المغادرة');
+  s('lbl-who-coming',  'الغرف والضيوف');
+  s('lbl-rooms-title', 'الغرف');
+  s('lbl-rooms-sub',   'عدد الغرف المطلوبة');
+  s('lbl-adults-title','البالغون');
+  s('lbl-adults-sub',  '13 سنة فأكثر');
   s('lbl-children-title','الأطفال');
-  s('lbl-children-sub',  'من 0 إلى 12 سنة');
-  s('lbl-bed-type',      'نوع الأسرّة');
-  s('tip-room-note',     'توفر الغرف يُؤكَّد عند الموافقة. يمكن التعديل عند الوصول.');
-  s('btn-next-1-txt',    'الخطوة التالية');
+  s('lbl-children-sub','من 0 إلى 12 سنة');
+  s('lbl-bed-type',    'نوع الأسرّة');
+  s('tip-room-note',   'توفر الغرف يُؤكَّد عند الموافقة. يمكن التعديل عند الوصول.');
+  s('btn-next-1-txt',  'الخطوة التالية');
 
   const bedSel = document.getElementById('bed-config-select');
   if (bedSel) {
@@ -1392,32 +1377,31 @@ function translateBookingPage() {
   }
 
   // Step 2
-  s('st-title-2',      'الإضافات والدفع');
-  s('st-sub-2',        'خصّص إقامتك واختر طريقة الدفع.');
+  s('st-title-2',         'الإضافات والدفع');
+  s('st-sub-2',           'خصّص إقامتك واختر طريقة الدفع.');
   s('lbl-price-breakdown','تفاصيل السعر');
-  s('rev-dates',       'التواريخ');
-  s('rev-nights-lbl',  'الليالي');
-  s('rev-rooms',       'الغرف');
-  s('rev-guests',      'الضيوف');
-  s('rev-addons',      'الإضافات');
-  s('rev-base',        'المجموع الفرعي');
-  s('rev-fees',        'رسوم الخدمة (8%)');
-  s('rev-total',       'الإجمالي');
-  s('lbl-pay-method',  'طريقة الدفع');
-  s('lbl-pay-cash',    'الدفع عند الوصول');
-  s('desc-pay-cash',   'ادفع المبلغ كاملاً عند وصولك للعقار. لا رسوم مسبقة.');
-  s('lbl-pay-transfer','تحويل بنكي / بريدي');
-  s('desc-pay-transfer','قم بالتحويل لحسابنا وارفع صورة الوصل لتأكيد سريع.');
-  s('txt-bank-info',   'يرجى تحويل المبلغ الإجمالي إلى الحساب التالي:');
-  s('lbl-bank-name',   'اسم الحساب');
-  s('lbl-receipt',     'رفع صورة الوصل');
-  s('file-upload-hint','انقر أو اسحب لرفع الوصل');
+  s('rev-dates',          'التواريخ');
+  s('rev-nights-lbl',     'الليالي');
+  s('rev-rooms',          'الغرف');
+  s('rev-guests',         'الضيوف');
+  s('rev-addons',         'الإضافات');
+  s('rev-base',           'المجموع الفرعي');
+  s('rev-fees',           'رسوم الخدمة (8%)');
+  s('rev-total',          'الإجمالي');
+  s('lbl-pay-method',     'طريقة الدفع');
+  s('lbl-pay-cash',       'الدفع عند الوصول');
+  s('desc-pay-cash',      'ادفع المبلغ كاملاً عند وصولك للعقار. لا رسوم مسبقة.');
+  s('lbl-pay-transfer',   'تحويل بنكي / بريدي');
+  s('desc-pay-transfer',  'قم بالتحويل لحسابنا وارفع صورة الوصل لتأكيد سريع.');
+  s('txt-bank-info',      'يرجى تحويل المبلغ الإجمالي إلى الحساب التالي:');
+  s('lbl-bank-name',      'اسم الحساب');
+  s('lbl-receipt',        'رفع صورة الوصل');
+  s('file-upload-hint',   'انقر أو اسحب لرفع الوصل');
   s('lbl-cancel-policy-title','سياسة الإلغاء');
-  s('lbl-policy-title','لقد اطلعت وأوافق على سياسة الإلغاء');
-  s('btn-back-2',      'رجوع');
-  s('btn-next-2-txt',  'الخطوة التالية');
+  s('lbl-policy-title',   'لقد اطلعت وأوافق على سياسة الإلغاء');
+  s('btn-back-2',         'رجوع');
+  s('btn-next-2-txt',     'الخطوة التالية');
 
-  // Policy timeline
   const policyItems = document.querySelectorAll('.policy-timeline-item .policy-timeline-text');
-  if (policyItems[0]) { policyItems[0].querySelector('strong').textContent = 'إلغاء مجاني'; policyItems[0].querySelector('span').textContent = 'حتى 48 ساعة قبل الوصول'; }
-  if (policyItems[1]) { policyItems[1].querySelector('strong').textContent = 'استرداد جزئي'; policyItems[
+  if (policyItems[0]) {
+    policyItems[0].querySelector
