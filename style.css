@@ -103,13 +103,76 @@ a   { color: inherit; }
 .auth-btn-logged { background-color: var(--accent) !important; }
 .auth-btn-guest  { background-color: var(--primary) !important; }
 
-/* Spin animation */
+/* =========================================================
+   --- FIX: Phosphor Icons — ضمان ظهور الأيقونات دائماً ---
+========================================================= */
+/* إصلاح شامل لجميع أيقونات Phosphor */
+i[class^="ph"],
+i[class*=" ph"],
+span[class^="ph"],
+span[class*=" ph"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  speak: none;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* حجم افتراضي آمن */
+i[class^="ph"],
+i[class*=" ph"] {
+  font-size: 1em;
+  width: 1.1em;
+  min-width: 1.1em;
+  text-align: center;
+}
+
+/* منع الأيقونات من الانكماش داخل flex */
+.nav-actions i,
+.dropdown-item i,
+.category-item i,
+.action-btn i,
+.primary-btn i,
+.ghost-btn i,
+.back-btn i,
+.search-btn i,
+.social-btn i,
+.icon-btn i,
+.profile-menu i,
+.fav-btn i,
+.slider-btn i,
+.close-modal-btn i,
+.close-lightbox i,
+.lightbox-btn i,
+.nav-item i,
+.stat-icon i,
+.btn-approve i,
+.btn-reject i {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================================================
+   --- Spin Animation ---
+========================================================= */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-.spin    { animation: spin 0.8s linear infinite; }
-.ph-spin { animation: spin 1s linear infinite; }
+
+.spin     { animation: spin 0.8s linear infinite; }
+.ph-spin  { animation: spin 1s linear infinite; }
+
+/* ph-circle-notch هو الأيقونة الصحيحة للسبينر في Phosphor */
+.ph-circle-notch { animation: spin 0.8s linear infinite; }
 
 .container {
   max-width: 1280px;
@@ -197,6 +260,9 @@ a   { color: inherit; }
   border-color: var(--primary);
   color: var(--primary);
 }
+
+/* FIX: حجم أيقونة الـ icon-btn */
+.icon-btn i { font-size: 1.15rem; }
 
 /* =========================================================
    --- Profile Dropdown ---
@@ -394,6 +460,9 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   transform: scale(1.02);
 }
 
+/* FIX: أيقونة البحث */
+.search-btn i { font-size: 1.1rem; }
+
 /* =========================================================
    --- Smart Search Dropdown ---
 ========================================================= */
@@ -544,14 +613,23 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   opacity: 1;
 }
 
-.category-item i    { font-size: 1.6rem; }
+/* FIX: حجم أيقونة الكاتيغوري ثابت */
+.category-item i {
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
 .category-item span { font-size: 0.82rem; font-weight: 500; white-space: nowrap; }
 
 /* =========================================================
    --- Listings Grid ---
 ========================================================= */
-.section-header        { padding: 32px 0 16px; }
-.section-header h2     { font-size: clamp(1.2rem, 2vw + 0.4rem, 1.75rem); }
+.section-header    { padding: 32px 0 16px; display: flex; align-items: center; gap: 12px; }
+.section-header h2 { font-size: clamp(1.2rem, 2vw + 0.4rem, 1.75rem); }
 
 .listings-grid {
   display: grid;
@@ -571,7 +649,8 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   font-size: 3rem;
   margin-bottom: 12px;
   opacity: 0.35;
-  display: block;
+  display: flex;
+  justify-content: center;
 }
 
 .card {
@@ -642,13 +721,14 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   cursor: pointer;
   color: var(--text-main);
   transition: var(--transition);
+  font-size: 1rem;
 }
 
-.fav-btn:hover   { background: white; transform: scale(1.1); }
-.fav-btn.active  { color: #e11d48; }
+.fav-btn:hover  { background: white; transform: scale(1.1); }
+.fav-btn.active { color: #e11d48; }
 
-.dark .fav-btn        { background: rgba(15, 23, 42, 0.75); color: var(--text-main); }
-.dark .fav-btn:hover  { background: var(--surface-color); }
+.dark .fav-btn       { background: rgba(15, 23, 42, 0.75); color: var(--text-main); }
+.dark .fav-btn:hover { background: var(--surface-color); }
 
 .card-content {
   padding: 16px 18px 18px;
@@ -674,7 +754,11 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   flex-shrink: 0;
 }
 
-.card-rating i { color: #fbbf24; }
+/* FIX: نجمة التقييم */
+.card-rating i {
+  color: #fbbf24;
+  font-size: 0.95rem;
+}
 
 .card-footer {
   margin-top: 12px;
@@ -685,8 +769,8 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   align-items: center;
 }
 
-.card-price       { font-size: 1.15rem; font-weight: 700; color: var(--primary); }
-.card-price span  { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+.card-price      { font-size: 1.15rem; font-weight: 700; color: var(--primary); }
+.card-price span { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
 
 /* =========================================================
    --- Footer ---
@@ -699,7 +783,7 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   text-align: center;
 }
 
-.developed-by    { font-size: 0.95rem; color: var(--text-muted); }
+.developed-by   { font-size: 0.95rem; color: var(--text-muted); }
 .developers-names {
   color: var(--primary);
   margin-inline-start: 6px;
@@ -769,6 +853,7 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   color: var(--text-main);
   transition: var(--transition);
   z-index: 10;
+  font-size: 1rem;
 }
 
 .close-modal-btn:hover { background: var(--border-color); }
@@ -786,8 +871,8 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   position: relative;
 }
 
-.auth-form         { display: none; animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
-.auth-form.active  { display: block; }
+.auth-form        { display: none; animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+.auth-form.active { display: block; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -838,7 +923,6 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   -webkit-appearance: none;
 }
 
-/* FIX: إضافة textarea لنفس تنسيق input/select في .input-group */
 .input-group textarea {
   width: 100%;
   padding: 13px 15px;
@@ -972,6 +1056,9 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
 
 .primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 
+/* FIX: أيقونات داخل primary-btn */
+.primary-btn i { font-size: 1.1rem; }
+
 /* Ghost button */
 .ghost-btn {
   display: inline-flex;
@@ -1047,6 +1134,9 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   border-color: var(--primary);
 }
 
+/* FIX: أيقونات social buttons */
+.social-btn i { font-size: 1.15rem; }
+
 .switch-form-text { text-align: center; font-size: 0.875rem; color: var(--text-muted); margin-top: 8px; }
 .switch-form-text a {
   color: var(--primary);
@@ -1109,8 +1199,8 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   gap: 4px;
 }
 
-.prop-rating i   { color: #fbbf24; }
-.prop-location   { display: flex; align-items: center; gap: 4px; }
+.prop-rating i { color: #fbbf24; }
+.prop-location { display: flex; align-items: center; gap: 4px; }
 
 .prop-content-grid {
   display: grid;
@@ -1150,7 +1240,14 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   color: var(--text-main);
 }
 
-.features-list i { font-size: 1.2rem; color: var(--primary); flex-shrink: 0; }
+/* FIX: أيقونات المميزات */
+.features-list i {
+  font-size: 1.2rem;
+  color: var(--primary);
+  flex-shrink: 0;
+  width: 1.2rem;
+  text-align: center;
+}
 
 /* --- Map Section --- */
 .prop-map-section {
@@ -1169,7 +1266,6 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   border: 1px solid var(--border-color);
 }
 
-/* FIX: خريطة الأدمن محسّنة مع display:block لضمان الظهور */
 .admin-map-container {
   width: 100%;
   height: 280px;
@@ -1180,7 +1276,6 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   display: block;
 }
 
-/* FIX: خريطة محدد الموقع في نموذج الإضافة */
 #admin-map-picker {
   width: 100%;
   height: 350px;
@@ -1192,11 +1287,8 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   transition: border-color 0.2s;
 }
 
-#admin-map-picker:hover {
-  border-color: var(--primary);
-}
+#admin-map-picker:hover { border-color: var(--primary); }
 
-/* FIX: خريطة مودال التعديل */
 #edit-map-picker {
   width: 100%;
   height: 250px;
@@ -1207,7 +1299,6 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   z-index: 1;
 }
 
-/* Dark mode للخرائط */
 .dark #admin-map-picker,
 .dark #edit-map-picker,
 .dark .admin-map-container {
@@ -1486,7 +1577,6 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   border: 1px solid var(--border-color);
 }
 
-/* FIX: تنسيق input داخل شاشة تسجيل دخول الأدمن */
 .admin-login-card .input-group input {
   background-color: var(--bg-color);
   border-color: var(--border-color);
@@ -1500,7 +1590,7 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
 /* =========================================================
    --- Admin Dashboard ---
 ========================================================= */
-.admin-body      { background-color: #f1f5f9; min-height: 100dvh; }
+.admin-body       { background-color: #f1f5f9; min-height: 100dvh; }
 .dark .admin-body { background-color: #0f172a; }
 
 .admin-layout { display: flex; width: 100%; min-height: 100dvh; }
@@ -1554,9 +1644,16 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   min-height: 44px;
 }
 
-.nav-item:hover     { background-color: var(--bg-color); }
-.nav-item.active    { background-color: var(--primary); color: white; }
-.nav-item i         { font-size: 1.2rem; flex-shrink: 0; }
+.nav-item:hover  { background-color: var(--bg-color); }
+.nav-item.active { background-color: var(--primary); color: white; }
+
+/* FIX: أيقونات القائمة الجانبية */
+.nav-item i {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  width: 1.3rem;
+  text-align: center;
+}
 
 .admin-main {
   flex: 1;
@@ -1636,7 +1733,7 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
 }
 
 /* =========================================================
-   --- Admin Form (FIX: شامل لجميع الحقول) ---
+   --- Admin Form ---
 ========================================================= */
 .admin-form input,
 .admin-form textarea,
@@ -1697,7 +1794,6 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   border-color: var(--border-color);
 }
 
-/* label داخل modern-form-wrapper */
 .modern-form-wrapper .input-group label {
   display: block;
   font-size: 0.85rem;
@@ -1754,8 +1850,8 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   white-space: nowrap;
 }
 
-.admin-table tr:last-child td  { border-bottom: none; }
-.admin-table tr:hover td       { background-color: rgba(67, 90, 191, 0.04); }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td      { background-color: rgba(67, 90, 191, 0.04); }
 
 .admin-table-img {
   width: 56px;
@@ -1817,11 +1913,15 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   transition: var(--transition);
 }
 
-.btn-approve              { background: #ecfdf5; color: #059669; border: 1px solid #10b981; }
-.btn-approve:hover        { background: #10b981; color: white; transform: scale(1.02); }
+/* FIX: أيقونات أزرار الحجز */
+.btn-approve i,
+.btn-reject i { font-size: 1.1rem; }
 
-.btn-reject               { background: #fef2f2; color: #e11d48; border: 1px solid #ef4444; }
-.btn-reject:hover         { background: #ef4444; color: white; transform: scale(1.02); }
+.btn-approve       { background: #ecfdf5; color: #059669; border: 1px solid #10b981; }
+.btn-approve:hover { background: #10b981; color: white; transform: scale(1.02); }
+
+.btn-reject        { background: #fef2f2; color: #e11d48; border: 1px solid #ef4444; }
+.btn-reject:hover  { background: #ef4444; color: white; transform: scale(1.02); }
 
 .btn-approve:disabled,
 .btn-reject:disabled {
@@ -1889,9 +1989,9 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 
-input:checked + .slider              { background-color: #10b981; }
-input:checked + .slider::before      { transform: translateX(21px); }
-input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
+input:checked + .slider             { background-color: #10b981; }
+input:checked + .slider::before     { transform: translateX(21px); }
+input:disabled + .slider            { opacity: 0.6; cursor: not-allowed; }
 
 .slider.round        { border-radius: 34px; }
 .slider.round::before { border-radius: 50%; }
@@ -1910,18 +2010,18 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
   white-space: nowrap;
 }
 
-.status-badge.active     { background-color: rgba(16,185,129,0.1);  color: #059669; }
-.status-badge.hidden     { background-color: rgba(100,116,139,0.1); color: var(--text-muted); }
-.status-badge.pending    { background-color: rgba(245,158,11,0.12); color: #d97706; }
-.status-badge.confirmed  { background-color: rgba(16,185,129,0.1);  color: #059669; }
-.status-badge.cancelled  { background-color: rgba(225,29,72,0.1);   color: #e11d48; }
+.status-badge.active    { background-color: rgba(16,185,129,0.1);  color: #059669; }
+.status-badge.hidden    { background-color: rgba(100,116,139,0.1); color: var(--text-muted); }
+.status-badge.pending   { background-color: rgba(245,158,11,0.12); color: #d97706; }
+.status-badge.confirmed { background-color: rgba(16,185,129,0.1);  color: #059669; }
+.status-badge.cancelled { background-color: rgba(225,29,72,0.1);   color: #e11d48; }
 
 /* =========================================================
    --- Focus Visible (Accessibility) ---
 ========================================================= */
-.primary-btn:focus-visible, .ghost-btn:focus-visible, .search-btn:focus-visible,
-.social-btn:focus-visible,  .icon-btn:focus-visible,  .lang-btn:focus-visible,
-.action-btn:focus-visible,  .fav-btn:focus-visible,   .slider-btn:focus-visible,
+.primary-btn:focus-visible, .ghost-btn:focus-visible,    .search-btn:focus-visible,
+.social-btn:focus-visible,  .icon-btn:focus-visible,     .lang-btn:focus-visible,
+.action-btn:focus-visible,  .fav-btn:focus-visible,      .slider-btn:focus-visible,
 .nav-item:focus-visible,    .close-modal-btn:focus-visible, .close-lightbox:focus-visible,
 .back-btn:focus-visible,    .category-item:focus-visible,   .profile-menu:focus-visible {
   outline: 2px solid var(--primary);
@@ -1974,7 +2074,6 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
     white-space: nowrap;
   }
 
-  /* FIX: خريطة الإضافة في الشاشات المتوسطة */
   #admin-map-picker { height: 280px; }
   .bookings-grid    { grid-template-columns: 1fr 1fr; }
 }
@@ -1983,10 +2082,10 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
 @media (max-width: 768px) {
   .container { padding: 0 16px; }
 
-  .navbar     { padding: 10px 16px; gap: 8px; }
-  .logo-img   { height: 44px; max-width: 140px; }
+  .navbar      { padding: 10px 16px; gap: 8px; }
+  .logo-img    { height: 44px; max-width: 140px; }
   .rewards-badge { display: none; }
-  .lang-btn   { padding: 7px 11px; font-size: 0.8rem; }
+  .lang-btn    { padding: 7px 11px; font-size: 0.8rem; }
   .nav-actions { gap: 7px; }
 
   .hero   { padding: 44px 16px 24px; }
@@ -2000,14 +2099,14 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
     align-items: stretch;
   }
   html[dir="rtl"] .search-bar { padding: 16px; }
-  .search-field { padding: 10px 4px; border-bottom: 1px solid var(--border-color); }
+  .search-field              { padding: 10px 4px; border-bottom: 1px solid var(--border-color); }
   .search-field:last-of-type { border-bottom: none; }
-  .search-divider  { display: none; }
-  .search-btn      { width: 100%; justify-content: center; margin-top: 12px; padding: 13px; }
+  .search-divider { display: none; }
+  .search-btn     { width: 100%; justify-content: center; margin-top: 12px; padding: 13px; }
   .search-dropdown { border-radius: var(--radius-xl); }
 
-  .categories     { gap: 16px; padding: 20px 16px; justify-content: flex-start; }
-  .listings-grid  { grid-template-columns: 1fr; gap: 16px; }
+  .categories    { gap: 16px; padding: 20px 16px; justify-content: flex-start; }
+  .listings-grid { grid-template-columns: 1fr; gap: 16px; }
   .card-img-wrapper { height: 200px; }
 
   .property-container  { padding-top: 20px; padding-bottom: 60px; }
@@ -2019,25 +2118,24 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
   .prop-booking-card   { padding: 18px; border-radius: var(--radius-xl); }
   .booking-price       { font-size: 1.2rem; }
 
-  .slider-btn   { width: 36px; height: 36px; font-size: 1.1rem; }
-  .prev-btn     { inset-inline-start: 8px; }
-  .next-btn     { inset-inline-end: 8px; }
+  .slider-btn { width: 36px; height: 36px; font-size: 1.1rem; }
+  .prev-btn   { inset-inline-start: 8px; }
+  .next-btn   { inset-inline-end: 8px; }
   .slider-dots-container { bottom: 10px; }
 
-  .map-container      { height: 240px; border-radius: var(--radius-xl); }
+  .map-container       { height: 240px; border-radius: var(--radius-xl); }
   .admin-map-container { height: 200px; }
 
-  /* FIX: خريطة الأدمن على الموبايل */
   #admin-map-picker { height: 240px; }
   #edit-map-picker  { height: 200px; }
 
-  .modal-overlay  { padding: 12px; align-items: flex-end; }
-  .modal-content  { max-width: 100%; max-height: 95dvh; }
-  .auth-card      { border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; }
-  .auth-content   { padding: 22px 18px 28px; }
-  .auth-title     { font-size: 1.4rem; }
-  .social-logins  { flex-direction: column; }
-  .social-btn     { width: 100%; }
+  .modal-overlay { padding: 12px; align-items: flex-end; }
+  .modal-content { max-width: 100%; max-height: 95dvh; }
+  .auth-card     { border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; }
+  .auth-content  { padding: 22px 18px 28px; }
+  .auth-title    { font-size: 1.4rem; }
+  .social-logins { flex-direction: column; }
+  .social-btn    { width: 100%; }
   .fav-btn, .close-modal-btn { width: 44px; height: 44px; }
 
   .admin-header  { padding: 12px 16px; }
@@ -2050,16 +2148,13 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
   .stat-info p { font-size: 1.3rem; }
 
   .admin-table th, .admin-table td { padding: 10px 11px; font-size: 0.82rem; }
-  .action-btn    { width: 34px; height: 34px; font-size: 1rem; }
-  .lightbox-btn  { width: 40px; height: 40px; font-size: 1.2rem; }
+  .action-btn   { width: 34px; height: 34px; font-size: 1rem; }
+  .lightbox-btn { width: 40px; height: 40px; font-size: 1.2rem; }
 
-  .inner-nav  { padding: 10px 16px; gap: 8px; }
-  .back-btn   { padding: 7px 12px; font-size: 0.85rem; }
+  .inner-nav { padding: 10px 16px; gap: 8px; }
+  .back-btn  { padding: 7px 12px; font-size: 0.85rem; }
 
-  /* Bookings grid: عمود واحد على الموبايل */
   .bookings-grid { grid-template-columns: 1fr; }
-
-  /* أزرار القبول والرفض كاملة العرض على الموبايل */
   .booking-actions-row { flex-direction: column; }
   .btn-approve, .btn-reject { width: 100%; }
 }
@@ -2076,9 +2171,9 @@ input:disabled + .slider             { opacity: 0.6; cursor: not-allowed; }
   .prop-image-gallery { height: 220px; }
   .card-img-wrapper   { height: 185px; }
 
-  .stats-grid  { grid-template-columns: 1fr; }
-  .form-grid   { grid-template-columns: 1fr; }
-  .auth-title  { font-size: 1.25rem; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .form-grid  { grid-template-columns: 1fr; }
+  .auth-title { font-size: 1.25rem; }
 
   .admin-login-card { padding: 24px 20px; }
 
