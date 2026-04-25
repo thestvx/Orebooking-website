@@ -21,113 +21,113 @@ const db   = firebase.firestore();
 // 🌍 2. GLOBAL STATE & TRANSLATIONS
 // ==========================================
 const state = {
-  lang:               localStorage.getItem('ore_lang')  || 'en',
-  theme:              localStorage.getItem('ore_theme') || 'light',
-  favorites:          [],
-  user:               null,
-  currentView:        'home',
-  currentImageIndex:  0,
-  liveProperties:     [],
-  activeSearch:       '',   // ✅ تتبع حالة البحث الحالي
-  activeCategory:     null  // ✅ تتبع الكاتيغوري المحدد
+  lang:              localStorage.getItem('ore_lang')  || 'en',
+  theme:             localStorage.getItem('ore_theme') || 'light',
+  favorites:         [],
+  user:              null,
+  currentView:       'home',
+  currentImageIndex: 0,
+  liveProperties:    [],
+  activeSearch:      '',
+  activeCategory:    null
 };
 
 const translations = {
   en: {
-    hero_title:         "Find your next perfect stay",
-    hero_subtitle:      "Discover premium apartments, villas, and unique homes around the world.",
-    location:           "Location",
+    hero_title:           "Find your next perfect stay",
+    hero_subtitle:        "Discover premium apartments, villas, and unique homes around the world.",
+    location:             "Location",
     location_placeholder: "Where are you going?",
-    dates:              "Dates",
-    dates_placeholder:  "Add dates",
-    guests:             "Guests",
-    guests_placeholder: "Add guests",
-    search:             "Search",
-    trending:           "Trending Destinations",
-    search_results:     "Search Results",
-    pts:                "Pts",
-    night:              "night",
-    urgency_few:        "Only 2 rooms left",
-    urgency_hot:        "Booked 5 times today",
-    developed_by:       "Developed by:",
-    welcome_back:       "Welcome back",
-    login_desc:         "Enter your details to access your account.",
-    email:              "Email Address",
-    password:           "Password",
-    remember_me:        "Remember me",
-    forgot_pass:        "Forgot password?",
-    sign_in:            "Sign In",
-    or_continue:        "or continue with",
-    no_account:         "Don't have an account?",
-    sign_up:            "Sign up",
-    create_account:     "Create an account",
-    register_desc:      "Join OreBooking to unlock premium features.",
-    full_name:          "Full Name",
-    sign_up_btn:        "Create Account",
-    has_account:        "Already have an account?",
-    logout:             "Log Out",
-    my_favorites:       "My Favorites",
-    no_favorites:       "You haven't saved any favorites yet.",
-    back_home:          "Back to Home",
-    about_prop:         "About this space",
-    what_offers:        "What this place offers",
-    book_now:           "Reserve Now",
-    wont_charged:       "You won't be charged yet",
-    loading:            "Loading properties...",
-    no_props:           "No properties available yet.",
-    location_on_map:    "Location on Map",
-    no_results:         "No results found",
-    clear_search:       "Clear Search",
-    all_wilayas:        "All Wilayas",
-    all_wilayas_sub:    "Show all properties",
+    dates:                "Dates",
+    dates_placeholder:    "Add dates",
+    guests:               "Guests",
+    guests_placeholder:   "Add guests",
+    search:               "Search",
+    trending:             "Trending Destinations",
+    search_results:       "Search Results",
+    pts:                  "Pts",
+    night:                "night",
+    urgency_few:          "Only 2 rooms left",
+    urgency_hot:          "Booked 5 times today",
+    developed_by:         "Developed by:",
+    welcome_back:         "Welcome back",
+    login_desc:           "Enter your details to access your account.",
+    email:                "Email Address",
+    password:             "Password",
+    remember_me:          "Remember me",
+    forgot_pass:          "Forgot password?",
+    sign_in:              "Sign In",
+    or_continue:          "or continue with",
+    no_account:           "Don't have an account?",
+    sign_up:              "Sign up",
+    create_account:       "Create an account",
+    register_desc:        "Join OreBooking to unlock premium features.",
+    full_name:            "Full Name",
+    sign_up_btn:          "Create Account",
+    has_account:          "Already have an account?",
+    logout:               "Log Out",
+    my_favorites:         "My Favorites",
+    no_favorites:         "You haven't saved any favorites yet.",
+    back_home:            "Back to Home",
+    about_prop:           "About this space",
+    what_offers:          "What this place offers",
+    book_now:             "Reserve Now",
+    wont_charged:         "You won't be charged yet",
+    loading:              "Loading properties...",
+    no_props:             "No properties available yet.",
+    location_on_map:      "Location on Map",
+    no_results:           "No results found",
+    clear_search:         "Clear Search",
+    all_wilayas:          "All Wilayas",
+    all_wilayas_sub:      "Show all properties",
   },
   ar: {
-    hero_title:         "اكتشف إقامتك المثالية القادمة",
-    hero_subtitle:      "اكتشف شققاً فاخرة، فلل، ومنازل فريدة حول العالم.",
-    location:           "الموقع",
+    hero_title:           "اكتشف إقامتك المثالية القادمة",
+    hero_subtitle:        "اكتشف شققاً فاخرة، فلل، ومنازل فريدة حول العالم.",
+    location:             "الموقع",
     location_placeholder: "إلى أين ستذهب؟",
-    dates:              "التواريخ",
-    dates_placeholder:  "أضف التواريخ",
-    guests:             "الضيوف",
-    guests_placeholder: "أضف الضيوف",
-    search:             "بحث",
-    trending:           "الوجهات الشائعة",
-    search_results:     "نتائج البحث",
-    pts:                "نقطة",
-    night:              "ليلة",
-    urgency_few:        "بقي غرفتان فقط",
-    urgency_hot:        "تم حجزه 5 مرات اليوم",
-    developed_by:       "تم تطوير هذا الموقع من قبل:",
-    welcome_back:       "مرحباً بعودتك",
-    login_desc:         "أدخل بياناتك للوصول إلى حسابك.",
-    email:              "البريد الإلكتروني",
-    password:           "كلمة المرور",
-    remember_me:        "تذكرني",
-    forgot_pass:        "نسيت كلمة المرور؟",
-    sign_in:            "تسجيل الدخول",
-    or_continue:        "أو المتابعة باستخدام",
-    no_account:         "ليس لديك حساب؟",
-    sign_up:            "إنشاء حساب",
-    create_account:     "إنشاء حساب جديد",
-    register_desc:      "انضم إلى OreBooking لفتح ميزات حصرية.",
-    full_name:          "الاسم الكامل",
-    sign_up_btn:        "إنشاء الحساب",
-    has_account:        "لديك حساب بالفعل؟",
-    logout:             "تسجيل الخروج",
-    my_favorites:       "مفضلتي",
-    no_favorites:       "لا توجد أي عقارات في مفضلتك بعد.",
-    back_home:          "العودة للرئيسية",
-    about_prop:         "حول هذا المكان",
-    what_offers:        "ماذا يوفر هذا المكان",
-    book_now:           "احجز الآن",
-    wont_charged:       "لن يتم خصم المبلغ الآن",
-    loading:            "جارٍ تحميل العقارات...",
-    no_props:           "لا توجد عقارات متاحة بعد.",
-    location_on_map:    "الموقع على الخريطة",
-    no_results:         "لا توجد نتائج مطابقة",
-    clear_search:       "إلغاء البحث",
-    all_wilayas:        "كل الولايات",
-    all_wilayas_sub:    "عرض جميع العقارات",
+    dates:                "التواريخ",
+    dates_placeholder:    "أضف التواريخ",
+    guests:               "الضيوف",
+    guests_placeholder:   "أضف الضيوف",
+    search:               "بحث",
+    trending:             "الوجهات الشائعة",
+    search_results:       "نتائج البحث",
+    pts:                  "نقطة",
+    night:                "ليلة",
+    urgency_few:          "بقي غرفتان فقط",
+    urgency_hot:          "تم حجزه 5 مرات اليوم",
+    developed_by:         "تم تطوير هذا الموقع من قبل:",
+    welcome_back:         "مرحباً بعودتك",
+    login_desc:           "أدخل بياناتك للوصول إلى حسابك.",
+    email:                "البريد الإلكتروني",
+    password:             "كلمة المرور",
+    remember_me:          "تذكرني",
+    forgot_pass:          "نسيت كلمة المرور؟",
+    sign_in:              "تسجيل الدخول",
+    or_continue:          "أو المتابعة باستخدام",
+    no_account:           "ليس لديك حساب؟",
+    sign_up:              "إنشاء حساب",
+    create_account:       "إنشاء حساب جديد",
+    register_desc:        "انضم إلى OreBooking لفتح ميزات حصرية.",
+    full_name:            "الاسم الكامل",
+    sign_up_btn:          "إنشاء الحساب",
+    has_account:          "لديك حساب بالفعل؟",
+    logout:               "تسجيل الخروج",
+    my_favorites:         "مفضلتي",
+    no_favorites:         "لا توجد أي عقارات في مفضلتك بعد.",
+    back_home:            "العودة للرئيسية",
+    about_prop:           "حول هذا المكان",
+    what_offers:          "ماذا يوفر هذا المكان",
+    book_now:             "احجز الآن",
+    wont_charged:         "لن يتم خصم المبلغ الآن",
+    loading:              "جارٍ تحميل العقارات...",
+    no_props:             "لا توجد عقارات متاحة بعد.",
+    location_on_map:      "الموقع على الخريطة",
+    no_results:           "لا توجد نتائج مطابقة",
+    clear_search:         "إلغاء البحث",
+    all_wilayas:          "كل الولايات",
+    all_wilayas_sub:      "عرض جميع العقارات",
   }
 };
 
@@ -175,71 +175,71 @@ const properties = [
 ];
 
 const categories = [
-  { icon: 'ph-buildings',      label_en: 'Apartments', label_ar: 'شقق'      },
-  { icon: 'ph-house',          label_en: 'Villas',     label_ar: 'فلل'      },
-  { icon: 'ph-tree-evergreen', label_en: 'Resorts',    label_ar: 'منتجعات'  },
-  { icon: 'ph-swimming-pool',  label_en: 'Pools',      label_ar: 'مسابح'    },
+  { icon: 'ph-buildings',      label_en: 'Apartments', label_ar: 'شقق'     },
+  { icon: 'ph-house',          label_en: 'Villas',     label_ar: 'فلل'     },
+  { icon: 'ph-tree-evergreen', label_en: 'Resorts',    label_ar: 'منتجعات' },
+  { icon: 'ph-swimming-pool',  label_en: 'Pools',      label_ar: 'مسابح'   },
 ];
 
 const algerianWilayas = [
-  { id: 1,  ar: "أدرار",          en: "Adrar"              },
-  { id: 2,  ar: "الشلف",          en: "Chlef"              },
-  { id: 3,  ar: "الأغواط",        en: "Laghouat"           },
-  { id: 4,  ar: "أم البواقي",     en: "Oum El Bouaghi"     },
-  { id: 5,  ar: "باتنة",          en: "Batna"              },
-  { id: 6,  ar: "بجاية",          en: "Béjaïa"             },
-  { id: 7,  ar: "بسكرة",          en: "Biskra"             },
-  { id: 8,  ar: "بشار",           en: "Béchar"             },
-  { id: 9,  ar: "البليدة",        en: "Blida"              },
-  { id: 10, ar: "البويرة",        en: "Bouira"             },
-  { id: 11, ar: "تمنراست",        en: "Tamanrasset"        },
-  { id: 12, ar: "تبسة",           en: "Tébessa"            },
-  { id: 13, ar: "تلمسان",         en: "Tlemcen"            },
-  { id: 14, ar: "تيارت",          en: "Tiaret"             },
-  { id: 15, ar: "تيزي وزو",       en: "Tizi Ouzou"         },
-  { id: 16, ar: "الجزائر",        en: "Algiers"            },
-  { id: 17, ar: "الجلفة",         en: "Djelfa"             },
-  { id: 18, ar: "جيجل",           en: "Jijel"              },
-  { id: 19, ar: "سطيف",           en: "Sétif"              },
-  { id: 20, ar: "سعيدة",          en: "Saïda"              },
-  { id: 21, ar: "سكيكدة",         en: "Skikda"             },
-  { id: 22, ar: "سيدي بلعباس",   en: "Sidi Bel Abbès"     },
-  { id: 23, ar: "عنابة",          en: "Annaba"             },
-  { id: 24, ar: "قالمة",          en: "Guelma"             },
-  { id: 25, ar: "قسنطينة",        en: "Constantine"        },
-  { id: 26, ar: "المدية",         en: "Médéa"              },
-  { id: 27, ar: "مستغانم",        en: "Mostaganem"         },
-  { id: 28, ar: "المسيلة",        en: "M'Sila"             },
-  { id: 29, ar: "معسكر",          en: "Mascara"            },
-  { id: 30, ar: "ورقلة",          en: "Ouargla"            },
-  { id: 31, ar: "وهران",          en: "Oran"               },
-  { id: 32, ar: "البيض",          en: "El Bayadh"          },
-  { id: 33, ar: "إليزي",          en: "Illizi"             },
-  { id: 34, ar: "برج بوعريريج",   en: "Bordj Bou Arréridj" },
-  { id: 35, ar: "بومرداس",        en: "Boumerdès"          },
-  { id: 36, ar: "الطارف",         en: "El Tarf"            },
-  { id: 37, ar: "تندوف",          en: "Tindouf"            },
-  { id: 38, ar: "تيسمسيلت",      en: "Tissemsilt"         },
-  { id: 39, ar: "الوادي",         en: "El Oued"            },
-  { id: 40, ar: "خنشلة",          en: "Khenchela"          },
-  { id: 41, ar: "سوق أهراس",     en: "Souk Ahras"         },
-  { id: 42, ar: "تيبازة",         en: "Tipaza"             },
-  { id: 43, ar: "ميلة",           en: "Mila"               },
-  { id: 44, ar: "عين الدفلى",    en: "Aïn Defla"          },
-  { id: 45, ar: "النعامة",        en: "Naâma"              },
-  { id: 46, ar: "عين تموشنت",    en: "Aïn Témouchent"     },
-  { id: 47, ar: "غرداية",         en: "Ghardaïa"           },
-  { id: 48, ar: "غليزان",         en: "Relizane"           },
-  { id: 49, ar: "تيميمون",        en: "Timimoun"           },
-  { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar"},
-  { id: 51, ar: "أولاد جلال",    en: "Ouled Djellal"      },
-  { id: 52, ar: "بني عباس",       en: "Béni Abbès"         },
-  { id: 53, ar: "إن صالح",        en: "In Salah"           },
-  { id: 54, ar: "إن قزام",        en: "In Guezzam"         },
-  { id: 55, ar: "تقرت",           en: "Touggourt"          },
-  { id: 56, ar: "جانت",           en: "Djanet"             },
-  { id: 57, ar: "المغير",         en: "El M'Ghair"         },
-  { id: 58, ar: "المنيعة",        en: "El Meniaa"          }
+  { id: 1,  ar: "أدرار",          en: "Adrar"               },
+  { id: 2,  ar: "الشلف",          en: "Chlef"               },
+  { id: 3,  ar: "الأغواط",        en: "Laghouat"            },
+  { id: 4,  ar: "أم البواقي",     en: "Oum El Bouaghi"      },
+  { id: 5,  ar: "باتنة",          en: "Batna"               },
+  { id: 6,  ar: "بجاية",          en: "Béjaïa"              },
+  { id: 7,  ar: "بسكرة",          en: "Biskra"              },
+  { id: 8,  ar: "بشار",           en: "Béchar"              },
+  { id: 9,  ar: "البليدة",        en: "Blida"               },
+  { id: 10, ar: "البويرة",        en: "Bouira"              },
+  { id: 11, ar: "تمنراست",        en: "Tamanrasset"         },
+  { id: 12, ar: "تبسة",           en: "Tébessa"             },
+  { id: 13, ar: "تلمسان",         en: "Tlemcen"             },
+  { id: 14, ar: "تيارت",          en: "Tiaret"              },
+  { id: 15, ar: "تيزي وزو",       en: "Tizi Ouzou"          },
+  { id: 16, ar: "الجزائر",        en: "Algiers"             },
+  { id: 17, ar: "الجلفة",         en: "Djelfa"              },
+  { id: 18, ar: "جيجل",           en: "Jijel"               },
+  { id: 19, ar: "سطيف",           en: "Sétif"               },
+  { id: 20, ar: "سعيدة",          en: "Saïda"               },
+  { id: 21, ar: "سكيكدة",         en: "Skikda"              },
+  { id: 22, ar: "سيدي بلعباس",    en: "Sidi Bel Abbès"      },
+  { id: 23, ar: "عنابة",          en: "Annaba"              },
+  { id: 24, ar: "قالمة",          en: "Guelma"              },
+  { id: 25, ar: "قسنطينة",        en: "Constantine"         },
+  { id: 26, ar: "المدية",         en: "Médéa"               },
+  { id: 27, ar: "مستغانم",        en: "Mostaganem"          },
+  { id: 28, ar: "المسيلة",        en: "M'Sila"              },
+  { id: 29, ar: "معسكر",          en: "Mascara"             },
+  { id: 30, ar: "ورقلة",          en: "Ouargla"             },
+  { id: 31, ar: "وهران",          en: "Oran"                },
+  { id: 32, ar: "البيض",          en: "El Bayadh"           },
+  { id: 33, ar: "إليزي",          en: "Illizi"              },
+  { id: 34, ar: "برج بوعريريج",   en: "Bordj Bou Arréridj"  },
+  { id: 35, ar: "بومرداس",        en: "Boumerdès"           },
+  { id: 36, ar: "الطارف",         en: "El Tarf"             },
+  { id: 37, ar: "تندوف",          en: "Tindouf"             },
+  { id: 38, ar: "تيسمسيلت",       en: "Tissemsilt"          },
+  { id: 39, ar: "الوادي",         en: "El Oued"             },
+  { id: 40, ar: "خنشلة",          en: "Khenchela"           },
+  { id: 41, ar: "سوق أهراس",      en: "Souk Ahras"          },
+  { id: 42, ar: "تيبازة",         en: "Tipaza"              },
+  { id: 43, ar: "ميلة",           en: "Mila"                },
+  { id: 44, ar: "عين الدفلى",     en: "Aïn Defla"           },
+  { id: 45, ar: "النعامة",        en: "Naâma"               },
+  { id: 46, ar: "عين تموشنت",     en: "Aïn Témouchent"      },
+  { id: 47, ar: "غرداية",         en: "Ghardaïa"            },
+  { id: 48, ar: "غليزان",         en: "Relizane"            },
+  { id: 49, ar: "تيميمون",        en: "Timimoun"            },
+  { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar" },
+  { id: 51, ar: "أولاد جلال",     en: "Ouled Djellal"       },
+  { id: 52, ar: "بني عباس",       en: "Béni Abbès"          },
+  { id: 53, ar: "إن صالح",        en: "In Salah"            },
+  { id: 54, ar: "إن قزام",        en: "In Guezzam"          },
+  { id: 55, ar: "تقرت",           en: "Touggourt"           },
+  { id: 56, ar: "جانت",           en: "Djanet"              },
+  { id: 57, ar: "المغير",         en: "El M'Ghair"          },
+  { id: 58, ar: "المنيعة",        en: "El Meniaa"           }
 ];
 
 // ==========================================
@@ -266,16 +266,15 @@ function init() {
     renderCategories();
     loadPropertiesFromFirestore();
     initSmartSearch();
-    initClearSearchBtn(); // ✅ تهيئة زر إلغاء البحث
+    initClearSearchBtn();
   }
 
   renderPropertyDetails();
 
-  if (langBtn)   langBtn.addEventListener('click',  toggleLanguage);
-  if (themeBtn)  themeBtn.addEventListener('click', toggleTheme);
+  if (langBtn)     langBtn.addEventListener('click',   toggleLanguage);
+  if (themeBtn)    themeBtn.addEventListener('click',  toggleTheme);
   if (openAuthBtn) openAuthBtn.addEventListener('click', handleAuthButtonClick);
 
-  // ✅ زر اللوجو: العودة للرئيسية مع إعادة تعيين كل شيء
   if (homeLogoBtn) {
     homeLogoBtn.addEventListener('click', (e) => {
       if (document.getElementById('hero-section')) {
@@ -310,7 +309,6 @@ function init() {
     }
   });
 
-  // ✅ إغلاق اللايت‌بوكس بالضغط على ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const lb = document.getElementById('lightbox');
@@ -346,7 +344,6 @@ function resetToHome() {
   if (hero) hero.style.display = 'block';
   if (cats) cats.style.display = 'flex';
 
-  // مسح حقل البحث
   const searchInput = document.getElementById('search-location');
   if (searchInput) searchInput.value = '';
 
@@ -367,9 +364,7 @@ function resetToHome() {
 function initClearSearchBtn() {
   const clearBtn = document.getElementById('clear-search-btn');
   if (!clearBtn) return;
-  clearBtn.addEventListener('click', () => {
-    resetToHome();
-  });
+  clearBtn.addEventListener('click', resetToHome);
 }
 
 function showClearSearchBtn() {
@@ -394,7 +389,6 @@ function initSmartSearch() {
 
   const dict = () => translations[state.lang];
 
-  // ✅ عرض القائمة مع كل الولايات
   const renderWilayas = (wilayas) => {
     let html = `
       <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom:1px solid var(--border-color);">
@@ -442,20 +436,18 @@ function initSmartSearch() {
     }
     const filtered = algerianWilayas.filter(w =>
       (w.ar && w.ar.includes(e.target.value.trim())) ||
-      (w.en && w.en.toLowerCase().includes(val)) ||
+      (w.en && w.en.toLowerCase().includes(val))     ||
       String(w.id) === val
     );
     renderWilayas(filtered);
   });
 
-  // ✅ إغلاق الـ dropdown عند النقر خارجه
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#search-location-wrapper') && !e.target.closest('.search-bar')) {
       searchDropdown.classList.remove('active');
     }
   });
 
-  // ✅ التحكم بالكيبورد داخل القائمة (↑↓ + Enter)
   let focusedIndex = -1;
   searchInput.addEventListener('keydown', (e) => {
     const items = searchDropdown.querySelectorAll('.search-item');
@@ -474,7 +466,6 @@ function initSmartSearch() {
       if (focusedIndex >= 0 && items[focusedIndex]) {
         items[focusedIndex].click();
       } else {
-        // بحث مباشر بالنص المكتوب
         if (searchBtn) searchBtn.click();
       }
       focusedIndex = -1;
@@ -489,13 +480,11 @@ function initSmartSearch() {
     if (items[index]) items[index].scrollIntoView({ block: 'nearest' });
   }
 
-  // ✅ اختيار ولاية من القائمة
   window.selectWilaya = function(arName, enName) {
     searchDropdown.classList.remove('active');
     focusedIndex = -1;
 
     if (!arName && !enName) {
-      // "كل الولايات" — إعادة ضبط
       searchInput.value  = '';
       state.activeSearch = '';
       hideClearSearchBtn();
@@ -510,10 +499,9 @@ function initSmartSearch() {
     }
 
     searchInput.value  = state.lang === 'en' ? enName : arName;
-    state.activeSearch = enName; // ✅ تخزين البحث الحالي
+    state.activeSearch = enName;
     showClearSearchBtn();
 
-    // تحديث عنوان القسم
     const sectionTitle = document.getElementById('section-main-title');
     if (sectionTitle) {
       sectionTitle.removeAttribute('data-i18n');
@@ -525,13 +513,12 @@ function initSmartSearch() {
     filterAndRender(enName, arName);
   };
 
-  // ✅ زر البحث
   if (searchBtn) {
     searchBtn.addEventListener('click', (e) => {
       e.preventDefault();
       searchDropdown.classList.remove('active');
-      const val     = searchInput.value.trim();
-      const valLow  = val.toLowerCase();
+      const val    = searchInput.value.trim();
+      const valLow = val.toLowerCase();
 
       if (!val) {
         resetToHome();
@@ -550,8 +537,8 @@ function initSmartSearch() {
       }
 
       const filtered = state.liveProperties.filter(p =>
-        (p.title_en    && p.title_en.toLowerCase().includes(valLow)) ||
-        (p.title_ar    && p.title_ar.includes(val))                  ||
+        (p.title_en    && p.title_en.toLowerCase().includes(valLow))    ||
+        (p.title_ar    && p.title_ar.includes(val))                     ||
         (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
         (p.location_ar && p.location_ar.includes(val))
       );
@@ -561,7 +548,6 @@ function initSmartSearch() {
     });
   }
 
-  // دالة فلترة الولاية وعرضها
   function filterAndRender(enName, arName) {
     const enLow  = enName ? enName.toLowerCase() : '';
     const arTrim = arName || '';
@@ -578,27 +564,24 @@ function initSmartSearch() {
 
 // ==========================================
 // 🔥 5. جلب العقارات من Firestore
+// ✅ Optimistic UI: عرض Static فوراً ثم استبدالها بـ Firestore في الخلفية
 // ==========================================
 async function loadPropertiesFromFirestore() {
   const container = document.getElementById('listings-grid');
   if (!container) return;
 
-  const dict = translations[state.lang];
+  // ✅ خطوة 1: عرض البيانات الـ Static فوراً بدون أي انتظار
+  state.liveProperties = [...properties];
+  renderListings();
 
-  container.innerHTML = `
-    <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
-      <i class="ph ph-circle-notch spin" style="font-size:2.5rem; display:block; margin-bottom:16px;"></i>
-      ${dict.loading}
-    </div>
-  `;
-
+  // ✅ خطوة 2: جلب Firestore بصمت في الخلفية
   try {
     const snapshot = await db.collection('properties')
       .where('visible', '==', true)
       .get();
 
     if (!snapshot.empty) {
-      state.liveProperties = snapshot.docs.map(doc => {
+      const firestoreData = snapshot.docs.map(doc => {
         const d = doc.data();
         return {
           id:          String(doc.id),
@@ -610,8 +593,7 @@ async function loadPropertiesFromFirestore() {
           rating:      d.rating     || 4.80,
           image:       d.imageUrl   || d.image       || '',
           images:      Array.isArray(d.images) && d.images.length > 0
-                         ? d.images
-                         : [d.imageUrl || d.image || ''],
+                         ? d.images : [d.imageUrl || d.image || ''],
           urgency:     d.urgency    || null,
           desc_en:     d.descEn     || d.desc_en     || '',
           desc_ar:     d.descAr     || d.desc_ar     || '',
@@ -619,19 +601,23 @@ async function loadPropertiesFromFirestore() {
                          ? (d.featuresEn || d.features_en) : [],
           features_ar: Array.isArray(d.featuresAr || d.features_ar)
                          ? (d.featuresAr || d.features_ar) : [],
-          lat:         d.lat  || null,
-          lng:         d.lng  || null,
+          lat:         d.lat || null,
+          lng:         d.lng || null,
         };
       });
-    } else {
-      state.liveProperties = properties;
+
+      // ✅ خطوة 3: استبدال بـ Firestore فقط إذا المستخدم ما زال في الصفحة الرئيسية
+      state.liveProperties = firestoreData;
+
+      if (state.currentView === 'home' && !state.activeSearch) {
+        renderListings();
+      }
     }
+    // إذا snapshot فارغ، تبقى الـ Static ظاهرة — لا تغيير
   } catch (err) {
     console.error('Firestore error:', err);
-    state.liveProperties = properties;
+    // الـ Static موجودة أصلاً — لا داعي لأي شيء
   }
-
-  renderListings();
 }
 
 // ==========================================
@@ -674,7 +660,6 @@ function toggleLanguage() {
   if (document.getElementById('categories-container')) {
     renderCategories();
 
-    // ✅ إعادة تطبيق البحث الحالي بعد تغيير اللغة
     if (state.activeSearch && state.currentView !== 'favorites') {
       const val = state.activeSearch.toLowerCase();
       const filtered = state.liveProperties.filter(p =>
@@ -710,7 +695,7 @@ function updateLanguageUI() {
 function loadFavorites() {
   if (state.user) {
     try {
-      const saved    = localStorage.getItem(`ore_favs_${state.user.uid}`);
+      const saved     = localStorage.getItem(`ore_favs_${state.user.uid}`);
       state.favorites = saved ? JSON.parse(saved) : [];
     } catch (e) {
       console.warn('Could not parse favorites:', e);
@@ -741,8 +726,8 @@ function toggleFavorite(e, id) {
     return;
   }
 
-  const strId = String(id);
-  const index = state.favorites.indexOf(strId);
+  const strId  = String(id);
+  const index  = state.favorites.indexOf(strId);
   const wasFav = index > -1;
 
   if (wasFav) state.favorites.splice(index, 1);
@@ -750,7 +735,6 @@ function toggleFavorite(e, id) {
 
   saveFavorites();
 
-  // ✅ تحديث زر القلب في مكانه مباشرة بدون إعادة رسم كاملة
   const btn = e.currentTarget;
   if (wasFav) {
     btn.classList.remove('active');
@@ -760,7 +744,6 @@ function toggleFavorite(e, id) {
     btn.innerHTML = `<i class="ph-fill ph-heart"></i>`;
   }
 
-  // ✅ إذا كنا في صفحة المفضلة، أعد الرسم لإزالة العنصر
   if (state.currentView === 'favorites') {
     renderListings();
   }
@@ -798,7 +781,6 @@ function renderListings(customArray = null) {
 
   let itemsToShow = customArray !== null ? customArray : state.liveProperties;
 
-  // ✅ عرض المفضلة
   if (state.currentView === 'favorites' && customArray === null) {
     itemsToShow = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
     if (itemsToShow.length === 0) {
@@ -813,7 +795,6 @@ function renderListings(customArray = null) {
     }
   }
 
-  // ✅ لا توجد نتائج
   if (itemsToShow.length === 0) {
     container.innerHTML = `
       <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
@@ -862,7 +843,9 @@ function renderListings(customArray = null) {
           <button
             class="fav-btn ${isFav ? 'active' : ''}"
             onclick="toggleFavorite(event, '${prop.id}')"
-            aria-label="${isFav ? (state.lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from favorites') : (state.lang === 'ar' ? 'إضافة للمفضلة' : 'Add to favorites')}"
+            aria-label="${isFav
+              ? (state.lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from favorites')
+              : (state.lang === 'ar' ? 'إضافة للمفضلة'   : 'Add to favorites')}"
           >
             <i class="${isFav ? 'ph-fill' : 'ph'} ph-heart"></i>
           </button>
@@ -999,7 +982,6 @@ function _fillPropertyPage(prop) {
     }
   }
 
-  // ✅ تحديث عنوان الصفحة
   document.title = `${state.lang === 'en' ? prop.title_en : prop.title_ar} — OreBooking`;
 
   if (typeof window.initPropertyMap === 'function') {
@@ -1041,14 +1023,12 @@ window.goToSlide = function(e, index) {
 function updateSlider() {
   const trackEl = document.getElementById('slider-track');
   if (trackEl) {
-    // ✅ دعم RTL في الـ slider
-    const offset  = state.currentImageIndex * 100;
+    const offset = state.currentImageIndex * 100;
     trackEl.style.transform = state.lang === 'ar'
       ? `translateX(${offset}%)`
       : `translateX(-${offset}%)`;
   }
 
-  // تحديث صورة اللايتبوكس إذا كان مفتوحاً
   const lb    = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
   if (lbImg && lb?.classList.contains('active')) {
@@ -1063,7 +1043,7 @@ function updateSlider() {
   });
 }
 
-// ✅ Swipe دعم اللمس في الـ Slider
+// ✅ دعم Swipe اللمس في الـ Slider
 (function initSliderTouch() {
   let touchStartX = 0;
   let touchEndX   = 0;
@@ -1077,10 +1057,9 @@ function updateSlider() {
     if (!e.target.closest('.slider-container')) return;
     touchEndX = e.changedTouches[0].screenX;
     const diff = touchStartX - touchEndX;
-
     if (Math.abs(diff) > 50) {
-      if (diff > 0) window.nextSlide(null); // سحب لليسار → الصورة التالية
-      else           window.prevSlide(null); // سحب لليمين → الصورة السابقة
+      if (diff > 0) window.nextSlide(null);
+      else          window.prevSlide(null);
     }
   }, { passive: true });
 })();
@@ -1144,11 +1123,11 @@ async function handleLogin(e) {
     loginForm.reset();
   } catch (error) {
     const msgs = {
-      'auth/user-not-found':    isAr ? 'لا يوجد حساب مسجل بهذا البريد'                                : 'No account found with this email',
-      'auth/wrong-password':    isAr ? 'كلمة المرور غير صحيحة'                                       : 'Incorrect password',
-      'auth/invalid-email':     isAr ? 'صيغة البريد الإلكتروني غير صحيحة'                            : 'Invalid email format',
-      'auth/too-many-requests': isAr ? 'تم تعطيل الحساب مؤقتاً بسبب محاولات كثيرة خاطئة'            : 'Account temporarily disabled due to many failed attempts',
-      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                               : 'Check your internet connection',
+      'auth/user-not-found':         isAr ? 'لا يوجد حساب مسجل بهذا البريد'                       : 'No account found with this email',
+      'auth/wrong-password':         isAr ? 'كلمة المرور غير صحيحة'                               : 'Incorrect password',
+      'auth/invalid-email':          isAr ? 'صيغة البريد الإلكتروني غير صحيحة'                    : 'Invalid email format',
+      'auth/too-many-requests':      isAr ? 'تم تعطيل الحساب مؤقتاً بسبب محاولات كثيرة خاطئة'    : 'Account temporarily disabled due to many failed attempts',
+      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                            : 'Check your internet connection',
     };
     showMessage(msgs[error.code] || (isAr ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password'), 'error');
   } finally {
@@ -1165,7 +1144,6 @@ async function handleRegister(e) {
   const btn      = registerForm.querySelector('button[type="submit"]');
   const isAr     = state.lang === 'ar';
 
-  // ✅ تحقق بسيط من اسم المستخدم
   if (name.length < 2) {
     showMessage(isAr ? 'الاسم يجب أن يكون حرفين على الأقل' : 'Name must be at least 2 characters', 'error');
     return;
@@ -1182,13 +1160,16 @@ async function handleRegister(e) {
     closeModal();
     registerForm.reset();
     updateUserUI();
-    showMessage(isAr ? `مرحباً ${name}! تم إنشاء حسابك بنجاح.` : `Welcome ${name}! Your account was created.`, 'success');
+    showMessage(
+      isAr ? `مرحباً ${name}! تم إنشاء حسابك بنجاح.` : `Welcome ${name}! Your account was created.`,
+      'success'
+    );
   } catch (error) {
     const msgs = {
-      'auth/email-already-in-use': isAr ? 'البريد الإلكتروني مسجل مسبقاً'                  : 'Email is already in use',
-      'auth/weak-password':        isAr ? 'كلمة المرور ضعيفة (6 أحرف على الأقل)'           : 'Password too weak (min 6 characters)',
-      'auth/invalid-email':        isAr ? 'صيغة البريد الإلكتروني غير صحيحة'               : 'Invalid email format',
-      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                     : 'Check your internet connection',
+      'auth/email-already-in-use':   isAr ? 'البريد الإلكتروني مسجل مسبقاً'             : 'Email is already in use',
+      'auth/weak-password':          isAr ? 'كلمة المرور ضعيفة (6 أحرف على الأقل)'     : 'Password too weak (min 6 characters)',
+      'auth/invalid-email':          isAr ? 'صيغة البريد الإلكتروني غير صحيحة'          : 'Invalid email format',
+      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                  : 'Check your internet connection',
     };
     showMessage(msgs[error.code] || error.message, 'error');
   } finally {
@@ -1203,7 +1184,6 @@ async function handleGoogleLogin() {
     await auth.signInWithPopup(provider);
     closeModal();
   } catch (error) {
-    // ✅ تجاهل إغلاق النافذة من المستخدم بدون رسالة خطأ
     if (error.code === 'auth/popup-closed-by-user') return;
     console.error('Google Auth Error:', error);
     showMessage(
@@ -1228,7 +1208,6 @@ function handleLogout() {
       if (heroEl) heroEl.style.display = 'block';
       if (catsEl) catsEl.style.display = 'flex';
 
-      // مسح حقل البحث
       const searchInput = document.getElementById('search-location');
       if (searchInput) searchInput.value = '';
       hideClearSearchBtn();
@@ -1265,12 +1244,6 @@ function updateUserUI() {
     const emailEl = document.getElementById('dropdown-user-email');
     if (nameEl)  nameEl.textContent  = state.user.displayName || (state.lang === 'ar' ? 'مستخدم' : 'User');
     if (emailEl) emailEl.textContent = state.user.email || '';
-
-    // ✅ تحديث نقاط المكافآت (placeholder — يمكن ربطه بـ Firestore لاحقاً)
-    const pointsEl = document.getElementById('user-points');
-    if (pointsEl && pointsEl.textContent === '1,250') {
-      // تبقى كما هي حتى يتم ربطها بقاعدة البيانات
-    }
   } else {
     openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
     openAuthBtn.classList.add('auth-btn-guest');
@@ -1281,7 +1254,7 @@ function updateUserUI() {
 
 function openModal() {
   if (!authModal) return;
-  switchForm('login'); // ✅ دائماً ابدأ بنموذج الدخول
+  switchForm('login');
   authModal.classList.add('active');
   document.body.classList.add('modal-open');
 }
@@ -1303,7 +1276,6 @@ function switchForm(type) {
     registerForm.classList.remove('active');
     loginForm.classList.add('active');
   }
-  // ✅ مسح رسائل الخطأ عند التبديل
   if (authMessage) authMessage.style.display = 'none';
 }
 
