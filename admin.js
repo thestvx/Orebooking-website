@@ -22,7 +22,11 @@ const db = firebase.firestore();
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
 
-let isSuperAdmin = false;
+// FIX: isSuperAdmin يتحدد من localStorage مباشرة عند كل استدعاء
+// بدل الاعتماد على متغير عالمي قد يكون خاطئ
+function getIsSuperAdmin() {
+  return !localStorage.getItem('ownerPropId');
+}
 
 // =========================================
 //   Login Logic
@@ -41,10 +45,9 @@ if (loginForm) {
     if (user === ADMIN_USER && pass === ADMIN_PASS) {
       localStorage.removeItem('ownerPropId');
       localStorage.removeItem('ownerPropName');
-      isSuperAdmin = true;
 
-      loginScreen.style.display = "none";
-      adminLayout.style.display = "flex";
+      if (loginScreen) loginScreen.style.display = "none";
+      if (adminLayout) adminLayout.style.display = "flex";
       loadProperties();
       loadBookings();
     } else {
@@ -70,7 +73,6 @@ function showLoginError(msg) {
 // الدخول التلقائي إذا كان هناك جلسة مفتوحة (حساب مالك)
 document.addEventListener("DOMContentLoaded", () => {
   if (localStorage.getItem('ownerPropId')) {
-    isSuperAdmin = false;
     if (loginScreen) loginScreen.style.display = "none";
     if (adminLayout) adminLayout.style.display = "flex";
     loadProperties();
@@ -80,8 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // =========================================
 //   Tab Switching
-//   FIX: يتم تعريف switchTab هنا ويُربط بالخريطة
-//        عبر hookSwitchTab في admin.html بعد defer
 // =========================================
 function switchTab(tabId) {
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
@@ -105,12 +105,9 @@ function switchTab(tabId) {
     loadBookings();
   }
 
-  // FIX: تشغيل الخريطة مباشرة من هنا إذا كانت الدالة محملة
   if (tabId === 'add-property') {
     setTimeout(() => {
-      if (typeof initAddMap === 'function') {
-        initAddMap();
-      }
+      if (typeof initAddMap === 'function') initAddMap();
     }, 150);
   }
 }
@@ -124,12 +121,13 @@ async function loadProperties() {
   tbody.innerHTML = `
     <tr>
       <td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">
-        <i class="ph ph-circle-notch ph-spin" style="font-size: 2rem;"></i><br>جارٍ التحميل...
+        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;"></i><br>جارٍ التحميل...
       </td>
     </tr>`;
 
   try {
-    if (!isSuperAdmin) {
+    // FIX: استخدام getIsSuperAdmin() بدل المتغير العالمي
+    if (!getIsSuperAdmin()) {
       const ownerPropId = localStorage.getItem('ownerPropId');
       if (!ownerPropId) return;
       const doc = await db.collection("properties").doc(ownerPropId).get();
@@ -170,7 +168,6 @@ async function loadProperties() {
   }
 }
 
-// دالة مساعدة لرسم جدول العقارات
 function renderPropertiesTable(docsArray) {
   const tbody = document.getElementById("properties-tbody");
   if (!tbody) return;
@@ -182,10 +179,10 @@ function renderPropertiesTable(docsArray) {
     const hasLoc    = p.lat && p.lng;
 
     const mapBadge = hasLoc
-      ? `<span title="الموقع محدد (${parseFloat(p.lat).toFixed(4)}, ${parseFloat(p.lng).toFixed(4)})" style="color:#10b981; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
+      ? `<span title="الموقع محدد" style="color:#10b981; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
            <i class="ph-fill ph-map-pin"></i> موقع الخريطة
          </span>`
-      : `<span title="لا يوجد موقع محدد" style="color:var(--text-muted); font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
+      : `<span title="لا يوجد موقع" style="color:var(--text-muted); font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
            <i class="ph ph-map-pin-slash"></i> بدون خريطة
          </span>`;
 
@@ -193,12 +190,10 @@ function renderPropertiesTable(docsArray) {
     tr.setAttribute('data-prop-id', doc.id);
     tr.innerHTML = `
       <td>
-        <img
-          class="admin-table-img"
-          src="${p.imageUrl || ''}"
-          alt="${p.titleAr || ''}"
-          style="width:70px; height:50px; border-radius:10px; object-fit:cover;"
-          onerror="this.src='images/placeholder.jpg'">
+        <img class="admin-table-img"
+             src="${p.imageUrl || ''}"
+             alt="${p.titleAr || ''}"
+             onerror="this.src='images/placeholder.jpg'">
       </td>
       <td>
         <div class="font-bold" style="color:var(--text-main); font-size:1.05rem;">${p.titleAr || '—'}</div>
@@ -213,24 +208,30 @@ function renderPropertiesTable(docsArray) {
       </td>
       <td>
         <label class="switch">
-          <input type="checkbox" ${isVisible ? 'checked' : ''} onchange="toggleVisibility('${doc.id}', this.checked, this)">
+          <input type="checkbox" ${isVisible ? 'checked' : ''}
+                 onchange="toggleVisibility('${doc.id}', this.checked, this)">
           <span class="slider round"></span>
         </label>
       </td>
       <td>
         <div class="action-btns">
-          <button class="action-btn view-btn" onclick="window.open('property.html?id=${doc.id}','_blank')" title="معاينة">
+          <button class="action-btn view-btn"
+                  onclick="window.open('property.html?id=${doc.id}','_blank')"
+                  title="معاينة">
             <i class="ph ph-eye"></i>
           </button>
-          <button class="action-btn edit-btn" onclick="openEditModal('${doc.id}')" title="تعديل">
+          <button class="action-btn edit-btn"
+                  onclick="openEditModal('${doc.id}')"
+                  title="تعديل">
             <i class="ph ph-pencil-simple"></i>
           </button>
-          <button class="action-btn delete-btn" onclick="deleteProperty('${doc.id}')" title="حذف">
+          <button class="action-btn delete-btn"
+                  onclick="deleteProperty('${doc.id}')"
+                  title="حذف">
             <i class="ph ph-trash"></i>
           </button>
         </div>
-      </td>
-    `;
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -262,7 +263,6 @@ if (addForm) {
   addForm.addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    // التحقق من وجود الإحداثيات
     const latVal = document.getElementById("prop-lat").value.trim();
     const lngVal = document.getElementById("prop-lng").value.trim();
     if (!latVal || !lngVal) {
@@ -276,7 +276,6 @@ if (addForm) {
       return;
     }
 
-    // التحقق من حجم الملف (5 ميجابايت)
     if (imageFile.size > 5 * 1024 * 1024) {
       alert("⚠️ حجم الصورة يتجاوز 5 ميجابايت. يرجى اختيار صورة أصغر.");
       return;
@@ -304,25 +303,21 @@ if (addForm) {
         price:      Number(document.getElementById("prop-price").value),
         descAr:     document.getElementById("prop-desc-ar").value.trim(),
         descEn:     document.getElementById("prop-desc-en").value.trim(),
-        imageUrl:   imageUrl,
-        lat:        parseFloat(latVal),
-        lng:        parseFloat(lngVal),
-        visible:    true,
-        createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+        imageUrl,
+        lat:       parseFloat(latVal),
+        lng:       parseFloat(lngVal),
+        visible:   true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
       await db.collection("properties").add(newProperty);
 
-      // إعادة ضبط النموذج
       addForm.reset();
       if (uploadStatus) uploadStatus.textContent = "";
 
       const zoneText = document.querySelector('.upload-zone-text');
       const zoneIcon = document.querySelector('.upload-zone i');
-      if (zoneText) {
-        zoneText.textContent = "اضغط هنا أو اسحب الصورة";
-        zoneText.style.color = "var(--text-main)";
-      }
+      if (zoneText) { zoneText.textContent = "اضغط هنا أو اسحب الصورة"; zoneText.style.color = "var(--text-main)"; }
       if (zoneIcon) zoneIcon.className = "ph ph-cloud-arrow-up";
 
       const badge = document.getElementById("map-picked-badge");
@@ -333,7 +328,6 @@ if (addForm) {
       if (latEl) latEl.value = "";
       if (lngEl) lngEl.value = "";
 
-      // إعادة تهيئة الخريطة للاستخدام التالي
       if (typeof window._resetAddMap === 'function') window._resetAddMap();
 
       alert("✅ تمت إضافة العقار بنجاح إلى منصة OreBooking!");
@@ -367,7 +361,7 @@ async function uploadToCloudinary(file) {
 
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
     method: "POST",
-    body: formData
+    body:   formData
   });
 
   if (!res.ok) throw new Error("فشل الاتصال بخادم رفع الصور");
@@ -385,10 +379,7 @@ async function openEditModal(docId) {
 
   try {
     const doc = await db.collection("properties").doc(docId).get();
-    if (!doc.exists) {
-      alert("العقار غير موجود!");
-      return;
-    }
+    if (!doc.exists) { alert("العقار غير موجود!"); return; }
     const p = doc.data();
 
     document.getElementById("edit-prop-id").value  = docId;
@@ -405,14 +396,11 @@ async function openEditModal(docId) {
     if (editLngEl) editLngEl.value = existingLng || "";
 
     const editBadge = document.getElementById("edit-map-picked-badge");
-    if (editBadge) {
-      editBadge.classList.toggle("visible", !!(existingLat && existingLng));
-    }
+    if (editBadge) editBadge.classList.toggle("visible", !!(existingLat && existingLng));
 
     editModal.classList.add("active");
     document.body.classList.add("modal-open");
 
-    // FIX: تفعيل خريطة التعديل مع تأخير كافٍ بعد ظهور المودال
     if (typeof window.initEditMapFromAdmin === "function") {
       window.initEditMapFromAdmin(existingLat, existingLng);
     }
@@ -429,7 +417,6 @@ function closeEditModal() {
   document.body.classList.remove("modal-open");
 }
 
-// إغلاق المودال بالنقر على الخلفية
 const editModalEl = document.getElementById("edit-modal");
 if (editModalEl) {
   editModalEl.addEventListener("click", function (e) {
@@ -437,7 +424,6 @@ if (editModalEl) {
   });
 }
 
-// نموذج التعديل
 const editForm      = document.getElementById("edit-property-form");
 const submitEditBtn = document.getElementById("submit-edit-btn");
 
@@ -462,9 +448,9 @@ if (editForm) {
 
     try {
       const updateData = {
-        titleAr: titleAr,
-        price:   Number(price),
-        descAr:  descAr,
+        titleAr,
+        price:     Number(price),
+        descAr,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
@@ -474,7 +460,6 @@ if (editForm) {
       }
 
       await db.collection("properties").doc(docId).update(updateData);
-
       closeEditModal();
       loadProperties();
       alert("✅ تم حفظ التعديلات بنجاح!");
@@ -495,7 +480,7 @@ if (editForm) {
 //   Delete Property
 // =========================================
 async function deleteProperty(docId) {
-  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\nسيتم مسحه من المنصة ولا يمكن التراجع عن هذا الإجراء.")) return;
+  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\nسيتم مسحه من المنصة ولا يمكن التراجع.")) return;
 
   try {
     await db.collection("properties").doc(docId).delete();
@@ -508,96 +493,173 @@ async function deleteProperty(docId) {
 }
 
 // =========================================
-//   Bookings Tab
+//   Load Bookings
+//   FIX الرئيسي:
+//   1. getIsSuperAdmin() بدل المتغير العالمي
+//   2. جلب الحجوزات بـ propertyId + fallback
+//      على حقول بديلة إذا ما ضبطت
+//   3. Grid أفقي يملأ الشاشة
 // =========================================
 async function loadBookings() {
   const container = document.getElementById('bookings-container');
   if (!container) return;
 
   container.innerHTML = `
-    <p style="text-align:center; padding:60px; color:var(--text-muted); width:100%;">
-      <i class="ph ph-circle-notch ph-spin" style="font-size:2.5rem; color:var(--primary); margin-bottom:16px; display:block;"></i>
+    <div style="text-align:center; padding:60px; color:var(--text-muted); width:100%;">
+      <i class="ph ph-circle-notch ph-spin"
+         style="font-size:2.5rem; color:var(--primary); margin-bottom:16px; display:block;"></i>
       جارٍ جلب الحجوزات...
-    </p>`;
+    </div>`;
 
   try {
-    let query = db.collection('bookings');
+    // ─────────────────────────────────────────
+    // FIX: قراءة الصلاحية مباشرة من localStorage
+    // لا تعتمد على المتغير العالمي isSuperAdmin
+    // ─────────────────────────────────────────
+    const ownerPropId  = (localStorage.getItem('ownerPropId') || '').trim();
+    const isSuperAdmin = !ownerPropId;
 
-    if (!isSuperAdmin) {
-      const ownerPropId = localStorage.getItem('ownerPropId');
-      if (!ownerPropId) return;
-      // FIX: جلب حجوزات العقار المحدد فقط (لا يحتاج orderBy فلا يحتاج index مركّب)
-      query = query.where('propertyId', '==', ownerPropId);
+    let docs = [];
+
+    if (isSuperAdmin) {
+      // ── أدمن عام: كل الحجوزات مرتبة ──────
+      try {
+        const snap = await db.collection('bookings').orderBy('createdAt', 'desc').get();
+        docs = snap.docs;
+      } catch (_) {
+        const snap = await db.collection('bookings').get();
+        docs = snap.docs;
+      }
+
     } else {
-      query = query.orderBy('createdAt', 'desc');
+      // ── مالك عقار: جرب جميع الحقول الممكنة ──
+      // FIX: بعض ملفات الحجز تحفظ الـ ID بأسماء مختلفة
+      const FIELD_CANDIDATES = ['propertyId', 'propId', 'propertyDocId', 'property_id'];
+      let matched = false;
+
+      for (const field of FIELD_CANDIDATES) {
+        try {
+          const snap = await db.collection('bookings')
+            .where(field, '==', ownerPropId)
+            .get();
+          if (!snap.empty) {
+            docs = snap.docs;
+            matched = true;
+            console.info(`[loadBookings] ✅ تطابق على الحقل: "${field}" → ${docs.length} حجز`);
+            break;
+          } else {
+            console.info(`[loadBookings] ⬜ الحقل "${field}": لا نتائج`);
+          }
+        } catch (fieldErr) {
+          console.warn(`[loadBookings] ⚠️ الحقل "${field}" يحتاج index:`, fieldErr.message);
+        }
+      }
+
+      // Fallback: جلب الكل وفلترة كلاينت
+      if (!matched) {
+        console.warn('[loadBookings] 🔄 Fallback: جلب الكل وفلترة محلية');
+        const allSnap = await db.collection('bookings').get();
+        docs = allSnap.docs.filter(d => {
+          const data = d.data() || {};
+          return FIELD_CANDIDATES.some(f =>
+            (data[f] || '').toString().trim() === ownerPropId
+          );
+        });
+        console.info(`[loadBookings] نتيجة الفلترة المحلية: ${docs.length} حجز`);
+      }
     }
 
-    const snap = await query.get();
+    // ترتيب تنازلي حسب createdAt
+    docs.sort((a, b) => {
+      const getMs = doc => {
+        const v = (doc.data() || {}).createdAt;
+        if (!v) return 0;
+        if (v.toDate) return v.toDate().getTime();
+        return new Date(v).getTime();
+      };
+      return getMs(b) - getMs(a);
+    });
 
-    if (snap.empty) {
+    // ──────────────────────────────────────────
+    // لا توجد حجوزات
+    // ──────────────────────────────────────────
+    if (!docs.length) {
       container.innerHTML = `
         <div style="text-align:center; padding:80px; color:var(--text-muted); width:100%;">
-          <i class="ph ph-calendar-blank" style="font-size:4rem; margin-bottom:16px; opacity:0.3; display:block;"></i>
-          <p style="font-size:1.1rem;">لا توجد أي حجوزات مسجلة حتى الآن.</p>
+          <i class="ph ph-calendar-blank"
+             style="font-size:4rem; margin-bottom:16px; opacity:0.3; display:block;"></i>
+          <p style="font-size:1.1rem;">
+            ${isSuperAdmin
+              ? 'لا توجد حجوزات مسجلة حتى الآن.'
+              : 'لا توجد حجوزات لعقارك حتى الآن.'}
+          </p>
+          ${!isSuperAdmin ? `
+            <p style="margin-top:8px; font-size:0.78rem; font-family:monospace;
+                      color:var(--text-muted); background:var(--bg-color);
+                      display:inline-block; padding:4px 10px; border-radius:6px;">
+              Property ID: ${ownerPropId}
+            </p>` : ''}
         </div>`;
       return;
     }
 
-    // FIX: ترتيب الحجوزات في الكلاينت لتجنب الحاجة لـ Firestore composite index
-    const docsArray = snap.docs.sort((a, b) => {
-      const getTime = doc => {
-        const val = doc.data().createdAt;
-        if (!val) return 0;
-        if (val.toDate) return val.toDate().getTime();
-        return new Date(val).getTime();
-      };
-      return getTime(b) - getTime(a);
-    });
-
+    // ──────────────────────────────────────────
+    // بناء الكاردات
+    // ──────────────────────────────────────────
     const statusLabel = { pending: 'قيد الانتظار', confirmed: 'تم التأكيد', cancelled: 'تم الإلغاء' };
-    const statusColor = { pending: '#d97706',      confirmed: '#059669',     cancelled: '#e11d48'  };
-    const statusBg    = { pending: '#fef3c7',       confirmed: '#ecfdf5',     cancelled: '#ffe4e6'  };
+    const statusColor = { pending: '#d97706',       confirmed: '#059669',     cancelled: '#e11d48' };
+    const statusBg    = { pending: '#fef3c7',        confirmed: '#ecfdf5',     cancelled: '#ffe4e6' };
 
-    const formatDate = (dateField) => {
-      if (!dateField) return '—';
-      if (typeof dateField === 'string') return dateField;
-      if (dateField.toDate) return dateField.toDate().toLocaleDateString('ar-DZ');
+    const formatDate = v => {
+      if (!v) return '—';
+      if (typeof v === 'string') return v;
+      if (v.toDate) return v.toDate().toLocaleDateString('ar-DZ');
       return '—';
     };
 
-    let html = `<div class="bookings-grid">`;
+    const formatDateTime = v => {
+      if (!v) return '—';
+      const d = v.toDate ? v.toDate() : new Date(v);
+      return d.toLocaleDateString('ar-DZ') + ' ' +
+             d.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+    };
 
-    docsArray.forEach(doc => {
-      const b  = doc.data();
+    // FIX: grid أفقي — 3 أعمدة على الديسكتوب، يتجاوب تلقائياً
+    let html = `
+      <div style="
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 20px;
+        width: 100%;
+        align-items: start;
+      ">`;
+
+    docs.forEach(doc => {
+      const b  = doc.data() || {};
+      const st = b.status || 'pending';
       const ci = formatDate(b.checkInDate  || b.checkIn);
       const co = formatDate(b.checkOutDate || b.checkOut);
+      const createdAtStr = formatDateTime(b.createdAt);
+      const docIdShort   = doc.id.slice(0, 8).toUpperCase();
 
-      let createdAtStr = '—';
-      if (b.createdAt) {
-        const d = b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
-        createdAtStr = d.toLocaleDateString('ar-DZ') + ' ' + d.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
-      }
-
-      const st          = b.status || 'pending';
-      const docIdShort  = doc.id.slice(0, 8).toUpperCase();
-
-      // قسم الإقامة والأسرّة
+      // الإقامة والأسرّة
       let occupancyHtml = `<span>${b.guests || 1} ضيف</span>`;
-      if (b.rooms && (b.adults || b.children !== undefined)) {
-        const bedLabels = { double: 'سرير مزدوج', twin: 'سريران منفصلان', king: 'سرير كينج', single: 'سرير فردي' };
-        const bedLabel  = bedLabels[b.bedConfig] || '';
-        const bedHtml   = bedLabel ? ` · ${bedLabel}` : '';
+      if (b.rooms) {
+        const bedMap  = { double:'سرير مزدوج', twin:'سريران منفصلان', king:'سرير كينج', single:'سرير فردي' };
+        const bedTxt  = bedMap[b.bedConfig] ? ` · ${bedMap[b.bedConfig]}` : '';
         occupancyHtml = `
-          <div style="display:flex; flex-direction:column; gap:3px; font-size:0.85rem;">
-            <span style="font-weight:700; color:var(--text-main);">${b.rooms} غرف${bedHtml}</span>
-            <span style="color:var(--text-muted);">${b.adults || 0} بالغين${b.children > 0 ? ` + ${b.children} أطفال` : ''}</span>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-weight:700;">${b.rooms} غرف${bedTxt}</span>
+            <span style="font-size:0.78rem; color:var(--text-muted);">
+              ${b.adults || 0} بالغين${(b.children > 0) ? ` + ${b.children} أطفال` : ''}
+            </span>
           </div>`;
       }
 
-      // الإضافات المختارة
+      // الإضافات
       let addonsHtml = '';
-      if (b.selectedAddons && b.selectedAddons.length > 0) {
-        const addOnLabels = {
+      if (Array.isArray(b.selectedAddons) && b.selectedAddons.length) {
+        const addMap = {
           restaurant:      'المطعم' + (b.restaurantPlan ? ` (${b.restaurantPlan})` : ''),
           wifi:            'إنترنت عالي السرعة',
           spa:             'جلسة سبا',
@@ -607,146 +669,159 @@ async function loadBookings() {
           extraBed:        'سرير إضافي',
           events:          'تنسيق فعاليات'
         };
-        const translatedAddons = b.selectedAddons.map(a => addOnLabels[a] || a).join('، ');
+        const list = b.selectedAddons.map(a => addMap[a] || a).join('، ');
         addonsHtml = `
-          <div style="margin-top:10px; background:var(--bg-color); padding:10px 12px; border-radius:10px; border:1px solid var(--border-color);">
-            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-              <i class="ph-fill ph-plus-circle" style="color:var(--primary);"></i>
-              <span style="font-size:0.8rem; font-weight:700; color:var(--primary);">إضافات مختارة:</span>
+          <div style="background:var(--bg-color); padding:10px 12px; border-radius:10px;
+                      border:1px solid var(--border-color); margin-top:4px;">
+            <div style="font-size:0.78rem; font-weight:700; color:var(--primary); margin-bottom:4px;">
+              <i class="ph-fill ph-plus-circle"></i> إضافات مختارة:
             </div>
-            <div style="font-size:0.8rem; color:var(--text-main); line-height:1.5;">${translatedAddons}</div>
+            <div style="font-size:0.8rem; color:var(--text-main);">${list}</div>
           </div>`;
       }
 
-      // الإيصال أو طريقة الدفع
-      let receiptHtml = '';
+      // طريقة الدفع والإيصال
+      let paymentBadge = '';
+      let receiptHtml  = '';
       if (b.paymentMethod === 'transfer') {
+        paymentBadge = `
+          <span style="font-size:0.7rem; background:#fef3c7; color:#d97706;
+                       padding:2px 7px; border-radius:4px; font-weight:700; margin-inline-start:6px;">
+            <i class="ph ph-bank"></i> تحويل بنكي
+          </span>`;
         receiptHtml = b.receiptUrl
-          ? `<a href="${b.receiptUrl}" target="_blank"
+          ? `<a href="${b.receiptUrl}" target="_blank" rel="noopener noreferrer"
                style="background:#fef3c7; color:#d97706; padding:6px 12px; border-radius:8px;
                       font-size:0.8rem; font-weight:700; text-decoration:none;
                       display:inline-flex; align-items:center; gap:6px; border:1px solid #fde68a;">
                <i class="ph ph-receipt"></i> عرض إيصال الدفع
              </a>`
-          : `<span style="color:#e11d48; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+          : `<span style="color:#e11d48; font-size:0.8rem; font-weight:600;
+                          display:inline-flex; align-items:center; gap:4px;">
                <i class="ph-fill ph-warning-circle"></i> الإيصال مفقود
              </span>`;
-      } else if (b.paymentMethod === 'cash') {
-        receiptHtml = `
-          <span style="background:var(--bg-color); color:var(--text-muted); padding:4px 10px;
-                       border-radius:8px; font-size:0.75rem; font-weight:600; border:1px solid var(--border-color);
-                       display:inline-flex; align-items:center; gap:5px;">
-            <i class="ph ph-money"></i> الدفع نقداً عند الوصول
+      } else {
+        paymentBadge = `
+          <span style="font-size:0.7rem; background:#ecfdf5; color:#059669;
+                       padding:2px 7px; border-radius:4px; font-weight:700; margin-inline-start:6px;">
+            <i class="ph ph-money"></i> الدفع عند الوصول
           </span>`;
       }
 
-      // ملاحظات ووقت الوصول
+      // الملاحظات ووقت الوصول
       let notesHtml = '';
-      if ((b.notes && b.notes.trim()) || b.arrivalTime) {
-        const arrivalHtml = b.arrivalTime
-          ? `<div style="margin-bottom:4px;"><strong>وقت الوصول:</strong> ${b.arrivalTime}</div>` : '';
-        const userNoteHtml = (b.notes && b.notes.trim())
-          ? `<div><strong>ملاحظة الضيف:</strong> ${b.notes}</div>` : '';
+      if (b.arrivalTime || (b.notes && b.notes.trim())) {
         notesHtml = `
-          <div style="margin-top:10px; font-size:0.8rem; color:var(--text-muted);
-                      background:rgba(245,158,11,0.1); padding:10px;
-                      border-inline-start:3px solid #f59e0b; border-radius:6px;">
-            ${arrivalHtml}${userNoteHtml}
+          <div style="font-size:0.8rem; color:var(--text-muted); background:#fffbeb;
+                      padding:8px 10px; border-inline-start:3px solid #f59e0b;
+                      border-radius:0 6px 6px 0; margin-top:4px;">
+            ${b.arrivalTime ? `<div><strong style="color:var(--text-main);">وقت الوصول:</strong> ${b.arrivalTime}</div>` : ''}
+            ${b.notes && b.notes.trim() ? `<div><strong style="color:var(--text-main);">ملاحظات:</strong> ${b.notes}</div>` : ''}
           </div>`;
       }
 
       html += `
-        <div class="booking-card"
-          style="background:var(--surface-color); border:1px solid var(--border-color);
-                 border-radius:16px; padding:20px; display:flex; flex-direction:column;
-                 gap:12px; box-shadow:var(--shadow-soft);">
+        <div class="booking-card">
 
-          <!-- هيدر الكارد -->
+          <!-- هيدر -->
           <div style="display:flex; justify-content:space-between; align-items:flex-start;
-                      border-bottom:1px solid var(--border-color); padding-bottom:14px;">
-            <div>
-              <div style="font-size:1.15rem; font-weight:700; color:var(--text-main); margin-bottom:4px;">
+                      border-bottom:1px solid var(--border-color); padding-bottom:14px; gap:10px;">
+            <div style="min-width:0; flex:1;">
+              <div style="font-size:1.05rem; font-weight:700; color:var(--text-main);
+                          margin-bottom:4px; word-break:break-word;">
                 ${b.guestName || 'غير معروف'}
               </div>
-              <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;
-                          background:var(--bg-color); padding:3px 8px; border-radius:6px; display:inline-block;">
-                رقم: #${docIdShort}
+              <div>${paymentBadge}</div>
+              <div style="margin-top:6px; font-size:0.72rem; color:var(--text-muted);
+                          font-family:monospace; background:var(--bg-color);
+                          padding:2px 7px; border-radius:5px; display:inline-block;">
+                #${docIdShort}
               </div>
             </div>
-            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-              <span style="font-size:0.75rem; font-weight:700; padding:6px 12px; border-radius:8px;
-                           background:${statusBg[st] || '#f1f5f9'}; color:${statusColor[st] || '#64748b'};
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0;">
+              <span class="status-badge ${st}"
+                    style="background:${statusBg[st] || '#f1f5f9'};
+                           color:${statusColor[st] || '#64748b'};
                            border:1px solid ${statusColor[st] || '#94a3b8'}40;">
                 ${statusLabel[st] || st}
               </span>
-              <span style="font-size:0.7rem; color:var(--text-muted);">
+              <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">
                 <i class="ph ph-clock"></i> ${createdAtStr}
               </span>
             </div>
           </div>
 
           <!-- تفاصيل -->
-          <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:10px; flex:1;">
 
-            <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem;">
-              <i class="ph-fill ph-house-line" style="color:var(--text-muted); font-size:1.2rem;"></i>
-              <span style="font-weight:700; color:var(--primary);">${b.propertyTitle || '—'}</span>
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem;">
+              <i class="ph-fill ph-buildings" style="color:var(--primary); font-size:1.1rem; flex-shrink:0;"></i>
+              <span style="font-weight:700; color:var(--primary); word-break:break-word;">
+                ${b.propertyTitle || '—'}
+              </span>
             </div>
 
-            <div style="display:flex; align-items:flex-start; gap:10px; font-size:0.9rem; color:var(--text-main);">
-              <i class="ph-fill ph-calendar-blank" style="color:var(--text-muted); font-size:1.2rem; margin-top:2px;"></i>
-              <div style="display:flex; flex-direction:column; gap:3px;">
-                <span style="font-weight:600;">
-                  ${ci}
-                  <i class="ph ph-arrow-left" style="font-size:0.7rem; color:var(--text-muted); margin:0 4px;"></i>
-                  ${co}
-                </span>
-                <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;
-                             background:var(--bg-color); padding:2px 8px; border-radius:4px;
-                             display:inline-block; width:fit-content;">
-                  ${b.nights || 0} ليالٍ إقامة
-                </span>
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-main);">
+              <i class="ph-fill ph-calendar-check" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
+              <div>
+                <div style="font-weight:600;">${ci} ← ${co}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); background:#f1f5f9;
+                            padding:1px 7px; border-radius:4px; display:inline-block; margin-top:2px;">
+                  ${b.nights || 0} ليالٍ
+                </div>
               </div>
             </div>
 
-            <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-main);">
-              <i class="ph-fill ph-users" style="color:var(--text-muted); font-size:1.2rem;"></i>
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-main);">
+              <i class="ph-fill ph-users" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
               ${occupancyHtml}
             </div>
 
-            <div style="display:flex; align-items:center; gap:10px; font-size:0.9rem; color:var(--text-main);">
-              <i class="ph-fill ph-phone" style="color:var(--text-muted); font-size:1.2rem;"></i>
-              <span dir="ltr" style="font-family:monospace; font-size:0.95rem; font-weight:600;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; min-width:0;">
+              <i class="ph-fill ph-phone" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
+              <span dir="ltr" style="font-family:monospace; font-weight:600; overflow-wrap:anywhere;">
                 ${b.guestPhone || '—'}
+              </span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; min-width:0;">
+              <i class="ph-fill ph-envelope" style="color:var(--text-muted); font-size:1.1rem; flex-shrink:0;"></i>
+              <span dir="ltr" style="overflow-wrap:anywhere; color:var(--text-muted);">
+                ${b.guestEmail || '—'}
               </span>
             </div>
 
             ${addonsHtml}
             ${notesHtml}
 
-            <!-- السعر وطريقة الدفع -->
-            <div style="display:flex; align-items:center; justify-content:space-between;
-                        margin-top:8px; padding-top:14px; border-top:1px dashed var(--border-color);">
+            <!-- الإجمالي -->
+            <div style="display:flex; justify-content:space-between; align-items:center;
+                        gap:12px; margin-top:auto; padding-top:12px;
+                        border-top:1px dashed var(--border-color); flex-wrap:wrap;">
               <div>${receiptHtml}</div>
-              <div style="text-align:left;">
-                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">الإجمالي</div>
-                <div style="font-size:1.25rem; font-weight:800; color:var(--primary);">
+              <div style="text-align:end;">
+                <div style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                  الإجمالي
+                </div>
+                <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">
                   ${Number(b.totalPrice || 0).toLocaleString()} DZD
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- أزرار القبول والرفض (للحجوزات قيد الانتظار فقط) -->
+          <!-- أزرار القبول / الرفض -->
           ${st === 'pending' ? `
-          <div class="booking-actions-row">
-            <button class="btn-approve" onclick="updateBookingStatus('${doc.id}', 'confirmed')">
-              <i class="ph-fill ph-check-circle" style="font-size:1.2rem;"></i> قبول الحجز
-            </button>
-            <button class="btn-reject" onclick="updateBookingStatus('${doc.id}', 'cancelled')">
-              <i class="ph-fill ph-x-circle" style="font-size:1.2rem;"></i> رفض الحجز
-            </button>
-          </div>` : ''}
+            <div class="booking-actions-row">
+              <button class="btn-approve"
+                      onclick="updateBookingStatus('${doc.id}', 'confirmed')">
+                <i class="ph-fill ph-check-circle"></i> قبول الحجز
+              </button>
+              <button class="btn-reject"
+                      onclick="updateBookingStatus('${doc.id}', 'cancelled')">
+                <i class="ph-fill ph-x-circle"></i> رفض الحجز
+              </button>
+            </div>` : ''}
 
         </div>`;
     });
@@ -755,22 +830,28 @@ async function loadBookings() {
     container.innerHTML = html;
 
   } catch (err) {
-    console.error("loadBookings error:", err);
-    // FIX: رسالة خاصة إذا كان Firestore يطلب index
-    if (err.code === 'failed-precondition' || (err.message && err.message.includes('index'))) {
+    console.error('[loadBookings] Fatal:', err);
+
+    const isIndexErr = err.code === 'failed-precondition' ||
+      (err.message && err.message.toLowerCase().includes('index'));
+
+    if (isIndexErr) {
       container.innerHTML = `
-        <div style="text-align:center; padding:40px; color:#d97706; background:#fef3c7;
-                    border-radius:12px; font-weight:bold; border:1px solid #fde68a;">
-          <i class="ph ph-warning" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
-          يحتاج هذا الاستعلام إلى إنشاء Index في Firestore.<br>
-          <small style="font-weight:400; color:var(--text-muted); margin-top:8px; display:block;">
-            افتح الـ Console وانقر على الرابط الذي يظهر لإنشاء الـ Index تلقائياً.
-          </small>
+        <div style="padding:32px; color:#d97706; background:#fef3c7;
+                    border-radius:14px; border:1px solid #fde68a; text-align:center; width:100%;">
+          <i class="ph ph-warning" style="font-size:2.5rem; display:block; margin-bottom:12px;"></i>
+          <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
+            يحتاج هذا الاستعلام إلى إنشاء Index في Firestore
+          </div>
+          <p style="font-size:0.85rem; color:var(--text-muted);">
+            افتح الـ Console (F12) وانقر على الرابط الأزرق لإنشاء الـ Index تلقائياً،
+            ثم أعد تحميل الصفحة.
+          </p>
         </div>`;
     } else {
       container.innerHTML = `
-        <div style="text-align:center; padding:40px; color:#e11d48; background:#ffe4e6;
-                    border-radius:12px; font-weight:bold;">
+        <div style="padding:32px; color:#e11d48; background:#ffe4e6;
+                    border-radius:14px; font-weight:bold; text-align:center; width:100%;">
           خطأ في تحميل الحجوزات: ${err.message}
         </div>`;
     }
@@ -778,7 +859,7 @@ async function loadBookings() {
 }
 
 // =========================================
-//   Update Booking Status (قبول / رفض)
+//   Update Booking Status
 // =========================================
 window.updateBookingStatus = async function(docId, newStatus) {
   const isConfirm  = newStatus === 'confirmed';
@@ -788,9 +869,11 @@ window.updateBookingStatus = async function(docId, newStatus) {
 
   if (!confirm(confirmMsg)) return;
 
-  // FIX: تعطيل الأزرار فوراً لمنع الضغط المزدوج
-  const allBtns = document.querySelectorAll('.btn-approve, .btn-reject');
-  allBtns.forEach(btn => { btn.disabled = true; });
+  // تعطيل كل الأزرار مؤقتاً
+  document.querySelectorAll('.btn-approve, .btn-reject').forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  });
 
   try {
     await db.collection('bookings').doc(docId).update({
@@ -798,15 +881,18 @@ window.updateBookingStatus = async function(docId, newStatus) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     alert(`✅ تم ${isConfirm ? 'قبول' : 'رفض'} الحجز بنجاح.`);
-    loadBookings();
+    await loadBookings();
   } catch (err) {
-    console.error("updateBookingStatus error:", err);
+    console.error('[updateBookingStatus]', err);
     alert('حدث خطأ أثناء تحديث حالة الحجز: ' + err.message);
-    allBtns.forEach(btn => { btn.disabled = false; });
+    document.querySelectorAll('.btn-approve, .btn-reject').forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    });
   }
 };
 
 // =========================================
-//   fetchProperties alias (للـ RBAC)
+//   fetchProperties alias
 // =========================================
 window.fetchProperties = loadProperties;
