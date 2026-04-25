@@ -106,7 +106,6 @@ a   { color: inherit; }
 /* =========================================================
    --- FIX: Phosphor Icons — ضمان ظهور الأيقونات دائماً ---
 ========================================================= */
-/* إصلاح شامل لجميع أيقونات Phosphor */
 i[class^="ph"],
 i[class*=" ph"],
 span[class^="ph"],
@@ -124,7 +123,6 @@ span[class*=" ph"] {
   flex-shrink: 0;
 }
 
-/* حجم افتراضي آمن */
 i[class^="ph"],
 i[class*=" ph"] {
   font-size: 1em;
@@ -133,7 +131,6 @@ i[class*=" ph"] {
   text-align: center;
 }
 
-/* منع الأيقونات من الانكماش داخل flex */
 .nav-actions i,
 .dropdown-item i,
 .category-item i,
@@ -171,7 +168,6 @@ i[class*=" ph"] {
 .spin     { animation: spin 0.8s linear infinite; }
 .ph-spin  { animation: spin 1s linear infinite; }
 
-/* ph-circle-notch هو الأيقونة الصحيحة للسبينر في Phosphor */
 .ph-circle-notch { animation: spin 0.8s linear infinite; }
 
 .container {
@@ -261,7 +257,6 @@ i[class*=" ph"] {
   color: var(--primary);
 }
 
-/* FIX: حجم أيقونة الـ icon-btn */
 .icon-btn i { font-size: 1.15rem; }
 
 /* =========================================================
@@ -460,7 +455,6 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   transform: scale(1.02);
 }
 
-/* FIX: أيقونة البحث */
 .search-btn i { font-size: 1.1rem; }
 
 /* =========================================================
@@ -613,7 +607,6 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   opacity: 1;
 }
 
-/* FIX: حجم أيقونة الكاتيغوري ثابت */
 .category-item i {
   font-size: 1.6rem;
   display: flex;
@@ -653,6 +646,31 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   justify-content: center;
 }
 
+/* =========================================================
+   ✅ Card Skeleton — Firestore Loading State
+========================================================= */
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+.card-skeleton {
+  border-radius: var(--radius-2xl);
+  height: 320px;
+  background: linear-gradient(
+    90deg,
+    var(--border-color) 25%,
+    var(--surface-color) 50%,
+    var(--border-color) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border: 1px solid var(--border-color);
+}
+
+/* =========================================================
+   --- Card ---
+========================================================= */
 .card {
   background-color: var(--surface-color);
   border-radius: var(--radius-2xl);
@@ -754,7 +772,6 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   flex-shrink: 0;
 }
 
-/* FIX: نجمة التقييم */
 .card-rating i {
   color: #fbbf24;
   font-size: 0.95rem;
@@ -1056,10 +1073,8 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
 
 .primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 
-/* FIX: أيقونات داخل primary-btn */
 .primary-btn i { font-size: 1.1rem; }
 
-/* Ghost button */
 .ghost-btn {
   display: inline-flex;
   align-items: center;
@@ -1134,7 +1149,6 @@ html[dir="rtl"] .search-bar { padding: 8px 28px 8px 8px; }
   border-color: var(--primary);
 }
 
-/* FIX: أيقونات social buttons */
 .social-btn i { font-size: 1.15rem; }
 
 .switch-form-text { text-align: center; font-size: 0.875rem; color: var(--text-muted); margin-top: 8px; }
@@ -1240,7 +1254,6 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   color: var(--text-main);
 }
 
-/* FIX: أيقونات المميزات */
 .features-list i {
   font-size: 1.2rem;
   color: var(--primary);
@@ -1647,7 +1660,6 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
 .nav-item:hover  { background-color: var(--bg-color); }
 .nav-item.active { background-color: var(--primary); color: white; }
 
-/* FIX: أيقونات القائمة الجانبية */
 .nav-item i {
   font-size: 1.2rem;
   flex-shrink: 0;
@@ -1913,7 +1925,6 @@ html[dir="rtl"] .input-half input[type="date"]::-webkit-calendar-picker-indicato
   transition: var(--transition);
 }
 
-/* FIX: أيقونات أزرار الحجز */
 .btn-approve i,
 .btn-reject i { font-size: 1.1rem; }
 
@@ -2107,6 +2118,7 @@ input:disabled + .slider            { opacity: 0.6; cursor: not-allowed; }
 
   .categories    { gap: 16px; padding: 20px 16px; justify-content: flex-start; }
   .listings-grid { grid-template-columns: 1fr; gap: 16px; }
+  .card-skeleton { height: 260px; }
   .card-img-wrapper { height: 200px; }
 
   .property-container  { padding-top: 20px; padding-bottom: 60px; }
@@ -2170,6 +2182,7 @@ input:disabled + .slider            { opacity: 0.6; cursor: not-allowed; }
   .hero               { padding: 36px 12px 20px; }
   .prop-image-gallery { height: 220px; }
   .card-img-wrapper   { height: 185px; }
+  .card-skeleton      { height: 240px; }
 
   .stats-grid { grid-template-columns: 1fr; }
   .form-grid  { grid-template-columns: 1fr; }
