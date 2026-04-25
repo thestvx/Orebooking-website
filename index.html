@@ -10,8 +10,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- Icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Icons: Phosphor Icons (نسخة محددة + preconnect) -->
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+  <!-- Phosphor Icons CSS (أسرع من JS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
 
   <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -22,6 +28,22 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
+    /* ===== Phosphor Icons Fix ===== */
+    /* يضمن ظهور الأيقونات حتى لو تأخر التحميل */
+    [class^="ph-"], [class*=" ph-"],
+    [class^="ph "], [class*=" ph "] {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-style: normal;
+    }
+
+    /* حجم افتراضي للأيقونات */
+    .ph, [class^="ph-"], [class*=" ph-"] {
+      font-size: inherit;
+    }
+
     /* ===== Smart Search Dropdown ===== */
     .search-field {
       position: relative;
@@ -99,7 +121,7 @@
 
     @keyframes fadeInDown {
       from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+      to   { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -202,7 +224,7 @@
 
     <!-- Spinner while searching -->
     <div id="search-spinner" style="display:none; text-align:center; padding:40px; color:var(--primary); font-size:2rem;">
-      <i class="ph ph-spinner ph-spin"></i>
+      <i class="ph ph-circle-notch ph-spin"></i>
     </div>
 
     <!-- No Results Message -->
@@ -221,7 +243,7 @@
   <footer class="footer">
     <div class="container">
       <p class="developed-by">
-        <span data-i18n="developed_by">Developed by:</span> 
+        <span data-i18n="developed_by">Developed by:</span>
         <span class="developers-names font-bold">Henni Abdennour, Khadem Mohammed, Kouidi Adel</span>
       </p>
     </div>
@@ -285,7 +307,7 @@
           </div>
 
           <p class="switch-form-text">
-            <span data-i18n="no_account">Don't have an account?</span> 
+            <span data-i18n="no_account">Don't have an account?</span>
             <a href="#" id="go-to-register" class="font-bold text-primary" data-i18n="sign_up">Sign up</a>
           </p>
         </form>
@@ -314,7 +336,7 @@
           </button>
 
           <p class="switch-form-text mt-4">
-            <span data-i18n="has_account">Already have an account?</span> 
+            <span data-i18n="has_account">Already have an account?</span>
             <a href="#" id="go-to-login" class="font-bold text-primary" data-i18n="sign_in">Sign in</a>
           </p>
         </form>
@@ -324,7 +346,25 @@
 
   <script src="script.js"></script>
 
+  <!-- Phosphor Icons JS (تحميل بعد المحتوى لضمان الظهور) -->
+  <script>
+    // تحميل Phosphor Icons JS بعد تحميل الصفحة
+    (function() {
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/dist/phosphor.umd.js';
+      script.async = true;
+      script.onerror = function() {
+        // Fallback: unpkg إذا فشل jsdelivr
+        var fallback = document.createElement('script');
+        fallback.src = 'https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.umd.js';
+        document.head.appendChild(fallback);
+      };
+      document.body.appendChild(script);
+    })();
+  </script>
+
   <!-- 🔍 Smart Search Logic -->
   <script src="search.js"></script>
+
 </body>
 </html>
