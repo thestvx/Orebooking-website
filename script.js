@@ -11,7 +11,6 @@ const firebaseConfig = {
   measurementId: "G-5GKMRMVHC3"
 };
 
-// تأكد من عدم التكرار في حال تحميل الملف مرتين
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
@@ -22,103 +21,113 @@ const db   = firebase.firestore();
 // 🌍 2. GLOBAL STATE & TRANSLATIONS
 // ==========================================
 const state = {
-  lang: localStorage.getItem('ore_lang') || 'en',
-  theme: localStorage.getItem('ore_theme') || 'light',
-  favorites: [],
-  user: null,
-  currentView: 'home',
-  currentImageIndex: 0,
-  liveProperties: []
+  lang:               localStorage.getItem('ore_lang')  || 'en',
+  theme:              localStorage.getItem('ore_theme') || 'light',
+  favorites:          [],
+  user:               null,
+  currentView:        'home',
+  currentImageIndex:  0,
+  liveProperties:     [],
+  activeSearch:       '',   // ✅ تتبع حالة البحث الحالي
+  activeCategory:     null  // ✅ تتبع الكاتيغوري المحدد
 };
 
 const translations = {
   en: {
-    hero_title: "Find your next perfect stay",
-    hero_subtitle: "Discover premium apartments, villas, and unique homes around the world.",
-    location: "Location",
+    hero_title:         "Find your next perfect stay",
+    hero_subtitle:      "Discover premium apartments, villas, and unique homes around the world.",
+    location:           "Location",
     location_placeholder: "Where are you going?",
-    dates: "Dates",
-    dates_placeholder: "Add dates",
-    guests: "Guests",
+    dates:              "Dates",
+    dates_placeholder:  "Add dates",
+    guests:             "Guests",
     guests_placeholder: "Add guests",
-    search: "Search",
-    trending: "Trending Destinations",
-    pts: "Pts",
-    night: "night",
-    urgency_few: "Only 2 rooms left",
-    urgency_hot: "Booked 5 times today",
-    developed_by: "Developed by:",
-    welcome_back: "Welcome back",
-    login_desc: "Enter your details to access your account.",
-    email: "Email Address",
-    password: "Password",
-    remember_me: "Remember me",
-    forgot_pass: "Forgot password?",
-    sign_in: "Sign In",
-    or_continue: "or continue with",
-    no_account: "Don't have an account?",
-    sign_up: "Sign up",
-    create_account: "Create an account",
-    register_desc: "Join OreBooking to unlock premium features.",
-    full_name: "Full Name",
-    sign_up_btn: "Create Account",
-    has_account: "Already have an account?",
-    logout: "Log Out",
-    my_favorites: "My Favorites",
-    no_favorites: "You haven't saved any favorites yet.",
-    back_home: "Back to Home",
-    about_prop: "About this space",
-    what_offers: "What this place offers",
-    book_now: "Reserve Now",
-    wont_charged: "You won't be charged yet",
-    loading: "Loading properties...",
-    no_props: "No properties available yet.",
-    location_on_map: "Location on Map",
-    no_results: "No results found"
+    search:             "Search",
+    trending:           "Trending Destinations",
+    search_results:     "Search Results",
+    pts:                "Pts",
+    night:              "night",
+    urgency_few:        "Only 2 rooms left",
+    urgency_hot:        "Booked 5 times today",
+    developed_by:       "Developed by:",
+    welcome_back:       "Welcome back",
+    login_desc:         "Enter your details to access your account.",
+    email:              "Email Address",
+    password:           "Password",
+    remember_me:        "Remember me",
+    forgot_pass:        "Forgot password?",
+    sign_in:            "Sign In",
+    or_continue:        "or continue with",
+    no_account:         "Don't have an account?",
+    sign_up:            "Sign up",
+    create_account:     "Create an account",
+    register_desc:      "Join OreBooking to unlock premium features.",
+    full_name:          "Full Name",
+    sign_up_btn:        "Create Account",
+    has_account:        "Already have an account?",
+    logout:             "Log Out",
+    my_favorites:       "My Favorites",
+    no_favorites:       "You haven't saved any favorites yet.",
+    back_home:          "Back to Home",
+    about_prop:         "About this space",
+    what_offers:        "What this place offers",
+    book_now:           "Reserve Now",
+    wont_charged:       "You won't be charged yet",
+    loading:            "Loading properties...",
+    no_props:           "No properties available yet.",
+    location_on_map:    "Location on Map",
+    no_results:         "No results found",
+    clear_search:       "Clear Search",
+    all_wilayas:        "All Wilayas",
+    all_wilayas_sub:    "Show all properties",
   },
   ar: {
-    hero_title: "اكتشف إقامتك المثالية القادمة",
-    hero_subtitle: "اكتشف شققاً فاخرة، فلل، ومنازل فريدة حول العالم.",
-    location: "الموقع",
+    hero_title:         "اكتشف إقامتك المثالية القادمة",
+    hero_subtitle:      "اكتشف شققاً فاخرة، فلل، ومنازل فريدة حول العالم.",
+    location:           "الموقع",
     location_placeholder: "إلى أين ستذهب؟",
-    dates: "التواريخ",
-    dates_placeholder: "أضف التواريخ",
-    guests: "الضيوف",
+    dates:              "التواريخ",
+    dates_placeholder:  "أضف التواريخ",
+    guests:             "الضيوف",
     guests_placeholder: "أضف الضيوف",
-    search: "بحث",
-    trending: "الوجهات الشائعة",
-    pts: "نقطة",
-    night: "ليلة",
-    urgency_few: "بقي غرفتان فقط",
-    urgency_hot: "تم حجزه 5 مرات اليوم",
-    developed_by: "تم تطوير هذا الموقع من قبل:",
-    welcome_back: "مرحباً بعودتك",
-    login_desc: "أدخل بياناتك للوصول إلى حسابك.",
-    email: "البريد الإلكتروني",
-    password: "كلمة المرور",
-    remember_me: "تذكرني",
-    forgot_pass: "نسيت كلمة المرور؟",
-    sign_in: "تسجيل الدخول",
-    or_continue: "أو المتابعة باستخدام",
-    no_account: "ليس لديك حساب؟",
-    sign_up: "إنشاء حساب",
-    create_account: "إنشاء حساب جديد",
-    register_desc: "انضم إلى OreBooking لفتح ميزات حصرية.",
-    full_name: "الاسم الكامل",
-    sign_up_btn: "إنشاء الحساب",
-    has_account: "لديك حساب بالفعل؟",
-    logout: "تسجيل الخروج",
-    my_favorites: "مفضلتي",
-    no_favorites: "لا توجد أي عقارات في مفضلتك بعد.",
-    back_home: "العودة للرئيسية",
-    about_prop: "حول هذا المكان",
-    what_offers: "ماذا يوفر هذا المكان",
-    book_now: "احجز الآن",
-    wont_charged: "لن يتم خصم المبلغ الآن",
-    loading: "جارٍ تحميل العقارات...",
-    no_props: "لا توجد عقارات متاحة بعد.",
-    location_on_map: "الموقع على الخريطة",
-    no_results: "لا توجد نتائج مطابقة"
+    search:             "بحث",
+    trending:           "الوجهات الشائعة",
+    search_results:     "نتائج البحث",
+    pts:                "نقطة",
+    night:              "ليلة",
+    urgency_few:        "بقي غرفتان فقط",
+    urgency_hot:        "تم حجزه 5 مرات اليوم",
+    developed_by:       "تم تطوير هذا الموقع من قبل:",
+    welcome_back:       "مرحباً بعودتك",
+    login_desc:         "أدخل بياناتك للوصول إلى حسابك.",
+    email:              "البريد الإلكتروني",
+    password:           "كلمة المرور",
+    remember_me:        "تذكرني",
+    forgot_pass:        "نسيت كلمة المرور؟",
+    sign_in:            "تسجيل الدخول",
+    or_continue:        "أو المتابعة باستخدام",
+    no_account:         "ليس لديك حساب؟",
+    sign_up:            "إنشاء حساب",
+    create_account:     "إنشاء حساب جديد",
+    register_desc:      "انضم إلى OreBooking لفتح ميزات حصرية.",
+    full_name:          "الاسم الكامل",
+    sign_up_btn:        "إنشاء الحساب",
+    has_account:        "لديك حساب بالفعل؟",
+    logout:             "تسجيل الخروج",
+    my_favorites:       "مفضلتي",
+    no_favorites:       "لا توجد أي عقارات في مفضلتك بعد.",
+    back_home:          "العودة للرئيسية",
+    about_prop:         "حول هذا المكان",
+    what_offers:        "ماذا يوفر هذا المكان",
+    book_now:           "احجز الآن",
+    wont_charged:       "لن يتم خصم المبلغ الآن",
+    loading:            "جارٍ تحميل العقارات...",
+    no_props:           "لا توجد عقارات متاحة بعد.",
+    location_on_map:    "الموقع على الخريطة",
+    no_results:         "لا توجد نتائج مطابقة",
+    clear_search:       "إلغاء البحث",
+    all_wilayas:        "كل الولايات",
+    all_wilayas_sub:    "عرض جميع العقارات",
   }
 };
 
@@ -128,82 +137,109 @@ const translations = {
 const properties = [
   {
     id: "1",
-    title_en: "Camp Palm Garden Resort",
-    title_ar: "منتجع بالم قاردن",
+    title_en:    "Camp Palm Garden Resort",
+    title_ar:    "منتجع بالم قاردن",
     location_en: "Hai Al-Sharqiya, Taghzout - El Oued",
     location_ar: "حي الشرقية، تغزوت – دائرة قمار",
-    price: 9500,
+    price:  9500,
     rating: 4.95,
-    image: "images/palmgarden/01.jpg",
+    image:  "images/palmgarden/01.jpg",
     images: [
-      "images/palmgarden/01.jpg","images/palmgarden/02.jpg",
-      "images/palmgarden/03.jpg","images/palmgarden/04.jpg"
+      "images/palmgarden/01.jpg", "images/palmgarden/02.jpg",
+      "images/palmgarden/03.jpg", "images/palmgarden/04.jpg"
     ],
     urgency: "hot",
     desc_en: "Where to find peace and comfort as if you are away from the bustle... but without feeling like you are in the desert! At Palm Garden you will find comfortable rooms, a breakfast fit for royalty, green lawns, and a safe family space.",
     desc_ar: "وين تلقى الهدوء والراحة وكأنك بعيد عن الصخب… لكن بلا ما تحس روحك في الصحراء! في بالم قاردن تلقى غرف مريحة، فطور صباحي يليق بالمقام، قازون أخضر يشرح الخاطر، وفضاء عائلي آمن.",
-    features_ar: ["غرف فردية، ثنائية وعائلية","فطور صباحي","قازون أخضر","فضاء عائلي آمن"],
-    features_en: ["Single & Family Rooms","Breakfast Included","Green Lawn","Safe Family Space"],
-    lat: null,
-    lng: null
+    features_ar: ["غرف فردية، ثنائية وعائلية", "فطور صباحي", "قازون أخضر", "فضاء عائلي آمن"],
+    features_en: ["Single & Family Rooms", "Breakfast Included", "Green Lawn", "Safe Family Space"],
+    lat: null, lng: null
   },
   {
     id: "2",
-    title_en: "Modern Forest Cabin",
-    title_ar: "كوخ عصري في الغابة",
+    title_en:    "Modern Forest Cabin",
+    title_ar:    "كوخ عصري في الغابة",
     location_en: "Aspen, Colorado",
     location_ar: "أسبن، كولورادو",
-    price: 45000,
+    price:  45000,
     rating: 4.85,
-    image: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80",
+    image:  "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80",
     images: ["https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80"],
     urgency: "few",
     desc_en: "A perfect modern retreat in the heart of nature.",
     desc_ar: "ملاذ عصري مثالي في قلب الطبيعة.",
-    features_ar: ["غرفتين نوم","مطبخ مجهز","مدفأة حطب"],
-    features_en: ["2 Bedrooms","Equipped Kitchen","Fireplace"],
-    lat: null,
-    lng: null
+    features_ar: ["غرفتين نوم", "مطبخ مجهز", "مدفأة حطب"],
+    features_en: ["2 Bedrooms", "Equipped Kitchen", "Fireplace"],
+    lat: null, lng: null
   }
 ];
 
 const categories = [
-  { icon: 'ph-buildings',      label_en: 'Apartments', label_ar: 'شقق' },
-  { icon: 'ph-house',          label_en: 'Villas',     label_ar: 'فلل' },
-  { icon: 'ph-tree-evergreen', label_en: 'Resorts',    label_ar: 'منتجعات' },
-  { icon: 'ph-swimming-pool',  label_en: 'Pools',      label_ar: 'مسابح' },
+  { icon: 'ph-buildings',      label_en: 'Apartments', label_ar: 'شقق'      },
+  { icon: 'ph-house',          label_en: 'Villas',     label_ar: 'فلل'      },
+  { icon: 'ph-tree-evergreen', label_en: 'Resorts',    label_ar: 'منتجعات'  },
+  { icon: 'ph-swimming-pool',  label_en: 'Pools',      label_ar: 'مسابح'    },
 ];
 
 const algerianWilayas = [
-  { id: 1, ar: "أدرار", en: "Adrar" }, { id: 2, ar: "الشلف", en: "Chlef" },
-  { id: 3, ar: "الأغواط", en: "Laghouat" }, { id: 4, ar: "أم البواقي", en: "Oum El Bouaghi" },
-  { id: 5, ar: "باتنة", en: "Batna" }, { id: 6, ar: "بجاية", en: "Béjaïa" },
-  { id: 7, ar: "بسكرة", en: "Biskra" }, { id: 8, ar: "بشار", en: "Béchar" },
-  { id: 9, ar: "البليدة", en: "Blida" }, { id: 10, ar: "البويرة", en: "Bouira" },
-  { id: 11, ar: "تمنراست", en: "Tamanrasset" }, { id: 12, ar: "تبسة", en: "Tébessa" },
-  { id: 13, ar: "تلمسان", en: "Tlemcen" }, { id: 14, ar: "تيارت", en: "Tiaret" },
-  { id: 15, ar: "تيزي وزو", en: "Tizi Ouzou" }, { id: 16, ar: "الجزائر", en: "Algiers" },
-  { id: 17, ar: "الجلفة", en: "Djelfa" }, { id: 18, ar: "جيجل", en: "Jijel" },
-  { id: 19, ar: "سطيف", en: "Sétif" }, { id: 20, ar: "سعيدة", en: "Saïda" },
-  { id: 21, ar: "سكيكدة", en: "Skikda" }, { id: 22, ar: "سيدي بلعباس", en: "Sidi Bel Abbès" },
-  { id: 23, ar: "عنابة", en: "Annaba" }, { id: 24, ar: "قالمة", en: "Guelma" },
-  { id: 25, ar: "قسنطينة", en: "Constantine" }, { id: 26, ar: "المدية", en: "Médéa" },
-  { id: 27, ar: "مستغانم", en: "Mostaganem" }, { id: 28, ar: "المسيلة", en: "M'Sila" },
-  { id: 29, ar: "معسكر", en: "Mascara" }, { id: 30, ar: "ورقلة", en: "Ouargla" },
-  { id: 31, ar: "وهران", en: "Oran" }, { id: 32, ar: "البيض", en: "El Bayadh" },
-  { id: 33, ar: "إليزي", en: "Illizi" }, { id: 34, ar: "برج بوعريريج", en: "Bordj Bou Arréridj" },
-  { id: 35, ar: "بومرداس", en: "Boumerdès" }, { id: 36, ar: "الطارف", en: "El Tarf" },
-  { id: 37, ar: "تندوف", en: "Tindouf" }, { id: 38, ar: "تيسمسيلت", en: "Tissemsilt" },
-  { id: 39, ar: "الوادي", en: "El Oued" }, { id: 40, ar: "خنشلة", en: "Khenchela" },
-  { id: 41, ar: "سوق أهراس", en: "Souk Ahras" }, { id: 42, ar: "تيبازة", en: "Tipaza" },
-  { id: 43, ar: "ميلة", en: "Mila" }, { id: 44, ar: "عين الدفلى", en: "Aïn Defla" },
-  { id: 45, ar: "النعامة", en: "Naâma" }, { id: 46, ar: "عين تموشنت", en: "Aïn Témouchent" },
-  { id: 47, ar: "غرداية", en: "Ghardaïa" }, { id: 48, ar: "غليزان", en: "Relizane" },
-  { id: 49, ar: "تيميمون", en: "Timimoun" }, { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar" },
-  { id: 51, ar: "أولاد جلال", en: "Ouled Djellal" }, { id: 52, ar: "بني عباس", en: "Béni Abbès" },
-  { id: 53, ar: "إن صالح", en: "In Salah" }, { id: 54, ar: "إن قزام", en: "In Guezzam" },
-  { id: 55, ar: "تقرت", en: "Touggourt" }, { id: 56, ar: "جانت", en: "Djanet" },
-  { id: 57, ar: "المغير", en: "El M'Ghair" }, { id: 58, ar: "المنيعة", en: "El Meniaa" }
+  { id: 1,  ar: "أدرار",          en: "Adrar"              },
+  { id: 2,  ar: "الشلف",          en: "Chlef"              },
+  { id: 3,  ar: "الأغواط",        en: "Laghouat"           },
+  { id: 4,  ar: "أم البواقي",     en: "Oum El Bouaghi"     },
+  { id: 5,  ar: "باتنة",          en: "Batna"              },
+  { id: 6,  ar: "بجاية",          en: "Béjaïa"             },
+  { id: 7,  ar: "بسكرة",          en: "Biskra"             },
+  { id: 8,  ar: "بشار",           en: "Béchar"             },
+  { id: 9,  ar: "البليدة",        en: "Blida"              },
+  { id: 10, ar: "البويرة",        en: "Bouira"             },
+  { id: 11, ar: "تمنراست",        en: "Tamanrasset"        },
+  { id: 12, ar: "تبسة",           en: "Tébessa"            },
+  { id: 13, ar: "تلمسان",         en: "Tlemcen"            },
+  { id: 14, ar: "تيارت",          en: "Tiaret"             },
+  { id: 15, ar: "تيزي وزو",       en: "Tizi Ouzou"         },
+  { id: 16, ar: "الجزائر",        en: "Algiers"            },
+  { id: 17, ar: "الجلفة",         en: "Djelfa"             },
+  { id: 18, ar: "جيجل",           en: "Jijel"              },
+  { id: 19, ar: "سطيف",           en: "Sétif"              },
+  { id: 20, ar: "سعيدة",          en: "Saïda"              },
+  { id: 21, ar: "سكيكدة",         en: "Skikda"             },
+  { id: 22, ar: "سيدي بلعباس",   en: "Sidi Bel Abbès"     },
+  { id: 23, ar: "عنابة",          en: "Annaba"             },
+  { id: 24, ar: "قالمة",          en: "Guelma"             },
+  { id: 25, ar: "قسنطينة",        en: "Constantine"        },
+  { id: 26, ar: "المدية",         en: "Médéa"              },
+  { id: 27, ar: "مستغانم",        en: "Mostaganem"         },
+  { id: 28, ar: "المسيلة",        en: "M'Sila"             },
+  { id: 29, ar: "معسكر",          en: "Mascara"            },
+  { id: 30, ar: "ورقلة",          en: "Ouargla"            },
+  { id: 31, ar: "وهران",          en: "Oran"               },
+  { id: 32, ar: "البيض",          en: "El Bayadh"          },
+  { id: 33, ar: "إليزي",          en: "Illizi"             },
+  { id: 34, ar: "برج بوعريريج",   en: "Bordj Bou Arréridj" },
+  { id: 35, ar: "بومرداس",        en: "Boumerdès"          },
+  { id: 36, ar: "الطارف",         en: "El Tarf"            },
+  { id: 37, ar: "تندوف",          en: "Tindouf"            },
+  { id: 38, ar: "تيسمسيلت",      en: "Tissemsilt"         },
+  { id: 39, ar: "الوادي",         en: "El Oued"            },
+  { id: 40, ar: "خنشلة",          en: "Khenchela"          },
+  { id: 41, ar: "سوق أهراس",     en: "Souk Ahras"         },
+  { id: 42, ar: "تيبازة",         en: "Tipaza"             },
+  { id: 43, ar: "ميلة",           en: "Mila"               },
+  { id: 44, ar: "عين الدفلى",    en: "Aïn Defla"          },
+  { id: 45, ar: "النعامة",        en: "Naâma"              },
+  { id: 46, ar: "عين تموشنت",    en: "Aïn Témouchent"     },
+  { id: 47, ar: "غرداية",         en: "Ghardaïa"           },
+  { id: 48, ar: "غليزان",         en: "Relizane"           },
+  { id: 49, ar: "تيميمون",        en: "Timimoun"           },
+  { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar"},
+  { id: 51, ar: "أولاد جلال",    en: "Ouled Djellal"      },
+  { id: 52, ar: "بني عباس",       en: "Béni Abbès"         },
+  { id: 53, ar: "إن صالح",        en: "In Salah"           },
+  { id: 54, ar: "إن قزام",        en: "In Guezzam"         },
+  { id: 55, ar: "تقرت",           en: "Touggourt"          },
+  { id: 56, ar: "جانت",           en: "Djanet"             },
+  { id: 57, ar: "المغير",         en: "El M'Ghair"         },
+  { id: 58, ar: "المنيعة",        en: "El Meniaa"          }
 ];
 
 // ==========================================
@@ -229,26 +265,22 @@ function init() {
   if (document.getElementById('categories-container')) {
     renderCategories();
     loadPropertiesFromFirestore();
-    initSmartSearch(); // تفعيل البحث الذكي
+    initSmartSearch();
+    initClearSearchBtn(); // ✅ تهيئة زر إلغاء البحث
   }
 
   renderPropertyDetails();
 
-  if (langBtn)    langBtn.addEventListener('click', toggleLanguage);
-  if (themeBtn)   themeBtn.addEventListener('click', toggleTheme);
+  if (langBtn)   langBtn.addEventListener('click',  toggleLanguage);
+  if (themeBtn)  themeBtn.addEventListener('click', toggleTheme);
   if (openAuthBtn) openAuthBtn.addEventListener('click', handleAuthButtonClick);
 
+  // ✅ زر اللوجو: العودة للرئيسية مع إعادة تعيين كل شيء
   if (homeLogoBtn) {
     homeLogoBtn.addEventListener('click', (e) => {
       if (document.getElementById('hero-section')) {
         e.preventDefault();
-        state.currentView = 'home';
-        document.getElementById('hero-section').style.display = 'block';
-        document.getElementById('categories-container').style.display = 'flex';
-        const sectionTitle = document.getElementById('section-main-title');
-        if (sectionTitle) sectionTitle.setAttribute('data-i18n', 'trending');
-        updateLanguageUI();
-        renderListings();
+        resetToHome();
       }
     });
   }
@@ -261,6 +293,7 @@ function init() {
       const cats = document.getElementById('categories-container');
       if (hero) hero.style.display = 'none';
       if (cats) cats.style.display = 'none';
+      hideClearSearchBtn();
       const sectionTitle = document.getElementById('section-main-title');
       if (sectionTitle) {
         sectionTitle.removeAttribute('data-i18n');
@@ -277,10 +310,19 @@ function init() {
     }
   });
 
+  // ✅ إغلاق اللايت‌بوكس بالضغط على ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const lb = document.getElementById('lightbox');
+      if (lb && lb.classList.contains('active')) closeLightbox();
+      else if (authModal && authModal.classList.contains('active')) closeModal();
+    }
+  });
+
   if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeModal);
   document.getElementById('go-to-register')?.addEventListener('click', (e) => { e.preventDefault(); switchForm('register'); });
   document.getElementById('go-to-login')?.addEventListener('click',    (e) => { e.preventDefault(); switchForm('login');    });
-  if (loginForm)    loginForm.addEventListener('submit', handleLogin);
+  if (loginForm)    loginForm.addEventListener('submit',    handleLogin);
   if (registerForm) registerForm.addEventListener('submit', handleRegister);
   document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleLogin);
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
@@ -293,25 +335,75 @@ function init() {
 }
 
 // ==========================================
+// 🏠 4.1 RESET TO HOME
+// ==========================================
+function resetToHome() {
+  state.currentView  = 'home';
+  state.activeSearch = '';
+
+  const hero = document.getElementById('hero-section');
+  const cats = document.getElementById('categories-container');
+  if (hero) hero.style.display = 'block';
+  if (cats) cats.style.display = 'flex';
+
+  // مسح حقل البحث
+  const searchInput = document.getElementById('search-location');
+  if (searchInput) searchInput.value = '';
+
+  hideClearSearchBtn();
+
+  const sectionTitle = document.getElementById('section-main-title');
+  if (sectionTitle) {
+    sectionTitle.setAttribute('data-i18n', 'trending');
+    sectionTitle.textContent = translations[state.lang].trending;
+  }
+
+  renderListings();
+}
+
+// ==========================================
+// 🔍 4.2 CLEAR SEARCH BUTTON
+// ==========================================
+function initClearSearchBtn() {
+  const clearBtn = document.getElementById('clear-search-btn');
+  if (!clearBtn) return;
+  clearBtn.addEventListener('click', () => {
+    resetToHome();
+  });
+}
+
+function showClearSearchBtn() {
+  const clearBtn = document.getElementById('clear-search-btn');
+  if (clearBtn) clearBtn.style.display = 'inline-flex';
+}
+
+function hideClearSearchBtn() {
+  const clearBtn = document.getElementById('clear-search-btn');
+  if (clearBtn) clearBtn.style.display = 'none';
+}
+
+// ==========================================
 // 🔍 4.5. SMART SEARCH WITH WILAYAS
 // ==========================================
 function initSmartSearch() {
-  const searchInput = document.querySelector('.search-field input[type="text"]');
-  const searchDropdown = document.querySelector('.search-dropdown');
-  const searchBtn = document.querySelector('.search-btn');
+  const searchInput    = document.getElementById('search-location');
+  const searchDropdown = document.getElementById('search-dropdown');
+  const searchBtn      = document.getElementById('main-search-btn');
 
   if (!searchInput || !searchDropdown) return;
 
+  const dict = () => translations[state.lang];
+
+  // ✅ عرض القائمة مع كل الولايات
   const renderWilayas = (wilayas) => {
-    let html = '';
-    
-    // إضافة خيار "الكل" في بداية القائمة دائماً
-    html += `
-      <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom: 1px solid var(--border-color);">
-        <div class="search-icon-box" style="color: var(--text-main);"><i class="ph ph-globe-hemisphere-west"></i></div>
+    let html = `
+      <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom:1px solid var(--border-color);">
+        <div class="search-icon-box" style="color:var(--text-main);">
+          <i class="ph ph-globe-hemisphere-west"></i>
+        </div>
         <div class="search-item-info">
-          <span class="search-item-title">${state.lang === 'en' ? 'All Wilayas' : 'كل الولايات'}</span>
-          <span class="search-item-sub">${state.lang === 'en' ? 'Show all properties' : 'عرض جميع العقارات'}</span>
+          <span class="search-item-title">${dict().all_wilayas}</span>
+          <span class="search-item-sub">${dict().all_wilayas_sub}</span>
         </div>
       </div>
     `;
@@ -322,7 +414,7 @@ function initSmartSearch() {
           <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
           <div class="search-item-info">
             <span class="search-item-title">${state.lang === 'en' ? w.en : w.ar}</span>
-            <span class="search-item-sub">${state.lang === 'en' ? 'Algeria' : 'الجزائر'} - ${w.id}</span>
+            <span class="search-item-sub">${state.lang === 'en' ? 'Algeria' : 'الجزائر'} — ${w.id}</span>
           </div>
         </div>
       `).join('');
@@ -330,93 +422,156 @@ function initSmartSearch() {
       html += `
         <div class="no-results">
           <i class="ph ph-magnifying-glass"></i>
-          <span>${translations[state.lang].no_results}</span>
+          <span>${dict().no_results}</span>
         </div>
       `;
     }
-    
+
     searchDropdown.innerHTML = html;
     searchDropdown.classList.add('active');
   };
 
-  // إظهار القائمة كاملة عند النقر أو التركيز على الحقل
   searchInput.addEventListener('focus', () => renderWilayas(algerianWilayas));
   searchInput.addEventListener('click', () => renderWilayas(algerianWilayas));
 
-  // الفلترة عند الكتابة
   searchInput.addEventListener('input', (e) => {
-    const val = e.target.value.toLowerCase().trim();
+    const val = e.target.value.trim().toLowerCase();
     if (!val) {
       renderWilayas(algerianWilayas);
       return;
     }
-
     const filtered = algerianWilayas.filter(w =>
-      (w.ar && w.ar.includes(val)) || 
-      (w.en && w.en.toLowerCase().includes(val)) || 
+      (w.ar && w.ar.includes(e.target.value.trim())) ||
+      (w.en && w.en.toLowerCase().includes(val)) ||
       String(w.id) === val
     );
     renderWilayas(filtered);
   });
 
-  // إغلاق القائمة عند النقر خارجها
+  // ✅ إغلاق الـ dropdown عند النقر خارجه
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search-wrapper') && !e.target.closest('.search-bar')) {
+    if (!e.target.closest('#search-location-wrapper') && !e.target.closest('.search-bar')) {
       searchDropdown.classList.remove('active');
     }
   });
 
-  // الدالة التي يتم استدعاؤها عند اختيار ولاية من القائمة
+  // ✅ التحكم بالكيبورد داخل القائمة (↑↓ + Enter)
+  let focusedIndex = -1;
+  searchInput.addEventListener('keydown', (e) => {
+    const items = searchDropdown.querySelectorAll('.search-item');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusedIndex = Math.min(focusedIndex + 1, items.length - 1);
+      updateKeyboardFocus(items, focusedIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusedIndex = Math.max(focusedIndex - 1, 0);
+      updateKeyboardFocus(items, focusedIndex);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (focusedIndex >= 0 && items[focusedIndex]) {
+        items[focusedIndex].click();
+      } else {
+        // بحث مباشر بالنص المكتوب
+        if (searchBtn) searchBtn.click();
+      }
+      focusedIndex = -1;
+    } else if (e.key === 'Escape') {
+      searchDropdown.classList.remove('active');
+      focusedIndex = -1;
+    }
+  });
+
+  function updateKeyboardFocus(items, index) {
+    items.forEach((item, i) => item.classList.toggle('selected', i === index));
+    if (items[index]) items[index].scrollIntoView({ block: 'nearest' });
+  }
+
+  // ✅ اختيار ولاية من القائمة
   window.selectWilaya = function(arName, enName) {
     searchDropdown.classList.remove('active');
+    focusedIndex = -1;
 
-    // إذا اختار "الكل"، نفرغ الحقل ونعرض كل العقارات
     if (!arName && !enName) {
-      searchInput.value = '';
+      // "كل الولايات" — إعادة ضبط
+      searchInput.value  = '';
+      state.activeSearch = '';
+      hideClearSearchBtn();
+      const sectionTitle = document.getElementById('section-main-title');
+      if (sectionTitle) {
+        sectionTitle.setAttribute('data-i18n', 'trending');
+        sectionTitle.textContent = translations[state.lang].trending;
+      }
       renderListings();
       document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
-    // تعيين الاسم المختار في الحقل حسب لغة الموقع
-    searchInput.value = state.lang === 'en' ? enName : arName;
-    
-    // فلترة العقارات لتطابق الولاية المختارة فقط
+    searchInput.value  = state.lang === 'en' ? enName : arName;
+    state.activeSearch = enName; // ✅ تخزين البحث الحالي
+    showClearSearchBtn();
+
+    // تحديث عنوان القسم
+    const sectionTitle = document.getElementById('section-main-title');
+    if (sectionTitle) {
+      sectionTitle.removeAttribute('data-i18n');
+      sectionTitle.textContent = state.lang === 'en'
+        ? `Results: ${enName}`
+        : `نتائج: ${arName}`;
+    }
+
     filterAndRender(enName, arName);
   };
 
-  // وظيفة زر البحث الأساسي
+  // ✅ زر البحث
   if (searchBtn) {
     searchBtn.addEventListener('click', (e) => {
       e.preventDefault();
       searchDropdown.classList.remove('active');
-      const val = searchInput.value.toLowerCase().trim();
-      
-      if (val) {
-        const filteredGrid = state.liveProperties.filter(p =>
-          (p.title_en && p.title_en.toLowerCase().includes(val)) ||
-          (p.title_ar && p.title_ar.includes(val)) ||
-          (p.location_en && p.location_en.toLowerCase().includes(val)) ||
-          (p.location_ar && p.location_ar.includes(val))
-        );
-        renderListings(filteredGrid);
-      } else {
-        renderListings();
+      const val     = searchInput.value.trim();
+      const valLow  = val.toLowerCase();
+
+      if (!val) {
+        resetToHome();
+        return;
       }
+
+      state.activeSearch = val;
+      showClearSearchBtn();
+
+      const sectionTitle = document.getElementById('section-main-title');
+      if (sectionTitle) {
+        sectionTitle.removeAttribute('data-i18n');
+        sectionTitle.textContent = state.lang === 'en'
+          ? `Results: "${val}"`
+          : `نتائج: "${val}"`;
+      }
+
+      const filtered = state.liveProperties.filter(p =>
+        (p.title_en    && p.title_en.toLowerCase().includes(valLow)) ||
+        (p.title_ar    && p.title_ar.includes(val))                  ||
+        (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
+        (p.location_ar && p.location_ar.includes(val))
+      );
+
+      renderListings(filtered);
       document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
-  // دالة مساعدة لتصفية العقارات وعرضها بناءً على الولاية
+  // دالة فلترة الولاية وعرضها
   function filterAndRender(enName, arName) {
-    const enLower = enName ? enName.toLowerCase() : "";
-    const arLower = arName || "";
-    
-    const filteredGrid = state.liveProperties.filter(p => {
-      return (p.location_en && p.location_en.toLowerCase().includes(enLower)) ||
-             (p.location_ar && p.location_ar.includes(arLower));
-    });
-    renderListings(filteredGrid);
+    const enLow  = enName ? enName.toLowerCase() : '';
+    const arTrim = arName || '';
+
+    const filtered = state.liveProperties.filter(p =>
+      (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
+      (p.location_ar && p.location_ar.includes(arTrim))
+    );
+
+    renderListings(filtered);
     document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
@@ -454,14 +609,18 @@ async function loadPropertiesFromFirestore() {
           price:       d.price      || 0,
           rating:      d.rating     || 4.80,
           image:       d.imageUrl   || d.image       || '',
-          images:      Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ''],
+          images:      Array.isArray(d.images) && d.images.length > 0
+                         ? d.images
+                         : [d.imageUrl || d.image || ''],
           urgency:     d.urgency    || null,
           desc_en:     d.descEn     || d.desc_en     || '',
           desc_ar:     d.descAr     || d.desc_ar     || '',
-          features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
-          features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
-          lat:         d.lat        || null,
-          lng:         d.lng        || null,
+          features_en: Array.isArray(d.featuresEn || d.features_en)
+                         ? (d.featuresEn || d.features_en) : [],
+          features_ar: Array.isArray(d.featuresAr || d.features_ar)
+                         ? (d.featuresAr || d.features_ar) : [],
+          lat:         d.lat  || null,
+          lng:         d.lng  || null,
         };
       });
     } else {
@@ -511,10 +670,25 @@ function toggleLanguage() {
   state.lang = state.lang === 'en' ? 'ar' : 'en';
   localStorage.setItem('ore_lang', state.lang);
   applyInitialState();
+
   if (document.getElementById('categories-container')) {
     renderCategories();
-    renderListings();
+
+    // ✅ إعادة تطبيق البحث الحالي بعد تغيير اللغة
+    if (state.activeSearch && state.currentView !== 'favorites') {
+      const val = state.activeSearch.toLowerCase();
+      const filtered = state.liveProperties.filter(p =>
+        (p.title_en    && p.title_en.toLowerCase().includes(val))    ||
+        (p.title_ar    && p.title_ar.includes(state.activeSearch))   ||
+        (p.location_en && p.location_en.toLowerCase().includes(val)) ||
+        (p.location_ar && p.location_ar.includes(state.activeSearch))
+      );
+      renderListings(filtered);
+    } else {
+      renderListings();
+    }
   }
+
   renderPropertyDetails();
 }
 
@@ -522,11 +696,11 @@ function updateLanguageUI() {
   const dict = translations[state.lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (dict[key]) el.textContent = dict[key];
+    if (dict[key] !== undefined) el.textContent = dict[key];
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
-    if (dict[key]) el.placeholder = dict[key];
+    if (dict[key] !== undefined) el.placeholder = dict[key];
   });
 }
 
@@ -536,10 +710,10 @@ function updateLanguageUI() {
 function loadFavorites() {
   if (state.user) {
     try {
-      const saved = localStorage.getItem(`ore_favs_${state.user.uid}`);
+      const saved    = localStorage.getItem(`ore_favs_${state.user.uid}`);
       state.favorites = saved ? JSON.parse(saved) : [];
-    } catch(e) {
-      console.warn("Could not parse favorites", e);
+    } catch (e) {
+      console.warn('Could not parse favorites:', e);
       state.favorites = [];
     }
   } else {
@@ -560,27 +734,35 @@ function toggleFavorite(e, id) {
   e.stopPropagation();
   if (!state.user) {
     openModal();
-    showMessage(state.lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً' : 'Please log in first', 'error');
+    showMessage(
+      state.lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً' : 'Please log in first',
+      'error'
+    );
     return;
   }
+
   const strId = String(id);
   const index = state.favorites.indexOf(strId);
-  if (index > -1) state.favorites.splice(index, 1);
-  else state.favorites.push(strId);
+  const wasFav = index > -1;
+
+  if (wasFav) state.favorites.splice(index, 1);
+  else        state.favorites.push(strId);
+
   saveFavorites();
-  
-  // إعادة التحميل مع الحفاظ على البيانات المفلترة في حال كنا نبحث
-  const isSearchActive = document.querySelector('.search-field input')?.value.trim() !== "";
-  if (!isSearchActive) renderListings();
-  else {
-    const btn = e.currentTarget;
-    if(index > -1) {
-      btn.classList.remove('active');
-      btn.innerHTML = `<i class="ph ph-heart"></i>`;
-    } else {
-      btn.classList.add('active');
-      btn.innerHTML = `<i class="ph-fill ph-heart"></i>`;
-    }
+
+  // ✅ تحديث زر القلب في مكانه مباشرة بدون إعادة رسم كاملة
+  const btn = e.currentTarget;
+  if (wasFav) {
+    btn.classList.remove('active');
+    btn.innerHTML = `<i class="ph ph-heart"></i>`;
+  } else {
+    btn.classList.add('active');
+    btn.innerHTML = `<i class="ph-fill ph-heart"></i>`;
+  }
+
+  // ✅ إذا كنا في صفحة المفضلة، أعد الرسم لإزالة العنصر
+  if (state.currentView === 'favorites') {
+    renderListings();
   }
 }
 
@@ -613,15 +795,17 @@ function renderListings(customArray = null) {
 
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
-  
-  let itemsToShow = customArray || state.liveProperties;
 
-  if (state.currentView === 'favorites' && !customArray) {
+  let itemsToShow = customArray !== null ? customArray : state.liveProperties;
+
+  // ✅ عرض المفضلة
+  if (state.currentView === 'favorites' && customArray === null) {
     itemsToShow = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
     if (itemsToShow.length === 0) {
       container.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
-          <i class="ph ph-heart-break" style="font-size:3.5rem; color:var(--text-muted); margin-bottom:16px; display:block; opacity: 0.5;"></i>
+          <i class="ph ph-heart-break"
+             style="font-size:3.5rem; color:var(--text-muted); margin-bottom:16px; display:block; opacity:0.5;"></i>
           <p style="font-size:1.1rem; color:var(--text-muted);">${dict.no_favorites}</p>
         </div>
       `;
@@ -629,11 +813,21 @@ function renderListings(customArray = null) {
     }
   }
 
+  // ✅ لا توجد نتائج
   if (itemsToShow.length === 0) {
     container.innerHTML = `
       <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
-        <i class="ph ph-house-line" style="font-size:3.5rem; display:block; margin-bottom:16px; opacity: 0.5;"></i>
-        <p style="font-size:1.1rem;">${customArray ? dict.no_results : dict.no_props}</p>
+        <i class="ph ph-magnifying-glass"
+           style="font-size:3.5rem; display:block; margin-bottom:16px; opacity:0.5;"></i>
+        <h3 style="margin-bottom:8px; color:var(--text-main);" class="font-bold">
+          ${customArray !== null ? dict.no_results : dict.no_props}
+        </h3>
+        ${customArray !== null
+          ? `<p style="font-size:0.95rem;">${state.lang === 'ar'
+              ? 'حاول البحث بولاية أخرى أو اسم مختلف.'
+              : 'Try searching with a different wilaya or keyword.'}</p>`
+          : ''
+        }
       </div>
     `;
     return;
@@ -641,21 +835,35 @@ function renderListings(customArray = null) {
 
   container.innerHTML = itemsToShow.map(prop => {
     const isFav    = state.favorites.includes(String(prop.id));
-    const title    = state.lang === 'en' ? (prop.title_en || '') : (prop.title_ar || '');
+    const title    = state.lang === 'en' ? (prop.title_en    || '') : (prop.title_ar    || '');
     const location = state.lang === 'en' ? (prop.location_en || '') : (prop.location_ar || '');
 
     let urgencyHtml = '';
     if (prop.urgency) {
       const urgencyText = prop.urgency === 'few' ? dict.urgency_few : dict.urgency_hot;
-      urgencyHtml = `<div class="urgency-label"><i class="ph-fill ph-fire"></i><span>${urgencyText}</span></div>`;
+      urgencyHtml = `
+        <div class="urgency-label">
+          <i class="ph-fill ph-fire"></i>
+          <span>${urgencyText}</span>
+        </div>`;
     }
 
     return `
       <div class="card" onclick="goToProperty('${prop.id}')">
         <div class="card-img-wrapper">
-          <img src="${prop.image}" alt="${title}" class="card-img" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+          <img
+            src="${prop.image}"
+            alt="${title}"
+            class="card-img"
+            loading="lazy"
+            onerror="this.src='images/placeholder.jpg'"
+          >
           ${urgencyHtml}
-          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, '${prop.id}')">
+          <button
+            class="fav-btn ${isFav ? 'active' : ''}"
+            onclick="toggleFavorite(event, '${prop.id}')"
+            aria-label="${isFav ? (state.lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from favorites') : (state.lang === 'ar' ? 'إضافة للمفضلة' : 'Add to favorites')}"
+          >
             <i class="${isFav ? 'ph-fill' : 'ph'} ph-heart"></i>
           </button>
         </div>
@@ -708,14 +916,15 @@ function renderPropertyDetails() {
           price:       d.price      || 0,
           rating:      d.rating     || 4.80,
           image:       d.imageUrl   || '',
-          images:      Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || ''],
+          images:      Array.isArray(d.images) && d.images.length > 0
+                         ? d.images : [d.imageUrl || ''],
           urgency:     d.urgency    || null,
           desc_en:     d.descEn     || '',
           desc_ar:     d.descAr     || '',
           features_en: Array.isArray(d.featuresEn) ? d.featuresEn : [],
           features_ar: Array.isArray(d.featuresAr) ? d.featuresAr : [],
-          lat:         d.lat        || null,
-          lng:         d.lng        || null,
+          lat:         d.lat || null,
+          lng:         d.lng || null,
         });
       })
       .catch(err => console.error('Property fetch error:', err));
@@ -745,7 +954,7 @@ function _fillPropertyPage(prop) {
   if (ratingEl)   ratingEl.textContent   = prop.rating;
   if (locationEl) locationEl.textContent = state.lang === 'en' ? prop.location_en : prop.location_ar;
   if (descEl)     descEl.textContent     = state.lang === 'en' ? prop.desc_en     : prop.desc_ar;
-  if (priceEl)    priceEl.textContent    = Number(prop.price).toLocaleString() + ' ' + currency;
+  if (priceEl)    priceEl.textContent    = `${Number(prop.price).toLocaleString()} ${currency}`;
 
   if (featuresEl) {
     const features = state.lang === 'en' ? prop.features_en : prop.features_ar;
@@ -761,11 +970,17 @@ function _fillPropertyPage(prop) {
     state.currentImageIndex = 0;
 
     trackEl.innerHTML = currentPropImages.map(img =>
-      `<img src="${img}" alt="Property Image" onclick="openLightbox()" loading="lazy" onerror="this.src='images/placeholder.jpg'">`
+      `<img
+        src="${img}"
+        alt="Property Image"
+        onclick="openLightbox()"
+        loading="lazy"
+        onerror="this.src='images/placeholder.jpg'"
+      >`
     ).join('');
 
     if (dotsEl) {
-      dotsEl.innerHTML = currentPropImages.map((img, i) =>
+      dotsEl.innerHTML = currentPropImages.map((_, i) =>
         `<button class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(event, ${i})"></button>`
       ).join('');
     }
@@ -778,9 +993,14 @@ function _fillPropertyPage(prop) {
       if (nextBtn) nextBtn.style.display = 'none';
       if (dotsEl)  dotsEl.style.display  = 'none';
     } else {
+      if (prevBtn) prevBtn.style.display = '';
+      if (nextBtn) nextBtn.style.display = '';
       updateSlider();
     }
   }
+
+  // ✅ تحديث عنوان الصفحة
+  document.title = `${state.lang === 'en' ? prop.title_en : prop.title_ar} — OreBooking`;
 
   if (typeof window.initPropertyMap === 'function') {
     const locationName = state.lang === 'en' ? prop.location_en : prop.location_ar;
@@ -821,22 +1041,49 @@ window.goToSlide = function(e, index) {
 function updateSlider() {
   const trackEl = document.getElementById('slider-track');
   if (trackEl) {
-    const direction = state.lang === 'ar' ? 100 : -100;
-    trackEl.style.transform = `translateX(${state.currentImageIndex * direction}%)`;
+    // ✅ دعم RTL في الـ slider
+    const offset  = state.currentImageIndex * 100;
+    trackEl.style.transform = state.lang === 'ar'
+      ? `translateX(${offset}%)`
+      : `translateX(-${offset}%)`;
   }
-  
+
+  // تحديث صورة اللايتبوكس إذا كان مفتوحاً
+  const lb    = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
-  if (lbImg && document.getElementById('lightbox')?.classList.contains('active')) {
+  if (lbImg && lb?.classList.contains('active')) {
     if (currentPropImages[state.currentImageIndex]) {
       lbImg.src = currentPropImages[state.currentImageIndex];
       lbImg.classList.remove('zoomed');
     }
   }
-  
+
   document.querySelectorAll('.slider-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === state.currentImageIndex);
   });
 }
+
+// ✅ Swipe دعم اللمس في الـ Slider
+(function initSliderTouch() {
+  let touchStartX = 0;
+  let touchEndX   = 0;
+
+  document.addEventListener('touchstart', (e) => {
+    if (!e.target.closest('.slider-container')) return;
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!e.target.closest('.slider-container')) return;
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) window.nextSlide(null); // سحب لليسار → الصورة التالية
+      else           window.prevSlide(null); // سحب لليمين → الصورة السابقة
+    }
+  }, { passive: true });
+})();
 
 // ==========================================
 // 🔍 Lightbox
@@ -875,96 +1122,122 @@ function showMessage(msg, type = 'error') {
   authMessage.textContent   = msg;
   authMessage.className     = `auth-message ${type}`;
   authMessage.style.display = 'block';
-  // التمرير أعلى المودال إذا لم يكن مرئيًا
-  if (authModal) authModal.querySelector('.modal-content')?.scrollTo({top: 0, behavior: 'smooth'});
-  setTimeout(() => { authMessage.style.display = 'none'; }, 5000);
+  authModal?.querySelector('.modal-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    if (authMessage) authMessage.style.display = 'none';
+  }, 5000);
 }
 
 async function handleLogin(e) {
   e.preventDefault();
-  const email    = document.getElementById('login-email').value;
+  const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
-  const btn = loginForm.querySelector('button[type="submit"]');
-  
-  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`; // Spinner
+  const btn      = loginForm.querySelector('button[type="submit"]');
+  const isAr     = state.lang === 'ar';
+
+  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`;
   btn.disabled  = true;
-  
+
   try {
     await auth.signInWithEmailAndPassword(email, password);
     closeModal();
     loginForm.reset();
   } catch (error) {
-    // توفير رسائل أكثر تفصيلاً 
-    let errorMsg = state.lang === 'ar' ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password';
-    if (error.code === 'auth/user-not-found') {
-      errorMsg = state.lang === 'ar' ? 'لا يوجد حساب مسجل بهذا البريد' : 'No account found with this email';
-    } else if (error.code === 'auth/too-many-requests') {
-      errorMsg = state.lang === 'ar' ? 'تم حظر الحساب مؤقتاً بسبب محاولات كثيرة خاطئة' : 'Account temporarily disabled due to many failed login attempts';
-    }
-    showMessage(errorMsg, 'error');
+    const msgs = {
+      'auth/user-not-found':    isAr ? 'لا يوجد حساب مسجل بهذا البريد'                                : 'No account found with this email',
+      'auth/wrong-password':    isAr ? 'كلمة المرور غير صحيحة'                                       : 'Incorrect password',
+      'auth/invalid-email':     isAr ? 'صيغة البريد الإلكتروني غير صحيحة'                            : 'Invalid email format',
+      'auth/too-many-requests': isAr ? 'تم تعطيل الحساب مؤقتاً بسبب محاولات كثيرة خاطئة'            : 'Account temporarily disabled due to many failed attempts',
+      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                               : 'Check your internet connection',
+    };
+    showMessage(msgs[error.code] || (isAr ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password'), 'error');
   } finally {
-    btn.innerHTML = `<span data-i18n="sign_in">${state.lang === 'en' ? 'Sign In' : 'تسجيل الدخول'}</span>`;
+    btn.innerHTML = `<span>${isAr ? 'تسجيل الدخول' : 'Sign In'}</span>`;
     btn.disabled  = false;
   }
 }
 
 async function handleRegister(e) {
   e.preventDefault();
-  const name     = document.getElementById('reg-name').value;
-  const email    = document.getElementById('reg-email').value;
+  const name     = document.getElementById('reg-name').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
-  const btn = registerForm.querySelector('button[type="submit"]');
-  
-  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`; // Spinner
+  const btn      = registerForm.querySelector('button[type="submit"]');
+  const isAr     = state.lang === 'ar';
+
+  // ✅ تحقق بسيط من اسم المستخدم
+  if (name.length < 2) {
+    showMessage(isAr ? 'الاسم يجب أن يكون حرفين على الأقل' : 'Name must be at least 2 characters', 'error');
+    return;
+  }
+
+  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`;
   btn.disabled  = true;
-  
+
   try {
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    await userCredential.user.updateProfile({ displayName: name });
-    // إجبار التحديث
-    await userCredential.user.reload();
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await cred.user.updateProfile({ displayName: name });
+    await cred.user.reload();
     state.user = auth.currentUser;
     closeModal();
     registerForm.reset();
     updateUserUI();
+    showMessage(isAr ? `مرحباً ${name}! تم إنشاء حسابك بنجاح.` : `Welcome ${name}! Your account was created.`, 'success');
   } catch (error) {
-    let errorMsg = error.message;
-    if (error.code === 'auth/email-already-in-use') {
-      errorMsg = state.lang === 'ar' ? 'البريد الإلكتروني مسجل مسبقاً' : 'Email is already in use';
-    } else if (error.code === 'auth/weak-password') {
-      errorMsg = state.lang === 'ar' ? 'كلمة المرور ضعيفة (يجب أن تكون 6 أحرف على الأقل)' : 'Password is too weak (minimum 6 characters)';
-    }
-    showMessage(errorMsg, 'error');
+    const msgs = {
+      'auth/email-already-in-use': isAr ? 'البريد الإلكتروني مسجل مسبقاً'                  : 'Email is already in use',
+      'auth/weak-password':        isAr ? 'كلمة المرور ضعيفة (6 أحرف على الأقل)'           : 'Password too weak (min 6 characters)',
+      'auth/invalid-email':        isAr ? 'صيغة البريد الإلكتروني غير صحيحة'               : 'Invalid email format',
+      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                     : 'Check your internet connection',
+    };
+    showMessage(msgs[error.code] || error.message, 'error');
   } finally {
-    btn.innerHTML = `<span data-i18n="sign_up_btn">${state.lang === 'en' ? 'Create Account' : 'إنشاء الحساب'}</span>`;
+    btn.innerHTML = `<span>${isAr ? 'إنشاء الحساب' : 'Create Account'}</span>`;
     btn.disabled  = false;
   }
 }
 
 async function handleGoogleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  try { 
-    await auth.signInWithPopup(provider); 
-    closeModal(); 
-  } catch (error) { 
-    console.error("Google Auth Error:", error);
-    showMessage(state.lang === 'ar' ? 'حدث خطأ أثناء تسجيل الدخول بواسطة جوجل' : 'Error signing in with Google', 'error'); 
+  try {
+    await auth.signInWithPopup(provider);
+    closeModal();
+  } catch (error) {
+    // ✅ تجاهل إغلاق النافذة من المستخدم بدون رسالة خطأ
+    if (error.code === 'auth/popup-closed-by-user') return;
+    console.error('Google Auth Error:', error);
+    showMessage(
+      state.lang === 'ar'
+        ? 'حدث خطأ أثناء تسجيل الدخول بواسطة جوجل'
+        : 'Error signing in with Google',
+      'error'
+    );
   }
 }
 
 function handleLogout() {
   auth.signOut().then(() => {
     if (profileDropdown) profileDropdown.classList.remove('active');
-    state.currentView = 'home';
-    state.favorites   = [];
+    state.currentView  = 'home';
+    state.activeSearch = '';
+    state.favorites    = [];
+
     if (document.getElementById('listings-grid')) {
       const heroEl = document.getElementById('hero-section');
       const catsEl = document.getElementById('categories-container');
       if (heroEl) heroEl.style.display = 'block';
       if (catsEl) catsEl.style.display = 'flex';
+
+      // مسح حقل البحث
+      const searchInput = document.getElementById('search-location');
+      if (searchInput) searchInput.value = '';
+      hideClearSearchBtn();
+
       const sectionTitle = document.getElementById('section-main-title');
-      if (sectionTitle) sectionTitle.setAttribute('data-i18n', 'trending');
-      updateLanguageUI();
+      if (sectionTitle) {
+        sectionTitle.setAttribute('data-i18n', 'trending');
+        sectionTitle.textContent = translations[state.lang].trending;
+      }
       renderListings();
     }
   });
@@ -981,17 +1254,22 @@ function handleAuthButtonClick() {
 function updateUserUI() {
   if (!openAuthBtn) return;
   if (state.user) {
-    const initial = state.user.displayName
-      ? state.user.displayName.charAt(0).toUpperCase()
-      : (state.user.email ? state.user.email.charAt(0).toUpperCase() : 'U');
-    
+    const name    = state.user.displayName || state.user.email || 'U';
+    const initial = name.charAt(0).toUpperCase();
+
     openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
     openAuthBtn.classList.add('auth-btn-logged');
     openAuthBtn.classList.remove('auth-btn-guest');
-    
-    if (document.getElementById('dropdown-user-name')) {
-      document.getElementById('dropdown-user-name').textContent  = state.user.displayName || (state.lang === 'ar' ? 'مستخدم' : 'User');
-      document.getElementById('dropdown-user-email').textContent = state.user.email || '';
+
+    const nameEl  = document.getElementById('dropdown-user-name');
+    const emailEl = document.getElementById('dropdown-user-email');
+    if (nameEl)  nameEl.textContent  = state.user.displayName || (state.lang === 'ar' ? 'مستخدم' : 'User');
+    if (emailEl) emailEl.textContent = state.user.email || '';
+
+    // ✅ تحديث نقاط المكافآت (placeholder — يمكن ربطه بـ Firestore لاحقاً)
+    const pointsEl = document.getElementById('user-points');
+    if (pointsEl && pointsEl.textContent === '1,250') {
+      // تبقى كما هي حتى يتم ربطها بقاعدة البيانات
     }
   } else {
     openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
@@ -1003,6 +1281,7 @@ function updateUserUI() {
 
 function openModal() {
   if (!authModal) return;
+  switchForm('login'); // ✅ دائماً ابدأ بنموذج الدخول
   authModal.classList.add('active');
   document.body.classList.add('modal-open');
 }
@@ -1012,9 +1291,7 @@ function closeModal() {
   authModal.classList.remove('active');
   document.body.classList.remove('modal-open');
   if (authMessage) authMessage.style.display = 'none';
-  if (loginForm && registerForm) {
-    setTimeout(() => switchForm('login'), 300);
-  }
+  setTimeout(() => switchForm('login'), 350);
 }
 
 function switchForm(type) {
@@ -1026,6 +1303,8 @@ function switchForm(type) {
     registerForm.classList.remove('active');
     loginForm.classList.add('active');
   }
+  // ✅ مسح رسائل الخطأ عند التبديل
+  if (authMessage) authMessage.style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', init);
