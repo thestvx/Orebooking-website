@@ -564,22 +564,28 @@ function initSmartSearch() {
 
 // ==========================================
 // 🔥 5. جلب العقارات من Firestore
-// ✅ Optimistic UI: عرض Static فوراً ثم استبدالها بـ Firestore في الخلفية
+// ✅ Firestore-First: Skeleton → Firestore → Fallback Static
 // ==========================================
 async function loadPropertiesFromFirestore() {
   const container = document.getElementById('listings-grid');
   if (!container) return;
 
-  state.liveProperties = [...properties];
-  renderListings();
+  // ✅ خطوة 1: عرض Skeleton متحرك بدلاً من العقارات القديمة
+  container.innerHTML = `
+    <div class="card-skeleton"></div>
+    <div class="card-skeleton"></div>
+    <div class="card-skeleton"></div>
+    <div class="card-skeleton"></div>
+  `;
 
+  // ✅ خطوة 2: جلب Firestore مباشرة
   try {
     const snapshot = await db.collection('properties')
       .where('visible', '==', true)
       .get();
 
     if (!snapshot.empty) {
-      const firestoreData = snapshot.docs.map(doc => {
+      state.liveProperties = snapshot.docs.map(doc => {
         const d = doc.data();
         return {
           id:          String(doc.id),
@@ -603,16 +609,18 @@ async function loadPropertiesFromFirestore() {
           lng:         d.lng || null,
         };
       });
-
-      state.liveProperties = firestoreData;
-
-      if (state.currentView === 'home' && !state.activeSearch) {
-        renderListings();
-      }
+    } else {
+      // ✅ Firestore فارغ — fallback للـ Static
+      state.liveProperties = [...properties];
     }
   } catch (err) {
     console.error('Firestore error:', err);
+    // ✅ فشل الاتصال — fallback للـ Static
+    state.liveProperties = [...properties];
   }
+
+  // ✅ خطوة 3: ارسم العقارات الحقيقية (Firestore أو Static)
+  renderListings();
 }
 
 // ==========================================
@@ -669,7 +677,6 @@ function toggleLanguage() {
     }
   }
 
-  // ✅ إعادة رسم صفحة التفاصيل عند تغيير اللغة
   renderPropertyDetails();
 }
 
@@ -684,7 +691,6 @@ function updateLanguageUI() {
     if (dict[key] !== undefined) el.placeholder = dict[key];
   });
 
-  // ✅ تحديث نصوص property.html الثابتة عند تغيير اللغة
   _updatePropertyPageTexts();
 }
 
@@ -999,7 +1005,6 @@ function _fillPropertyPage(prop) {
       ).join('');
     }
 
-    // ✅ السلايدر: إخفاء الأزرار والبادج إذا صورة واحدة فقط
     const prevBtns  = document.querySelectorAll('.slider-btn.prev-btn');
     const nextBtns  = document.querySelectorAll('.slider-btn.next-btn');
     const badge     = document.getElementById('slider-count-badge');
@@ -1013,10 +1018,9 @@ function _fillPropertyPage(prop) {
     } else {
       prevBtns.forEach(b => b.style.display = '');
       nextBtns.forEach(b => b.style.display = '');
-      if (dotsEl)  dotsEl.style.display  = '';
-      if (badge)   badge.style.display   = '';
+      if (dotsEl)    dotsEl.style.display    = '';
+      if (badge)     badge.style.display     = '';
       if (fullscBtn) fullscBtn.style.display = '';
-      // ✅ تحديث badge العداد بالقيمة الأولى
       if (typeof window.updateImageBadge === 'function') {
         window.updateImageBadge(0, currentPropImages.length);
       }
@@ -1026,7 +1030,6 @@ function _fillPropertyPage(prop) {
 
   document.title = `${state.lang === 'en' ? prop.title_en : prop.title_ar} — OreBooking`;
 
-  // ✅ تحديث رابط زر الحجز بـ ID العقار الحالي
   const bookNowLink = document.getElementById('book-now-link');
   if (bookNowLink && prop.id) {
     bookNowLink.href = `booking.html?id=${prop.id}`;
@@ -1039,12 +1042,10 @@ function _fillPropertyPage(prop) {
     }, 200);
   }
 
-  // ✅ إظهار المحتوى الحقيقي وإخفاء الـ Skeleton
   if (typeof window.showPropertyContent === 'function') {
     window.showPropertyContent();
   }
 
-  // ✅ تحديث النصوص الثابتة بعد تحميل البيانات (للغة الحالية)
   _updatePropertyPageTexts();
 }
 
@@ -1098,7 +1099,6 @@ function updateSlider() {
     dot.classList.toggle('active', i === state.currentImageIndex);
   });
 
-  // ✅ تحديث badge عداد الصور
   if (typeof window.updateImageBadge === 'function') {
     window.updateImageBadge(state.currentImageIndex, currentPropImages.length);
   }
