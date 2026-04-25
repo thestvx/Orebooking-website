@@ -18,14 +18,407 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- 🗺️ Leaflet.js (OpenStreetMap) -->
+  <!-- 🗺️ Leaflet.js -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* ===== Map Section ===== */
+    /* =============================================
+       PROPERTY PAGE — CUSTOM STYLES
+    ============================================= */
+
+    /* ── Skeleton Loading ── */
+    @keyframes shimmer {
+      0%   { background-position: -800px 0; }
+      100% { background-position:  800px 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg,
+        var(--bg-color) 25%,
+        var(--border-color) 50%,
+        var(--bg-color) 75%
+      );
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: var(--radius-lg);
+    }
+
+    .skeleton-title  { height: 36px; width: 65%; margin-bottom: 14px; }
+    .skeleton-meta   { height: 20px; width: 40%; margin-bottom: 8px; }
+    .skeleton-gallery{ height: 480px; border-radius: var(--radius-2xl); }
+    .skeleton-text   { height: 14px; width: 100%; margin-bottom: 8px; }
+    .skeleton-text:last-child { width: 70%; }
+
+    /* ── Navbar ── */
+    .inner-nav {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      background: rgba(var(--bg-rgb, 255,255,255), 0.85);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 20px rgba(0,0,0,0.06);
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 8px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      transform: translateX(-2px);
+    }
+
+    [dir="rtl"] .back-btn:hover { transform: translateX(2px); }
+    [dir="rtl"] .back-btn i { transform: scaleX(-1); }
+
+    /* ── Page Layout ── */
+    .property-container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* ── Property Header ── */
+    .prop-header {
+      margin-bottom: 28px;
+    }
+
+    .prop-title {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      line-height: 1.25;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .prop-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .prop-rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, #fff7e6, #fff3d6);
+      border: 1px solid #f5c842;
+      color: #b8860b;
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .dark .prop-rating {
+      background: linear-gradient(135deg, #2a2000, #1e1800);
+      border-color: #8a6800;
+      color: #f5c842;
+    }
+
+    .prop-rating i { color: #f5b800; font-size: 1rem; }
+
+    .prop-location {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+    }
+
+    .prop-location i { color: var(--primary); font-size: 1.1rem; }
+
+    /* ── Image Gallery ── */
+    .prop-image-gallery {
+      border-radius: var(--radius-2xl);
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .slider-container {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      background: var(--bg-color);
+      cursor: grab;
+    }
+
+    .slider-container:active { cursor: grabbing; }
+
+    .slider-track {
+      display: flex;
+      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      height: 100%;
+      will-change: transform;
+    }
+
+    .slider-track img {
+      min-width: 100%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Image count badge */
+    .slider-count-badge {
+      position: absolute;
+      top: 16px;
+      inset-inline-end: 16px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      z-index: 5;
+      pointer-events: none;
+      letter-spacing: 0.03em;
+    }
+
+    /* Fullscreen button */
+    .slider-fullscreen-btn {
+      position: absolute;
+      top: 16px;
+      inset-inline-start: 16px;
+      width: 38px;
+      height: 38px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(8px);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      transition: var(--transition);
+    }
+
+    .slider-fullscreen-btn:hover {
+      background: var(--primary);
+      transform: scale(1.08);
+    }
+
+    .slider-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(6px);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--text-main);
+      z-index: 10;
+      transition: var(--transition);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    }
+
+    .dark .slider-btn {
+      background: rgba(30,30,30,0.88);
+      color: #fff;
+    }
+
+    .slider-btn:hover {
+      background: var(--primary);
+      color: #fff;
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .slider-btn.prev-btn { inset-inline-start: 14px; }
+    .slider-btn.next-btn { inset-inline-end:   14px; }
+
+    .slider-dots-container {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 7px;
+      z-index: 5;
+    }
+
+    .slider-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s;
+      padding: 0;
+    }
+
+    .slider-dot.active {
+      background: #fff;
+      width: 22px;
+      border-radius: 4px;
+    }
+
+    /* ── Content Grid ── */
+    .prop-content-grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .prop-content-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Info Column ── */
+    .prop-details h2 {
+      font-size: 1.35rem;
+      margin-bottom: 14px;
+      color: var(--text-main);
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--primary);
+      display: inline-block;
+    }
+
+    .prop-description {
+      color: var(--text-muted);
+      line-height: 1.85;
+      font-size: 0.97rem;
+      margin-bottom: 36px;
+    }
+
+    /* Features */
+    .prop-features {
+      margin-bottom: 40px;
+    }
+
+    .prop-features h3 {
+      font-size: 1.1rem;
+      margin-bottom: 18px;
+      color: var(--text-main);
+    }
+
+    .features-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .features-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      padding: 12px 16px;
+      border-radius: var(--radius-xl);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      transition: var(--transition);
+    }
+
+    .features-list li:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 67,90,191), 0.08);
+      transform: translateY(-1px);
+    }
+
+    .features-list li i {
+      color: var(--primary);
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    /* Host card */
+    .host-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-2xl);
+      margin-bottom: 36px;
+    }
+
+    .host-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #6c7fd8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .host-info { flex: 1; }
+
+    .host-info strong {
+      display: block;
+      font-size: 0.97rem;
+      color: var(--text-main);
+      margin-bottom: 3px;
+    }
+
+    .host-info span {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+    }
+
+    .host-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #e8f4fd;
+      color: #1a6fa8;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      margin-top: 5px;
+    }
+
+    .dark .host-badge {
+      background: #0d2b3e;
+      color: #60b4f0;
+    }
+
+    /* ── Map Section ── */
     .map-section {
       margin-top: 40px;
       padding-top: 32px;
@@ -33,7 +426,7 @@
     }
 
     .map-section h3 {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       margin-bottom: 16px;
       display: flex;
       align-items: center;
@@ -42,16 +435,17 @@
 
     .map-section h3 i {
       color: var(--primary);
-      font-size: 1.4rem;
+      font-size: 1.3rem;
     }
 
     #property-map {
       width: 100%;
-      height: 380px;
+      height: 360px;
       border-radius: var(--radius-2xl);
       border: 1px solid var(--border-color);
       z-index: 1;
       box-shadow: var(--shadow-soft);
+      overflow: hidden;
     }
 
     .map-open-btn {
@@ -60,12 +454,12 @@
       gap: 8px;
       margin-top: 12px;
       padding: 10px 20px;
-      background-color: var(--primary);
-      color: white;
+      background: var(--primary);
+      color: #fff;
       border: none;
       border-radius: var(--radius-full);
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
@@ -73,42 +467,207 @@
     }
 
     .map-open-btn:hover {
-      background-color: var(--primary-hover);
+      background: var(--primary-hover);
       transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(var(--primary-rgb, 67,90,191), 0.35);
     }
 
     .map-no-location {
       width: 100%;
-      height: 200px;
+      height: 180px;
       border-radius: var(--radius-2xl);
-      background-color: var(--bg-color);
-      border: 1px dashed var(--border-color);
+      background: var(--bg-color);
+      border: 1.5px dashed var(--border-color);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       color: var(--text-muted);
+      font-size: 0.9rem;
     }
 
     .map-no-location i {
-      font-size: 2.5rem;
-      color: var(--border-color);
+      font-size: 2.2rem;
+      opacity: 0.35;
     }
 
-    /* Fix Leaflet dark mode */
+    /* Leaflet dark mode */
     .dark .leaflet-tile {
-      filter: brightness(0.85) saturate(0.9);
+      filter: brightness(0.82) saturate(0.85) contrast(1.05);
     }
 
     .dark .leaflet-popup-content-wrapper,
     .dark .leaflet-popup-tip {
-      background-color: var(--surface-color);
+      background: var(--surface-color);
       color: var(--text-main);
       box-shadow: var(--shadow-soft);
     }
 
-    /* Auth Modal (needed on this page too) */
+    /* ── Booking Card ── */
+    .prop-booking-card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-2xl);
+      padding: 28px;
+      position: sticky;
+      top: 88px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.09);
+      transition: box-shadow 0.3s;
+    }
+
+    .prop-booking-card:hover {
+      box-shadow: 0 12px 50px rgba(0,0,0,0.13);
+    }
+
+    .booking-price {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 22px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .price-val {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    /* Price highlights */
+    .booking-perks {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 22px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .booking-perk {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .booking-perk i {
+      color: var(--primary);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    /* Booking info box */
+    .booking-info-box {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      background: var(--bg-color);
+      border-radius: var(--radius-xl);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .booking-info-box i {
+      color: var(--primary);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .booking-info-box p {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* CTA Button */
+    .book-cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 15px 24px;
+      background: linear-gradient(135deg, var(--primary), #6c7fd8);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-xl);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(var(--primary-rgb, 67,90,191), 0.35);
+      letter-spacing: 0.01em;
+    }
+
+    .book-cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(var(--primary-rgb, 67,90,191), 0.5);
+      filter: brightness(1.07);
+    }
+
+    .book-cta-btn:active { transform: translateY(0); }
+
+    .book-cta-btn i { font-size: 1.2rem; }
+
+    .no-charge-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .no-charge-text i { font-size: 0.95rem; }
+
+    /* ── Share button ── */
+    .prop-share-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .share-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .share-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(var(--primary-rgb, 67,90,191), 0.06);
+    }
+
+    /* ── Divider ── */
+    .section-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 36px 0;
+    }
+
+    /* ── Auth Modal ── */
     .auth-modal-overlay {
       display: none;
       position: fixed;
@@ -119,12 +678,69 @@
       justify-content: center;
     }
 
-    .auth-modal-overlay.active {
+    .auth-modal-overlay.active { display: flex; }
+
+    /* ── Toast Notification ── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      inset-inline-end: 24px;
+      z-index: 9999;
       display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      font-size: 0.88rem;
+      color: var(--text-main);
+      pointer-events: auto;
+      animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      max-width: 320px;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    }
+
+    .toast.fade-out {
+      animation: toastOut 0.3s ease forwards;
+    }
+
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateY(10px); }
+    }
+
+    .toast i { font-size: 1.2rem; }
+    .toast.success i { color: #22c55e; }
+    .toast.info    i { color: var(--primary); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .property-container { padding: 20px 16px 60px; }
+      .prop-title { font-size: 1.4rem; }
+      .slider-container { aspect-ratio: 4/3; }
+      .features-list { grid-template-columns: 1fr 1fr; }
+      .prop-booking-card { position: static; }
+      .price-val { font-size: 1.6rem; }
+      .inner-nav .logo { display: none; }
     }
   </style>
 </head>
 <body>
+
+  <!-- ── Toast Container ── -->
+  <div id="toast-container"></div>
 
   <!-- ======== Navbar ======== -->
   <nav class="navbar inner-nav">
@@ -143,7 +759,6 @@
       </button>
       <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
 
-      <!-- Profile Dropdown -->
       <div class="profile-container">
         <button id="open-auth-btn" class="profile-menu">
           <i class="ph ph-user"></i>
@@ -154,7 +769,7 @@
             <span class="text-muted text-sm" id="dropdown-user-email">user@email.com</span>
           </div>
           <div class="dropdown-body">
-            <a href="index.html" class="dropdown-item" style="text-decoration: none;" id="my-favorites-btn">
+            <a href="index.html" class="dropdown-item" style="text-decoration:none;" id="my-favorites-btn">
               <i class="ph ph-heart"></i>
               <span data-i18n="my_favorites">My Favorites</span>
             </a>
@@ -171,101 +786,168 @@
   <!-- ======== Main Content ======== -->
   <main class="container property-container">
 
-    <!-- Property Header -->
-    <div class="prop-header">
-      <h1 class="prop-title font-bold" id="prop-title">Loading...</h1>
-      <div class="prop-meta">
-        <div class="prop-rating"><i class="ph-fill ph-star"></i> <span id="prop-rating">0.0</span></div>
-        <div class="prop-location"><i class="ph ph-map-pin"></i> <span id="prop-location">Location</span></div>
+    <!-- ── Skeleton (يظهر ريثما تتحمل البيانات) ── -->
+    <div id="prop-skeleton">
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-meta" style="width:30%; margin-bottom:28px;"></div>
+      <div class="skeleton skeleton-gallery"></div>
+      <div style="margin-top:32px;">
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
       </div>
     </div>
 
-    <!-- 🖼️ Image Gallery Slider -->
-    <div class="prop-image-gallery" id="gallery-container">
-      <div class="slider-container">
-        <button class="slider-btn prev-btn" onclick="prevSlide(event)">
-          <i class="ph ph-caret-left"></i>
-        </button>
-        <div class="slider-track" id="slider-track"></div>
-        <button class="slider-btn next-btn" onclick="nextSlide(event)">
-          <i class="ph ph-caret-right"></i>
-        </button>
-        <div class="slider-dots-container" id="slider-dots"></div>
-      </div>
-    </div>
+    <!-- ── Real Content (مخفي حتى تتحمل البيانات) ── -->
+    <div id="prop-real-content" style="display:none;">
 
-    <!-- Content Grid -->
-    <div class="prop-content-grid">
-
-      <!-- ======== Info Column ======== -->
-      <div class="prop-details">
-
-        <h2 class="font-bold" data-i18n="about_prop">About this space</h2>
-        <p class="prop-description" id="prop-desc">Loading description...</p>
-
-        <!-- Features List -->
-        <div class="prop-features">
-          <h3 class="font-bold" data-i18n="what_offers">What this place offers</h3>
-          <ul class="features-list" id="prop-features"></ul>
+      <!-- Property Header -->
+      <div class="prop-header">
+        <div class="prop-share-row">
+          <h1 class="prop-title font-bold" id="prop-title" style="flex:1; margin:0;"></h1>
+          <button class="share-btn" id="share-btn" onclick="handleShare()">
+            <i class="ph ph-share-network"></i>
+            <span id="share-text">Share</span>
+          </button>
         </div>
+        <div class="prop-meta">
+          <div class="prop-rating">
+            <i class="ph-fill ph-star"></i>
+            <span id="prop-rating">0.0</span>
+          </div>
+          <div class="prop-location">
+            <i class="ph ph-map-pin"></i>
+            <span id="prop-location"></span>
+          </div>
+        </div>
+      </div>
 
-        <!-- 🗺️ Map Section -->
-        <div class="map-section" id="prop-map-section">
-          <h3 class="font-bold">
-            <i class="ph ph-map-trifold"></i>
-            <span id="map-title">Where you'll be</span>
-          </h3>
+      <!-- 🖼️ Image Gallery Slider -->
+      <div class="prop-image-gallery" id="gallery-container">
+        <div class="slider-container" id="slider-container">
+          <button class="slider-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous image">
+            <i class="ph ph-caret-left"></i>
+          </button>
+          <div class="slider-track" id="slider-track"></div>
+          <button class="slider-btn next-btn" onclick="nextSlide(event)" aria-label="Next image">
+            <i class="ph ph-caret-right"></i>
+          </button>
+          <div class="slider-dots-container" id="slider-dots"></div>
+          <!-- Badge عدد الصور -->
+          <div class="slider-count-badge" id="slider-count-badge">1 / 1</div>
+          <!-- زر Fullscreen -->
+          <button class="slider-fullscreen-btn" onclick="openLightbox()" aria-label="View fullscreen">
+            <i class="ph ph-arrows-out"></i>
+          </button>
+        </div>
+      </div>
 
-          <!-- الخريطة أو رسالة "لا يوجد موقع" تُحقن هنا من JS -->
-          <div id="property-map"></div>
+      <!-- Content Grid -->
+      <div class="prop-content-grid">
 
-          <a id="map-open-link"
-             class="map-open-btn"
-             href="#"
-             target="_blank"
-             rel="noopener noreferrer"
-             style="display:none;">
-            <i class="ph ph-arrow-square-out"></i>
-            <span id="open-maps-text">Open in Google Maps</span>
+        <!-- ======== Info Column ======== -->
+        <div class="prop-details">
+
+          <!-- About -->
+          <h2 class="font-bold" data-i18n="about_prop">About this space</h2>
+          <p class="prop-description" id="prop-desc"></p>
+
+          <!-- Host Card -->
+          <div class="host-card" id="host-card">
+            <div class="host-avatar">
+              <i class="ph ph-user-circle"></i>
+            </div>
+            <div class="host-info">
+              <strong id="host-name">OreBooking Host</strong>
+              <span id="host-since">Hosting since 2024</span>
+              <div class="host-badge">
+                <i class="ph-fill ph-seal-check"></i>
+                <span id="host-badge-text">Verified Host</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Features List -->
+          <div class="prop-features">
+            <h3 class="font-bold" data-i18n="what_offers">What this place offers</h3>
+            <ul class="features-list" id="prop-features"></ul>
+          </div>
+
+          <!-- 🗺️ Map Section -->
+          <div class="map-section" id="prop-map-section">
+            <h3 class="font-bold">
+              <i class="ph ph-map-trifold"></i>
+              <span id="map-title">Where you'll be</span>
+            </h3>
+            <div id="property-map"></div>
+            <a id="map-open-link"
+               class="map-open-btn"
+               href="#"
+               target="_blank"
+               rel="noopener noreferrer"
+               style="display:none;">
+              <i class="ph ph-arrow-square-out"></i>
+              <span id="open-maps-text">Open in Google Maps</span>
+            </a>
+          </div>
+
+        </div><!-- /prop-details -->
+
+        <!-- ======== Booking Card ======== -->
+        <div class="prop-booking-card">
+
+          <!-- السعر -->
+          <div class="booking-price">
+            <span class="price-val" id="prop-price">0 DZD</span>
+            <span class="text-muted text-sm">/ <span data-i18n="night">night</span></span>
+          </div>
+
+          <!-- مزايا سريعة -->
+          <div class="booking-perks">
+            <div class="booking-perk">
+              <i class="ph-fill ph-shield-check"></i>
+              <span id="perk-1">Free cancellation within 24h</span>
+            </div>
+            <div class="booking-perk">
+              <i class="ph-fill ph-clock-countdown"></i>
+              <span id="perk-2">Instant confirmation</span>
+            </div>
+            <div class="booking-perk">
+              <i class="ph-fill ph-headset"></i>
+              <span id="perk-3">24/7 support</span>
+            </div>
+          </div>
+
+          <!-- معلومة صغيرة -->
+          <div class="booking-info-box">
+            <i class="ph ph-info"></i>
+            <p id="booking-info-text">Choose your dates and number of guests on the next page to see the final price.</p>
+          </div>
+
+          <!-- زر الحجز -->
+          <a href="#" class="book-cta-btn" id="book-now-link">
+            <i class="ph ph-calendar-check"></i>
+            <span data-i18n="book_now">Reserve Now</span>
           </a>
-        </div>
 
-      </div>
+          <div class="no-charge-text">
+            <i class="ph ph-lock-simple"></i>
+            <span data-i18n="wont_charged">You won't be charged yet</span>
+          </div>
 
-      <!-- ======== Booking Card ======== -->
-      <div class="prop-booking-card">
-        <div class="booking-price">
-          <span class="price-val" id="prop-price">0 DZD</span>
-          <span class="text-muted text-sm">/ <span data-i18n="night">night</span></span>
-        </div>
+        </div><!-- /prop-booking-card -->
 
-        <!-- ✅ تمت إزالة حقول الإدخال القديمة من هنا لأن الحجز أصبح في صفحة منفصلة -->
-        <div style="padding: 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
-          <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">
-            <i class="ph ph-info" style="vertical-align: middle; margin-inline-end: 4px;"></i>
-            <span id="booking-info-text">اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.</span>
-          </p>
-        </div>
+      </div><!-- /prop-content-grid -->
+    </div><!-- /prop-real-content -->
 
-        <!-- ✅ تم تحويل الزر إلى رابط (a tag) وتغيير الـ id ليتم التعامل معه في script.js -->
-        <a href="#" class="primary-btn font-bold" id="book-now-link" style="display: flex; justify-content: center; align-items: center; gap: 8px; text-decoration: none;">
-          <i class="ph ph-calendar-check" style="font-size: 1.2rem;"></i>
-          <span data-i18n="book_now">Reserve Now</span>
-        </a>
-        <p class="text-center text-sm text-muted mt-3" data-i18n="wont_charged">
-          You won't be charged yet
-        </p>
-      </div>
-
-    </div><!-- /prop-content-grid -->
   </main>
 
   <!-- ======== 🔍 Lightbox ======== -->
   <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
-    <button class="close-lightbox" onclick="closeLightbox()">
+    <button class="close-lightbox" onclick="closeLightbox()" aria-label="Close">
       <i class="ph ph-x"></i>
     </button>
-    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)">
+    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous">
       <i class="ph ph-caret-left"></i>
     </button>
     <div class="lightbox-img-wrapper">
@@ -276,7 +958,7 @@
            title="Click to Zoom"
            alt="Property Image">
     </div>
-    <button class="lightbox-btn next-btn" onclick="nextSlide(event)">
+    <button class="lightbox-btn next-btn" onclick="nextSlide(event)" aria-label="Next">
       <i class="ph ph-caret-right"></i>
     </button>
   </div>
@@ -374,27 +1056,21 @@
 
   <script>
   // =======================================================
-  //  🗺️ initPropertyMap — يُستدعى من _fillPropertyPage()
-  //  في script.js بعد تحميل بيانات العقار
+  //  🗺️ initPropertyMap
   // =======================================================
   window.initPropertyMap = function(lat, lng, locationName, lang) {
-    const mapEl     = document.getElementById('property-map');
-    const mapLink   = document.getElementById('map-open-link');
-    const mapTitle  = document.getElementById('map-title');
-    const mapsText  = document.getElementById('open-maps-text');
+    const mapEl   = document.getElementById('property-map');
+    const mapLink = document.getElementById('map-open-link');
+    const mapTitle= document.getElementById('map-title');
+    const mapsText= document.getElementById('open-maps-text');
     if (!mapEl) return;
 
     const isAr = lang === 'ar';
+    if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار'        : "Where you'll be";
+    if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
 
-    // ترجمة نصوص القسم
-    if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار'         : "Where you'll be";
-    if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل'  : 'Open in Google Maps';
-
-    // ─── لا يوجد إحداثيات ───
     if (!lat || !lng) {
       mapEl.style.display = 'none';
-
-      // إظهار رسالة "لا يوجد موقع"
       const existing = document.querySelector('.map-no-location');
       if (!existing) {
         const noLoc = document.createElement('div');
@@ -408,25 +1084,23 @@
       return;
     }
 
-    // ─── تنظيف أي خريطة سابقة ───
     if (mapEl._leaflet_id) {
       mapEl._leaflet_id = null;
       mapEl.innerHTML   = '';
     }
 
-    // ─── تهيئة Leaflet ───
     const map = L.map('property-map', {
       center: [lat, lng],
       zoom: 15,
-      scrollWheelZoom: false
+      scrollWheelZoom: false,
+      zoomControl: true
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
       maxZoom: 19
     }).addTo(map);
 
-    // أيقونة مخصصة (دبوس ملوّن)
     const customIcon = L.divIcon({
       className: '',
       html: `<div style="
@@ -442,41 +1116,124 @@
       popupAnchor: [0, -42]
     });
 
-    // ماركر مع Popup
     L.marker([lat, lng], { icon: customIcon })
       .addTo(map)
       .bindPopup(`<strong style="font-family:inherit; font-size:0.95rem;">${locationName || ''}</strong>`)
       .openPopup();
 
-    // حل مشكلة الخريطة الرمادية
     setTimeout(() => map.invalidateSize(), 300);
 
-    // رابط Google Maps
     if (mapLink) {
       mapLink.href          = `https://www.google.com/maps?q=${lat},${lng}`;
       mapLink.style.display = 'inline-flex';
     }
   };
-  
-  // إعداد رابط زر "احجز الآن" ليأخذ معرّف العقار من الرابط الحالي
+
+  // =======================================================
+  //  🎛️ Page Init
+  // =======================================================
   document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const propId = urlParams.get('id');
+    const propId    = urlParams.get('id');
+    const lang      = localStorage.getItem('ore_lang') || 'en';
+    const isAr      = lang === 'ar';
+
+    // رابط زر الحجز
     const bookNowLink = document.getElementById('book-now-link');
-    
     if (bookNowLink && propId) {
       bookNowLink.href = `booking.html?id=${propId}`;
     }
-    
-    // ترجمة نص الإشعار الصغير
-    const lang = localStorage.getItem('ore_lang') || 'en';
+
+    // ترجمة النصوص الثابتة
     const infoText = document.getElementById('booking-info-text');
     if (infoText) {
-      infoText.textContent = lang === 'ar' 
-        ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.' 
+      infoText.textContent = isAr
+        ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.'
         : 'Choose your dates and number of guests on the next page to see the final price.';
     }
+
+    // ترجمة مزايا بطاقة الحجز
+    const perk1 = document.getElementById('perk-1');
+    const perk2 = document.getElementById('perk-2');
+    const perk3 = document.getElementById('perk-3');
+    if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة'  : 'Free cancellation within 24h';
+    if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز'           : 'Instant confirmation';
+    if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة'        : '24/7 support';
+
+    // ترجمة زر المشاركة
+    const shareText = document.getElementById('share-text');
+    if (shareText) shareText.textContent = isAr ? 'مشاركة' : 'Share';
+
+    // ترجمة Host Card
+    const hostSince     = document.getElementById('host-since');
+    const hostBadgeText = document.getElementById('host-badge-text');
+    if (hostSince)     hostSince.textContent     = isAr ? 'مضيف منذ 2024'  : 'Hosting since 2024';
+    if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق'     : 'Verified Host';
+
+    // إظهار المحتوى الحقيقي وإخفاء الـ Skeleton بعد تحميل العقار
+    // (يتم استدعاؤه من _fillPropertyPage في script.js)
   });
+
+  // =======================================================
+  //  ✅ إظهار المحتوى بعد تحميل البيانات
+  //  — يُستدعى من _fillPropertyPage في script.js
+  // =======================================================
+  window.showPropertyContent = function() {
+    const skeleton = document.getElementById('prop-skeleton');
+    const content  = document.getElementById('prop-real-content');
+    if (skeleton) skeleton.style.display = 'none';
+    if (content)  content.style.display  = 'block';
+  };
+
+  // =======================================================
+  //  📢 Toast Notification
+  // =======================================================
+  window.showToast = function(msg, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const icons = { success: 'ph-check-circle', info: 'ph-info', error: 'ph-warning' };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="ph-fill ${icons[type] || 'ph-info'}"></i> ${msg}`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      toast.addEventListener('animationend', () => toast.remove());
+    }, duration);
+  };
+
+  // =======================================================
+  //  📊 Image Counter Badge
+  // =======================================================
+  window.updateImageBadge = function(current, total) {
+    const badge = document.getElementById('slider-count-badge');
+    if (badge) badge.textContent = `${current + 1} / ${total}`;
+  };
+
+  // =======================================================
+  //  🔗 Share Button
+  // =======================================================
+  window.handleShare = function() {
+    const lang  = localStorage.getItem('ore_lang') || 'en';
+    const isAr  = lang === 'ar';
+    const title = document.getElementById('prop-title')?.textContent || 'OreBooking Property';
+    const url   = window.location.href;
+
+    if (navigator.share) {
+      navigator.share({ title, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        showToast(
+          isAr ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!',
+          'success'
+        );
+      }).catch(() => {
+        showToast(isAr ? 'تعذّر نسخ الرابط' : 'Could not copy link', 'error');
+      });
+    }
+  };
   </script>
 
 </body>
