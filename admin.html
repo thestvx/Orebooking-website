@@ -25,7 +25,6 @@
       background-color: #f8fafc;
     }
 
-    /* ===== نموذج إضافة عقار ===== */
     .modern-form-wrapper {
       display: grid;
       gap: 24px;
@@ -136,7 +135,6 @@
       gap: 6px;
     }
 
-    /* ===== Upload Zone ===== */
     .upload-zone {
       border: 2px dashed var(--border-color);
       border-radius: 16px;
@@ -171,7 +169,6 @@
     .upload-zone-text  { font-size: 1rem; font-weight: 600; color: var(--text-main); }
     .upload-zone-sub   { font-size: 0.85rem; color: var(--text-muted); }
 
-    /* ===== Map Picker ===== */
     .map-picker-wrapper { margin-top: 8px; }
 
     .map-picker-hint {
@@ -269,7 +266,6 @@
     .map-picked-badge.visible { display: flex; }
 
     /* ===== Bookings Grid ===== */
-    /* FIX: grid أفقي يملأ الشاشة بدل العمودي */
     #bookings-container .bookings-grid,
     #bookings-container > div {
       display: grid !important;
@@ -289,7 +285,6 @@
       gap: 12px;
       box-shadow: var(--shadow-soft);
       transition: var(--transition);
-      /* FIX: يمنع الكارد من التمدد العمودي داخل بعضه */
       width: 100%;
       box-sizing: border-box;
     }
@@ -307,7 +302,6 @@
       white-space: nowrap;
     }
 
-    /* ===== أزرار قبول ورفض الحجوزات ===== */
     .booking-actions-row {
       display: flex;
       gap: 10px;
@@ -344,14 +338,12 @@
       cursor: not-allowed;
     }
 
-    /* ===== Dark mode للخريطة ===== */
     .dark #admin-map-picker,
     .dark #edit-map-picker {
       border-color: var(--border-color);
       filter: brightness(0.9) contrast(1.05);
     }
 
-    /* ===== Responsive ===== */
     @media (max-width: 900px) {
       #bookings-container .bookings-grid,
       #bookings-container > div {
@@ -397,7 +389,6 @@
   <!-- 🎛️ Main Admin Layout -->
   <div class="admin-layout" id="admin-layout" style="display:none;">
 
-    <!-- Sidebar -->
     <aside class="admin-sidebar">
       <div class="sidebar-logo">
         <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:40px;">
@@ -419,7 +410,6 @@
       </nav>
     </aside>
 
-    <!-- Main Content -->
     <main class="admin-main">
       <header class="admin-header">
         <h2 id="page-title" class="font-bold" style="font-size:1.4rem;">إدارة العقارات</h2>
@@ -464,7 +454,6 @@
         <div id="tab-add-property" class="tab-pane">
           <form id="add-property-form" class="modern-form-wrapper">
 
-            <!-- Section 1: Basic Info -->
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-text-aa"></i>
@@ -473,13 +462,11 @@
               <div class="form-grid">
                 <div class="input-group">
                   <label>اسم العقار (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-ar"
-                         placeholder="مثال: شاليه الأحلام" required>
+                  <input type="text" id="prop-title-ar" placeholder="مثال: شاليه الأحلام" required>
                 </div>
                 <div class="input-group">
                   <label>اسم العقار (إنجليزي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-en"
-                         placeholder="Example: Dream Chalet" required>
+                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" required>
                 </div>
                 <div class="input-group" style="grid-column:1/-1;">
                   <label>وصف العقار (عربي) <span class="text-danger">*</span></label>
@@ -494,7 +481,6 @@
               </div>
             </div>
 
-            <!-- Section 2: Pricing & Media -->
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-money"></i>
@@ -520,7 +506,6 @@
               </div>
             </div>
 
-            <!-- Section 3: Location & Map -->
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-map-pin-line"></i>
@@ -557,19 +542,16 @@
                 <div class="coords-row">
                   <div class="input-group">
                     <label>خط العرض (Latitude)</label>
-                    <input type="text" id="prop-lat"
-                           placeholder="سيتم تعبئته تلقائياً" readonly>
+                    <input type="text" id="prop-lat" placeholder="سيتم تعبئته تلقائياً" readonly>
                   </div>
                   <div class="input-group">
                     <label>خط الطول (Longitude)</label>
-                    <input type="text" id="prop-lng"
-                           placeholder="سيتم تعبئته تلقائياً" readonly>
+                    <input type="text" id="prop-lng" placeholder="سيتم تعبئته تلقائياً" readonly>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Submit -->
             <div style="text-align:left; margin-top:10px;">
               <button type="submit" class="primary-btn" id="submit-prop-btn"
                       style="width:auto; padding:16px 40px; font-size:1.1rem;
@@ -581,7 +563,6 @@
         </div>
 
         <!-- Tab 3: Bookings -->
-        <!-- FIX: حذف class="bookings-grid" من هنا لأن admin.js يرسم الـ grid بنفسه داخل الـ container -->
         <div id="tab-bookings" class="tab-pane">
           <div class="admin-card"
                style="background:transparent; border:none; box-shadow:none; padding:0;">
@@ -590,7 +571,6 @@
               <i class="ph-fill ph-calendar-check" style="color:var(--primary);"></i>
               طلبات الحجوزات
             </h3>
-            <!-- FIX: بدون class="bookings-grid" — admin.js يحقنه داخلياً -->
             <div id="bookings-container">
               <div style="text-align:center; padding:60px; color:var(--text-muted);">
                 <i class="ph ph-circle-notch ph-spin"
@@ -602,9 +582,9 @@
           </div>
         </div>
 
-      </div><!-- /admin-content -->
+      </div>
     </main>
-  </div><!-- /admin-layout -->
+  </div>
 
   <!-- ✏️ Edit Modal -->
   <div class="modal-overlay" id="edit-modal">
@@ -666,10 +646,18 @@
 
   <!-- ================================================
        🛡️ RBAC — نظام صلاحيات الملاك
-       FIX: يُحمَّل قبل admin.js لأنه يعتمد على
-            localStorage فقط ولا يحتاج Firebase
        ================================================ -->
   <script>
+    // =============================================
+    // ⚠️ Document IDs الحقيقية من Firestore
+    // بالم جاردن  → bo0f9aLoiKPj0H8FKi6l
+    // فندق التجاني → Mu1JanKGWSy8xyUmya2C
+    // =============================================
+    const OWNER_ACCOUNTS = {
+      palmadmin:    { id: 'bo0f9aLoiKPj0H8FKi6l', name: 'مالك عقار: بالم جاردن'  },
+      tedjaniadmin: { id: 'Mu1JanKGWSy8xyUmya2C', name: 'مالك عقار: فندق التجاني' }
+    };
+
     document.addEventListener("DOMContentLoaded", () => {
       const loginForm = document.getElementById('admin-login-form');
       if (loginForm) {
@@ -677,20 +665,21 @@
           const u = document.getElementById('admin-user').value.trim();
           const p = document.getElementById('admin-pass').value.trim();
 
-          // FIX: حسابات الملاك تُعالَج هنا وتوقف الحدث
-          // حتى لا يصل لـ admin.js ويمسح ownerPropId
-          if (u === 'palmadmin' && p === 'palmadmin') {
-            e.preventDefault(); e.stopImmediatePropagation();
-            setupOwnerSession('1', 'مالك عقار: بالم قاردن');
-          } else if (u === 'tedjaniadmin' && p === 'tedjaniadmin') {
-            e.preventDefault(); e.stopImmediatePropagation();
-            setupOwnerSession('2', 'مالك عقار: التجاني');
+          // إذا كان اسم المستخدم موجوداً في OWNER_ACCOUNTS
+          // وكلمة المرور تطابق اسم المستخدم (palmadmin/palmadmin)
+          const ownerKey = Object.keys(OWNER_ACCOUNTS).find(k => k === u && k === p);
+
+          if (ownerKey) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const owner = OWNER_ACCOUNTS[ownerKey];
+            setupOwnerSession(owner.id, owner.name);
           } else {
             // أدمن عام — admin.js يتولى الأمر
             localStorage.removeItem('ownerPropId');
             localStorage.removeItem('ownerPropName');
           }
-        }, true); // capture=true للتأكد أنه يُنفَّذ قبل admin.js
+        }, true); // capture=true يضمن تنفيذه قبل admin.js
       }
 
       // دخول تلقائي إذا كان المالك مسجّلاً مسبقاً
@@ -707,7 +696,7 @@
       document.getElementById('admin-layout').style.display = 'flex';
       setupOwnerUI(displayName);
 
-      // FIX: ننتظر admin.js يحمّل ثم نستدعي الدوال
+      // ننتظر admin.js يحمّل (defer) ثم نستدعي الدوال
       const waitForAdminJs = setInterval(() => {
         if (typeof loadBookings === 'function' && typeof loadProperties === 'function') {
           clearInterval(waitForAdminJs);
@@ -718,6 +707,7 @@
     }
 
     function setupOwnerUI(displayName) {
+      // إخفاء زر إضافة عقار عن الملاك
       const navAdd = document.getElementById('nav-add-property');
       if (navAdd) navAdd.style.display = 'none';
 
@@ -740,20 +730,18 @@
   <!-- ✅ Core admin logic (ثانياً) -->
   <script src="admin.js" defer></script>
 
-  <!-- 🗺️ Admin Map Pickers (Leaflet) -->
+  <!-- 🗺️ Admin Map Pickers -->
   <script>
     let addMap = null, addMarker  = null;
     let editMap = null, editMarker = null;
 
     function initAddMap() {
       if (addMap) { addMap.invalidateSize(); return; }
-
       addMap = L.map('admin-map-picker').setView([28.0, 3.0], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(addMap);
-
       addMap.on('click', function(e) {
         placeAddMarker(e.latlng.lat, e.latlng.lng);
       });
@@ -799,7 +787,6 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19
         }).addTo(editMap);
-
         editMap.on('click', function(e) {
           const { lat, lng } = e.latlng;
           if (editMarker) editMap.removeLayer(editMarker);
@@ -826,20 +813,16 @@
       }
     }
 
-    // hook على switchTab بعد تحميل admin.js
     function hookSwitchTab() {
       if (typeof window.switchTab !== 'function') return;
       const _orig = window.switchTab;
       window.switchTab = function(tab) {
         _orig(tab);
-        if (tab === 'add-property') {
-          setTimeout(initAddMap, 150);
-        }
+        if (tab === 'add-property') setTimeout(initAddMap, 150);
       };
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // ننتظر admin.js يُعرّف switchTab (defer)
       const checkInterval = setInterval(() => {
         if (typeof window.switchTab === 'function') {
           clearInterval(checkInterval);
@@ -847,13 +830,11 @@
         }
       }, 100);
 
-      // إذا كان تبويب إضافة عقار هو الافتراضي
       const addTab = document.getElementById('tab-add-property');
       if (addTab && addTab.classList.contains('active')) {
         setTimeout(initAddMap, 300);
       }
 
-      // تفاعل بصري مع رفع الصور
       const fileInput = document.getElementById('prop-image');
       if (fileInput) {
         fileInput.addEventListener('change', function() {
@@ -870,7 +851,6 @@
       }
     });
 
-    // يُستدعى من admin.js عند فتح مودال التعديل
     window.initEditMapFromAdmin = function(lat, lng) {
       setTimeout(() => {
         initEditMap(lat || null, lng || null);
@@ -878,7 +858,6 @@
       }, 200);
     };
 
-    // FIX: إعادة ضبط خريطة الإضافة بعد نشر عقار جديد
     window._resetAddMap = function() {
       if (addMarker && addMap) {
         addMap.removeLayer(addMarker);
