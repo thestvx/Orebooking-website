@@ -570,11 +570,9 @@ async function loadPropertiesFromFirestore() {
   const container = document.getElementById('listings-grid');
   if (!container) return;
 
-  // ✅ خطوة 1: عرض البيانات الـ Static فوراً بدون أي انتظار
   state.liveProperties = [...properties];
   renderListings();
 
-  // ✅ خطوة 2: جلب Firestore بصمت في الخلفية
   try {
     const snapshot = await db.collection('properties')
       .where('visible', '==', true)
@@ -606,17 +604,14 @@ async function loadPropertiesFromFirestore() {
         };
       });
 
-      // ✅ خطوة 3: استبدال بـ Firestore فقط إذا المستخدم ما زال في الصفحة الرئيسية
       state.liveProperties = firestoreData;
 
       if (state.currentView === 'home' && !state.activeSearch) {
         renderListings();
       }
     }
-    // إذا snapshot فارغ، تبقى الـ Static ظاهرة — لا تغيير
   } catch (err) {
     console.error('Firestore error:', err);
-    // الـ Static موجودة أصلاً — لا داعي لأي شيء
   }
 }
 
@@ -674,6 +669,7 @@ function toggleLanguage() {
     }
   }
 
+  // ✅ إعادة رسم صفحة التفاصيل عند تغيير اللغة
   renderPropertyDetails();
 }
 
@@ -687,6 +683,41 @@ function updateLanguageUI() {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key] !== undefined) el.placeholder = dict[key];
   });
+
+  // ✅ تحديث نصوص property.html الثابتة عند تغيير اللغة
+  _updatePropertyPageTexts();
+}
+
+// ✅ دالة مساعدة: تُحدّث النصوص الثابتة في property.html عند تغيير اللغة
+function _updatePropertyPageTexts() {
+  const isAr = state.lang === 'ar';
+
+  const infoText = document.getElementById('booking-info-text');
+  if (infoText) {
+    infoText.textContent = isAr
+      ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.'
+      : 'Choose your dates and number of guests on the next page to see the final price.';
+  }
+
+  const perk1 = document.getElementById('perk-1');
+  const perk2 = document.getElementById('perk-2');
+  const perk3 = document.getElementById('perk-3');
+  if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
+  if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز'          : 'Instant confirmation';
+  if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة'       : '24/7 support';
+
+  const shareText = document.getElementById('share-text');
+  if (shareText) shareText.textContent = isAr ? 'مشاركة' : 'Share';
+
+  const hostSince     = document.getElementById('host-since');
+  const hostBadgeText = document.getElementById('host-badge-text');
+  if (hostSince)     hostSince.textContent     = isAr ? 'مضيف منذ 2024' : 'Hosting since 2024';
+  if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق'    : 'Verified Host';
+
+  const mapTitle = document.getElementById('map-title');
+  const mapsText = document.getElementById('open-maps-text');
+  if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار'        : "Where you'll be";
+  if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
 }
 
 // ==========================================
@@ -968,21 +999,38 @@ function _fillPropertyPage(prop) {
       ).join('');
     }
 
-    const prevBtn = document.querySelector('.prev-btn');
-    const nextBtn = document.querySelector('.next-btn');
+    // ✅ السلايدر: إخفاء الأزرار والبادج إذا صورة واحدة فقط
+    const prevBtns  = document.querySelectorAll('.slider-btn.prev-btn');
+    const nextBtns  = document.querySelectorAll('.slider-btn.next-btn');
+    const badge     = document.getElementById('slider-count-badge');
+    const fullscBtn = document.querySelector('.slider-fullscreen-btn');
 
     if (currentPropImages.length <= 1) {
-      if (prevBtn) prevBtn.style.display = 'none';
-      if (nextBtn) nextBtn.style.display = 'none';
+      prevBtns.forEach(b => b.style.display = 'none');
+      nextBtns.forEach(b => b.style.display = 'none');
       if (dotsEl)  dotsEl.style.display  = 'none';
+      if (badge)   badge.style.display   = 'none';
     } else {
-      if (prevBtn) prevBtn.style.display = '';
-      if (nextBtn) nextBtn.style.display = '';
+      prevBtns.forEach(b => b.style.display = '');
+      nextBtns.forEach(b => b.style.display = '');
+      if (dotsEl)  dotsEl.style.display  = '';
+      if (badge)   badge.style.display   = '';
+      if (fullscBtn) fullscBtn.style.display = '';
+      // ✅ تحديث badge العداد بالقيمة الأولى
+      if (typeof window.updateImageBadge === 'function') {
+        window.updateImageBadge(0, currentPropImages.length);
+      }
       updateSlider();
     }
   }
 
   document.title = `${state.lang === 'en' ? prop.title_en : prop.title_ar} — OreBooking`;
+
+  // ✅ تحديث رابط زر الحجز بـ ID العقار الحالي
+  const bookNowLink = document.getElementById('book-now-link');
+  if (bookNowLink && prop.id) {
+    bookNowLink.href = `booking.html?id=${prop.id}`;
+  }
 
   if (typeof window.initPropertyMap === 'function') {
     const locationName = state.lang === 'en' ? prop.location_en : prop.location_ar;
@@ -990,6 +1038,14 @@ function _fillPropertyPage(prop) {
       window.initPropertyMap(prop.lat, prop.lng, locationName, state.lang);
     }, 200);
   }
+
+  // ✅ إظهار المحتوى الحقيقي وإخفاء الـ Skeleton
+  if (typeof window.showPropertyContent === 'function') {
+    window.showPropertyContent();
+  }
+
+  // ✅ تحديث النصوص الثابتة بعد تحميل البيانات (للغة الحالية)
+  _updatePropertyPageTexts();
 }
 
 // ==========================================
@@ -1041,6 +1097,11 @@ function updateSlider() {
   document.querySelectorAll('.slider-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === state.currentImageIndex);
   });
+
+  // ✅ تحديث badge عداد الصور
+  if (typeof window.updateImageBadge === 'function') {
+    window.updateImageBadge(state.currentImageIndex, currentPropImages.length);
+  }
 }
 
 // ✅ دعم Swipe اللمس في الـ Slider
