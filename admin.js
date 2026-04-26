@@ -178,6 +178,14 @@ function renderPropertiesTable(docsArray) {
     const isVisible = p.visible !== false;
     const hasLoc    = p.lat && p.lng;
 
+    // إضافة ترجمة لأنواع العقارات لتعرض في الجدول بجانب الاسم
+    const typeLabel = {
+      apartment: "شقة",
+      villa: "فيلا",
+      resort: "منتجع",
+      pool: "مسبح"
+    }[p.type] || "عقار";
+
     const mapBadge = hasLoc
       ? `<span title="الموقع محدد" style="color:#10b981; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
            <i class="ph-fill ph-map-pin"></i> موقع الخريطة
@@ -196,7 +204,10 @@ function renderPropertiesTable(docsArray) {
              onerror="this.src='images/placeholder.jpg'">
       </td>
       <td>
-        <div class="font-bold" style="color:var(--text-main); font-size:1.05rem;">${p.titleAr || '—'}</div>
+        <div class="font-bold" style="color:var(--text-main); font-size:1.05rem;">
+          ${p.titleAr || '—'} 
+          <span style="font-size:0.75rem; background:var(--primary); color:white; padding:2px 6px; border-radius:4px; margin-inline-start:4px;">${typeLabel}</span>
+        </div>
         <div style="font-size:0.8rem; color:var(--text-muted);">${p.titleEn || ''}</div>
       </td>
       <td>
@@ -295,12 +306,17 @@ if (addForm) {
         uploadStatus.style.color = "#10b981";
       }
 
+      // جلب القيمة من حقل "نوع العقار"
+      const typeSelect = document.getElementById("prop-type");
+      const propType = typeSelect ? typeSelect.value : "apartment";
+
       const newProperty = {
         titleAr:    document.getElementById("prop-title-ar").value.trim(),
         titleEn:    document.getElementById("prop-title-en").value.trim(),
         locationAr: document.getElementById("prop-loc-ar").value.trim(),
         locationEn: document.getElementById("prop-loc-en").value.trim(),
         price:      Number(document.getElementById("prop-price").value),
+        type:       propType, // حفظ نوع العقار في قاعدة البيانات
         descAr:     document.getElementById("prop-desc-ar").value.trim(),
         descEn:     document.getElementById("prop-desc-en").value.trim(),
         imageUrl,
@@ -387,6 +403,12 @@ async function openEditModal(docId) {
     document.getElementById("edit-price").value    = p.price   || "";
     document.getElementById("edit-desc-ar").value  = p.descAr  || "";
 
+    // جلب نوع العقار الحالي وتحديده في المودال (النافذة المنبثقة)
+    const editTypeEl = document.getElementById("edit-type");
+    if (editTypeEl) {
+      editTypeEl.value = p.type || "apartment"; // 'apartment' كقيمة افتراضية لو ما عنده نوع
+    }
+
     const existingLat = p.lat ? parseFloat(p.lat) : null;
     const existingLng = p.lng ? parseFloat(p.lng) : null;
 
@@ -437,6 +459,10 @@ if (editForm) {
     const titleAr = document.getElementById("edit-title-ar").value.trim();
     const price   = document.getElementById("edit-price").value;
     const descAr  = document.getElementById("edit-desc-ar").value.trim();
+    
+    // جلب النوع الجديد في حال تم تعديله
+    const editTypeEl = document.getElementById("edit-type");
+    const typeValue  = editTypeEl ? editTypeEl.value : "apartment";
 
     if (!titleAr) { alert("يرجى إدخال اسم العقار"); return; }
     if (!price || isNaN(Number(price))) { alert("يرجى إدخال سعر صحيح"); return; }
@@ -451,6 +477,7 @@ if (editForm) {
         titleAr,
         price:     Number(price),
         descAr,
+        type:      typeValue, // تحديث نوع العقار
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
@@ -480,7 +507,7 @@ if (editForm) {
 //   Delete Property
 // =========================================
 async function deleteProperty(docId) {
-  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\nسيتم مسحه من المنصة ولا يمكن التراجع.")) return;
+  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\\nسيتم مسحه من المنصة ولا يمكن التراجع.")) return;
 
   try {
     await db.collection("properties").doc(docId).delete();
