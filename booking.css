@@ -1,6 +1,6 @@
 /* =========================================
    Complete Booking Page Styles — booking.css
-   OreBooking v3.0 — Synced with Enhanced HTML
+   OreBooking v4.0 — Full Merge (Old + Enhanced)
    ========================================= */
 
 /* ═══════════════════════════════════════════
@@ -8,6 +8,48 @@
 ═══════════════════════════════════════════ */
 html[dir="rtl"] .booking-page { text-align: right; direction: rtl; }
 html[dir="ltr"] .booking-page { text-align: left;  direction: ltr; }
+
+/* ═══════════════════════════════════════════
+   Animations
+═══════════════════════════════════════════ */
+@keyframes bk-fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bk-slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bk-popIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bk-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+@keyframes bk-toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes bk-drawCircle {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes bk-drawCheck {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-glow {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 40%, transparent); }
+  70%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
 
 /* ═══════════════════════════════════════════
    Layout
@@ -97,6 +139,7 @@ html[dir="ltr"] .booking-page { text-align: left;  direction: ltr; }
   border-color: var(--primary);
   color: #fff;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+  animation: pulse-glow 2s infinite;
 }
 
 .step-indicator.completed .step-num {
@@ -141,11 +184,6 @@ html[dir="ltr"] .booking-page { text-align: left;  direction: ltr; }
   animation: bk-fadeIn 0.35s ease;
 }
 .booking-step.active { display: block; }
-
-@keyframes bk-fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 
 /* ─── Step Header ─────────────────────────── */
 .step-header {
@@ -347,14 +385,18 @@ html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
   border-radius: 8px;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
   position: relative;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .cal-cell.empty       { background: transparent; cursor: default; pointer-events: none; }
-.cal-cell.available:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.cal-cell.available:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  transform: scale(1.05);
+}
 .cal-cell.disabled    { color: var(--text-muted); opacity: 0.38; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
 .cal-cell.today       { font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--primary); color: var(--primary); }
 
@@ -364,6 +406,7 @@ html[dir="rtl"] .step-actions-between { flex-direction: row-reverse; }
   font-weight: 700;
   border-radius: 8px 0 0 8px;
   z-index: 1;
+  animation: pulse-glow 1.5s infinite;
 }
 html[dir="rtl"] .cal-cell.check-in { border-radius: 0 8px 8px 0; }
 
@@ -574,6 +617,7 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   border-color: var(--primary);
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
+  transform: scale(1.05);
 }
 
 .counter-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -585,6 +629,13 @@ html[dir="rtl"] .cal-cell.check-out { border-radius: 8px 0 0 8px; }
   text-align: center;
   font-variant-numeric: tabular-nums;
   color: var(--text-main);
+}
+
+/* Disable state for icon buttons */
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* ─── Child Ages Box ──────────────────────── */
@@ -1596,14 +1647,6 @@ html[dir="rtl"] .form-group input[dir="ltr"] { text-align: left; }
   animation: bk-drawCheck 0.5s ease forwards 0.55s;
 }
 
-@keyframes bk-drawCircle {
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes bk-drawCheck {
-  to { stroke-dashoffset: 0; }
-}
-
 .success-title {
   font-size: 1.6rem;
   font-weight: 700;
@@ -2231,12 +2274,12 @@ html[dir="rtl"] .form-group input[dir="ltr"] { text-align: left; }
 .reviews-list { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
 
 /* ─── Review Card ─────────────────────────── */
-.review-card.rev-positive    { border-inline-start: 3px solid #10b981; }
-.review-card.rev-negative    { border-inline-start: 3px solid #e11d48; }
-.review-card.rev-mixed       { border-inline-start: 3px solid #f59e0b; }
-.review-card.rev-constructive{ border-inline-start: 3px solid var(--primary); }
+.review-card.rev-positive     { border-inline-start: 3px solid #10b981; }
+.review-card.rev-negative     { border-inline-start: 3px solid #e11d48; }
+.review-card.rev-mixed        { border-inline-start: 3px solid #f59e0b; }
+.review-card.rev-constructive { border-inline-start: 3px solid var(--primary); }
 
-/* Override review-card that was set above for price breakdown */
+/* Override review-card for reviews list (not price breakdown) */
 .reviews-list .review-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -2330,19 +2373,9 @@ html[dir="rtl"] .form-group input[dir="ltr"] { text-align: left; }
 
 .copy-toast i { color: #10b981; font-size: 1rem; }
 
-@keyframes bk-toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
 /* ═══════════════════════════════════════════
    Skeleton Loader
 ═══════════════════════════════════════════ */
-@keyframes bk-shimmer {
-  0%   { background-position: -600px 0; }
-  100% { background-position:  600px 0; }
-}
-
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -2369,19 +2402,6 @@ html[dir="rtl"] .form-group input[dir="ltr"] { text-align: left; }
 .mt-48   { margin-top: 48px; }
 .mb-16   { margin-bottom: 16px; }
 .mb-32   { margin-bottom: 32px; }
-
-/* ═══════════════════════════════════════════
-   Animations
-═══════════════════════════════════════════ */
-@keyframes bk-slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes bk-popIn {
-  from { transform: scale(0); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
 
 /* ═══════════════════════════════════════════
    Dark Mode Overrides
