@@ -1,6 +1,7 @@
 // =========================================
 //   Advanced Booking Logic — booking.js
 //   OreBooking © 2025 | Hotel Edition
+//   Enhanced Version v4.0
 // =========================================
 
 // ─── Firebase Config ───────────────────────
@@ -778,8 +779,8 @@ function updateOccupancyCounters() {
   if (els.adultCount) els.adultCount.textContent = bookingState.adults;
   if (els.childCount) els.childCount.textContent = bookingState.children;
 
-  if (els.btnRoomMinus)  els.btnRoomMinus.disabled  = bookingState.rooms <= 1;
-  if (els.btnRoomPlus)   els.btnRoomPlus.disabled   = bookingState.rooms >= bookingState.maxRooms;
+  if (els.btnRoomMinus)  els.btnRoomMinus.disabled   = bookingState.rooms <= 1;
+  if (els.btnRoomPlus)   els.btnRoomPlus.disabled    = bookingState.rooms >= bookingState.maxRooms;
   if (els.btnAdultMinus) els.btnAdultMinus.disabled  = bookingState.adults <= 1;
   if (els.btnAdultPlus)  els.btnAdultPlus.disabled   = (bookingState.adults + bookingState.children) >= bookingState.maxGuests;
   if (els.btnChildMinus) els.btnChildMinus.disabled  = bookingState.children <= 0;
@@ -787,7 +788,7 @@ function updateOccupancyCounters() {
 
   const badge = document.getElementById('occupancy-summary-badge');
   if (badge) {
-    const isAr    = bookingState.lang === 'ar';
+    const isAr     = bookingState.lang === 'ar';
     const roomTxt  = `${bookingState.rooms} ${t('room','غرفة')}${bookingState.rooms>1&&!isAr?'s':''}`;
     const adultTxt = `${bookingState.adults} ${t('adult','بالغ')}${bookingState.adults>1&&!isAr?'s':''}`;
     const childTxt = bookingState.children > 0
@@ -837,7 +838,6 @@ function updateBookingSummary() {
   if (els.priceBreakdown) {
     const ad = bookingState.addons;
     const addonLines = [];
-
     if (ad.restaurant) {
       const planKey   = `restaurant_${ad.restaurantPlan}`;
       const planCost  = (ADDON_PRICES[planKey] || 0) * bookingState.nights * (bookingState.adults + bookingState.children);
@@ -906,571 +906,361 @@ function updateStepConnectors(activeTo) {
   });
 }
 
-function switchStep(from, to) {
-  const fromEl = document.getElementById(`step-${from}`);
-  const toEl   = document.getElementById(`step-${to}`);
-  if (!fromEl || !toEl) return;
-
-  fromEl.classList.remove('active');
-  toEl.classList.add('active');
-
-  document.querySelectorAll('.step-indicator').forEach(ind => {
-    const n = parseInt(ind.getAttribute('data-step'), 10);
-    ind.classList.remove('active','completed');
-    ind.removeAttribute('aria-current');
-    if (n < to)  ind.classList.add('completed');
-    if (n === to) { ind.classList.add('active'); ind.setAttribute('aria-current','step'); }
-  });
-
-  updateStepConnectors(to);
+function goToStep(stepNum) {
   hideGlobalAlert();
+  [1, 2, 3, 4].forEach(n => {
+    const el = els[`step${n}`];
+    const ind = document.getElementById(`step-ind-${n}`);
+    if (el) el.classList.toggle('active', n === stepNum);
+    if (ind) {
+      ind.classList.toggle('active', n === stepNum);
+      ind.classList.toggle('completed', n < stepNum);
+    }
+  });
+  updateStepConnectors(stepNum);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (to === 2) renderAddonsPanel();
+  // Update URL hash for better UX
+  history.pushState(null, null, `#step-${stepNum}`);
 }
 
-// ─── Payment Method Toggle ──────────────────
-function updatePaymentUI() {
-  const selected = document.querySelector('input[name="pay_method"]:checked')?.value || 'cash';
-  document.querySelectorAll('.payment-option').forEach(opt => {
-    const radio = opt.querySelector('input[type="radio"]');
-    opt.classList.toggle('selected', radio?.value === selected);
-  });
-  if (els.transferBox) els.transferBox.classList.toggle('d-none', selected !== 'transfer');
+// ─── Step Validation ─────────────────────────
+function validateStep1() {
+  if (!bookingState.checkIn || !bookingState.checkOut) {
+    showGlobalAlert(t('Please select check-in and check-out dates.', 'يرجى تحديد تواريخ الوصول والمغادرة.'));
+    return false;
+  }
+  if (bookingState.nights < bookingState.minNights) {
+    showGlobalAlert(t(`Minimum stay is ${bookingState.minNights} nights.`, `الحد الأدنى للإقامة هو ${bookingState.minNights} ليالٍ.`));
+    return false;
+  }
+  if (bookingState.children > 0 && bookingState.childAges.some(a => a === undefined || a === '')) {
+    showGlobalAlert(t('Please select ages for all children.', 'يرجى تحديد أعمار جميع الأطفال.'));
+    els.childAgesBox.scrollIntoView({behavior: 'smooth', block: 'center'});
+    return false;
+  }
+  return true;
 }
 
-// ─── Receipt File Handler ────────────────────
-function handleReceiptChange() {
-  const file = els.receiptFile?.files[0];
-  if (!file) return;
+function validateStep2() {
+  const method = document.querySelector('input[name="pay_method"]:checked')?.value;
+  if (!method) {
+    showGlobalAlert(t('Please select a payment method.', 'يرجى اختيار طريقة الدفع.'));
+    return false;
+  }
+  if (method === 'transfer' && els.receiptFile && !els.receiptFile.files[0]) {
+    showGlobalAlert(t('Please upload the transfer receipt.', 'يرجى رفع إيصال التحويل البنكي.'));
+    return false;
+  }
+  return true;
+}
 
-  if (file.size > 5 * 1024 * 1024) {
-    showGlobalAlert(t('File too large. Max 5MB.','الملف كبير جداً. الحد 5MB.'), 'error');
-    els.receiptFile.value = '';
+// ─── Upload Helper ───────────────────────────
+async function uploadReceipt(file, refId) {
+  const ext = file.name.split('.').pop();
+  const path = `receipts/${refId}_${Date.now()}.${ext}`;
+  const snap = await storage.ref(path).put(file);
+  return await snap.ref.getDownloadURL();
+}
+
+// ─── Submit Booking (Step 3) ─────────────────
+async function submitBooking() {
+  if (!els.agreePolicy.checked) {
+    showGlobalAlert(t('You must agree to the house rules.', 'يجب الموافقة على قوانين الفندق.'));
+    return;
+  }
+  if (!els.guestForm.checkValidity()) {
+    els.guestForm.reportValidity();
     return;
   }
 
-  const allowed = ['image/jpeg','image/png','image/webp','application/pdf'];
-  if (!allowed.includes(file.type)) {
-    showGlobalAlert(t('Only JPG, PNG, WEBP or PDF files accepted.','يُقبل JPG أو PNG أو WEBP أو PDF فقط.'), 'error');
-    els.receiptFile.value = '';
-    return;
-  }
+  setButtonLoading(els.btnConfirm, true);
+  hideGlobalAlert();
 
-  const previewWrap = document.getElementById('receipt-preview-wrap');
-  const fileNameEl  = document.getElementById('receipt-file-name');
-  if (fileNameEl)  fileNameEl.textContent = file.name;
-  if (previewWrap) previewWrap.classList.remove('d-none');
+  try {
+    const isTransfer = document.querySelector('input[name="pay_method"]:checked')?.value === 'transfer';
+    let receiptUrl = '';
+    const refId = `BK-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-  const hint = document.getElementById('file-upload-hint');
-  if (hint) hint.textContent = `✔ ${file.name}`;
-}
+    if (isTransfer && els.receiptFile?.files[0]) {
+      receiptUrl = await uploadReceipt(els.receiptFile.files[0], refId);
+    }
 
-// ─── Form Validation ─────────────────────────
-function validateField(input, errId, validFn, msg) {
-  if (!input) return true;
-  const errEl = document.getElementById(errId);
-  const valid  = validFn(input.value.trim());
-  input.classList.toggle('invalid', !valid);
-  if (errEl) { errEl.textContent = valid ? '' : msg; errEl.classList.toggle('visible', !valid); }
-  return valid;
-}
+    const payload = {
+      propertyId:   String(bookingState.propertyId),
+      refId,
+      userId:       currentUser ? currentUser.uid : null,
+      guestName:    els.gName.value.trim(),
+      guestEmail:   els.gEmail.value.trim(),
+      guestPhone:   els.gPhone.value.trim(),
+      nationality:  els.gNationality.value,
+      purpose:      bookingState.purposeOfVisit,
+      arrivalTime:  els.gArrival.value,
+      notes:        els.gNotes.value.trim(),
+      checkIn:      bookingState.checkIn,
+      checkOut:     bookingState.checkOut,
+      checkInDate:  firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)),
+      checkOutDate: firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)),
+      rooms:        bookingState.rooms,
+      adults:       bookingState.adults,
+      children:     bookingState.children,
+      childAges:    bookingState.childAges,
+      bedConfig:    bookingState.bedConfig,
+      nights:       bookingState.nights,
+      basePrice:    bookingState.basePrice,
+      roomPrice:    bookingState.roomPrice,
+      fee:          bookingState.fee,
+      addonsTotal:  bookingState.addonsTotal,
+      totalPrice:   bookingState.totalPrice,
+      addons:       bookingState.addons,
+      paymentMethod: isTransfer ? 'transfer' : 'cash',
+      receiptUrl,
+      status:       'pending',
+      createdAt:    firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-function validateGuestForm() {
-  let ok = true;
-  ok = validateField(els.gName,  'g-name-err',  v => v.length >= 2,                              t('Full name required.','الاسم الكامل مطلوب.'))  && ok;
-  ok = validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),       t('Valid email required.','بريد صحيح مطلوب.'))     && ok;
-  ok = validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v), t('Valid phone required.','رقم هاتف صحيح مطلوب.')) && ok;
-  return ok;
-}
+    await db.collection('bookings').add(payload);
 
-// ─── Event Listeners ─────────────────────────
-function setupEventListeners() {
+    // Populate Success Screen
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('succ-ref',     refId);
+    set('succ-name',    payload.guestName);
+    set('succ-dates',   `${payload.checkIn} → ${payload.checkOut}`);
+    set('succ-guests',  `${payload.adults} ${t('adults','بالغين')}, ${payload.rooms} ${t('room','غرفة')}`);
+    set('succ-total',   `${payload.totalPrice.toLocaleString()} ${bookingState.lang === 'ar' ? 'د.ج' : 'DZD'}`);
 
-  // ── Copy bank account buttons ─────────────
-  document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const valEl = e.currentTarget.previousElementSibling;
-      if (!valEl) return;
-      const textToCopy = valEl.textContent.trim().replace(/\s+/g, '');
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-        const icon = btn.querySelector('i');
-        if (icon) { const orig = icon.className; icon.className = 'ph-fill ph-check-circle'; setTimeout(() => icon.className = orig, 2000); }
-        showCopyToast(t('Copied!', 'تم النسخ!'));
-      } catch (err) {
-        showGlobalAlert(t('Could not copy. Please copy manually.','تعذّر النسخ. انسخ يدوياً.'), 'info');
+    const badge = document.getElementById('succ-pay-badge');
+    if (badge) {
+      if (isTransfer) {
+        badge.className = 'success-pay-badge transfer';
+        badge.innerHTML = `<i class="ph-fill ph-bank" aria-hidden="true"></i> ${t('Awaiting transfer verification','بانتظار التحقق من التحويل')}`;
+      } else {
+        badge.className = 'success-pay-badge cash';
+        badge.innerHTML = `<i class="ph-fill ph-money" aria-hidden="true"></i> ${t('Pay at property','الدفع في الفندق')}`;
       }
-    });
-  });
+    }
 
-  // ── Calendar ─────────────────────────────
-  els.calPrev?.addEventListener('click', () => { calViewDate.setMonth(calViewDate.getMonth()-1); renderCalendar(); });
-  els.calNext?.addEventListener('click', () => { calViewDate.setMonth(calViewDate.getMonth()+1); renderCalendar(); });
+    goToStep(4);
+    if (window.confetti) window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
 
-  // ── Rooms ─────────────────────────────────
-  els.btnRoomMinus?.addEventListener('click', () => {
-    if (bookingState.rooms > 1) { bookingState.rooms--; updateOccupancyCounters(); updateBookingSummary(); }
-  });
-  els.btnRoomPlus?.addEventListener('click', () => {
-    if (bookingState.rooms < bookingState.maxRooms) { bookingState.rooms++; updateOccupancyCounters(); updateBookingSummary(); }
-  });
+  } catch (err) {
+    handleError(err, '[submitBooking]');
+  } finally {
+    setButtonLoading(els.btnConfirm, false);
+  }
+}
 
-  // ── Adults ────────────────────────────────
-  els.btnAdultMinus?.addEventListener('click', () => {
-    if (bookingState.adults > 1) { bookingState.adults--; updateOccupancyCounters(); updateBookingSummary(); }
-  });
-  els.btnAdultPlus?.addEventListener('click', () => {
-    if ((bookingState.adults + bookingState.children) < bookingState.maxGuests) {
-      bookingState.adults++; updateOccupancyCounters(); updateBookingSummary();
+// ─── Events Setup ────────────────────────────
+function setupEventListeners() {
+  // Navigation
+  els.btnNext1?.addEventListener('click', () => { if (validateStep1()) goToStep(2); });
+  els.btnNext2?.addEventListener('click', () => { if (validateStep2()) goToStep(3); });
+  els.btnPrev2?.addEventListener('click', () => goToStep(1));
+  els.btnPrev3?.addEventListener('click', () => goToStep(2));
+  els.btnConfirm?.addEventListener('click', () => submitBooking());
+
+  // Handle browser back button (hash changes)
+  window.addEventListener('popstate', (e) => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#step-')) {
+      const step = parseInt(hash.replace('#step-', ''), 10);
+      if (step >= 1 && step <= 4) goToStep(step);
+    } else {
+      goToStep(1); // Default to step 1
     }
   });
 
-  // ── Children ──────────────────────────────
-  els.btnChildMinus?.addEventListener('click', () => {
-    if (bookingState.children > 0) {
-      bookingState.children--;
-      bookingState.childAges.pop();
-      updateOccupancyCounters(); renderChildAges(); updateBookingSummary();
-    }
+  // Calendar Controls
+  els.calPrev?.addEventListener('click', () => {
+    calViewDate.setMonth(calViewDate.getMonth() - 1);
+    renderCalendar();
   });
-  els.btnChildPlus?.addEventListener('click', () => {
-    if ((bookingState.adults + bookingState.children) < bookingState.maxGuests) {
-      bookingState.children++;
-      bookingState.childAges.push('');
-      updateOccupancyCounters(); renderChildAges(); updateBookingSummary();
-    }
+  els.calNext?.addEventListener('click', () => {
+    calViewDate.setMonth(calViewDate.getMonth() + 1);
+    renderCalendar();
   });
 
-  // ── Bed config ────────────────────────────
-  els.bedSelect?.addEventListener('change', e => { bookingState.bedConfig = e.target.value; updateBookingSummary(); });
+  // Occupancy Controls
+  const handleCounter = (type, dir) => {
+    if (type === 'room') {
+      bookingState.rooms += dir;
+      // Auto-adjust guests if needed based on rooms
+      if (bookingState.rooms > bookingState.adults) {
+        bookingState.adults = bookingState.rooms;
+      }
+    } else if (type === 'adult') {
+      bookingState.adults += dir;
+      // Ensure at least one adult per room
+      if (bookingState.adults < bookingState.rooms) {
+        bookingState.rooms = bookingState.adults;
+      }
+    } else if (type === 'child') {
+      bookingState.children += dir;
+      if (dir > 0) bookingState.childAges.push('');
+      else bookingState.childAges.pop();
+      renderChildAges();
+    }
+    updateOccupancyCounters();
+    updateBookingSummary();
+  };
 
-  // ── Purpose chips ─────────────────────────
+  els.btnRoomMinus?.addEventListener('click', () => handleCounter('room', -1));
+  els.btnRoomPlus?.addEventListener('click',  () => handleCounter('room', 1));
+  els.btnAdultMinus?.addEventListener('click', () => handleCounter('adult', -1));
+  els.btnAdultPlus?.addEventListener('click',  () => handleCounter('adult', 1));
+  els.btnChildMinus?.addEventListener('click', () => handleCounter('child', -1));
+  els.btnChildPlus?.addEventListener('click',  () => handleCounter('child', 1));
+
+  els.bedSelect?.addEventListener('change', e => {
+    bookingState.bedConfig = e.target.value;
+    updateBookingSummary();
+  });
+
+  // Payment Methods
+  els.payRadios.forEach(r => {
+    r.addEventListener('change', updatePaymentUI);
+  });
+
+  // Purpose Chips
   document.querySelectorAll('.purpose-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
-      bookingState.purposeOfVisit = chip.dataset.value;
-      if (els.gPurpose) els.gPurpose.value = chip.dataset.value;
+      bookingState.purposeOfVisit = chip.dataset.val;
     });
   });
 
-  // ── Step navigation ───────────────────────
-  els.btnNext1?.addEventListener('click', () => switchStep(1, 2));
-  els.btnPrev2?.addEventListener('click', () => switchStep(2, 1));
-  els.btnNext2?.addEventListener('click', () => switchStep(2, 3));
-  els.btnPrev3?.addEventListener('click', () => switchStep(3, 2));
-
-  // ── Policy checkbox ───────────────────────
-  els.agreePolicy?.addEventListener('change', e => {
-    if (els.btnNext2) {
-      els.btnNext2.disabled = !e.target.checked;
-      els.btnNext2.setAttribute('aria-disabled', String(!e.target.checked));
+  // File Upload Preview
+  els.receiptFile?.addEventListener('change', e => {
+    const file = e.target.files[0];
+    const preview = document.getElementById('receipt-preview');
+    const nameEl  = document.getElementById('receipt-file-name');
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        showGlobalAlert(t('File too large. Max 5MB.', 'الملف كبير جداً. الحد الأقصى 5 ميجابايت.'));
+        e.target.value = '';
+        return;
+      }
+      if (nameEl) nameEl.textContent = file.name;
+      preview?.classList.remove('d-none');
+    } else {
+      preview?.classList.add('d-none');
     }
   });
-
-  // ── Payment ───────────────────────────────
-  els.payRadios.forEach(r => r.addEventListener('change', updatePaymentUI));
-  document.querySelectorAll('.payment-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      const r = opt.querySelector('input[type="radio"]');
-      if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
-    });
-  });
-
-  // ── Fee tooltip ───────────────────────────
-  document.getElementById('btn-fee-info')?.addEventListener('click', () => {
-    document.getElementById('fee-tooltip')?.classList.toggle('d-none');
-  });
-
-  // ── Receipt ───────────────────────────────
-  els.receiptFile?.addEventListener('change', handleReceiptChange);
 
   document.getElementById('btn-remove-receipt')?.addEventListener('click', () => {
     if (els.receiptFile) els.receiptFile.value = '';
-    const previewWrap = document.getElementById('receipt-preview-wrap');
-    const fileNameEl  = document.getElementById('receipt-file-name');
-    if (previewWrap) previewWrap.classList.add('d-none');
-    if (fileNameEl)  fileNameEl.textContent = '';
-    const hint = document.getElementById('file-upload-hint');
-    if (hint) hint.textContent = t('Click or drag & drop your receipt','انقر أو اسحب لرفع الوصل');
+    document.getElementById('receipt-preview')?.classList.add('d-none');
   });
 
-  // ── Drag & Drop ───────────────────────────
-  const dropZone = document.getElementById('file-drop-zone');
-  if (dropZone && els.receiptFile) {
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        const dt = new DataTransfer(); dt.items.add(file);
-        els.receiptFile.files = dt.files;
-        handleReceiptChange();
+  // Notes Character Counter
+  els.gNotes?.addEventListener('input', e => {
+    const counter = document.getElementById('g-notes-counter');
+    if (counter) counter.textContent = `${e.target.value.length}/500`;
+  });
+
+  // Copy Buttons
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.copyTarget;
+      const text = document.getElementById(targetId)?.textContent || '';
+      if (text) {
+        navigator.clipboard.writeText(text.trim());
+        showCopyToast();
       }
     });
-  }
-
-  // ── Blur Validation ───────────────────────
-  els.gName?.addEventListener('blur',  () => validateField(els.gName,  'g-name-err',  v => v.length >= 2,                               t('Full name required.','الاسم الكامل مطلوب.')));
-  els.gEmail?.addEventListener('blur', () => validateField(els.gEmail, 'g-email-err', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),         t('Valid email required.','بريد صحيح مطلوب.')));
-  els.gPhone?.addEventListener('blur', () => validateField(els.gPhone, 'g-phone-err', v => /^[+0-9\s\-()\u0660-\u0669]{7,20}$/.test(v),  t('Valid phone required.','رقم هاتف صحيح مطلوب.')));
-
-  // ── Notes Counter ─────────────────────────
-  els.gNotes?.addEventListener('input', () => {
-    const counter = document.getElementById('g-notes-counter');
-    if (counter) counter.textContent = `${els.gNotes.value.length} / 500`;
   });
 
-  // ── Arrival Time ──────────────────────────
-  els.gArrival?.addEventListener('change', e => { bookingState.arrivalTime = e.target.value; });
-
-  // ── Theme Toggle ──────────────────────────
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('ore_theme', isDark ? 'dark' : 'light');
-    const icon = document.querySelector('#theme-toggle i');
-    if (icon) icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
-  });
-
-  // ── Language Toggle ───────────────────────
-  document.getElementById('lang-toggle')?.addEventListener('click', () => {
-    localStorage.setItem('ore_lang', bookingState.lang === 'ar' ? 'en' : 'ar');
-    location.reload();
-  });
-
-  // ── Step-4 Copy Reference ─────────────────
   els.btnCopyRef?.addEventListener('click', () => {
-    const ref = document.getElementById('ref-number')?.textContent || '';
-    navigator.clipboard.writeText(ref).then(() => {
+    const ref = document.getElementById('succ-ref')?.textContent;
+    if (ref) {
+      navigator.clipboard.writeText(ref);
       showCopyToast(t('Reference copied!', 'تم نسخ رقم الحجز!'));
-      const icon = els.btnCopyRef.querySelector('i');
-      if (icon) { const orig = icon.className; icon.className = 'ph ph-check'; setTimeout(() => icon.className = orig, 2000); }
-    }).catch(() => {});
+    }
   });
 
-  // ── Step-4 Share ──────────────────────────
   els.btnShareBooking?.addEventListener('click', () => {
-    const ref = document.getElementById('ref-number')?.textContent || '';
     if (navigator.share) {
+      const ref = document.getElementById('succ-ref')?.textContent;
       navigator.share({
-        title: 'OreBooking — My Booking',
-        text:  t(`My booking reference: ${ref}`, `رقم حجزي: ${ref}`),
-        url:   window.location.href
-      }).catch(() => {});
+        title: t('My OreBooking Reservation','حجزي في OreBooking'),
+        text: `${t('My booking reference is:','رقم مرجع حجزي هو:')} ${ref}\n${t('Hotel:','الفندق:')} ${bookingState.property?.titleEn || 'Hotel'}`,
+        url: window.location.href
+      });
     } else {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => showCopyToast(t('Link copied!','تم نسخ الرابط!')))
-        .catch(() => {});
+      showCopyToast(t('Sharing not supported on this browser','المشاركة غير مدعومة في هذا المتصفح'));
     }
   });
-
-  // ── Form Submit ───────────────────────────
-  els.guestForm?.addEventListener('submit', handleSubmit);
 }
 
-// ─── Form Submission ─────────────────────────
-async function handleSubmit(e) {
-  e.preventDefault();
-  hideGlobalAlert();
-
-  if (!validateGuestForm()) {
-    showGlobalAlert(t('Please fix the errors above.','يرجى تصحيح الأخطاء أعلاه.'), 'error');
-    els.guestForm.querySelector('.invalid')?.focus();
-    return;
-  }
-
-  const payMethod  = document.querySelector('input[name="pay_method"]:checked')?.value || 'cash';
-  const isTransfer = payMethod === 'transfer';
-  let receiptUrl   = null;
-
-  setButtonLoading(els.btnConfirm, true);
-
-  try {
-    await loadBookedDates();
-    if (hasBookedDatesInRange(bookingState.checkIn, bookingState.checkOut)) {
-      showGlobalAlert(t('These dates were just booked. Please choose new dates.','تم حجز هذه التواريخ للتو. اختر تواريخ جديدة.'), 'error');
-      setButtonLoading(els.btnConfirm, false);
-      setTimeout(() => switchStep(3, 1), 2500);
-      return;
-    }
-
-    if (isTransfer) {
-      const file = els.receiptFile?.files[0];
-      if (!file) {
-        showGlobalAlert(t('Please upload your transfer receipt.','يرجى رفع صورة وصل التحويل.'), 'error');
-        setButtonLoading(els.btnConfirm, false);
-        return;
-      }
-      const ref  = storage.ref(`receipts/${Date.now()}_${file.name}`);
-      const snap = await ref.put(file);
-      receiptUrl = await snap.ref.getDownloadURL();
-    }
-
-    const isAr      = bookingState.lang === 'ar';
-    const prop       = bookingState.property;
-    const propTitle  = isAr ? (prop?.titleAr || prop?.titleEn || '') : (prop?.titleEn || prop?.titleAr || '');
-
-    const selectedAddons = Object.entries(bookingState.addons)
-      .filter(([k, v]) => v === true)
-      .map(([k]) => k);
-
-    const bookingDoc = {
-      propertyId:     String(bookingState.propertyId || ''),
-      propertyTitle:  propTitle || '',
-      checkIn:        bookingState.checkIn,
-      checkInDate:    bookingState.checkIn  ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn))  : null,
-      checkOut:       bookingState.checkOut,
-      checkOutDate:   bookingState.checkOut ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)) : null,
-      rooms:          Number(bookingState.rooms)    || 1,
-      adults:         Number(bookingState.adults)   || 1,
-      children:       Number(bookingState.children) || 0,
-      childAges:      (bookingState.childAges || []).map(a => isNaN(a) || a === '' ? 0 : Number(a)),
-      bedConfig:      bookingState.bedConfig || 'double',
-      nights:         Number(bookingState.nights)      || 0,
-      basePrice:      Number(bookingState.basePrice)   || 0,
-      roomPrice:      Number(bookingState.roomPrice)   || 0,
-      addonsTotal:    Number(bookingState.addonsTotal) || 0,
-      serviceFee:     Number(bookingState.fee)         || 0,
-      totalPrice:     Number(bookingState.totalPrice)  || 0,
-      currency:       'DZD',
-      guests:         Number(bookingState.adults) + Number(bookingState.children),
-      addons:         bookingState.addons  || {},
-      selectedAddons: selectedAddons       || [],
-      restaurantPlan: bookingState.addons?.restaurant ? (bookingState.addons.restaurantPlan || 'breakfast') : null,
-      purposeOfVisit: bookingState.purposeOfVisit || 'leisure',
-      guestName:      els.gName?.value?.trim()               || '',
-      guestEmail:     els.gEmail?.value?.trim().toLowerCase() || '',
-      guestPhone:     els.gPhone?.value?.trim()              || '',
-      nationality:    els.gNationality?.value                || '',
-      arrivalTime:    els.gArrival?.value                    || '',
-      notes:          els.gNotes?.value?.trim().slice(0,500)  || '',
-      paymentMethod:  payMethod  || 'cash',
-      receiptUrl:     receiptUrl || null,
-      status:         'pending',
-      lang:           bookingState.lang || 'en',
-      userId:         currentUser ? currentUser.uid   : null,
-      userEmail:      currentUser ? currentUser.email : null,
-      createdAt:      firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    const docRef = await db.collection('bookings').add(bookingDoc);
-    populateSuccessScreen(docRef.id, bookingDoc, isAr);
-    switchStep(3, 4);
-
-  } catch (err) {
-    handleError(err, '[handleSubmit]');
+function updatePaymentUI() {
+  const method = document.querySelector('input[name="pay_method"]:checked')?.value;
+  if (els.transferBox) {
+    if (method === 'transfer') els.transferBox.classList.remove('d-none');
+    else els.transferBox.classList.add('d-none');
   }
 }
 
-// ─── Success Screen ───────────────────────────
-function populateSuccessScreen(docId, data, isAr) {
-  const refEl = document.getElementById('ref-number');
-  if (refEl) refEl.textContent = '#' + docId.slice(0, 8).toUpperCase();
-
-  const grid = document.getElementById('success-details-grid');
-  if (!grid) return;
-
-  const curr    = isAr ? 'د.ج' : 'DZD';
-  const locale  = isAr ? 'ar-DZ' : 'en-GB';
-  const fmtLong = { day:'2-digit', month:'long', year:'numeric' };
-  const ciDate  = parseLocalDate(bookingState.checkIn).toLocaleDateString(locale, fmtLong);
-  const coDate  = parseLocalDate(bookingState.checkOut).toLocaleDateString(locale, fmtLong);
-
-  const planLabels = {
-    breakfast: t('Breakfast','إفطار'),
-    halfboard: t('Half-Board','نصف إقامة'),
-    fullboard: t('Full-Board','إقامة كاملة')
-  };
-
-  const addonsStr = data.selectedAddons?.length
-    ? data.selectedAddons.map(k => t(k, k)).join(', ')
-    : t('None','لا شيء');
-
-  const purposeLabels = {
-    leisure:   t('Leisure','ترفيه'),
-    business:  t('Business','أعمال'),
-    family:    t('Family','عائلة'),
-    honeymoon: t('Honeymoon','شهر عسل')
-  };
-
-  const cards = [
-    [t('Check-in','الوصول'),       ciDate],
-    [t('Check-out','المغادرة'),     coDate],
-    [t('Nights','الليالي'),         `${data.nights}`],
-    [t('Rooms','الغرف'),            `${data.rooms} · ${data.bedConfig}`],
-    [t('Guests','الضيوف'),          `${data.adults} ${t('adults','بالغين')}${data.children>0 ? ` + ${data.children} ${t('children','أطفال')}` : ''}`],
-    [t('Add-ons','الإضافات'),       data.restaurantPlan ? `${t('Restaurant','المطعم')}: ${planLabels[data.restaurantPlan]||''}` : addonsStr],
-    [t('Purpose','غرض الزيارة'),    purposeLabels[data.purposeOfVisit] || '—'],
-    [t('Total','الإجمالي'),         `${data.totalPrice.toLocaleString()} ${curr}`],
-    [t('Payment','الدفع'),          data.paymentMethod === 'cash' ? t('Pay at Property','عند الوصول') : t('Bank Transfer','تحويل بنكي')],
-    [t('Status','الحالة'),          `<span class="status-badge pending"><i class="ph-fill ph-clock" aria-hidden="true"></i> ${t('Pending','قيد الانتظار')}</span>`],
-    [t('Name','الاسم'),             data.guestName],
-    [t('Email','البريد'),           data.guestEmail],
-    [t('Phone','الهاتف'),           data.guestPhone],
-    ...(data.arrivalTime ? [[t('Arrival Time','وقت الوصول'), data.arrivalTime]] : []),
-    ...(data.notes       ? [[t('Requests','الطلبات'),        data.notes]]       : []),
-  ];
-
-  grid.innerHTML = cards.map(([label, value]) => `
-    <div class="confirm-detail-card">
-      <p class="confirm-detail-label">${label}</p>
-      <p class="confirm-detail-value">${value}</p>
-    </div>`).join('');
-
-  const badge = document.getElementById('success-payment-badge');
-  if (badge) {
-    const isCash = data.paymentMethod === 'cash';
-    badge.innerHTML = `
-      <div class="success-pay-badge ${isCash ? 'cash' : 'transfer'}">
-        <i class="ph ${isCash ? 'ph-money' : 'ph-bank'}" aria-hidden="true"></i>
-        ${isCash
-          ? t('Pay at property — no upfront charge.','الدفع عند الوصول — لا رسوم مسبقة.')
-          : t("Transfer receipt received. We'll confirm soon.",'تم استلام وصل التحويل. سنؤكد قريباً.')}
-      </div>`;
+// ─── Quick Translation Map ───────────────────
+const TRANSLATIONS = {
+  ar: {
+    title1: "اختر تواريخك",
+    title2: "راجع تفاصيل رحلتك",
+    title3: "أكمل بياناتك",
+    step1: "التواريخ", step2: "مراجعة", step3: "البيانات", step4: "تأكيد",
+    bedLabel: "ترتيب الأسرة",
+    guestsLabel: "الضيوف والغرف",
+    payTitle: "كيف تود الدفع؟",
+    payCash: "الدفع عند الوصول",
+    payCashDesc: "ادفع نقداً أو بالبطاقة في الفندق",
+    payBank: "تحويل بنكي",
+    payBankDesc: "أرسل المبلغ مباشرة إلى حساب الفندق",
+    bankTitle: "تفاصيل الحساب البنكي",
+    accName: "اسم الحساب",
+    accBank: "البنك",
+    uploadProof: "قم برفع إيصال التحويل (صورة أو PDF)",
+    policyTitle: "قوانين الفندق وإلغاء الحجز",
+    policy1: "إلغاء مجاني حتى 48 ساعة قبل الوصول",
+    policy2: "تسجيل الوصول من 14:00، المغادرة قبل 12:00",
+    policy3: "غير مسموح بالحيوانات الأليفة",
+    iAgree: "لقد قرأت وأوافق على قوانين الفندق.",
+    nameLabel: "الاسم الكامل",
+    emailLabel: "البريد الإلكتروني",
+    phoneLabel: "رقم الهاتف",
+    notesLabel: "طلبات خاصة (اختياري)",
+    purposeLabel: "الغرض من الزيارة",
+    successTitle: "تم حجز إقامتك!",
+    successSub: "شكراً لك. سنرسل إليك بريداً إلكترونياً يحتوي على جميع التفاصيل.",
   }
-}
+};
 
-// ─── Translations ────────────────────────────
 function translateBookingPage() {
   if (bookingState.lang !== 'ar') return;
+  const dict = TRANSLATIONS.ar;
+
+  const setTxt = (sel, txt) => {
+    document.querySelectorAll(sel).forEach(el => {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = txt;
+      else el.textContent = txt;
+    });
+  };
+
+  setTxt('.step-title', dict.title1); // Needs finer targeting in full implementation
+  document.getElementById('step-ind-1').querySelector('.step-label').textContent = dict.step1;
+  document.getElementById('step-ind-2').querySelector('.step-label').textContent = dict.step2;
+  document.getElementById('step-ind-3').querySelector('.step-label').textContent = dict.step3;
+  document.getElementById('step-ind-4').querySelector('.step-label').textContent = dict.step4;
+
+  // Buttons
+  setTxt('#btn-next-1 span', 'الخطوة التالية: المراجعة');
+  setTxt('#btn-next-2 span', 'الخطوة التالية: البيانات');
+  setTxt('#btn-confirm-book span', 'تأكيد الحجز');
+
+  // Fields
+  const l_name = document.querySelector('label[for="g-name"]'); if (l_name) l_name.innerHTML = `<i class="ph ph-user form-label-icon" aria-hidden="true"></i> ${dict.nameLabel} <span class="req-star">*</span>`;
+  const l_email = document.querySelector('label[for="g-email"]'); if (l_email) l_email.innerHTML = `<i class="ph ph-envelope form-label-icon" aria-hidden="true"></i> ${dict.emailLabel} <span class="req-star">*</span>`;
+
+  // Apply RTL specifics on body/html
   document.documentElement.setAttribute('dir', 'rtl');
   document.documentElement.setAttribute('lang', 'ar');
-
-  const s = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-
-  s('nav-back-txt', 'العودة للعقار');
-  const langBtn = document.getElementById('lang-toggle');
-  if (langBtn) { const sp = langBtn.querySelector('span'); if (sp) sp.textContent = 'English'; }
-
-  // Steps
-  s('lbl-step1', 'التواريخ والغرف');
-  s('lbl-step2', 'الإضافات والدفع');
-  s('lbl-step3', 'بيانات الضيف');
-  s('lbl-step4', 'التأكيد');
-
-  // Step 1
-  s('st-title-1',      'متى ستسافر؟');
-  s('st-sub-1',        'اختر تواريخ وصولك ومغادرتك، وتفضيلات الغرف.');
-  s('lbl-chk-in',      'تاريخ الوصول');
-  s('lbl-nights',      'الليالي');
-  s('lbl-chk-out',     'تاريخ المغادرة');
-  s('lbl-who-coming',  'الغرف والضيوف');
-  s('lbl-rooms-title', 'الغرف');
-  s('lbl-rooms-sub',   'عدد الغرف المطلوبة');
-  s('lbl-adults-title','البالغون');
-  s('lbl-adults-sub',  '13 سنة فأكثر');
-  s('lbl-children-title','الأطفال');
-  s('lbl-children-sub','من 0 إلى 12 سنة');
-  s('lbl-bed-type',    'نوع الأسرّة');
-  s('tip-room-note',   'توفر الغرف يُؤكَّد عند الموافقة. يمكن التعديل عند الوصول.');
-  s('btn-next-1-txt',  'الخطوة التالية');
-
-  const bedSel = document.getElementById('bed-config-select');
-  if (bedSel) {
-    if (bedSel.options[0]) bedSel.options[0].text = '🛏 سرير مزدوج (Double)';
-    if (bedSel.options[1]) bedSel.options[1].text = '🛏🛏 سريران منفصلان (Twin)';
-    if (bedSel.options[2]) bedSel.options[2].text = '👑 سرير كبير (King)';
-    if (bedSel.options[3]) bedSel.options[3].text = '🛏 سرير فردي (Single)';
-  }
-
-  // Step 2
-  s('st-title-2',         'الإضافات والدفع');
-  s('st-sub-2',           'خصّص إقامتك واختر طريقة الدفع.');
-  s('lbl-price-breakdown','تفاصيل السعر');
-  s('rev-dates',          'التواريخ');
-  s('rev-nights-lbl',     'الليالي');
-  s('rev-rooms',          'الغرف');
-  s('rev-guests',         'الضيوف');
-  s('rev-addons',         'الإضافات');
-  s('rev-base',           'المجموع الفرعي');
-  s('rev-fees',           'رسوم الخدمة (8%)');
-  s('rev-total',          'الإجمالي');
-  s('lbl-pay-method',     'طريقة الدفع');
-  s('lbl-pay-cash',       'الدفع عند الوصول');
-  s('desc-pay-cash',      'ادفع المبلغ كاملاً عند وصولك للعقار. لا رسوم مسبقة.');
-  s('lbl-pay-transfer',   'تحويل بنكي / بريدي');
-  s('desc-pay-transfer',  'قم بالتحويل لحسابنا وارفع صورة الوصل لتأكيد سريع.');
-  s('txt-bank-info',      'يرجى تحويل المبلغ الإجمالي إلى الحساب التالي:');
-  s('lbl-bank-name',      'اسم الحساب');
-  s('lbl-receipt',        'رفع صورة الوصل');
-  s('file-upload-hint',   'انقر أو اسحب لرفع الوصل');
-  s('lbl-cancel-policy-title','سياسة الإلغاء');
-  s('lbl-policy-title',   'لقد اطلعت وأوافق على سياسة الإلغاء');
-  s('btn-back-2',         'رجوع');
-  s('btn-next-2-txt',     'الخطوة التالية');
-
-    const policyItems = document.querySelectorAll('.policy-timeline-item .policy-timeline-text');
-  if (policyItems[0]) {
-    const st = policyItems[0].querySelector('strong');
-    const sp = policyItems[0].querySelector('span');
-    if (st) st.textContent = 'إلغاء مجاني';
-    if (sp) sp.textContent = 'حتى 48 ساعة قبل الوصول.';
-  }
-  if (policyItems[1]) {
-    const st = policyItems[1].querySelector('strong');
-    const sp = policyItems[1].querySelector('span');
-    if (st) st.textContent = 'إلغاء متأخر';
-    if (sp) sp.textContent = 'يُخصم سعر الليلة الأولى.';
-  }
-
-  // Step 3
-  s('st-title-3',        'بيانات الضيف');
-  s('st-sub-3',          'نحتاج هذه التفاصيل لتأكيد حجزك.');
-  s('lbl-g-name',        'الاسم الكامل');
-  s('lbl-g-email',       'البريد الإلكتروني');
-  s('lbl-g-phone',       'رقم الهاتف');
-  s('lbl-g-nationality', 'الجنسية (اختياري)');
-  s('lbl-g-arrival',     'وقت الوصول المتوقع (اختياري)');
-  s('lbl-g-purpose',     'غرض الزيارة (اختياري)');
-  s('lbl-g-notes',       'طلبات خاصة (اختياري)');
-  s('txt-auth-prompt',   'هل لديك حساب؟ سجّل الدخول لحجز أسرع.');
-  s('link-login-booking','تسجيل الدخول / إنشاء حساب');
-  s('btn-back-3',        'رجوع');
-  s('btn-confirm-txt',   'تأكيد الحجز');
-  s('txt-privacy',       'نحن نحمي بياناتك وفقاً لسياسة الخصوصية.');
-
-  if (els.gName)  els.gName.placeholder  = 'مثال: محمد بن علي';
-  if (els.gEmail) els.gEmail.placeholder = 'mohamed@example.com';
-  if (els.gPhone) els.gPhone.placeholder = '+213 555 123 456';
-  if (els.gNotes) els.gNotes.placeholder = 'أي طلبات خاصة...';
-
-  const natSel = document.getElementById('g-nationality');
-  if (natSel) {
-    Array.from(natSel.options).forEach(opt => {
-      const v = opt.value;
-      if (!v)          opt.text = 'اختر الجنسية';
-      else if (v==='DZ')    opt.text = 'الجزائر';
-      else if (v==='TN')    opt.text = 'تونس';
-      else if (v==='MA')    opt.text = 'المغرب';
-      else if (v==='FR')    opt.text = 'فرنسا';
-      else if (v==='OTHER') opt.text = 'أخرى';
-    });
-  }
-
-  const pChips = document.querySelectorAll('.purpose-chip');
-  if (pChips.length >= 4) {
-    pChips[0].innerHTML = '<i class="ph ph-sun" aria-hidden="true"></i> سياحة';
-    pChips[1].innerHTML = '<i class="ph ph-briefcase" aria-hidden="true"></i> عمل';
-    pChips[2].innerHTML = '<i class="ph ph-users" aria-hidden="true"></i> عائلة';
-    pChips[3].innerHTML = '<i class="ph ph-heart" aria-hidden="true"></i> شهر عسل';
-  }
-
-  // Step 4
-  s('st-title-4', 'تم استلام طلب حجزك!');
-  s('st-sub-4',   'شكراً لاختيارك OreBooking. سنقوم بمراجعة طلبك وإرسال تأكيد قريباً.');
-  s('lbl-ref-num','رقم الحجز الخاص بك');
-  s('btn-copy-ref-txt', 'نسخ الرقم');
-  s('btn-share-txt',    'مشاركة تفاصيل الحجز');
-  s('btn-home',         'العودة للرئيسية');
-
-  // Sidebar
-  s('lbl-sum-title',   'ملخص الحجز');
-  s('lbl-sec-badge',   'بوابتك لحجز آمن بنسبة 100%');
-  s('lbl-hotel-info',  'معلومات الفندق');
-  s('lbl-need-help',   'تحتاج مساعدة؟');
-  s('sub-need-help',   'فريق الدعم متوفر 24/7');
-  s('link-call-us',    'اتصل بنا الآن');
 }
