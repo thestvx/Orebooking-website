@@ -484,15 +484,27 @@
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-money"></i>
-                <h4>التسعير والصور</h4>
+                <h4>التسعير والصور ونوع العقار</h4>
               </div>
               <div class="form-grid" style="align-items:start;">
+                
+                <div class="input-group">
+                  <label>نوع العقار <span class="text-danger">*</span></label>
+                  <select id="prop-type" required style="font-size:1.05rem; font-weight:bold; color:var(--primary); height: 50px;">
+                    <option value="apartment">شقة (Apartment)</option>
+                    <option value="villa">فيلا (Villa)</option>
+                    <option value="resort">منتجع (Resort)</option>
+                    <option value="pool">مسبح (Pool)</option>
+                  </select>
+                </div>
+
                 <div class="input-group">
                   <label>السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
                   <input type="number" id="prop-price" placeholder="مثال: 15000"
-                         style="font-size:1.2rem; font-weight:bold; color:var(--primary);" required>
+                         style="font-size:1.2rem; font-weight:bold; color:var(--primary); height: 50px;" required>
                 </div>
-                <div class="input-group">
+                
+                <div class="input-group" style="grid-column:1/-1; margin-top: 10px;">
                   <label>الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
                   <div class="upload-zone">
                     <i class="ph ph-cloud-arrow-up"></i>
@@ -608,6 +620,17 @@
             <label>السعر (DZD)</label>
             <input type="number" id="edit-price" required>
           </div>
+          
+          <div class="input-group" style="grid-column: 1 / -1;">
+            <label>نوع العقار</label>
+            <select id="edit-type" required>
+              <option value="apartment">شقة (Apartment)</option>
+              <option value="villa">فيلا (Villa)</option>
+              <option value="resort">منتجع (Resort)</option>
+              <option value="pool">مسبح (Pool)</option>
+            </select>
+          </div>
+          
         </div>
         <div class="input-group" style="margin-top:16px;">
           <label>الوصف (عربي)</label>
@@ -665,8 +688,6 @@
           const u = document.getElementById('admin-user').value.trim();
           const p = document.getElementById('admin-pass').value.trim();
 
-          // إذا كان اسم المستخدم موجوداً في OWNER_ACCOUNTS
-          // وكلمة المرور تطابق اسم المستخدم (palmadmin/palmadmin)
           const ownerKey = Object.keys(OWNER_ACCOUNTS).find(k => k === u && k === p);
 
           if (ownerKey) {
@@ -675,14 +696,12 @@
             const owner = OWNER_ACCOUNTS[ownerKey];
             setupOwnerSession(owner.id, owner.name);
           } else {
-            // أدمن عام — admin.js يتولى الأمر
             localStorage.removeItem('ownerPropId');
             localStorage.removeItem('ownerPropName');
           }
-        }, true); // capture=true يضمن تنفيذه قبل admin.js
+        }, true);
       }
 
-      // دخول تلقائي إذا كان المالك مسجّلاً مسبقاً
       if (localStorage.getItem('ownerPropId')) {
         setupOwnerUI(localStorage.getItem('ownerPropName') || 'مالك عقار');
       }
@@ -696,7 +715,6 @@
       document.getElementById('admin-layout').style.display = 'flex';
       setupOwnerUI(displayName);
 
-      // ننتظر admin.js يحمّل (defer) ثم نستدعي الدوال
       const waitForAdminJs = setInterval(() => {
         if (typeof loadBookings === 'function' && typeof loadProperties === 'function') {
           clearInterval(waitForAdminJs);
@@ -707,7 +725,6 @@
     }
 
     function setupOwnerUI(displayName) {
-      // إخفاء زر إضافة عقار عن الملاك
       const navAdd = document.getElementById('nav-add-property');
       if (navAdd) navAdd.style.display = 'none';
 
@@ -724,10 +741,10 @@
     }
   </script>
 
-  <!-- ✅ Addon utilities (أولاً) -->
+  <!-- ✅ Addon utilities -->
   <script src="admin_bookings_addon.js" defer></script>
 
-  <!-- ✅ Core admin logic (ثانياً) -->
+  <!-- ✅ Core admin logic -->
   <script src="admin.js" defer></script>
 
   <!-- 🗺️ Admin Map Pickers -->
