@@ -1402,6 +1402,75 @@ function translateBookingPage() {
   s('btn-back-2',         'رجوع');
   s('btn-next-2-txt',     'الخطوة التالية');
 
-  const policyItems = document.querySelectorAll('.policy-timeline-item .policy-timeline-text');
+    const policyItems = document.querySelectorAll('.policy-timeline-item .policy-timeline-text');
   if (policyItems[0]) {
-    policyItems[0].querySelector
+    const st = policyItems[0].querySelector('strong');
+    const sp = policyItems[0].querySelector('span');
+    if (st) st.textContent = 'إلغاء مجاني';
+    if (sp) sp.textContent = 'حتى 48 ساعة قبل الوصول.';
+  }
+  if (policyItems[1]) {
+    const st = policyItems[1].querySelector('strong');
+    const sp = policyItems[1].querySelector('span');
+    if (st) st.textContent = 'إلغاء متأخر';
+    if (sp) sp.textContent = 'يُخصم سعر الليلة الأولى.';
+  }
+
+  // Step 3
+  s('st-title-3',        'بيانات الضيف');
+  s('st-sub-3',          'نحتاج هذه التفاصيل لتأكيد حجزك.');
+  s('lbl-g-name',        'الاسم الكامل');
+  s('lbl-g-email',       'البريد الإلكتروني');
+  s('lbl-g-phone',       'رقم الهاتف');
+  s('lbl-g-nationality', 'الجنسية (اختياري)');
+  s('lbl-g-arrival',     'وقت الوصول المتوقع (اختياري)');
+  s('lbl-g-purpose',     'غرض الزيارة (اختياري)');
+  s('lbl-g-notes',       'طلبات خاصة (اختياري)');
+  s('txt-auth-prompt',   'هل لديك حساب؟ سجّل الدخول لحجز أسرع.');
+  s('link-login-booking','تسجيل الدخول / إنشاء حساب');
+  s('btn-back-3',        'رجوع');
+  s('btn-confirm-txt',   'تأكيد الحجز');
+  s('txt-privacy',       'نحن نحمي بياناتك وفقاً لسياسة الخصوصية.');
+
+  if (els.gName)  els.gName.placeholder  = 'مثال: محمد بن علي';
+  if (els.gEmail) els.gEmail.placeholder = 'mohamed@example.com';
+  if (els.gPhone) els.gPhone.placeholder = '+213 555 123 456';
+  if (els.gNotes) els.gNotes.placeholder = 'أي طلبات خاصة...';
+
+  const natSel = document.getElementById('g-nationality');
+  if (natSel) {
+    Array.from(natSel.options).forEach(opt => {
+      const v = opt.value;
+      if (!v)          opt.text = 'اختر الجنسية';
+      else if (v==='DZ')    opt.text = 'الجزائر';
+      else if (v==='TN')    opt.text = 'تونس';
+      else if (v==='MA')    opt.text = 'المغرب';
+      else if (v==='FR')    opt.text = 'فرنسا';
+      else if (v==='OTHER') opt.text = 'أخرى';
+    });
+  }
+
+  const pChips = document.querySelectorAll('.purpose-chip');
+  if (pChips.length >= 4) {
+    pChips[0].innerHTML = '<i class="ph ph-sun" aria-hidden="true"></i> سياحة';
+    pChips[1].innerHTML = '<i class="ph ph-briefcase" aria-hidden="true"></i> عمل';
+    pChips[2].innerHTML = '<i class="ph ph-users" aria-hidden="true"></i> عائلة';
+    pChips[3].innerHTML = '<i class="ph ph-heart" aria-hidden="true"></i> شهر عسل';
+  }
+
+  // Step 4
+  s('st-title-4', 'تم استلام طلب حجزك!');
+  s('st-sub-4',   'شكراً لاختيارك OreBooking. سنقوم بمراجعة طلبك وإرسال تأكيد قريباً.');
+  s('lbl-ref-num','رقم الحجز الخاص بك');
+  s('btn-copy-ref-txt', 'نسخ الرقم');
+  s('btn-share-txt',    'مشاركة تفاصيل الحجز');
+  s('btn-home',         'العودة للرئيسية');
+
+  // Sidebar
+  s('lbl-sum-title',   'ملخص الحجز');
+  s('lbl-sec-badge',   'بوابتك لحجز آمن بنسبة 100%');
+  s('lbl-hotel-info',  'معلومات الفندق');
+  s('lbl-need-help',   'تحتاج مساعدة؟');
+  s('sub-need-help',   'فريق الدعم متوفر 24/7');
+  s('link-call-us',    'اتصل بنا الآن');
+}
