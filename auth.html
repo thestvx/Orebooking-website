@@ -7,7 +7,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- 🔥 Firebase -->
@@ -21,34 +21,42 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary:       #435abf;
-      --primary-hover: #3448a8;
-      --bg:            #f5f6fa;
+      --primary:       #3b82f6;      /* Blue 500 */
+      --primary-dark:  #2563eb;      /* Blue 600 */
+      --primary-light: #60a5fa;      /* Blue 400 */
+      --accent:        #8b5cf6;      /* Purple 500 */
+
+      --bg:            #f0fdfa;      /* Soft gradient background base */
       --surface:       #ffffff;
-      --border:        #e2e5f0;
-      --text:          #1a1d2e;
-      --text-muted:    #6b7280;
-      --input-bg:      #f9fafb;
-      --input-focus:   #eef0fc;
+      --border:        #e2e8f0;
+      --text:          #0f172a;
+      --text-muted:    #64748b;
+      --input-bg:      #f8fafc;
+      --input-focus:   #f1f5f9;
       --error:         #ef4444;
       --success:       #10b981;
-      --radius:        14px;
-      --radius-sm:     8px;
-      --shadow:        0 8px 40px rgba(67,90,191,0.10), 0 2px 8px rgba(0,0,0,0.06);
-      --transition:    0.22s cubic-bezier(0.4,0,0.2,1);
-      --font-en:       'Poppins', sans-serif;
+
+      --radius:        24px;
+      --radius-sm:     12px;
+      --shadow:        0 20px 40px -10px rgba(15, 23, 42, 0.08);
+      --shadow-hover:  0 30px 60px -15px rgba(59, 130, 246, 0.15);
+      --transition:    0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      --font-en:       'Outfit', sans-serif;
       --font-ar:       'Tajawal', sans-serif;
     }
 
     body.dark {
-      --bg:         #0f1117;
-      --surface:    #1a1d2e;
-      --border:     #2a2d40;
-      --text:       #e8eaf6;
-      --text-muted: #9198b5;
-      --input-bg:   #13162a;
-      --input-focus:#1e2245;
-      --shadow:     0 8px 40px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
+      --primary:       #60a5fa;
+      --primary-dark:  #3b82f6;
+      --bg:            #020617;
+      --surface:       #0f172a;
+      --border:        #1e293b;
+      --text:          #f8fafc;
+      --text-muted:    #94a3b8;
+      --input-bg:      #1e293b;
+      --input-focus:   #334155;
+      --shadow:        0 20px 40px -10px rgba(0, 0, 0, 0.5);
     }
 
     html[lang="ar"] body,
@@ -58,14 +66,32 @@
 
     body {
       min-height: 100dvh;
-      background: var(--bg);
+      background-color: var(--bg);
+      /* الاحترافية في التدرج (Gradient) المميز والمتحرك للخلفية */
+      background-image: 
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, transparent 50%), 
+        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.08) 0, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(339,49%,30%,0.08) 0, transparent 50%);
+      background-size: 200% 200%;
+      animation: gradientBg 15s ease infinite;
       color: var(--text);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px 16px;
-      transition: background var(--transition), color var(--transition);
-      font-family: var(--font-en);
+      transition: background-color var(--transition), color var(--transition);
+    }
+
+    body.dark {
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
+    }
+
+    @keyframes gradientBg {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
     /* ============================================================
@@ -73,180 +99,243 @@
     ============================================================ */
     .auth-controls {
       position: fixed;
-      top: 20px;
-      inset-inline-end: 20px;
+      top: 24px;
+      inset-inline-end: 24px;
       display: flex;
-      gap: 10px;
+      gap: 12px;
       z-index: 100;
     }
 
-    .icon-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--surface);
+    .icon-btn, .lang-btn {
+      height: 44px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
       color: var(--text);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 1.1rem;
       transition: var(--transition);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .icon-btn:hover { background: var(--input-focus); border-color: var(--primary); color: var(--primary); }
-
-    .lang-btn {
-      height: 40px;
-      padding: 0 16px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.85rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       font-weight: 600;
-      font-family: inherit;
-      transition: var(--transition);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
-    .lang-btn:hover { background: var(--input-focus); border-color: var(--primary); color: var(--primary); }
+
+    body.dark .icon-btn, body.dark .lang-btn {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .icon-btn { width: 44px; font-size: 1.2rem; }
+    .lang-btn { padding: 0 20px; font-size: 0.9rem; }
+
+    .icon-btn:hover, .lang-btn:hover { 
+      background: var(--surface); 
+      transform: translateY(-2px);
+      color: var(--primary);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
 
     /* ============================================================
        AUTH CARD
     ============================================================ */
-    .auth-card {
+    .auth-card-wrapper {
+      position: relative;
       width: 100%;
-      max-width: 440px;
+      max-width: 460px;
+    }
+
+    /* تأثير توهج خلف البطاقة */
+    .auth-card-glow {
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(45deg, var(--primary), var(--accent), var(--primary-light));
+      border-radius: calc(var(--radius) + 2px);
+      filter: blur(15px);
+      opacity: 0;
+      transition: opacity var(--transition);
+      z-index: 0;
+    }
+
+    .auth-card-wrapper:hover .auth-card-glow {
+      opacity: 0.4;
+    }
+    body.dark .auth-card-wrapper:hover .auth-card-glow {
+      opacity: 0.6;
+    }
+
+    .auth-card {
+      position: relative;
+      width: 100%;
       background: var(--surface);
-      border-radius: calc(var(--radius) + 4px);
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
       border: 1px solid var(--border);
       overflow: hidden;
-      transition: background var(--transition), box-shadow var(--transition);
+      transition: all var(--transition);
+      z-index: 1;
+    }
+
+    .auth-card:hover {
+      box-shadow: var(--shadow-hover);
     }
 
     /* Logo Header */
     .auth-header {
-      padding: 32px 40px 0;
-      display: flex;
-      justify-content: center;
+      padding: 40px 40px 20px;
+      text-align: center;
+      position: relative;
     }
 
     .auth-logo-link {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      gap: 12px;
       text-decoration: none;
       color: var(--primary);
+      margin-bottom: 8px;
     }
-    .auth-logo-link i { font-size: 1.8rem; }
+
+    .logo-icon-wrap {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.6rem;
+      box-shadow: 0 8px 16px rgba(59, 130, 246, 0.25);
+      transform: rotate(-5deg);
+      transition: var(--transition);
+    }
+
+    .auth-logo-link:hover .logo-icon-wrap {
+      transform: rotate(0deg) scale(1.05);
+    }
+
     .auth-logo-link span {
-      font-size: 1.4rem;
-      font-weight: 700;
+      font-size: 1.8rem;
+      font-weight: 800;
       color: var(--text);
-      letter-spacing: -0.3px;
+      letter-spacing: -0.5px;
     }
 
     /* Auth Body */
     .auth-body-inner {
-      padding: 28px 40px 36px;
+      padding: 0 40px 40px;
     }
 
     /* ============================================================
        FORMS
     ============================================================ */
-    .auth-form { display: none; }
+    .auth-form { 
+      display: none; 
+      animation: fadeIn 0.4s ease forwards;
+    }
     .auth-form.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     .auth-title {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--text);
-      margin-bottom: 6px;
-      line-height: 1.3;
+      margin-bottom: 8px;
+      text-align: center;
     }
 
     .auth-subtitle {
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       color: var(--text-muted);
-      margin-bottom: 28px;
-      line-height: 1.6;
+      margin-bottom: 32px;
+      text-align: center;
+      line-height: 1.5;
     }
 
     /* Input Groups */
     .input-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
 
     .input-group label {
       display: block;
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 7px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .input-icon-wrap {
+      position: relative;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: var(--input-bg);
+      transition: var(--transition);
+    }
+
+    .input-icon-wrap:focus-within {
+      border-color: var(--primary);
+      background: var(--surface);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     }
 
     .input-group input {
       width: 100%;
-      height: 48px;
-      padding: 0 14px;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
-      background: var(--input-bg);
+      height: 52px;
+      padding: 0 16px 0 46px;
+      border: none;
+      background: transparent;
       color: var(--text);
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 1rem;
       outline: none;
-      transition: var(--transition);
     }
 
-    .input-group input::placeholder { color: var(--text-muted); opacity: 0.7; }
-
-    .input-group input:focus {
-      border-color: var(--primary);
-      background: var(--input-focus);
-      box-shadow: 0 0 0 3px rgba(67,90,191,0.12);
+    html[dir="rtl"] .input-group input {
+      padding: 0 46px 0 16px;
     }
 
-    /* Input with icon wrapper */
-    .input-icon-wrap {
-      position: relative;
-    }
-    .input-icon-wrap i {
+    .input-group input::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+    .input-icon-wrap > i:first-child {
       position: absolute;
       top: 50%;
-      inset-inline-start: 14px;
+      inset-inline-start: 16px;
       transform: translateY(-50%);
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       color: var(--text-muted);
       pointer-events: none;
       transition: color var(--transition);
     }
-    .input-icon-wrap input {
-      padding-inline-start: 42px;
+
+    .input-icon-wrap:focus-within > i:first-child { 
+      color: var(--primary); 
     }
-    .input-icon-wrap input:focus ~ i,
-    .input-icon-wrap:focus-within i { color: var(--primary); }
 
     /* Password toggle */
     .pass-toggle {
       position: absolute;
-      top: 50%;
-      inset-inline-end: 14px;
-      transform: translateY(-50%);
+      top: 0;
+      bottom: 0;
+      inset-inline-end: 0;
+      width: 48px;
       background: none;
       border: none;
       cursor: pointer;
       color: var(--text-muted);
-      font-size: 1.1rem;
-      padding: 0;
-      transition: color var(--transition);
+      font-size: 1.2rem;
       display: flex;
       align-items: center;
+      justify-content: center;
+      transition: color var(--transition);
     }
     .pass-toggle:hover { color: var(--primary); }
 
@@ -255,40 +344,44 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 22px;
-      margin-top: -4px;
+      margin-bottom: 28px;
+      margin-top: 8px;
     }
 
     .checkbox-container {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
+      font-weight: 500;
       color: var(--text-muted);
       user-select: none;
+      transition: var(--transition);
     }
+    .checkbox-container:hover { color: var(--text); }
+
     .checkbox-container input[type="checkbox"] { display: none; }
     .checkmark {
-      width: 18px;
-      height: 18px;
-      border: 1.5px solid var(--border);
-      border-radius: 4px;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
       background: var(--input-bg);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: var(--transition);
-      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .checkbox-container input:checked + .checkmark {
       background: var(--primary);
       border-color: var(--primary);
+      transform: scale(1.05);
     }
     .checkbox-container input:checked + .checkmark::after {
       content: '';
       width: 5px;
-      height: 9px;
+      height: 10px;
       border: 2px solid white;
       border-top: none;
       border-left: none;
@@ -297,49 +390,64 @@
     }
 
     .forgot-link {
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       font-weight: 600;
       color: var(--primary);
       text-decoration: none;
-      transition: opacity var(--transition);
+      transition: var(--transition);
     }
-    .forgot-link:hover { opacity: 0.75; }
+    .forgot-link:hover { color: var(--primary-dark); text-decoration: underline; }
 
     /* Primary Button */
     .primary-btn {
+      position: relative;
       width: 100%;
-      height: 50px;
+      height: 54px;
       border-radius: var(--radius-sm);
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
       color: white;
       border: none;
       font-family: inherit;
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 1.05rem;
+      font-weight: 700;
       cursor: pointer;
       transition: var(--transition);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      letter-spacing: 0.2px;
+      gap: 10px;
+      letter-spacing: 0.5px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
     }
+
+    .primary-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 50%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transform: skewX(-20deg);
+      transition: 0.5s;
+    }
+
     .primary-btn:hover:not(:disabled) {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(67,90,191,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(59, 130, 246, 0.35);
     }
+
+    .primary-btn:hover:not(:disabled)::before { left: 150%; }
     .primary-btn:active:not(:disabled) { transform: translateY(0); }
-    .primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .primary-btn:disabled { opacity: 0.7; cursor: not-allowed; box-shadow: none; background: var(--text-muted); }
 
     /* Divider */
     .auth-divider {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin: 20px 0;
+      gap: 16px;
+      margin: 28px 0;
       color: var(--text-muted);
-      font-size: 0.82rem;
+      font-size: 0.85rem;
+      font-weight: 500;
     }
     .auth-divider::before,
     .auth-divider::after {
@@ -353,58 +461,65 @@
     .social-logins {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 4px;
+      gap: 16px;
+      margin-bottom: 8px;
     }
 
     .social-btn {
-      height: 46px;
+      height: 50px;
       border-radius: var(--radius-sm);
       border: 1.5px solid var(--border);
-      background: var(--input-bg);
+      background: var(--surface);
       color: var(--text);
       font-family: inherit;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       transition: var(--transition);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
     }
     .social-btn:hover {
-      border-color: var(--primary);
-      background: var(--input-focus);
+      border-color: var(--text-muted);
+      background: var(--input-bg);
+      transform: translateY(-1px);
     }
-    .social-btn i { font-size: 1.15rem; }
+    .social-btn i { font-size: 1.3rem; }
 
     /* Switch Form */
     .switch-form-text {
       text-align: center;
-      font-size: 0.875rem;
+      font-size: 0.95rem;
       color: var(--text-muted);
-      margin-top: 20px;
+      margin-top: 32px;
+      font-weight: 500;
     }
     .switch-form-text a {
       color: var(--primary);
       font-weight: 700;
       text-decoration: none;
-      margin-inline-start: 4px;
+      margin-inline-start: 6px;
+      transition: var(--transition);
     }
-    .switch-form-text a:hover { text-decoration: underline; }
+    .switch-form-text a:hover { color: var(--primary-dark); text-decoration: underline; }
 
     /* Auth Message */
     .auth-message {
-      padding: 12px 14px;
+      padding: 14px 16px;
       border-radius: var(--radius-sm);
-      font-size: 0.875rem;
-      font-weight: 500;
-      margin-bottom: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 24px;
       display: none;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
     }
+    .auth-message i { font-size: 1.2rem; }
+
     .auth-message.error {
       background: #fef2f2;
       color: var(--error);
@@ -417,17 +532,20 @@
       border: 1px solid #bbf7d0;
       display: flex;
     }
-    body.dark .auth-message.error   { background: #2a1515; border-color: #7f1d1d; }
-    body.dark .auth-message.success { background: #0f2a1f; border-color: #14532d; }
+    body.dark .auth-message.error   { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); }
+    body.dark .auth-message.success { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); }
 
     /* ============================================================
        RESPONSIVE
     ============================================================ */
     @media (max-width: 480px) {
-      .auth-header    { padding: 24px 24px 0; }
-      .auth-body-inner { padding: 22px 24px 28px; }
-      .auth-title      { font-size: 1.3rem; }
-      .social-logins   { grid-template-columns: 1fr; }
+      body { padding: 16px; }
+      .auth-card-wrapper { max-width: 100%; }
+      .auth-header    { padding: 32px 24px 16px; }
+      .auth-body-inner { padding: 0 24px 32px; }
+      .auth-title      { font-size: 1.35rem; }
+      .social-logins   { grid-template-columns: 1fr; gap: 12px; }
+      .auth-controls   { top: 16px; inset-inline-end: 16px; }
     }
 
     /* spin animation for loading */
@@ -442,132 +560,141 @@
     <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
       <i class="ph ph-moon"></i>
     </button>
-    <button id="lang-toggle" class="lang-btn">العربية</button>
+    <button id="lang-toggle" class="lang-btn">English</button>
   </div>
 
-  <!-- Auth Card -->
-  <div class="auth-card">
+  <!-- Wrapper for Glow Effect -->
+  <div class="auth-card-wrapper">
+    <div class="auth-card-glow"></div>
 
-    <!-- Logo -->
-    <div class="auth-header">
-      <a href="index.html" class="auth-logo-link">
-        <i class="ph-fill ph-house-line"></i>
-        <span>OreBooking</span>
-      </a>
-    </div>
+    <!-- Auth Card -->
+    <div class="auth-card">
 
-    <div class="auth-body-inner">
-
-      <!-- Auth Message (errors/success) -->
-      <div id="auth-message" class="auth-message"></div>
-
-      <!-- ====== Login Form ====== -->
-      <form id="login-form" class="auth-form active">
-        <h2 class="auth-title font-bold" data-i18n="welcome_back">Welcome back</h2>
-        <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
-
-        <div class="input-group">
-          <label data-i18n="email">EMAIL</label>
-          <div class="input-icon-wrap">
-            <input type="email" id="login-email"
-                   placeholder="name@example.com" required autocomplete="email">
-            <i class="ph ph-envelope"></i>
+      <!-- Logo -->
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo-link">
+          <div class="logo-icon-wrap">
+            <i class="ph-fill ph-buildings"></i>
           </div>
-        </div>
+          <span>OreBooking</span>
+        </a>
+      </div>
 
-        <div class="input-group">
-          <label data-i18n="password">PASSWORD</label>
-          <div class="input-icon-wrap">
-            <input type="password" id="login-password"
-                   placeholder="••••••••" required autocomplete="current-password">
-            <i class="ph ph-lock"></i>
-            <button type="button" class="pass-toggle" onclick="togglePass('login-password', this)">
-              <i class="ph ph-eye"></i>
+      <div class="auth-body-inner">
+
+        <!-- Auth Message (errors/success) -->
+        <div id="auth-message" class="auth-message"></div>
+
+        <!-- ====== Login Form ====== -->
+        <form id="login-form" class="auth-form active">
+          <h2 class="auth-title" data-i18n="welcome_back">مرحباً بعودتك!</h2>
+          <p class="auth-subtitle" data-i18n="login_desc">أدخل بياناتك للوصول إلى حسابك والاستمتاع بعروضنا الحصرية.</p>
+
+          <div class="input-group">
+            <label data-i18n="email">البريد الإلكتروني</label>
+            <div class="input-icon-wrap">
+              <i class="ph ph-envelope"></i>
+              <input type="email" id="login-email"
+                     placeholder="name@example.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label data-i18n="password">كلمة المرور</label>
+            <div class="input-icon-wrap">
+              <i class="ph ph-lock"></i>
+              <input type="password" id="login-password"
+                     placeholder="••••••••" required autocomplete="current-password">
+              <button type="button" class="pass-toggle" onclick="togglePass('login-password', this)">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-options">
+            <label class="checkbox-container">
+              <input type="checkbox" id="remember-me" checked>
+              <span class="checkmark"></span>
+              <span data-i18n="remember_me">تذكرني</span>
+            </label>
+            <a href="#" class="forgot-link" data-i18n="forgot_pass">نسيت كلمة المرور؟</a>
+          </div>
+
+          <button type="submit" class="primary-btn" id="login-btn">
+            <i class="ph ph-sign-in"></i>
+            <span data-i18n="sign_in">تسجيل الدخول</span>
+          </button>
+
+          <div class="auth-divider">
+            <span data-i18n="or_continue">أو تابع باستخدام</span>
+          </div>
+
+          <div class="social-logins">
+            <button type="button" class="social-btn" id="google-btn">
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20" height="20" alt="Google">
+              Google
+            </button>
+            <button type="button" class="social-btn">
+              <i class="ph-fill ph-apple-logo"></i>
+              Apple
             </button>
           </div>
-        </div>
 
-        <div class="auth-options">
-          <label class="checkbox-container">
-            <input type="checkbox" id="remember-me">
-            <span class="checkmark"></span>
-            <span data-i18n="remember_me">Remember me</span>
-          </label>
-          <a href="#" class="forgot-link" data-i18n="forgot_pass">Forgot password?</a>
-        </div>
+          <p class="switch-form-text">
+            <span data-i18n="no_account">ليس لديك حساب؟</span>
+            <a href="#" id="go-to-register" data-i18n="sign_up">إنشاء حساب جديد</a>
+          </p>
+        </form>
 
-        <button type="submit" class="primary-btn" id="login-btn">
-          <span data-i18n="sign_in">Sign In</span>
-        </button>
+        <!-- ====== Register Form ====== -->
+        <form id="register-form" class="auth-form">
+          <h2 class="auth-title" data-i18n="create_account">إنشاء حساب جديد</h2>
+          <p class="auth-subtitle" data-i18n="register_desc">انضم إلى OreBooking وابدأ بتجميع نقاط الولاء الآن.</p>
 
-        <div class="auth-divider">
-          <span data-i18n="or_continue">or continue with</span>
-        </div>
+          <div class="input-group">
+            <label data-i18n="full_name">الاسم الكامل</label>
+            <div class="input-icon-wrap">
+              <i class="ph ph-user"></i>
+              <input type="text" id="reg-name"
+                     placeholder="مثال: أحمد محمد" required autocomplete="name">
+            </div>
+          </div>
 
-        <div class="social-logins">
-          <button type="button" class="social-btn" id="google-btn">
-            <i class="ph-fill ph-google-logo" style="color:#ea4335;"></i>
-            Google
+          <div class="input-group">
+            <label data-i18n="email">البريد الإلكتروني</label>
+            <div class="input-icon-wrap">
+              <i class="ph ph-envelope"></i>
+              <input type="email" id="reg-email"
+                     placeholder="name@example.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label data-i18n="password">كلمة المرور</label>
+            <div class="input-icon-wrap">
+              <i class="ph ph-lock"></i>
+              <input type="password" id="reg-password"
+                     placeholder="••••••••" required autocomplete="new-password">
+              <button type="button" class="pass-toggle" onclick="togglePass('reg-password', this)">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="primary-btn" id="register-btn">
+            <i class="ph ph-user-plus"></i>
+            <span data-i18n="sign_up_btn">إنشاء حساب</span>
           </button>
-          <button type="button" class="social-btn">
-            <i class="ph-fill ph-apple-logo"></i>
-            Apple
-          </button>
-        </div>
 
-        <p class="switch-form-text">
-          <span data-i18n="no_account">Don't have an account?</span>
-          <a href="#" id="go-to-register" data-i18n="sign_up">Sign up</a>
-        </p>
-      </form>
+          <p class="switch-form-text">
+            <span data-i18n="has_account">لديك حساب بالفعل؟</span>
+            <a href="#" id="go-to-login" data-i18n="sign_in">تسجيل الدخول</a>
+          </p>
+        </form>
 
-      <!-- ====== Register Form ====== -->
-      <form id="register-form" class="auth-form">
-        <h2 class="auth-title font-bold" data-i18n="create_account">Create an account</h2>
-        <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
-
-        <div class="input-group">
-          <label data-i18n="full_name">FULL NAME</label>
-          <div class="input-icon-wrap">
-            <input type="text" id="reg-name"
-                   placeholder="John Doe" required autocomplete="name">
-            <i class="ph ph-user"></i>
-          </div>
-        </div>
-
-        <div class="input-group">
-          <label data-i18n="email">EMAIL</label>
-          <div class="input-icon-wrap">
-            <input type="email" id="reg-email"
-                   placeholder="name@example.com" required autocomplete="email">
-            <i class="ph ph-envelope"></i>
-          </div>
-        </div>
-
-        <div class="input-group">
-          <label data-i18n="password">PASSWORD</label>
-          <div class="input-icon-wrap">
-            <input type="password" id="reg-password"
-                   placeholder="••••••••" required autocomplete="new-password">
-            <i class="ph ph-lock"></i>
-            <button type="button" class="pass-toggle" onclick="togglePass('reg-password', this)">
-              <i class="ph ph-eye"></i>
-            </button>
-          </div>
-        </div>
-
-        <button type="submit" class="primary-btn" id="register-btn">
-          <span data-i18n="sign_up_btn">Create Account</span>
-        </button>
-
-        <p class="switch-form-text">
-          <span data-i18n="has_account">Already have an account?</span>
-          <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
-        </p>
-      </form>
-
-    </div><!-- /auth-body-inner -->
-  </div><!-- /auth-card -->
+      </div><!-- /auth-body-inner -->
+    </div><!-- /auth-card -->
+  </div><!-- /auth-card-wrapper -->
 
   <script src="auth.js"></script>
 
