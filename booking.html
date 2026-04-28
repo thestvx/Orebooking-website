@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Complete your booking on OreBooking - Secure and easy reservation.">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#3b82f6">
+  <meta name="theme-color" content="#435abf">
   <title>Complete Booking — OreBooking</title>
 
   <link rel="canonical" href="booking.html">
@@ -15,41 +15,47 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
-  <!-- Phosphor Icons — FIX: script type=module للتوافق الصحيح -->
+  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- 🔥 Firebase -->
+  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+  <!-- Canvas Confetti (optional - for success animation) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
 
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="booking.css">
 
   <style>
     /* ==========================================================
-       Booking Page — Inline Overrides
-       FIX LIST:
-       ✅ 1. --primary يتعارض مع style.css (كان #3b82f6) — وُحِّد
-       ✅ 2. .inner-nav position:fixed يغطي المحتوى — booking-page padding-top صُحِّح
-       ✅ 3. .back-btn/.icon-btn/.lang-btn تعريفات مكررة مع style.css — نُظِّفت
-       ✅ 4. body padding-bottom مفقود لـ mobile bottom nav — أُضيف
-       ✅ 5. .booking-wrapper grid يكسر على 992px بدون fallback — صُحِّح
-       ✅ 6. .step-connector top:-12px يخرج عن الـ container — استُخدم align-self
-       ✅ 7. .booking-steps-header overflow:hidden يقطع box-shadow — أُزيل
-       ✅ 8. .input-with-icon للـ textarea لا يعمل بشكل صحيح — فُصل
-       ✅ 9. .form-row على الجوال يكسر التصميم — صُحِّح في 768px
-       ✅ 10. payment-method-label :has() لا يعمل في بعض المتصفحات — أُضيف fallback
-       ✅ 11. .step-actions على الجوال الأزرار تخرج عن الشاشة — flex-wrap أُضيف
-       ✅ 12. .booking-summary-sidebar position:sticky top:100px لا يعمل صح — صُحِّح
-       ✅ 13. prop-mini-img width:100px ثابت — استُخدم min-width
-       ✅ 14. الـ textarea padding-right/left يتعارض مع .input-with-icon — فُصل
-       ✅ 15. dark mode ألوان الـ input غير صحيحة — صُحِّح
+       Booking Page — Inline Overrides v4.2
+       ✅ 01. --primary unified with style.css
+       ✅ 02. .inner-nav fixed — booking-page padding-top fixed
+       ✅ 03. .back-btn/.icon-btn/.lang-btn cleaned up
+       ✅ 04. body padding-bottom for mobile nav
+       ✅ 05. .booking-wrapper grid fallback at 992px
+       ✅ 06. .step-connector alignment fixed
+       ✅ 07. .booking-steps-header overflow removed
+       ✅ 08. .input-with-icon for textarea separated
+       ✅ 09. .form-row mobile fix
+       ✅ 10. payment-method :has() fallback via JS .selected
+       ✅ 11. .step-actions mobile flex-wrap
+       ✅ 12. .booking-summary-sidebar sticky top fixed
+       ✅ 13. prop-mini-img min-width
+       ✅ 14. textarea wrapper separated
+       ✅ 15. dark mode inputs
+       ✅ 16. Success overlay + print receipt
+       ✅ 17. btn-confirm-booking wired to submitBooking()
+       ✅ 18. payment_method unified name
+       ✅ 19. addons-panel + children counter added
+       ✅ 20. transfer-details section added
     ========================================================== */
 
     :root {
-      /* FIX 1: تطابق مع style.css الرئيسي */
       --primary:       #435abf;
       --primary-dark:  #34459c;
       --primary-light: #657be0;
@@ -90,16 +96,16 @@
         radial-gradient(circle at 85% 30%, rgba(139,92,246,0.08), transparent 25%);
     }
 
-    /* FIX 2: padding-top يعوّض الـ fixed navbar (70px) */
+    /* FIX 02: padding-top compensates fixed navbar */
     .booking-page {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 90px 20px 60px; /* 90px = navbar height */
+      padding: 90px 20px 60px;
     }
 
     /* ── Navbar ── */
     .inner-nav {
-      background: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.88);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
@@ -113,9 +119,8 @@
       z-index: 1000;
       gap: 12px;
     }
-    body.dark .inner-nav { background: rgba(15,23,42,0.85); }
+    body.dark .inner-nav { background: rgba(15,23,42,0.88); }
 
-    /* FIX 3: تعريفات موحّدة لا تتعارض مع style.css */
     .back-btn {
       height: 40px;
       border-radius: 20px;
@@ -139,9 +144,8 @@
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
-    html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
+    html[dir="rtl"] .back-btn i { transform: scaleX(-1); }
 
-    /* FIX: icon-btn و lang-btn مُنسَّقان بدون تعارض */
     .icon-btn {
       width: 40px; height: 40px;
       border-radius: 50%;
@@ -161,6 +165,11 @@
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
+    .icon-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
 
     .lang-btn {
       height: 40px;
@@ -179,16 +188,14 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .lang-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-1px);
-    }
+    .lang-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
 
     .nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 
+    .logo { display: flex; align-items: center; text-decoration: none; }
+    .logo-img { height: 38px; width: auto; object-fit: contain; }
+
     /* ── Steps Header ── */
-    /* FIX 7: أُزيل overflow:hidden الذي كان يقطع box-shadow */
     .booking-steps-header {
       display: flex;
       align-items: center;
@@ -209,9 +216,10 @@
       gap: 10px;
       position: relative;
       z-index: 2;
-      opacity: 0.45;
+      opacity: 0.4;
       transition: var(--transition);
       flex-shrink: 0;
+      cursor: default;
     }
     .step-indicator.active    { opacity: 1; }
     .step-indicator.completed { opacity: 1; }
@@ -231,12 +239,16 @@
       background: linear-gradient(135deg, var(--primary), var(--accent));
       border-color: transparent;
       color: white;
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.2);
+      box-shadow: 0 0 0 4px rgba(67,90,191,0.18);
     }
     .step-indicator.completed .step-num {
       background: var(--success);
       border-color: transparent;
       color: white;
+    }
+    .step-indicator.completed .step-num::after {
+      content: "✓";
+      position: absolute;
     }
 
     .step-label {
@@ -246,17 +258,17 @@
       white-space: nowrap;
     }
 
-    /* FIX 6: step-connector بشكل صحيح بدون top سالب */
     .step-connector {
       flex: 1;
       height: 2px;
       background: var(--border);
-      margin: 0 12px;
+      margin: 0 10px;
       align-self: center;
-      margin-bottom: 28px; /* يعوّض gap الـ step-label */
-      transition: background 0.3s;
+      margin-bottom: 28px;
+      transition: background 0.4s;
+      border-radius: 2px;
     }
-    .step-connector.done { background: var(--success); }
+    .step-connector.completed { background: var(--success); }
 
     /* ── Layout ── */
     .booking-wrapper {
@@ -279,12 +291,14 @@
 
     .booking-step {
       display: none;
-      animation: fadeInRight 0.35s ease forwards;
     }
-    .booking-step.active { display: block; }
+    .booking-step.active {
+      display: block;
+      animation: fadeStepIn 0.35s ease forwards;
+    }
 
-    @keyframes fadeInRight {
-      from { opacity: 0; transform: translateX(16px); }
+    @keyframes fadeStepIn {
+      from { opacity: 0; transform: translateX(14px); }
       to   { opacity: 1; transform: translateX(0); }
     }
 
@@ -309,13 +323,25 @@
     }
     body.dark .step-header-icon { background: rgba(67,90,191,0.18); }
 
-    .step-title {
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 4px;
+    .step-title { font-size: 1.45rem; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.2; }
+    .step-subtitle { font-size: 0.92rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Auth Prompt ── */
+    .auth-prompt-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(67,90,191,0.06);
+      border: 1px solid rgba(67,90,191,0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
     }
-    .step-subtitle { font-size: 0.92rem; color: var(--text-muted); }
+    .auth-prompt-banner i { color: var(--primary); font-size: 1.2rem; flex-shrink: 0; }
+    .auth-prompt-banner a { color: var(--primary); font-weight: 600; text-decoration: none; }
+    .auth-prompt-banner a:hover { text-decoration: underline; }
 
     /* ── Form Elements ── */
     .form-group { margin-bottom: 22px; }
@@ -337,7 +363,6 @@
     }
     .req-star { color: var(--error); }
 
-    /* FIX 8: .input-with-icon للـ inputs */
     .input-with-icon {
       position: relative;
       border-radius: var(--radius-sm);
@@ -352,13 +377,19 @@
       background: var(--surface);
       box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
     }
+    .input-with-icon.invalid {
+      border-color: var(--error);
+    }
+    .input-with-icon.invalid:focus-within {
+      box-shadow: 0 0 0 4px rgba(239,68,68,0.1);
+    }
 
     .input-icon {
       position: absolute;
       left: 14px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       color: var(--text-muted);
       pointer-events: none;
       transition: color 0.2s;
@@ -367,25 +398,29 @@
     html[dir="rtl"] .input-icon { left: auto; right: 14px; }
     .input-with-icon:focus-within .input-icon { color: var(--primary); }
 
-    .input-with-icon input {
+    .input-with-icon input,
+    .input-with-icon select {
       width: 100%;
       height: 50px;
-      padding: 0 14px 0 44px;
+      padding: 0 14px 0 42px;
       border: none;
       background: transparent;
       color: var(--text);
       font-size: 0.95rem;
       font-family: inherit;
       outline: none;
+      appearance: none;
+      -webkit-appearance: none;
     }
-    html[dir="rtl"] .input-with-icon input { padding: 0 44px 0 14px; }
+    html[dir="rtl"] .input-with-icon input,
+    html[dir="rtl"] .input-with-icon select { padding: 0 42px 0 14px; }
 
-    /* FIX 15: dark mode inputs */
-    body.dark .input-with-icon { background: rgba(255,255,255,0.04); border-color: var(--border); }
-    body.dark .input-with-icon input { color: var(--text); }
+    body.dark .input-with-icon { background: rgba(255,255,255,0.04); }
+    body.dark .input-with-icon input,
+    body.dark .input-with-icon select { color: var(--text); }
     body.dark .input-with-icon input::placeholder { color: var(--text-muted); }
 
-    /* FIX 14: textarea wrapper منفصل عن input-with-icon */
+    /* Textarea wrapper */
     .textarea-wrapper {
       position: relative;
       border-radius: var(--radius-sm);
@@ -400,8 +435,8 @@
     }
     .textarea-icon {
       position: absolute;
-      left: 14px; top: 16px;
-      font-size: 1.15rem;
+      left: 14px; top: 15px;
+      font-size: 1.1rem;
       color: var(--text-muted);
       pointer-events: none;
       transition: color 0.2s;
@@ -412,7 +447,7 @@
       width: 100%;
       border: none;
       background: transparent;
-      padding: 14px 14px 14px 44px;
+      padding: 14px 14px 14px 42px;
       color: var(--text);
       font-family: inherit;
       font-size: 0.95rem;
@@ -424,12 +459,31 @@
       box-sizing: border-box;
       border-radius: var(--radius-sm);
     }
-    html[dir="rtl"] .textarea-wrapper textarea { padding: 14px 44px 14px 14px; }
-    body.dark .textarea-wrapper { background: rgba(255,255,255,0.04); border-color: var(--border); }
+    html[dir="rtl"] .textarea-wrapper textarea { padding: 14px 42px 14px 14px; }
+    body.dark .textarea-wrapper { background: rgba(255,255,255,0.04); }
     body.dark .textarea-wrapper textarea { color: var(--text); }
     body.dark .textarea-wrapper textarea::placeholder { color: var(--text-muted); }
 
+    .char-counter {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 4px;
+      padding-right: 4px;
+    }
+    html[dir="rtl"] .char-counter { text-align: left; }
+
+    .field-error {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--error);
+      margin-top: 5px;
+      min-height: 1em;
+    }
+
     /* ── Occupancy ── */
+    .occupancy-section { margin-top: 36px; }
+
     .occupancy-row {
       display: flex;
       justify-content: space-between;
@@ -439,22 +493,87 @@
       border-radius: var(--radius-sm);
       margin-bottom: 12px;
       background: var(--bg);
-      transition: var(--transition);
+      transition: border-color var(--transition);
     }
     .occupancy-row:last-child { margin-bottom: 0; }
     .occupancy-row:hover { border-color: var(--primary); }
-    .occupancy-controls {
-      display: flex; align-items: center; gap: 14px;
-    }
+
+    .occ-label-title { font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 3px; }
+    .occ-label-sub   { font-size: 0.78rem; color: var(--text-muted); }
+
+    .occupancy-controls { display: flex; align-items: center; gap: 14px; }
+
     .occ-count {
       font-weight: 700;
       font-size: 1.1rem;
       min-width: 28px;
       text-align: center;
+      color: var(--text);
+    }
+
+    #child-ages-box { margin-top: 16px; }
+    .child-ages-title { font-size: 0.88rem; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; }
+    .child-ages-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .child-age-field { display: flex; flex-direction: column; gap: 4px; }
+    .child-age-field label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .child-age-select {
+      height: 38px;
+      padding: 0 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    /* Bed config select */
+    .bed-select-wrapper {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--border);
+    }
+    .bed-select-wrapper label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.88rem; font-weight: 600;
+      margin-bottom: 8px; color: var(--text);
+    }
+    #bed-config-select {
+      width: 100%;
+      height: 50px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+    html[dir="rtl"] #bed-config-select { background-position: left 14px center; padding-right: 14px; padding-left: 40px; }
+
+    /* Occupancy badge */
+    .occupancy-badge-wrap { margin-top: 14px; text-align: center; }
+    #occupancy-summary-badge {
+      display: inline-block;
+      background: rgba(67,90,191,0.08);
+      border: 1px solid rgba(67,90,191,0.2);
+      color: var(--primary);
+      padding: 5px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
     }
 
     /* ── Buttons ── */
-    /* FIX 11: step-actions flex-wrap على الجوال */
     .step-actions {
       display: flex;
       justify-content: flex-end;
@@ -484,7 +603,7 @@
     }
     .primary-btn:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(67,90,191,0.4);
+      box-shadow: 0 10px 22px rgba(67,90,191,0.4);
     }
     .primary-btn:disabled {
       background: var(--border);
@@ -492,6 +611,13 @@
       box-shadow: none;
       cursor: not-allowed;
       transform: none;
+    }
+    .primary-btn.green-btn {
+      background: linear-gradient(135deg, var(--success), #059669);
+      box-shadow: 0 6px 16px rgba(16,185,129,0.3);
+    }
+    .primary-btn.green-btn:hover:not(:disabled) {
+      box-shadow: 0 10px 22px rgba(16,185,129,0.4);
     }
 
     .ghost-btn {
@@ -511,12 +637,24 @@
     }
     .ghost-btn:hover { background: var(--bg); color: var(--text); border-color: var(--text-muted); }
 
+    /* ── Addons Panel ── */
+    #addons-panel { margin-top: 32px; }
+
     /* ── Payment Methods ── */
+    .payment-section { margin-bottom: 28px; }
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
     .payment-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
-      margin-bottom: 32px;
     }
 
     .payment-method-label {
@@ -533,16 +671,14 @@
     }
     .payment-method-label:hover { border-color: var(--primary); background: var(--surface); }
 
-    /* FIX 10: :has() fallback — JS يضيف .selected */
     .payment-method-label.selected,
     .payment-method-label:has(input:checked) {
       border-color: var(--primary);
       background: rgba(67,90,191,0.05);
     }
     body.dark .payment-method-label.selected,
-    body.dark .payment-method-label:has(input:checked) {
-      background: rgba(67,90,191,0.12);
-    }
+    body.dark .payment-method-label:has(input:checked) { background: rgba(67,90,191,0.12); }
+
     .payment-method-label .radio-circle {
       width: 20px; height: 20px;
       border-radius: 50%;
@@ -557,6 +693,82 @@
       box-shadow: inset 0 0 0 3px var(--surface);
     }
 
+    /* Transfer Details Box */
+    #transfer-details {
+      background: rgba(67,90,191,0.04);
+      border: 1.5px dashed rgba(67,90,191,0.3);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-top: 20px;
+    }
+    body.dark #transfer-details { background: rgba(67,90,191,0.08); }
+
+    .transfer-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .transfer-info-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .transfer-info-item .ti-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .transfer-info-item .ti-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* File Upload */
+    .file-upload-wrapper {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--bg);
+    }
+    .file-upload-wrapper:hover,
+    .file-upload-wrapper.drag-over {
+      border-color: var(--primary);
+      background: rgba(67,90,191,0.04);
+    }
+    .file-upload-wrapper label { cursor: pointer; }
+    .file-upload-wrapper input[type="file"] { display: none; }
+    .file-upload-icon {
+      font-size: 2.2rem;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    .file-upload-txt { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 4px; }
+    .file-upload-sub { font-size: 0.78rem; color: var(--text-muted); opacity: 0.7; }
+    #receipt-preview {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    #receipt-file-name { font-size: 0.85rem; color: var(--text); font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #btn-remove-receipt {
+      background: none; border: none; color: var(--error);
+      cursor: pointer; font-size: 1.1rem; padding: 0; flex-shrink: 0;
+    }
+
     /* ── Summary Sidebar ── */
     .booking-summary-sidebar {
       background: var(--surface);
@@ -564,10 +776,20 @@
       box-shadow: var(--shadow);
       border: 1px solid var(--border);
       padding: 24px;
-      /* FIX 12: top يعوّض الـ fixed navbar */
       position: sticky;
       top: 88px;
     }
+
+    .sidebar-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+    .sidebar-title i { color: var(--primary); }
 
     .prop-mini-card {
       display: flex;
@@ -577,7 +799,6 @@
       margin-bottom: 18px;
     }
 
-    /* FIX 13: min-width بدل width ثابتة */
     .prop-mini-img {
       width: 90px;
       min-width: 90px;
@@ -585,17 +806,18 @@
       border-radius: 10px;
       object-fit: cover;
       border: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
     .prop-mini-details h4 {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--text);
       margin-bottom: 4px;
       line-height: 1.3;
     }
     .prop-mini-details p {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
       display: flex; align-items: center; gap: 4px;
       margin-top: 4px;
@@ -606,9 +828,10 @@
       background: var(--bg);
       padding: 2px 8px;
       border-radius: 4px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
       border: 1px solid var(--border);
+      color: var(--text-muted);
     }
 
     .summary-row {
@@ -616,22 +839,61 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: var(--text);
       gap: 8px;
     }
     .summary-row span:first-child { color: var(--text-muted); }
     .summary-row.total {
-      margin-top: 18px;
-      padding-top: 18px;
+      margin-top: 16px;
+      padding-top: 16px;
       border-top: 1.5px dashed var(--border);
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 800;
       color: var(--primary);
     }
     .summary-row.total span { color: var(--primary); }
 
-    /* ── Calendar Section ── */
+    #price-breakdown .price-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 6px;
+    }
+    #price-breakdown .price-row:last-child { border-bottom: none; }
+    #price-breakdown .price-row--addon { color: var(--primary); font-size: 0.8rem; }
+    #price-breakdown .price-row--fee   { color: var(--text-muted); }
+    #price-breakdown .price-row--total {
+      font-weight: 800;
+      font-size: 0.98rem;
+      color: var(--text);
+      padding-top: 10px;
+    }
+    #price-breakdown .price-highlight { color: var(--primary); }
+    .sum-placeholder-txt {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 16px 0;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    /* Rating bar in sidebar */
+    .sidebar-rating {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .sidebar-rating .stars { color: #f59e0b; font-size: 0.85rem; }
+    #sum-rating { font-weight: 700; color: var(--text); }
+
+    /* ── Calendar ── */
     .calendar-section { width: 100%; }
     .calendar-nav {
       display: flex;
@@ -639,87 +901,95 @@
       align-items: center;
       margin-bottom: 16px;
     }
+    #calendar-month-label { font-size: 1rem; font-weight: 700; color: var(--text); }
 
     .calendar-grid {
       background: var(--bg);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 14px;
       border: 1px solid var(--border);
       min-height: 260px;
     }
 
-    /* Date Summary */
     .date-summary {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: var(--bg);
-      padding: 16px;
+      padding: 14px 18px;
       border-radius: var(--radius-sm);
       margin-top: 20px;
       border: 1.5px solid var(--border);
+      gap: 8px;
     }
     .date-summary-item { text-align: center; flex: 1; }
     .date-summary-label {
       display: block;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
-      margin-bottom: 4px;
+      margin-bottom: 5px;
       text-transform: uppercase;
       letter-spacing: 0.4px;
+      font-weight: 600;
     }
     .date-summary-value {
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: var(--primary);
     }
     .date-summary-divider {
       width: 1px;
-      height: 40px;
+      height: 38px;
       background: var(--border);
-      margin: 0 8px;
     }
     #disp-nights {
       background: var(--surface);
-      padding: 4px 14px;
+      padding: 4px 12px;
       border-radius: 20px;
       border: 1px solid var(--border);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 700;
       color: var(--text);
     }
 
     /* Warning */
     .booking-warning {
-      color: var(--error);
+      color: #c0392b;
       background: #fef2f2;
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-radius: 8px;
       border: 1px solid #fecdd3;
-      margin-top: 14px;
-      font-size: 0.88rem;
+      margin-top: 12px;
+      font-size: 0.85rem;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    body.dark .booking-warning { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+    body.dark .booking-warning { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: #f87171; }
 
     /* Global Alert */
     .booking-alert {
-      padding: 14px 18px;
+      padding: 13px 18px;
       border-radius: var(--radius-sm);
-      margin-bottom: 20px;
-      font-size: 0.9rem;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
       font-weight: 500;
       display: flex;
       align-items: center;
       gap: 10px;
+      line-height: 1.4;
     }
     .booking-alert.error   { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; }
     .booking-alert.success { background: #dcfce7; color: #059669; border: 1px solid #bbf7d0; }
-    body.dark .booking-alert.error   { background: rgba(225,29,72,0.1);  border-color: rgba(225,29,72,0.3); }
-    body.dark .booking-alert.success { background: rgba(5,150,105,0.1);  border-color: rgba(5,150,105,0.3); }
+    .booking-alert.warning { background: #fff7ed; color: #d97706; border: 1px solid #fed7aa; }
+    .booking-alert.info    { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    body.dark .booking-alert.error   { background: rgba(225,29,72,0.08); border-color: rgba(225,29,72,0.25); }
+    body.dark .booking-alert.success { background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.25); }
 
-    /* Final Summary Block */
+    /* Reviews Section */
+    #reviews-section { margin-top: 40px; }
+
+    /* ── Step 4 — Final Summary ── */
     .final-summary-block {
       background: var(--bg);
       border: 1.5px solid var(--border);
@@ -728,30 +998,40 @@
       margin-bottom: 20px;
     }
     .final-summary-block h3 {
-      font-size: 1.05rem;
-      margin-bottom: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 18px;
       display: flex; align-items: center; gap: 8px;
+      color: var(--text);
     }
     .final-row {
-      display: flex; justify-content: space-between;
-      font-size: 0.92rem; margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
       gap: 8px;
     }
     .final-row span:first-child { color: var(--text-muted); }
     .final-total-row {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 1.15rem; color: var(--primary); margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.2rem;
+      color: var(--primary);
+      font-weight: 800;
+      margin-top: 6px;
       padding-top: 14px;
-      border-top: 1px dashed var(--border);
+      border-top: 1.5px dashed var(--border);
     }
 
     /* Points Box */
     .points-box {
-      background: rgba(139,92,246,0.08);
-      border: 1px solid rgba(139,92,246,0.2);
+      background: rgba(139,92,246,0.06);
+      border: 1px solid rgba(139,92,246,0.18);
       border-radius: var(--radius-sm);
-      padding: 16px;
+      padding: 16px 18px;
       display: flex; gap: 14px; align-items: flex-start;
+      margin-top: 16px;
     }
     .points-icon {
       background: var(--accent);
@@ -761,75 +1041,381 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 1.2rem; flex-shrink: 0;
     }
-    .points-text .font-bold { color: var(--accent); margin-bottom: 4px; display: block; }
-    .points-text p { font-size: 0.83rem; color: var(--text-muted); line-height: 1.5; }
+    .points-text .points-title {
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 4px;
+      display: block;
+      font-size: 0.9rem;
+    }
+    .points-text p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
 
-    /* ============================================
-       RESPONSIVE — MOBILE
-    ============================================ */
+    /* Copy Toast */
+    #copy-toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: white;
+      padding: 10px 22px;
+      border-radius: 99px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 9000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      white-space: nowrap;
+    }
+    #copy-toast i { color: #4ade80; }
 
+    /* d-none utility */
+    .d-none { display: none !important; }
+    .font-bold { font-weight: 700; }
+
+    /* Skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    body.dark .skeleton {
+      background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+      background-size: 200% 100%;
+    }
+    .skeleton-text { border-radius: 4px; }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ─── SUCCESS OVERLAY ─────────────────────────── */
+    .booking-success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 20px 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      overflow-y: auto;
+    }
+    .booking-success-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .bso-card {
+      background: #ffffff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 680px;
+      padding: 40px 44px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+      animation: bsoSlideIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
+      margin: auto;
+    }
+    body.dark .bso-card { background: #1E293B; }
+    @keyframes bsoSlideIn {
+      from { transform: translateY(36px) scale(0.97); opacity: 0; }
+      to   { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .bso-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    body.dark .bso-header { border-color: #334155; }
+    .bso-logo img { height: 32px; object-fit: contain; }
+    .bso-badge-confirmed {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #DCFCE7;
+      color: #15803D;
+      font-weight: 600;
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid #BBF7D0;
+      white-space: nowrap;
+    }
+    .bso-badge-confirmed i { color: #22C55E; font-size: 1rem; }
+    .bso-hero { text-align: center; margin-bottom: 30px; }
+    .bso-checkmark-anim { width: 62px; height: 62px; margin: 0 auto 14px; }
+    .bso-checkmark-anim svg { width: 100%; height: 100%; }
+    .bso-circle-anim {
+      stroke-dasharray: 170;
+      stroke-dashoffset: 170;
+      animation: drawCircle 0.55s 0.25s ease forwards;
+    }
+    .bso-tick-anim {
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: drawTick 0.35s 0.8s ease forwards;
+    }
+    @keyframes drawCircle { to { stroke-dashoffset: 0; } }
+    @keyframes drawTick   { to { stroke-dashoffset: 0; } }
+    .bso-title { font-size: 1.5rem; font-weight: 800; color: #111827; margin: 0 0 8px; }
+    body.dark .bso-title { color: #F1F5F9; }
+    .bso-sub { color: #6B7280; font-size: 0.88rem; max-width: 460px; margin: 0 auto 20px; line-height: 1.6; }
+    body.dark .bso-sub { color: #94A3B8; }
+    .bso-ref-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #F0F9FF;
+      border: 2px dashed #BAE6FD;
+      border-radius: 12px;
+      padding: 10px 20px;
+    }
+    body.dark .bso-ref-box { background: #1A2744; border-color: #3B82F6; }
+    .bso-ref-label { font-size: 0.75rem; color: #6B7280; font-weight: 600; letter-spacing: 0.3px; }
+    body.dark .bso-ref-label { color: #94A3B8; }
+    .bso-ref-number {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #1D4ED8;
+      letter-spacing: 2px;
+      font-family: 'Courier New', monospace;
+    }
+    .bso-copy-btn {
+      background: none;
+      border: 1px solid #BAE6FD;
+      border-radius: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
+      color: #3B82F6;
+      font-size: 1rem;
+      transition: background 0.15s;
+    }
+    .bso-copy-btn:hover { background: #DBEAFE; }
+    .bso-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .bso-detail-block {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #F9FAFB;
+      border: 1px solid #F3F4F6;
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    body.dark .bso-detail-block { background: #1A2744; border-color: #334155; }
+    .bso-detail-icon {
+      width: 34px; height: 34px; min-width: 34px;
+      border-radius: 8px;
+      background: #EFF6FF;
+      display: flex; align-items: center; justify-content: center;
+      color: #3B82F6; font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+    body.dark .bso-detail-icon { background: #1E3A5F; }
+    .bso-detail-block > div { display: flex; flex-direction: column; gap: 2px; }
+    .bso-detail-label { font-size: 0.7rem; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .bso-detail-value { font-size: 0.85rem; font-weight: 700; color: #111827; line-height: 1.3; }
+    body.dark .bso-detail-value { color: #F1F5F9; }
+    .bso-detail-sub { font-size: 0.76rem; color: #6B7280; }
+    .bso-addons-section {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .bso-addons-section h4 {
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: #15803D;
+      margin: 0 0 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .bso-addons-list {
+      list-style: none; margin: 0; padding: 0;
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .bso-addons-list li {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.78rem; color: #166534;
+      background: #DCFCE7;
+      padding: 3px 10px; border-radius: 999px;
+    }
+    .bso-addons-list li i { color: #22C55E; font-size: 0.82rem; }
+    .bso-price-summary {
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    body.dark .bso-price-summary { border-color: #334155; }
+    .bso-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      font-size: 0.84rem;
+      color: #374151;
+      border-bottom: 1px solid #F3F4F6;
+    }
+    body.dark .bso-price-row { color: #CBD5E1; border-color: #334155; }
+    .bso-price-row:last-child { border-bottom: none; }
+    .bso-price-total {
+      background: #1E3A5F !important;
+      color: #fff !important;
+      font-weight: 800;
+      font-size: 0.95rem;
+      padding: 14px 16px;
+    }
+    .bso-price-total span { color: #fff !important; }
+    .bso-footer-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 22px;
+    }
+    body.dark .bso-footer-note { background: #1C1917; border-color: #78350F; }
+    .bso-footer-note i { color: #EA580C; font-size: 1.05rem; flex-shrink: 0; margin-top: 1px; }
+    .bso-footer-note p { margin: 0; font-size: 0.8rem; color: #92400E; line-height: 1.55; }
+    body.dark .bso-footer-note p { color: #FCD34D; }
+    .bso-actions {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .bso-btn-print, .bso-btn-home {
+      flex: 1;
+      min-width: 140px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+      border: none;
+      font-family: inherit;
+    }
+    .bso-btn-print {
+      background: #1E3A5F;
+      color: #fff;
+    }
+    .bso-btn-print:hover { background: #1D4ED8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(29,78,216,0.28); }
+    .bso-btn-home {
+      background: #F3F4F6;
+      color: #374151;
+      border: 1px solid #E5E7EB;
+    }
+    body.dark .bso-btn-home { background: #334155; color: #CBD5E1; border-color: #475569; }
+    .bso-btn-home:hover { background: #E5E7EB; }
+    body.dark .bso-btn-home:hover { background: #475569; }
+    .bso-print-footer { display: none; margin-top: 28px; padding-top: 16px; border-top: 1px solid #E5E7EB; text-align: center; font-size: 0.72rem; color: #9CA3AF; }
+
+    /* RTL adjustments for overlay */
+    [dir="rtl"] .bso-detail-block,
+    [dir="rtl"] .bso-footer-note,
+    [dir="rtl"] .bso-ref-box { flex-direction: row-reverse; }
+    [dir="rtl"] .bso-badge-confirmed,
+    [dir="rtl"] .bso-addons-section h4 { flex-direction: row-reverse; }
+
+    /* ─── PRINT STYLES ───────────────────────── */
+    @media print {
+      .no-print,
+      .bso-actions,
+      .inner-nav,
+      .booking-page,
+      .booking-success-overlay { display: none !important; }
+
+      body * { visibility: hidden; }
+      #bso-printable,
+      #bso-printable * { visibility: visible; }
+      #bso-printable {
+        position: fixed;
+        top: 0; left: 0;
+        margin: 0;
+        padding: 28px 36px;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100%;
+        width: 100%;
+        background: #fff !important;
+        color: #000 !important;
+      }
+      .bso-price-total {
+        background: #1E3A5F !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bso-badge-confirmed, .bso-addons-list li {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bso-print-footer { display: block !important; }
+      .no-print { display: none !important; }
+      @page { size: A4 portrait; margin: 14mm 18mm; }
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────── */
     @media (max-width: 992px) {
-      /* FIX 5: sidebar ينزل تحت الـ form */
-      .booking-wrapper {
-        grid-template-columns: 1fr;
-      }
-      .booking-summary-sidebar {
-        position: static;
-        order: -1; /* يظهر فوق الـ form على الجوال */
-      }
+      .booking-wrapper { grid-template-columns: 1fr; }
+      .booking-summary-sidebar { position: static; order: -1; }
     }
 
     @media (max-width: 768px) {
-      .booking-page { padding: 82px 14px 40px; }
+      .booking-page { padding: 80px 14px 40px; }
       .inner-nav    { padding: 0 14px; height: 64px; }
-
-      /* FIX: body padding-bottom لـ mobile bottom nav */
-      body { padding-bottom: 68px; }
-
-      /* Steps Header */
-      .booking-steps-header { padding: 16px; margin-bottom: 18px; }
-      .step-label { display: none; } /* توفير مساحة */
-      .step-num   { width: 34px; height: 34px; font-size: 0.85rem; }
+      body { padding-bottom: 70px; }
+      .booking-steps-header { padding: 14px 16px; margin-bottom: 16px; }
+      .step-label { display: none; }
+      .step-num   { width: 32px; height: 32px; font-size: 0.82rem; }
       .step-connector { margin: 0 6px; margin-bottom: 0; }
-
-      /* Main Card */
-      .booking-main-card { padding: 20px 18px; border-radius: var(--radius); }
-      .step-title  { font-size: 1.2rem; }
-      .step-header { margin-bottom: 22px; padding-bottom: 18px; gap: 12px; }
+      .booking-main-card { padding: 20px 16px; border-radius: var(--radius); }
+      .step-title { font-size: 1.15rem; }
+      .step-header { margin-bottom: 20px; padding-bottom: 16px; gap: 12px; }
       .step-header-icon { width: 44px; height: 44px; min-width: 44px; font-size: 1.4rem; border-radius: 12px; }
-
-      /* FIX 9: form-row عمود واحد */
       .form-row { grid-template-columns: 1fr; gap: 0; }
-
-      /* Payment */
       .payment-grid { grid-template-columns: 1fr; gap: 12px; }
-
-      /* Buttons */
-      .step-actions {
-        flex-direction: column-reverse;
-        gap: 10px;
-      }
+      .transfer-info-grid { grid-template-columns: 1fr; }
+      .step-actions { flex-direction: column-reverse; gap: 10px; }
       .step-actions-between { flex-direction: row; }
-      .primary-btn, .ghost-btn { width: 100%; justify-content: center; }
-      .step-actions-between .primary-btn,
-      .step-actions-between .ghost-btn { width: auto; }
-
-      /* Sidebar */
-      .booking-summary-sidebar { padding: 18px; border-radius: var(--radius); }
-      .prop-mini-img { width: 72px; min-width: 72px; height: 60px; }
-
-      /* Back btn — نص يختفي على الشاشات الصغيرة جداً */
+      .primary-btn, .ghost-btn { justify-content: center; }
+      .step-actions:not(.step-actions-between) .primary-btn { width: 100%; }
+      .step-actions:not(.step-actions-between) .ghost-btn   { width: 100%; }
+      .booking-summary-sidebar { padding: 16px; border-radius: var(--radius); }
+      .prop-mini-img { width: 72px; min-width: 72px; height: 58px; }
       #nav-back-txt { display: none; }
       .back-btn { padding: 0 12px; }
+      .bso-card { padding: 24px 20px; border-radius: 16px; }
+      .bso-details-grid { grid-template-columns: 1fr; }
+      .bso-title { font-size: 1.25rem; }
+      .bso-actions { flex-direction: column; }
+      .bso-btn-print, .bso-btn-home { flex: unset; width: 100%; }
     }
 
     @media (max-width: 480px) {
-      .booking-page { padding-left: 12px; padding-right: 12px; }
-      .booking-steps-header { display: none; } /* إخفاء كامل على الشاشات الصغيرة */
-      .date-summary { flex-direction: column; gap: 12px; align-items: flex-start; }
+      .booking-page { padding-left: 10px; padding-right: 10px; }
+      .booking-steps-header { display: none; }
+      .date-summary { flex-direction: column; gap: 10px; align-items: flex-start; }
       .date-summary-divider { display: none; }
     }
-
   </style>
 </head>
 
@@ -848,12 +1434,10 @@
         id="main-logo"
         alt="OreBooking"
         class="logo-img"
-        width="140"
-        height="48"
+        width="140" height="46"
         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
       >
-      <!-- Fallback logo -->
-      <div style="display:none; font-size:1.4rem; font-weight:800; color:var(--primary); align-items:center; gap:8px;">
+      <div style="display:none; font-size:1.3rem; font-weight:800; color:var(--primary); align-items:center; gap:8px;">
         <i class="ph-fill ph-buildings"></i> OreBooking
       </div>
     </a>
@@ -872,46 +1456,48 @@
   <!-- ===================== MAIN ===================== -->
   <main class="booking-page" id="booking-page" role="main">
 
-    <!-- ── Steps Header ── -->
+    <!-- ── Steps Progress Bar ── -->
     <div class="booking-steps-header" id="steps-header" role="tablist" aria-label="Booking steps">
 
-      <div class="step-indicator active" data-step="1" role="tab" aria-selected="true">
+      <div class="step-indicator active" data-step="1" role="tab" aria-selected="true" tabindex="0">
         <div class="step-num">1</div>
         <div class="step-label" id="lbl-step1">Dates &amp; Rooms</div>
       </div>
       <div class="step-connector" id="connector-1-2"></div>
 
-      <div class="step-indicator" data-step="2" role="tab" aria-selected="false">
+      <div class="step-indicator" data-step="2" role="tab" aria-selected="false" tabindex="-1">
         <div class="step-num">2</div>
         <div class="step-label" id="lbl-step2">Add-ons &amp; Pay</div>
       </div>
       <div class="step-connector" id="connector-2-3"></div>
 
-      <div class="step-indicator" data-step="3" role="tab" aria-selected="false">
+      <div class="step-indicator" data-step="3" role="tab" aria-selected="false" tabindex="-1">
         <div class="step-num">3</div>
         <div class="step-label" id="lbl-step3">Guest Details</div>
       </div>
       <div class="step-connector" id="connector-3-4"></div>
 
-      <div class="step-indicator" data-step="4" role="tab" aria-selected="false">
+      <div class="step-indicator" data-step="4" role="tab" aria-selected="false" tabindex="-1">
         <div class="step-num">4</div>
         <div class="step-label" id="lbl-step4">Confirmation</div>
       </div>
 
-    </div>
+    </div><!-- /steps-header -->
 
-    <!-- ── Main Wrapper ── -->
+    <!-- ── Two-Column Layout ── -->
     <div class="booking-wrapper">
 
-      <!-- Left: Main Form -->
+      <!-- ════════════════════════════════════
+           LEFT: Main Form Card
+      ════════════════════════════════════════ -->
       <div class="booking-main-card" id="booking-main-card">
 
-        <!-- Global Alert -->
+        <!-- Global Alert Banner -->
         <div id="booking-global-alert" class="booking-alert d-none" role="alert" aria-live="assertive"></div>
 
-        <!-- ==========================================
-             STEP 1 — Dates & Rooms
-        =========================================== -->
+        <!-- ──────────────────────────────────
+             STEP 1 — Dates & Occupancy
+        ─────────────────────────────────────── -->
         <div class="booking-step active" id="step-1" role="tabpanel" aria-labelledby="lbl-step1">
 
           <div class="step-header">
@@ -924,106 +1510,141 @@
             </div>
           </div>
 
-          <div class="step-body">
+          <!-- Calendar -->
+          <div class="calendar-section">
+            <div class="calendar-nav">
+              <button class="icon-btn" id="cal-prev" type="button" aria-label="Previous month">
+                <i class="ph ph-caret-left"></i>
+              </button>
+              <span id="calendar-month-label" class="font-bold"></span>
+              <button class="icon-btn" id="cal-next" type="button" aria-label="Next month">
+                <i class="ph ph-caret-right"></i>
+              </button>
+            </div>
 
-            <!-- Calendar -->
-            <div class="calendar-section">
-              <div class="calendar-nav">
-                <button class="icon-btn" id="cal-prev" type="button" aria-label="Previous month">
-                  <i class="ph ph-caret-left"></i>
+            <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Date picker">
+              <div style="text-align:center; padding:48px 0; color:var(--text-muted);">
+                <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;"></i>
+              </div>
+            </div>
+
+            <!-- Date Summary Bar -->
+            <div class="date-summary" aria-live="polite">
+              <div class="date-summary-item">
+                <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
+                <span class="date-summary-value" id="disp-checkin">Add date</span>
+              </div>
+              <div class="date-summary-divider"></div>
+              <div class="date-summary-item">
+                <span class="date-summary-label" id="lbl-nights">Nights</span>
+                <span id="disp-nights" class="font-bold">—</span>
+              </div>
+              <div class="date-summary-divider"></div>
+              <div class="date-summary-item">
+                <span class="date-summary-label" id="lbl-chk-out">Check-out</span>
+                <span class="date-summary-value" id="disp-checkout">Add date</span>
+              </div>
+            </div>
+
+            <div id="min-nights-warning" class="booking-warning d-none" role="alert">
+              <i class="ph ph-warning-circle"></i>
+              <span id="min-nights-msg"></span>
+            </div>
+          </div><!-- /calendar-section -->
+
+          <!-- Occupancy & Rooms -->
+          <div class="occupancy-section">
+            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+              <i class="ph-fill ph-users" style="color:var(--primary);"></i>
+              <span id="lbl-who-coming">Occupancy &amp; Rooms</span>
+            </h3>
+
+            <!-- Rooms -->
+            <div class="occupancy-row">
+              <div>
+                <div class="occ-label-title" id="lbl-rooms-title">Rooms</div>
+                <div class="occ-label-sub" id="lbl-rooms-sub">Max 5</div>
+              </div>
+              <div class="occupancy-controls">
+                <button class="icon-btn" id="btn-minus-room" type="button" aria-label="Decrease rooms" disabled>
+                  <i class="ph ph-minus"></i>
                 </button>
-                <span id="calendar-month-label" class="font-bold" style="font-size:1.05rem;"></span>
-                <button class="icon-btn" id="cal-next" type="button" aria-label="Next month">
-                  <i class="ph ph-caret-right"></i>
+                <span class="occ-count" id="rooms-count" aria-live="polite">1</span>
+                <button class="icon-btn" id="btn-plus-room" type="button" aria-label="Increase rooms">
+                  <i class="ph ph-plus"></i>
                 </button>
               </div>
+            </div>
 
-              <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Date picker">
-                <!-- JS injects calendar here -->
-                <div style="text-align:center; padding:48px 0; color:var(--text-muted);">
-                  <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;"></i>
-                </div>
+            <!-- Adults -->
+            <div class="occupancy-row">
+              <div>
+                <div class="occ-label-title" id="lbl-adults-title">Adults</div>
+                <div class="occ-label-sub" id="lbl-adults-sub">Ages 13 or above</div>
               </div>
-
-              <!-- Date Summary -->
-              <div class="date-summary" aria-live="polite">
-                <div class="date-summary-item">
-                  <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
-                  <span class="date-summary-value" id="disp-checkin">Add date</span>
-                </div>
-                <div class="date-summary-divider"></div>
-                <div class="date-summary-item">
-                  <span class="date-summary-label" id="lbl-nights">Nights</span>
-                  <span id="disp-nights" class="font-bold">—</span>
-                </div>
-                <div class="date-summary-divider"></div>
-                <div class="date-summary-item">
-                  <span class="date-summary-label" id="lbl-chk-out">Check-out</span>
-                  <span class="date-summary-value" id="disp-checkout">Add date</span>
-                </div>
+              <div class="occupancy-controls">
+                <button class="icon-btn" id="btn-minus-adult" type="button" aria-label="Decrease adults">
+                  <i class="ph ph-minus"></i>
+                </button>
+                <span class="occ-count" id="adults-count" aria-live="polite">2</span>
+                <button class="icon-btn" id="btn-plus-adult" type="button" aria-label="Increase adults">
+                  <i class="ph ph-plus"></i>
+                </button>
               </div>
+            </div>
 
-              <div id="min-nights-warning" class="booking-warning d-none" role="alert">
-                <i class="ph ph-warning-circle"></i>
-                <span id="min-nights-msg"></span>
+            <!-- Children -->
+            <div class="occupancy-row">
+              <div>
+                <div class="occ-label-title" id="lbl-children-title">Children</div>
+                <div class="occ-label-sub" id="lbl-children-sub">Under 13</div>
               </div>
-            </div><!-- /calendar-section -->
-
-            <!-- Occupancy -->
-            <div class="occupancy-section" style="margin-top: 36px;">
-              <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                <i class="ph-fill ph-users" style="color:var(--primary);"></i>
-                <span id="lbl-who-coming">Occupancy &amp; Rooms</span>
-              </h3>
-
-              <!-- Rooms Row -->
-              <div class="occupancy-row">
-                <div>
-                  <div class="font-bold" id="lbl-rooms-title">Rooms</div>
-                  <small style="color:var(--text-muted);" id="lbl-rooms-sub">Max 5</small>
-                </div>
-                <div class="occupancy-controls">
-                  <button class="icon-btn" id="btn-minus-room" type="button" aria-label="Decrease rooms" disabled>
-                    <i class="ph ph-minus"></i>
-                  </button>
-                  <span class="occ-count" id="rooms-count" aria-live="polite">1</span>
-                  <button class="icon-btn" id="btn-plus-room" type="button" aria-label="Increase rooms">
-                    <i class="ph ph-plus"></i>
-                  </button>
-                </div>
+              <div class="occupancy-controls">
+                <button class="icon-btn" id="btn-minus-child" type="button" aria-label="Decrease children" disabled>
+                  <i class="ph ph-minus"></i>
+                </button>
+                <span class="occ-count" id="children-count" aria-live="polite">0</span>
+                <button class="icon-btn" id="btn-plus-child" type="button" aria-label="Increase children">
+                  <i class="ph ph-plus"></i>
+                </button>
               </div>
+            </div>
 
-              <!-- Adults Row -->
-              <div class="occupancy-row">
-                <div>
-                  <div class="font-bold" id="lbl-adults-title">Adults</div>
-                  <small style="color:var(--text-muted);" id="lbl-adults-sub">Ages 13 or above</small>
-                </div>
-                <div class="occupancy-controls">
-                  <button class="icon-btn" id="btn-minus-adult" type="button" aria-label="Decrease adults">
-                    <i class="ph ph-minus"></i>
-                  </button>
-                  <span class="occ-count" id="adults-count" aria-live="polite">2</span>
-                  <button class="icon-btn" id="btn-plus-adult" type="button" aria-label="Increase adults">
-                    <i class="ph ph-plus"></i>
-                  </button>
-                </div>
-              </div>
+            <!-- Child Ages (dynamic) -->
+            <div id="child-ages-box" class="d-none"></div>
 
-            </div><!-- /occupancy-section -->
-          </div><!-- /step-body -->
+            <!-- Bed Config -->
+            <div class="bed-select-wrapper">
+              <label for="bed-config-select">
+                <i class="ph ph-bed" style="color:var(--primary);"></i>
+                <span id="lbl-bed-config">Bed Configuration</span>
+              </label>
+              <select id="bed-config-select">
+                <option value="double">Double Bed</option>
+                <option value="twin">Twin Beds</option>
+                <option value="king">King Bed</option>
+                <option value="single">Single Bed</option>
+              </select>
+            </div>
+
+            <!-- Occupancy Summary Badge -->
+            <div class="occupancy-badge-wrap">
+              <span id="occupancy-summary-badge">1 room · 2 adults</span>
+            </div>
+
+          </div><!-- /occupancy-section -->
 
           <div class="step-actions">
-            <button class="primary-btn" id="btn-next-1" type="button" disabled>
+            <button class="primary-btn" id="btn-next-1" type="button" disabled aria-disabled="true">
               <span id="btn-next-1-txt">Next Step</span>
               <i class="ph ph-arrow-right"></i>
             </button>
           </div>
         </div><!-- /step-1 -->
 
-        <!-- ==========================================
+        <!-- ──────────────────────────────────
              STEP 2 — Add-ons & Payment
-        =========================================== -->
+        ─────────────────────────────────────── -->
         <div class="booking-step" id="step-2" role="tabpanel" aria-labelledby="lbl-step2">
 
           <div class="step-header">
@@ -1036,40 +1657,88 @@
             </div>
           </div>
 
-          <div class="step-body">
+          <!-- Add-ons Panel (dynamic) -->
+          <div id="addons-panel"></div>
 
-            <h3 style="font-size:1rem; font-weight:700; margin-bottom:14px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;" id="lbl-pay-method">Payment Method</h3>
+          <!-- Payment Method -->
+          <div class="payment-section" style="margin-top:36px;">
+            <div class="section-label" id="lbl-pay-method">Payment Method</div>
 
-            <!-- FIX 10: payment-grid مع JS class .selected fallback -->
             <div class="payment-grid" role="radiogroup" aria-label="Payment method">
 
-              <label class="payment-method-label selected" id="pay-label-cash">
-                <input type="radio" name="payment_method" value="cash" checked style="display:none;">
+              <label class="payment-method-label selected" id="pay-label-cash" for="pay-cash">
+                <input type="radio" name="payment_method" id="pay-cash" value="cash" checked style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <i class="ph ph-money" style="font-size:1.7rem; color:var(--success);"></i>
                   <div class="radio-circle"></div>
                 </div>
                 <div>
                   <div class="font-bold" id="pay-cash-title">Pay at Property</div>
-                  <div style="font-size:0.82rem; color:var(--text-muted);" id="pay-cash-sub">Pay with cash upon arrival</div>
+                  <div style="font-size:0.8rem; color:var(--text-muted);" id="pay-cash-sub">Pay with cash upon arrival</div>
                 </div>
               </label>
 
-              <label class="payment-method-label" id="pay-label-transfer">
-                <input type="radio" name="payment_method" value="transfer" style="display:none;">
+              <label class="payment-method-label" id="pay-label-transfer" for="pay-transfer">
+                <input type="radio" name="payment_method" id="pay-transfer" value="transfer" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <i class="ph ph-bank" style="font-size:1.7rem; color:var(--primary);"></i>
                   <div class="radio-circle"></div>
                 </div>
                 <div>
                   <div class="font-bold" id="pay-transfer-title">Bank Transfer</div>
-                  <div style="font-size:0.82rem; color:var(--text-muted);" id="pay-transfer-sub">Transfer money to our account</div>
+                  <div style="font-size:0.8rem; color:var(--text-muted);" id="pay-transfer-sub">Transfer to our account</div>
                 </div>
               </label>
 
             </div><!-- /payment-grid -->
 
-          </div><!-- /step-body -->
+            <!-- Transfer Details Box -->
+            <div id="transfer-details" class="d-none">
+              <h4 style="font-size:0.88rem; font-weight:700; margin-bottom:16px; color:var(--primary); display:flex; align-items:center; gap:7px;">
+                <i class="ph ph-bank"></i> <span id="lbl-bank-info">Bank Account Details</span>
+              </h4>
+              <div class="transfer-info-grid">
+                <div class="transfer-info-item">
+                  <div class="ti-label" id="lbl-bank-name">Bank</div>
+                  <div class="ti-value">CPA Bank Algeria</div>
+                </div>
+                <div class="transfer-info-item">
+                  <div class="ti-label" id="lbl-account-name">Account Name</div>
+                  <div class="ti-value">OreBooking SARL</div>
+                </div>
+                <div class="transfer-info-item">
+                  <div class="ti-label" id="lbl-rib">RIB / IBAN</div>
+                  <div class="ti-value" style="font-family:monospace; letter-spacing:1px; font-size:0.82rem;">00799999 12345678 90</div>
+                </div>
+                <div class="transfer-info-item">
+                  <div class="ti-label" id="lbl-ref-note">Reference Note</div>
+                  <div class="ti-value" id="lbl-ref-note-val">Your Booking Ref</div>
+                </div>
+              </div>
+
+              <!-- Receipt Upload -->
+              <p style="font-size:0.85rem; font-weight:600; margin-bottom:10px;" id="lbl-upload-receipt">
+                <i class="ph ph-paperclip" style="color:var(--primary);"></i>
+                Upload Transfer Receipt <span class="req-star">*</span>
+              </p>
+              <div class="file-upload-wrapper" id="file-drop-zone">
+                <label for="receipt-file">
+                  <div class="file-upload-icon"><i class="ph ph-cloud-arrow-up"></i></div>
+                  <p class="file-upload-txt" id="lbl-drop-file">Click or drag & drop your receipt here</p>
+                  <p class="file-upload-sub">PNG, JPG, PDF — Max 5MB</p>
+                  <input type="file" id="receipt-file" name="receipt" accept="image/*,.pdf">
+                </label>
+              </div>
+              <div id="receipt-preview" class="d-none">
+                <i class="ph-fill ph-file-image" style="color:var(--primary); font-size:1.3rem;"></i>
+                <span id="receipt-file-name">file.jpg</span>
+                <button id="btn-remove-receipt" type="button" aria-label="Remove file">
+                  <i class="ph ph-x-circle"></i>
+                </button>
+              </div>
+            </div><!-- /transfer-details -->
+
+          </div><!-- /payment-section -->
 
           <div class="step-actions step-actions-between">
             <button class="ghost-btn" id="btn-prev-2" type="button">
@@ -1083,9 +1752,9 @@
           </div>
         </div><!-- /step-2 -->
 
-        <!-- ==========================================
+        <!-- ──────────────────────────────────
              STEP 3 — Guest Details
-        =========================================== -->
+        ─────────────────────────────────────── -->
         <div class="booking-step" id="step-3" role="tabpanel" aria-labelledby="lbl-step3">
 
           <div class="step-header">
@@ -1098,63 +1767,134 @@
             </div>
           </div>
 
-          <div class="step-body">
-            <form id="guest-form" novalidate autocomplete="on">
+          <!-- Auth Prompt (shown when not logged in) -->
+          <div id="auth-prompt" class="auth-prompt-banner d-none">
+            <i class="ph ph-info"></i>
+            <span id="lbl-auth-prompt">
+              <a href="#" id="link-login-booking" id="lbl-login-link">Log in</a>
+              to speed up your booking and earn loyalty points.
+            </span>
+          </div>
 
-              <!-- Full Name -->
+          <form id="guest-form" novalidate autocomplete="on">
+
+            <!-- Full Name -->
+            <div class="form-group">
+              <label for="g-name" id="lbl-fname">
+                <i class="ph ph-identification-card" style="color:var(--primary);"></i>
+                Full Name <span class="req-star">*</span>
+              </label>
+              <div class="input-with-icon">
+                <i class="ph ph-identification-card input-icon"></i>
+                <input type="text" id="g-name" name="name" required
+                       placeholder="Mohammed Amine" autocomplete="name" aria-required="true">
+              </div>
+              <span class="field-error" id="err-name"></span>
+            </div>
+
+            <!-- Email + Phone -->
+            <div class="form-row">
               <div class="form-group">
-                <label for="g-name" id="lbl-fname">
-                  <i class="ph ph-identification-card" style="color:var(--primary);"></i>
-                  Full Name <span class="req-star">*</span>
+                <label for="g-email" id="lbl-email">
+                  <i class="ph ph-envelope-simple" style="color:var(--primary);"></i>
+                  Email <span class="req-star">*</span>
                 </label>
                 <div class="input-with-icon">
-                  <i class="ph ph-identification-card input-icon"></i>
-                  <input type="text" id="g-name" name="name" required placeholder="John Doe" autocomplete="name" aria-required="true">
+                  <i class="ph ph-envelope-simple input-icon"></i>
+                  <input type="email" id="g-email" name="email" required
+                         placeholder="you@example.com" autocomplete="email" aria-required="true">
                 </div>
-                <span class="field-error" id="err-name"></span>
+                <span class="field-error" id="err-email"></span>
               </div>
 
-              <!-- Email & Phone -->
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="g-email" id="lbl-email">
-                    <i class="ph ph-envelope-simple" style="color:var(--primary);"></i>
-                    Email <span class="req-star">*</span>
-                  </label>
-                  <div class="input-with-icon">
-                    <i class="ph ph-envelope-simple input-icon"></i>
-                    <input type="email" id="g-email" name="email" required placeholder="john@example.com" autocomplete="email" aria-required="true">
-                  </div>
-                  <span class="field-error" id="err-email"></span>
-                </div>
-
-                <div class="form-group">
-                  <label for="g-phone" id="lbl-phone">
-                    <i class="ph ph-phone" style="color:var(--primary);"></i>
-                    Phone Number <span class="req-star">*</span>
-                  </label>
-                  <div class="input-with-icon">
-                    <i class="ph ph-phone input-icon"></i>
-                    <input type="tel" id="g-phone" name="phone" required placeholder="+213 555 000 000" dir="ltr" autocomplete="tel" aria-required="true">
-                  </div>
-                  <span class="field-error" id="err-phone"></span>
-                </div>
-              </div>
-
-              <!-- Special Requests — FIX 14: textarea-wrapper منفصل -->
               <div class="form-group">
-                <label for="g-notes" id="lbl-notes">
-                  <i class="ph ph-chat-text" style="color:var(--primary);"></i>
-                  Special Requests <span style="color:var(--text-muted); font-weight:400;">(Optional)</span>
+                <label for="g-phone" id="lbl-phone">
+                  <i class="ph ph-phone" style="color:var(--primary);"></i>
+                  Phone <span class="req-star">*</span>
                 </label>
-                <div class="textarea-wrapper">
-                  <i class="ph ph-chat-text textarea-icon"></i>
-                  <textarea id="g-notes" name="notes" rows="3" placeholder="Any special requests or arrival time?"></textarea>
+                <div class="input-with-icon">
+                  <i class="ph ph-phone input-icon"></i>
+                  <input type="tel" id="g-phone" name="phone" required
+                         placeholder="+213 555 000 000" dir="ltr" autocomplete="tel" aria-required="true">
+                </div>
+                <span class="field-error" id="err-phone"></span>
+              </div>
+            </div>
+
+            <!-- Nationality + Arrival Time -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="g-nationality" id="lbl-nationality">
+                  <i class="ph ph-globe" style="color:var(--primary);"></i>
+                  <span id="lbl-nationality-txt">Nationality</span>
+                </label>
+                <div class="input-with-icon">
+                  <i class="ph ph-globe input-icon"></i>
+                  <input type="text" id="g-nationality" name="nationality"
+                         placeholder="Algerian" autocomplete="country-name">
                 </div>
               </div>
 
-            </form>
-          </div><!-- /step-body -->
+              <div class="form-group">
+                <label for="g-arrival-time" id="lbl-arrival">
+                  <i class="ph ph-clock" style="color:var(--primary);"></i>
+                  <span id="lbl-arrival-txt">Estimated Arrival Time</span>
+                </label>
+                <div class="input-with-icon">
+                  <i class="ph ph-clock input-icon"></i>
+                  <input type="time" id="g-arrival-time" name="arrivalTime">
+                </div>
+              </div>
+            </div>
+
+            <!-- Purpose of Visit -->
+            <div class="form-group">
+              <label id="lbl-purpose-txt">
+                <i class="ph ph-suitcase" style="color:var(--primary);"></i>
+                <span id="lbl-purpose">Purpose of Visit</span>
+              </label>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+                <button type="button" class="purpose-chip active" data-val="leisure">
+                  <i class="ph ph-sun"></i> Leisure
+                </button>
+                <button type="button" class="purpose-chip" data-val="business">
+                  <i class="ph ph-briefcase"></i> Business
+                </button>
+                <button type="button" class="purpose-chip" data-val="family">
+                  <i class="ph ph-house"></i> Family
+                </button>
+                <button type="button" class="purpose-chip" data-val="event">
+                  <i class="ph ph-confetti"></i> Event
+                </button>
+              </div>
+            </div>
+
+            <!-- Special Requests -->
+            <div class="form-group">
+              <label for="g-notes" id="lbl-notes">
+                <i class="ph ph-chat-text" style="color:var(--primary);"></i>
+                Special Requests <span style="color:var(--text-muted); font-weight:400;">(Optional)</span>
+              </label>
+              <div class="textarea-wrapper">
+                <i class="ph ph-chat-text textarea-icon"></i>
+                <textarea id="g-notes" name="notes" rows="3"
+                          placeholder="Any special requests or questions…"></textarea>
+              </div>
+              <div class="char-counter"><span id="g-notes-counter">0</span>/500</div>
+            </div>
+
+            <!-- Agree to Policy -->
+            <div class="form-group" style="display:flex; align-items:flex-start; gap:12px;">
+              <input type="checkbox" id="agree-policy" style="margin-top:3px; accent-color:var(--primary); width:16px; height:16px; flex-shrink:0;">
+              <label for="agree-policy" style="cursor:pointer; font-size:0.86rem; color:var(--text-muted); font-weight:400;">
+                <span id="lbl-agree">I agree to the </span>
+                <a href="#" style="color:var(--primary); font-weight:600;" id="lbl-house-rules">house rules</a>
+                <span> and </span>
+                <a href="#" style="color:var(--primary); font-weight:600;" id="lbl-privacy">privacy policy</a>.
+              </label>
+            </div>
+
+          </form>
 
           <div class="step-actions step-actions-between">
             <button class="ghost-btn" id="btn-prev-3" type="button">
@@ -1168,9 +1908,9 @@
           </div>
         </div><!-- /step-3 -->
 
-        <!-- ==========================================
-             STEP 4 — Confirmation
-        =========================================== -->
+        <!-- ──────────────────────────────────
+             STEP 4 — Review & Confirm
+        ─────────────────────────────────────── -->
         <div class="booking-step" id="step-4" role="tabpanel" aria-labelledby="lbl-step4">
 
           <div class="step-header">
@@ -1183,73 +1923,74 @@
             </div>
           </div>
 
-          <div class="step-body">
+          <!-- Final Summary Card -->
+          <div class="final-summary-block">
+            <h3>
+              <i class="ph ph-file-text" style="color:var(--primary);"></i>
+              <span id="lbl-final-summary">Final Summary</span>
+            </h3>
 
-            <!-- Final Summary -->
-            <div class="final-summary-block">
-              <h3>
-                <i class="ph ph-file-text" style="color:var(--primary);"></i>
-                <span id="lbl-final-summary">Final Summary</span>
-              </h3>
-
-              <div class="final-row">
-                <span id="lbl-final-name">Guest Name:</span>
-                <span class="font-bold" id="final-name">—</span>
-              </div>
-              <div class="final-row">
-                <span id="lbl-final-dates">Dates:</span>
-                <span class="font-bold" id="final-dates">—</span>
-              </div>
-              <div class="final-row">
-                <span id="lbl-final-payment">Payment:</span>
-                <span class="font-bold" id="final-payment">—</span>
-              </div>
-
-              <hr style="border:none; border-top:1px dashed var(--border); margin:12px 0;">
-
-              <div class="final-total-row">
-                <span class="font-bold" id="lbl-total-amount">Total Amount:</span>
-                <span class="font-bold" id="final-total">— DZD</span>
-              </div>
+            <div class="final-row">
+              <span id="lbl-final-name">Guest Name:</span>
+              <span class="font-bold" id="final-name">—</span>
+            </div>
+            <div class="final-row">
+              <span id="lbl-final-dates">Dates:</span>
+              <span class="font-bold" id="final-dates">—</span>
+            </div>
+            <div class="final-row">
+              <span id="lbl-final-payment">Payment Method:</span>
+              <span class="font-bold" id="final-payment">—</span>
             </div>
 
-            <!-- Loyalty Points -->
-            <div class="points-box">
-              <div class="points-icon">
-                <i class="ph ph-gift"></i>
-              </div>
-              <div class="points-text">
-                <span class="font-bold" id="lbl-loyalty">Loyalty Points</span>
-                <p id="lbl-loyalty-sub">
-                  By completing this booking, you will earn
-                  <strong id="earned-points-preview">—</strong>
-                  loyalty points if you are logged in!
-                </p>
-              </div>
+            <hr style="border:none; border-top:1px dashed var(--border); margin:14px 0;">
+
+            <div class="final-total-row">
+              <span class="font-bold" id="lbl-total-amount">Total Amount</span>
+              <span class="font-bold" id="final-total">— DZD</span>
             </div>
+          </div>
 
-          </div><!-- /step-body -->
+          <!-- Loyalty Points Preview -->
+          <div class="points-box">
+            <div class="points-icon">
+              <i class="ph ph-gift"></i>
+            </div>
+            <div class="points-text">
+              <span class="points-title" id="lbl-loyalty">Loyalty Points</span>
+              <p id="lbl-loyalty-sub">
+                Complete this booking to earn
+                <strong id="earned-points-preview">—</strong>
+                loyalty points!
+              </p>
+            </div>
+          </div>
 
-          <div class="step-actions step-actions-between">
+          <div class="step-actions step-actions-between" style="margin-top:28px;">
             <button class="ghost-btn" id="btn-prev-4" type="button">
               <i class="ph ph-arrow-left"></i>
               <span id="btn-back-4">Back</span>
             </button>
-            <button class="primary-btn" id="btn-confirm-booking" type="button" style="background:linear-gradient(135deg, var(--success), #059669);">
-              <span id="btn-confirm-txt">Confirm Booking</span>
+            <!-- FIX: id="btn-confirm-booking" — matches booking.js exactly -->
+            <button class="primary-btn green-btn" id="btn-confirm-booking" type="button"
+                    onclick="submitBooking()" aria-label="Confirm and submit booking">
               <i class="ph ph-check"></i>
+              <span id="btn-confirm-txt">Confirm Booking</span>
             </button>
           </div>
         </div><!-- /step-4 -->
 
       </div><!-- /booking-main-card -->
 
-      <!-- Right: Sidebar Summary -->
+      <!-- ════════════════════════════════════
+           RIGHT: Booking Summary Sidebar
+      ════════════════════════════════════════ -->
       <aside class="booking-summary-sidebar" aria-label="Booking summary">
-        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
-          <i class="ph-fill ph-receipt" style="color:var(--primary);"></i>
+
+        <div class="sidebar-title">
+          <i class="ph-fill ph-receipt"></i>
           <span id="lbl-sidebar-title">Booking Summary</span>
-        </h3>
+        </div>
 
         <!-- Property Mini Card -->
         <div class="prop-mini-card">
@@ -1257,25 +1998,39 @@
             src="images/placeholder.jpg"
             id="prop-mini-img"
             class="prop-mini-img"
-            alt="Property Image"
-            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2272%22 viewBox=%220 0 90 72%22><rect width=%2290%22 height=%2272%22 fill=%22%23e2e8f0%22/></svg>'"
+            alt="Property"
+            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2272%22><rect width=%2290%22 height=%2272%22 fill=%22%23e2e8f0%22/><text x=%2245%22 y=%2242%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-size=%2224%22>🏨</text></svg>'"
           >
           <div class="prop-mini-details">
-            <h4 id="prop-mini-title">Property Name</h4>
-            <p><i class="ph-fill ph-map-pin"></i> <span id="prop-mini-loc">Location</span></p>
-            <div class="prop-type-badge" id="prop-mini-type">Apartment</div>
+            <h4 id="prop-mini-title">
+              <span class="skeleton skeleton-text" style="width:80%;display:inline-block;height:0.9em;"></span>
+            </h4>
+            <p>
+              <i class="ph-fill ph-map-pin"></i>
+              <span id="prop-mini-loc">
+                <span class="skeleton skeleton-text" style="width:60%;display:inline-block;height:0.8em;"></span>
+              </span>
+            </p>
+            <div class="prop-type-badge" id="prop-mini-type">Hotel</div>
           </div>
         </div>
 
-        <!-- Price Breakdown -->
-        <div>
+        <!-- Rating -->
+        <div class="sidebar-rating">
+          <span class="stars">★★★★★</span>
+          <span id="sum-rating">—</span>
+          <span id="sum-reviews-count"></span>
+        </div>
+
+        <!-- Price Breakdown (dynamic) -->
+        <div id="price-breakdown" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
           <div class="summary-row">
-            <span><span id="sb-nights-count">0</span> nights × <span id="sb-night-price">0</span> DZD</span>
+            <span><span id="sb-nights-count">0</span> nights × <span id="sb-night-price">0 DZD</span></span>
             <span class="font-bold"><span id="sb-base-total">0</span> DZD</span>
           </div>
           <div class="summary-row">
             <span id="lbl-taxes">Taxes &amp; Fees</span>
-            <span class="font-bold" style="color:var(--success);" id="lbl-taxes-val">Included</span>
+            <span id="lbl-taxes-val" style="color:var(--success); font-weight:600;">Included</span>
           </div>
           <div class="summary-row total">
             <span id="lbl-total">Total</span>
@@ -1283,11 +2038,47 @@
           </div>
         </div>
 
-      </aside>
+      </aside><!-- /sidebar -->
 
     </div><!-- /booking-wrapper -->
 
+    <!-- Reviews Section (dynamic) -->
+    <div id="reviews-section" style="margin-top:48px;"></div>
+
   </main>
+
+  <!-- ── Copy Toast ── -->
+  <div id="copy-toast" class="d-none" role="status" aria-live="polite">
+    <i class="ph-fill ph-check-circle"></i>
+    <span id="copy-toast-txt">Copied!</span>
+  </div>
+
+  <!-- ── Purpose Chip Styles (inline) ── -->
+  <style>
+    .purpose-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .purpose-chip:hover,
+    .purpose-chip.active {
+      border-color: var(--primary);
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+    }
+    body.dark .purpose-chip { background: rgba(255,255,255,0.04); }
+    body.dark .purpose-chip.active { background: rgba(67,90,191,0.15); }
+  </style>
 
   <!-- Scripts -->
   <script src="booking.js"></script>
