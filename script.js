@@ -2,13 +2,13 @@
 // 🔥 1. FIREBASE CONFIGURATION
 // ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-  authDomain: "orebooking-website.firebaseapp.com",
-  projectId: "orebooking-website",
-  storageBucket: "orebooking-website.firebasestorage.app",
+  apiKey:            "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+  authDomain:        "orebooking-website.firebaseapp.com",
+  projectId:         "orebooking-website",
+  storageBucket:     "orebooking-website.firebasestorage.app",
   messagingSenderId: "1012887567747",
-  appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-  measurementId: "G-5GKMRMVHC3"
+  appId:             "1:1012887567747:web:153b57b60cb143d88acab6",
+  measurementId:     "G-5GKMRMVHC3"
 };
 
 if (!firebase.apps.length) {
@@ -80,6 +80,15 @@ const translations = {
     clear_search:         "Clear Search",
     all_wilayas:          "All Wilayas",
     all_wilayas_sub:      "Show all properties",
+    fav_added:            "Added to favorites",
+    fav_removed:          "Removed from favorites",
+    reset_pass_title:     "Reset Password",
+    reset_pass_desc:      "Enter your email and we'll send you a reset link.",
+    send_link:            "Send Reset Link",
+    back_to_login:        "Back to login",
+    reset_sent:           "Reset link sent! Check your inbox.",
+    my_bookings:          "My Bookings",
+    no_bookings:          "You have no bookings yet.",
   },
   ar: {
     hero_title:           "اكتشف إقامتك المثالية القادمة",
@@ -128,6 +137,15 @@ const translations = {
     clear_search:         "إلغاء البحث",
     all_wilayas:          "كل الولايات",
     all_wilayas_sub:      "عرض جميع العقارات",
+    fav_added:            "تمت الإضافة للمفضلة",
+    fav_removed:          "تمت الإزالة من المفضلة",
+    reset_pass_title:     "استعادة كلمة المرور",
+    reset_pass_desc:      "أدخل بريدك الإلكتروني وسنرسل لك رابط الاستعادة.",
+    send_link:            "إرسال الرابط",
+    back_to_login:        "العودة لتسجيل الدخول",
+    reset_sent:           "تم الإرسال! تحقق من بريدك الإلكتروني.",
+    my_bookings:          "حجوزاتي",
+    no_bookings:          "ليس لديك أي حجوزات بعد.",
   }
 };
 
@@ -253,10 +271,12 @@ const openAuthBtn     = document.getElementById('open-auth-btn');
 const closeAuthBtn    = document.getElementById('close-auth-btn');
 const loginForm       = document.getElementById('login-form');
 const registerForm    = document.getElementById('register-form');
+const forgotForm      = document.getElementById('forgot-form');
 const authMessage     = document.getElementById('auth-message');
 const profileDropdown = document.getElementById('profile-dropdown');
 const logoutBtn       = document.getElementById('logout-btn');
 const myFavoritesBtn  = document.getElementById('my-favorites-btn');
+const myBookingsBtn   = document.getElementById('my-bookings-btn');
 const homeLogoBtn     = document.getElementById('home-logo-btn');
 
 function init() {
@@ -270,9 +290,14 @@ function init() {
   }
 
   renderPropertyDetails();
+  initScrollTopBtn();
+  initMobileNav();
+  initPasswordToggles();
+  initPasswordStrength();
+  initForgotPassword();
 
-  if (langBtn)     langBtn.addEventListener('click',   toggleLanguage);
-  if (themeBtn)    themeBtn.addEventListener('click',  toggleTheme);
+  if (langBtn)     langBtn.addEventListener('click',  toggleLanguage);
+  if (themeBtn)    themeBtn.addEventListener('click', toggleTheme);
   if (openAuthBtn) openAuthBtn.addEventListener('click', handleAuthButtonClick);
 
   if (homeLogoBtn) {
@@ -296,9 +321,17 @@ function init() {
       const sectionTitle = document.getElementById('section-main-title');
       if (sectionTitle) {
         sectionTitle.removeAttribute('data-i18n');
-        sectionTitle.textContent = state.lang === 'en' ? 'My Favorites' : 'مفضلتي';
+        sectionTitle.textContent = translations[state.lang].my_favorites;
       }
       renderListings();
+    });
+  }
+
+  // ✅ NEW: زر حجوزاتي
+  if (myBookingsBtn) {
+    myBookingsBtn.addEventListener('click', () => {
+      if (profileDropdown) profileDropdown.classList.remove('active');
+      showMyBookings();
     });
   }
 
@@ -314,15 +347,38 @@ function init() {
       const lb = document.getElementById('lightbox');
       if (lb && lb.classList.contains('active')) closeLightbox();
       else if (authModal && authModal.classList.contains('active')) closeModal();
+      // أغلق search dropdown
+      const sd = document.getElementById('search-dropdown');
+      if (sd) sd.classList.remove('active');
     }
   });
 
   if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeModal);
-  document.getElementById('go-to-register')?.addEventListener('click', (e) => { e.preventDefault(); switchForm('register'); });
-  document.getElementById('go-to-login')?.addEventListener('click',    (e) => { e.preventDefault(); switchForm('login');    });
+
+  document.getElementById('go-to-register')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchForm('register');
+  });
+  document.getElementById('go-to-login')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchForm('login');
+  });
+  document.getElementById('go-to-forgot')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchForm('forgot');
+  });
+  document.getElementById('back-to-login')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchForm('login');
+  });
+
   if (loginForm)    loginForm.addEventListener('submit',    handleLogin);
   if (registerForm) registerForm.addEventListener('submit', handleRegister);
+  if (forgotForm)   forgotForm.addEventListener('submit',   handleForgotPassword);
+
   document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleLogin);
+  document.getElementById('google-register-btn')?.addEventListener('click', handleGoogleLogin);
+
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
   auth.onAuthStateChanged((user) => {
@@ -333,11 +389,99 @@ function init() {
 }
 
 // ==========================================
+// 🔝 SCROLL-TO-TOP BUTTON
+// ==========================================
+function initScrollTopBtn() {
+  const btn = document.getElementById('scroll-top-btn');
+  if (!btn) return;
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+// ==========================================
+// 📱 MOBILE BOTTOM NAV
+// ==========================================
+function initMobileNav() {
+  const nav = document.getElementById('mobile-bottom-nav');
+  if (!nav) return;
+
+  nav.querySelectorAll('.mob-nav-btn[data-target]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      nav.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.getAttribute('data-target');
+      if (target === 'home')      resetToHome();
+      if (target === 'favorites') myFavoritesBtn?.click();
+      if (target === 'profile')   handleAuthButtonClick();
+    });
+  });
+}
+
+// ==========================================
+// 🔒 PASSWORD SHOW/HIDE TOGGLES
+// ==========================================
+function initPasswordToggles() {
+  document.querySelectorAll('.toggle-pass-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = btn.closest('.pass-wrapper')?.querySelector('input');
+      if (!input) return;
+      const isText = input.type === 'text';
+      input.type    = isText ? 'password' : 'text';
+      btn.innerHTML = isText
+        ? '<i class="ph ph-eye"></i>'
+        : '<i class="ph ph-eye-slash"></i>';
+    });
+  });
+}
+
+// ==========================================
+// 🔑 PASSWORD STRENGTH METER
+// ==========================================
+function initPasswordStrength() {
+  const input    = document.getElementById('reg-password');
+  const wrapper  = document.getElementById('password-strength');
+  const label    = document.getElementById('strength-label');
+  const barsEl   = wrapper?.querySelectorAll('.str-bar');
+  if (!input || !wrapper || !barsEl) return;
+
+  input.addEventListener('input', () => {
+    const val   = input.value;
+    const score = calcPasswordStrength(val);
+    const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e'];
+    const labels = {
+      en: ['', 'Weak', 'Fair', 'Good', 'Strong'],
+      ar: ['', 'ضعيفة', 'مقبولة', 'جيدة', 'قوية']
+    };
+    barsEl.forEach((bar, i) => {
+      bar.style.background = i < score ? colors[score - 1] : 'var(--border-color)';
+    });
+    if (label) {
+      label.textContent  = val.length ? labels[state.lang][score] : '';
+      label.style.color  = score > 0 ? colors[score - 1] : 'var(--text-muted)';
+    }
+  });
+}
+
+function calcPasswordStrength(val) {
+  if (!val || val.length < 6) return 1;
+  let score = 1;
+  if (val.length >= 8)                     score++;
+  if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val))           score++;
+  return Math.min(score, 4);
+}
+
+// ==========================================
 // 🏠 4.1 RESET TO HOME
 // ==========================================
 function resetToHome() {
   state.currentView  = 'home';
   state.activeSearch = '';
+  state.activeCategory = null;
 
   const hero = document.getElementById('hero-section');
   const cats = document.getElementById('categories-container');
@@ -354,6 +498,10 @@ function resetToHome() {
     sectionTitle.setAttribute('data-i18n', 'trending');
     sectionTitle.textContent = translations[state.lang].trending;
   }
+
+  // Mobile bottom nav — home active
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.mob-nav-btn[data-target="home"]')?.classList.add('active');
 
   renderListings();
 }
@@ -404,7 +552,7 @@ function initSmartSearch() {
 
     if (wilayas.length > 0) {
       html += wilayas.map(w => `
-        <div class="search-item" onclick="selectWilaya('${w.ar}', '${w.en}')">
+        <div class="search-item" onclick="selectWilaya('${w.ar.replace(/'/g, "\\'")}', '${w.en.replace(/'/g, "\\'")}')">
           <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
           <div class="search-item-info">
             <span class="search-item-title">${state.lang === 'en' ? w.en : w.ar}</span>
@@ -551,12 +699,10 @@ function initSmartSearch() {
   function filterAndRender(enName, arName) {
     const enLow  = enName ? enName.toLowerCase() : '';
     const arTrim = arName || '';
-
     const filtered = state.liveProperties.filter(p =>
       (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
       (p.location_ar && p.location_ar.includes(arTrim))
     );
-
     renderListings(filtered);
     document.getElementById('listings-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -564,13 +710,11 @@ function initSmartSearch() {
 
 // ==========================================
 // 🔥 5. جلب العقارات من Firestore
-// ✅ Firestore-First: Skeleton → Firestore → Fallback Static
 // ==========================================
 async function loadPropertiesFromFirestore() {
   const container = document.getElementById('listings-grid');
   if (!container) return;
 
-  // ✅ خطوة 1: عرض Skeleton متحرك بدلاً من العقارات القديمة
   container.innerHTML = `
     <div class="card-skeleton"></div>
     <div class="card-skeleton"></div>
@@ -578,7 +722,6 @@ async function loadPropertiesFromFirestore() {
     <div class="card-skeleton"></div>
   `;
 
-  // ✅ خطوة 2: جلب Firestore مباشرة
   try {
     const snapshot = await db.collection('properties')
       .where('visible', '==', true)
@@ -610,16 +753,13 @@ async function loadPropertiesFromFirestore() {
         };
       });
     } else {
-      // ✅ Firestore فارغ — fallback للـ Static
       state.liveProperties = [...properties];
     }
   } catch (err) {
     console.error('Firestore error:', err);
-    // ✅ فشل الاتصال — fallback للـ Static
     state.liveProperties = [...properties];
   }
 
-  // ✅ خطوة 3: ارسم العقارات الحقيقية (Firestore أو Static)
   renderListings();
 }
 
@@ -645,7 +785,10 @@ function applyInitialState() {
   updateLogo();
   htmlEl.setAttribute('dir',  state.lang === 'en' ? 'ltr' : 'rtl');
   htmlEl.setAttribute('lang', state.lang);
+
+  // ✅ FIX: langBtn يُحدَّث بـ textContent فقط (لا font-size:0)
   if (langBtn) langBtn.textContent = state.lang === 'en' ? 'العربية' : 'English';
+
   updateLanguageUI();
 }
 
@@ -664,7 +807,7 @@ function toggleLanguage() {
     renderCategories();
 
     if (state.activeSearch && state.currentView !== 'favorites') {
-      const val = state.activeSearch.toLowerCase();
+      const val      = state.activeSearch.toLowerCase();
       const filtered = state.liveProperties.filter(p =>
         (p.title_en    && p.title_en.toLowerCase().includes(val))    ||
         (p.title_ar    && p.title_ar.includes(state.activeSearch))   ||
@@ -674,6 +817,23 @@ function toggleLanguage() {
       renderListings(filtered);
     } else {
       renderListings();
+    }
+
+    // تحديث قيمة حقل البحث باللغة الجديدة
+    const searchInput = document.getElementById('search-location');
+    if (searchInput && state.activeSearch) {
+      const matched = algerianWilayas.find(w =>
+        w.en.toLowerCase() === state.activeSearch.toLowerCase()
+      );
+      if (matched) {
+        searchInput.value = state.lang === 'en' ? matched.en : matched.ar;
+      }
+    }
+
+    // تحديث عنوان القسم
+    const sectionTitle = document.getElementById('section-main-title');
+    if (sectionTitle && state.currentView === 'favorites') {
+      sectionTitle.textContent = translations[state.lang].my_favorites;
     }
   }
 
@@ -690,11 +850,9 @@ function updateLanguageUI() {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key] !== undefined) el.placeholder = dict[key];
   });
-
   _updatePropertyPageTexts();
 }
 
-// ✅ دالة مساعدة: تُحدّث النصوص الثابتة في property.html عند تغيير اللغة
 function _updatePropertyPageTexts() {
   const isAr = state.lang === 'ar';
 
@@ -781,6 +939,13 @@ function toggleFavorite(e, id) {
     btn.innerHTML = `<i class="ph-fill ph-heart"></i>`;
   }
 
+  // ✅ NEW: Toast notification للمفضلة
+  showFavToast(
+    wasFav
+      ? translations[state.lang].fav_removed
+      : translations[state.lang].fav_added
+  );
+
   if (state.currentView === 'favorites') {
     renderListings();
   }
@@ -788,6 +953,113 @@ function toggleFavorite(e, id) {
 
 function goToProperty(id) {
   window.location.href = `property.html?id=${String(id)}`;
+}
+
+// ==========================================
+// 🔔 TOAST NOTIFICATIONS
+// ==========================================
+function showToast(message, type = 'info', duration = 3000) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const icons = { success: 'ph-check-circle', error: 'ph-x-circle', info: 'ph-info' };
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<i class="ph ${icons[type] || 'ph-info'}"></i><span>${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+function showFavToast(message) {
+  let el = document.getElementById('fav-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'fav-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ==========================================
+// 📋 MY BOOKINGS
+// ==========================================
+async function showMyBookings() {
+  if (!state.user) {
+    openModal();
+    return;
+  }
+
+  const modal = document.getElementById('bookings-modal');
+  if (!modal) {
+    // Fallback: نفتح alert مبسّط إذا لم يوجد modal
+    showToast(
+      state.lang === 'ar' ? 'جاري تحميل الحجوزات...' : 'Loading bookings...',
+      'info'
+    );
+    return;
+  }
+
+  modal.classList.add('active');
+  document.body.classList.add('modal-open');
+
+  const body = modal.querySelector('.bookings-body') || modal.querySelector('.modal-content');
+  if (body) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:40px;">
+        <i class="ph ph-circle-notch spin" style="font-size:2rem;color:var(--primary);"></i>
+      </div>
+    `;
+  }
+
+  try {
+    const snap = await db.collection('bookings')
+      .where('userId', '==', state.user.uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (snap.empty) {
+      if (body) body.innerHTML = `
+        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+          <i class="ph ph-calendar-x" style="font-size:3rem;display:block;margin-bottom:12px;opacity:0.4;"></i>
+          <p>${translations[state.lang].no_bookings}</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (body) {
+      body.innerHTML = snap.docs.map(doc => {
+        const b   = doc.data();
+        const isAr = state.lang === 'ar';
+        const title = isAr ? (b.title_ar || b.propertyTitle) : (b.title_en || b.propertyTitle || '');
+        return `
+          <div class="booking-card">
+            <strong>${title}</strong>
+            <span class="text-muted text-sm">
+              ${b.checkIn || ''} → ${b.checkOut || ''}
+            </span>
+            <span class="status-badge ${b.status || 'pending'}">
+              ${b.status || 'pending'}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('Bookings fetch error:', err);
+    if (body) body.innerHTML = `<p class="text-center text-muted" style="padding:24px;">Error loading bookings.</p>`;
+  }
 }
 
 // ==========================================
@@ -954,9 +1226,6 @@ function renderPropertyDetails() {
   _fillPropertyPage(prop);
 }
 
-// ==========================================
-// 🗺️ تعبئة صفحة التفاصيل + الخريطة
-// ==========================================
 function _fillPropertyPage(prop) {
   const dict     = translations[state.lang];
   const currency = state.lang === 'en' ? 'DZD' : 'د.ج';
@@ -1104,7 +1373,7 @@ function updateSlider() {
   }
 }
 
-// ✅ دعم Swipe اللمس في الـ Slider
+// ✅ Swipe Touch Support
 (function initSliderTouch() {
   let touchStartX = 0;
   let touchEndX   = 0;
@@ -1182,11 +1451,16 @@ async function handleLogin(e) {
     await auth.signInWithEmailAndPassword(email, password);
     closeModal();
     loginForm.reset();
+    showToast(
+      isAr ? 'تم تسجيل الدخول بنجاح!' : 'Logged in successfully!',
+      'success'
+    );
   } catch (error) {
     const msgs = {
       'auth/user-not-found':         isAr ? 'لا يوجد حساب مسجل بهذا البريد'                       : 'No account found with this email',
       'auth/wrong-password':         isAr ? 'كلمة المرور غير صحيحة'                               : 'Incorrect password',
       'auth/invalid-email':          isAr ? 'صيغة البريد الإلكتروني غير صحيحة'                    : 'Invalid email format',
+      'auth/invalid-credential':     isAr ? 'البريد أو كلمة المرور غير صحيحة'                     : 'Invalid email or password',
       'auth/too-many-requests':      isAr ? 'تم تعطيل الحساب مؤقتاً بسبب محاولات كثيرة خاطئة'    : 'Account temporarily disabled due to many failed attempts',
       'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'                            : 'Check your internet connection',
     };
@@ -1210,6 +1484,11 @@ async function handleRegister(e) {
     return;
   }
 
+  if (password.length < 6) {
+    showMessage(isAr ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters', 'error');
+    return;
+  }
+
   btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`;
   btn.disabled  = true;
 
@@ -1221,7 +1500,7 @@ async function handleRegister(e) {
     closeModal();
     registerForm.reset();
     updateUserUI();
-    showMessage(
+    showToast(
       isAr ? `مرحباً ${name}! تم إنشاء حسابك بنجاح.` : `Welcome ${name}! Your account was created.`,
       'success'
     );
@@ -1239,11 +1518,44 @@ async function handleRegister(e) {
   }
 }
 
+// ✅ NEW: Forgot Password
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const email  = document.getElementById('forgot-email')?.value.trim();
+  const btn    = forgotForm?.querySelector('button[type="submit"]');
+  const isAr   = state.lang === 'ar';
+
+  if (!email || !btn) return;
+
+  btn.innerHTML = `<i class="ph ph-circle-notch spin"></i>`;
+  btn.disabled  = true;
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showMessage(translations[state.lang].reset_sent, 'success');
+    setTimeout(() => switchForm('login'), 3000);
+  } catch (error) {
+    const msgs = {
+      'auth/user-not-found':         isAr ? 'لا يوجد حساب مسجل بهذا البريد' : 'No account found with this email',
+      'auth/invalid-email':          isAr ? 'صيغة البريد غير صحيحة'          : 'Invalid email format',
+      'auth/network-request-failed': isAr ? 'تحقق من اتصالك بالإنترنت'       : 'Check your internet connection',
+    };
+    showMessage(msgs[error.code] || error.message, 'error');
+  } finally {
+    btn.innerHTML = `<span>${isAr ? 'إرسال الرابط' : 'Send Reset Link'}</span>`;
+    btn.disabled  = false;
+  }
+}
+
 async function handleGoogleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
     await auth.signInWithPopup(provider);
     closeModal();
+    showToast(
+      state.lang === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Signed in successfully!',
+      'success'
+    );
   } catch (error) {
     if (error.code === 'auth/popup-closed-by-user') return;
     console.error('Google Auth Error:', error);
@@ -1259,9 +1571,10 @@ async function handleGoogleLogin() {
 function handleLogout() {
   auth.signOut().then(() => {
     if (profileDropdown) profileDropdown.classList.remove('active');
-    state.currentView  = 'home';
-    state.activeSearch = '';
-    state.favorites    = [];
+    state.currentView    = 'home';
+    state.activeSearch   = '';
+    state.favorites      = [];
+    state.activeCategory = null;
 
     if (document.getElementById('listings-grid')) {
       const heroEl = document.getElementById('hero-section');
@@ -1280,6 +1593,11 @@ function handleLogout() {
       }
       renderListings();
     }
+
+    showToast(
+      state.lang === 'ar' ? 'تم تسجيل الخروج' : 'Logged out successfully',
+      'info'
+    );
   });
 }
 
@@ -1329,15 +1647,16 @@ function closeModal() {
 }
 
 function switchForm(type) {
-  if (!loginForm || !registerForm) return;
-  if (type === 'register') {
-    loginForm.classList.remove('active');
-    registerForm.classList.add('active');
-  } else {
-    registerForm.classList.remove('active');
-    loginForm.classList.add('active');
-  }
+  // أخفِ الكل
+  [loginForm, registerForm, forgotForm].forEach(f => f?.classList.remove('active'));
   if (authMessage) authMessage.style.display = 'none';
+
+  if (type === 'register' && registerForm) registerForm.classList.add('active');
+  else if (type === 'forgot' && forgotForm)  forgotForm.classList.add('active');
+  else if (loginForm)                         loginForm.classList.add('active');
 }
 
+// ==========================================
+// 🚀 START
+// ==========================================
 document.addEventListener('DOMContentLoaded', init);
