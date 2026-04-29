@@ -1,7 +1,7 @@
 // =========================================
 //   Advanced Booking Logic — booking.js
 //   OreBooking © 2025 | Hotel Edition
-//   Enhanced Version v5.1 — Modal/Print Fix
+//   Enhanced Version v5.2 — Property Data Resolve Fix
 // =========================================
 
 // ─── Safe Storage Helpers ───────────────────
@@ -253,6 +253,40 @@ function formatDisplayDate(str) {
     bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
     { day: "2-digit", month: "short", year: "numeric" }
   );
+}
+
+function resolvePropertyId() {
+  const params = new URLSearchParams(window.location.search);
+
+  const fromQuery =
+    params.get("id") ||
+    params.get("propertyId") ||
+    params.get("property") ||
+    params.get("pid");
+
+  if (fromQuery && String(fromQuery).trim()) return String(fromQuery).trim();
+
+  const hash = window.location.hash || "";
+  const hashMatch = hash.match(/#?(?:prop|property)[-_=]?(.+)/i);
+  if (hashMatch && hashMatch[1] && String(hashMatch[1]).trim()) {
+    return String(hashMatch[1]).trim();
+  }
+
+  const stored =
+    safeGet("selectedPropertyId") ||
+    safeGet("booking_property_id") ||
+    safeGet("last_property_id");
+
+  if (stored && String(stored).trim()) return String(stored).trim();
+
+  return null;
+}
+
+function persistPropertyId(id) {
+  if (!id) return;
+  safeSet("selectedPropertyId", String(id));
+  safeSet("booking_property_id", String(id));
+  safeSet("last_property_id", String(id));
 }
 
 function showGlobalAlert(msg, type = "error") {
@@ -676,8 +710,11 @@ function setupLangToggle() {
 
 // ─── Initialization ─────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
-  const params = new URLSearchParams(window.location.search);
-  bookingState.propertyId = params.get("id");
+  bookingState.propertyId = resolvePropertyId();
+
+  if (bookingState.propertyId) {
+    persistPropertyId(bookingState.propertyId);
+  }
 
   if (!bookingState.propertyId) {
     showGlobalAlert(t("No property selected. Redirecting…", "لم يتم تحديد عقار. جارٍ التحويل…"), "error");
@@ -746,21 +783,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ─── Load Property Data ─────────────────────
 async function loadPropertyDetails() {
   try {
-    const doc = await db.collection("properties").doc(String(bookingState.propertyId)).get();
+    if (!bookingState.propertyId) {
+      throw new Error("missing-property-id");
+    }
+
+    const docRef = db.collection("properties").doc(String(bookingState.propertyId));
+    let doc = await docRef.get();
+
+    if (!doc.exists && Number.isFinite(Number(bookingState.propertyId))) {
+      doc = await db.collection("properties").doc(Number(bookingState.propertyId).toString()).get();
+    }
+
     if (!doc.exists) throw new Error("not-found");
 
-    const p = doc.data();
+    const raw = doc.data() || {};
+    const p = {
+      ...raw,
+      id: raw.id || doc.id,
+      docId: doc.id
+    };
+
     bookingState.property = p;
-    bookingState.basePrice = Number(p.price || 0);
+    bookingState.propertyId = p.id || p.docId || bookingState.propertyId;
+    persistPropertyId(bookingState.propertyId);
+
+    bookingState.basePrice = Number(p.price || p.basePrice || p.pricePerNight || 0);
     bookingState.minNights = Number(p.minNights || 1);
     bookingState.maxGuests = Number(p.maxGuests || 10);
     bookingState.maxRooms = Number(p.maxRooms || 5);
 
     const isAr = bookingState.lang === "ar";
-    const title = isAr ? (p.titleAr || p.titleEn) : (p.titleEn || p.titleAr);
-    const loc = isAr ? (p.locationAr || p.locationEn) : (p.locationEn || p.locationAr);
+    const title = isAr ? (p.titleAr || p.title || p.titleEn) : (p.titleEn || p.title || p.titleAr);
+    const loc = isAr ? (p.locationAr || p.location || p.locationEn) : (p.locationEn || p.location || p.locationAr);
     const curr = isAr ? "د.ج" : "DZD";
-    const type = isAr ? (p.typeAr || p.type || "") : (p.type || "");
+    const type = isAr ? (p.typeAr || p.type || "") : (p.type || p.typeEn || "");
+    const imageSrc =
+      p.imageUrl ||
+      p.mainImage ||
+      p.thumbnail ||
+      (Array.isArray(p.images) ? p.images[0] : "") ||
+      "images/placeholder.jpg";
 
     const setTxt = (id, val) => {
       const el = document.getElementById(id);
@@ -773,13 +835,18 @@ async function loadPropertyDetails() {
     const locEl = document.getElementById("sum-loc");
     if (locEl) locEl.innerHTML = `<i class="ph ph-map-pin" aria-hidden="true"></i><span>${loc || ""}</span>`;
 
-    const imgEl = document.getElementById("sum-img") || els.propMiniImg;
-    if (imgEl) {
-      const src = p.imageUrl || (Array.isArray(p.images) ? p.images[0] : "") || "images/placeholder.jpg";
-      imgEl.src = src;
-      imgEl.alt = title || "Property";
-      imgEl.onerror = () => { imgEl.src = "images/placeholder.jpg"; };
-      imgEl.classList.remove("skeleton");
+    const sumImgEl = document.getElementById("sum-img");
+    if (sumImgEl) {
+      sumImgEl.src = imageSrc;
+      sumImgEl.alt = title || "Property";
+      sumImgEl.onerror = () => { sumImgEl.src = "images/placeholder.jpg"; };
+      sumImgEl.classList.remove("skeleton");
+    }
+
+    if (els.propMiniImg) {
+      els.propMiniImg.src = imageSrc;
+      els.propMiniImg.alt = title || "Property";
+      els.propMiniImg.onerror = () => { els.propMiniImg.src = "images/placeholder.jpg"; };
     }
 
     if (els.propMiniTitle) els.propMiniTitle.textContent = title || "—";
@@ -845,6 +912,7 @@ function handleError(err, context = "") {
 
   if (err?.code === "storage/unauthorized") msg = t("Upload failed: no permission.", "فشل الرفع: غير مصرّح.");
   else if (err?.code === "permission-denied") msg = t("Permission denied. Please log in.", "تم رفض الإذن. يرجى تسجيل الدخول.");
+  else if (err?.message === "missing-property-id") msg = t("Property ID is missing.", "معرّف العقار مفقود.");
   else if (String(err?.message || "").includes("NaN")) msg = t("Invalid number in form.", "رقم غير صحيح في النموذج.");
   else if (err?.message === "not-found") msg = t("Property not found.", "العقار غير موجود.");
   else if (err?.message) msg += ` (${err.message})`;
@@ -1495,8 +1563,8 @@ async function submitBooking() {
 
     const payload = {
       propertyId: String(bookingState.propertyId),
-      propertyTitleEn: bookingState.property?.titleEn || "",
-      propertyTitleAr: bookingState.property?.titleAr || "",
+      propertyTitleEn: bookingState.property?.titleEn || bookingState.property?.title || "",
+      propertyTitleAr: bookingState.property?.titleAr || bookingState.property?.title || "",
       refId,
       userId: currentUser ? currentUser.uid : null,
       guestName: els.gName?.value?.trim() || "",
@@ -1732,7 +1800,7 @@ function setupEventListeners() {
       try {
         await navigator.share({
           title: t("My OreBooking Reservation", "حجزي في OreBooking"),
-          text: `${t("My booking reference is:", "رقم مرجع حجزي هو:")} ${ref}\n${t("Hotel:", "الفندق:")} ${bookingState.property?.titleEn || bookingState.property?.titleAr || "Hotel"}`,
+          text: `${t("My booking reference is:", "رقم مرجع حجزي هو:")} ${ref}\n${t("Hotel:", "الفندق:")} ${bookingState.property?.titleEn || bookingState.property?.titleAr || bookingState.property?.title || "Hotel"}`,
           url: window.location.href
         });
       } catch (_) {}
@@ -1881,4 +1949,24 @@ const TRANSLATIONS = {
     "lbl-who-coming": "الإشغال والغرف",
     "lbl-rooms-title": "غرف",
     "lbl-rooms-sub": "الحد الأقصى 5",
-   
+    "lbl-adults-title": "بالغون",
+    "lbl-adults-sub": "الأعمار 18+",
+    "lbl-children-title": "أطفال",
+    "lbl-children-sub": "0 - 17",
+    "btn-next": "التالي",
+    "btn-prev": "السابق",
+    "btn-confirm": "تأكيد الحجز"
+  },
+  en: {}
+};
+
+function translateBookingPage() {
+  const dict = TRANSLATIONS[bookingState.lang] || {};
+  document.documentElement.lang = bookingState.lang;
+  document.documentElement.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
+
+  Object.entries(dict).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  });
+}
