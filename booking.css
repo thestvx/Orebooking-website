@@ -1,7 +1,7 @@
 /* =========================================================
-   booking.css — OreBooking v5.0
+   booking.css — OreBooking v5.1
    Complete Booking Page Styles
-   Synced with booking.html success modal + receipt layout
+   Synced with updated booking.html success modal controls
    ========================================================= */
 
 /* ═══════════════════════════════════════════
@@ -402,6 +402,29 @@ html[dir="rtl"] .summary-row {
   background: var(--bg, #f8fafc);
   color: var(--text, #0f172a);
   border-color: var(--text-muted, #64748b);
+}
+
+/* Success modal specific buttons */
+#btn-done,
+#btn-print-receipt,
+#btn-copy-ref,
+#btn-close-success {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#btn-done {
+  min-width: 140px;
+}
+
+#btn-print-receipt,
+#btn-copy-ref {
+  min-width: 160px;
+}
+
+#btn-print-receipt i,
+#btn-copy-ref i,
+#btn-done i {
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -866,13 +889,14 @@ html[dir="rtl"] #bed-config-select {
 .addon-card.selected {
   border-color: var(--primary, #435abf);
   box-shadow: 0 0 0 3px rgba(67,90,191,0.15);
-  background: rgba(67,90,191,0.04);
-  transform: translateY(-1px);
+  backgrcted {
+  border-color: var(--primary, #435abf);
+  box-sh);
 }
 
-.addon-card input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
+.addon-card icted {
+  border-color: var(--primary, #435abf);
+  box-sh 0;
   pointer-events: none;
   width: 0;
   height: 0;
@@ -912,12 +936,9 @@ html[dir="rtl"] #bed-config-select {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text, #0f172a);
-  line-height: 1.3;
-}
-
-.addon-desc {
-  font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  line-hected {
+  border-color: var(--primary, #435abf);
+  box-shr: var(--text-muted, #64748b);
   line-height: 1.45;
 }
 
@@ -974,12 +995,9 @@ html[dir="rtl"] #bed-config-select {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text-muted, #64748b);
-  margin-bottom: 14px;
-}
-
-.payment-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  macted {
+  border-color: var(--primary, #435abf);
+  box-sh grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
 
@@ -1076,12 +1094,14 @@ html[dir="rtl"] #bed-config-select {
 }
 
 .file-upload-wrapper.drag-over,
-.file-upload-wrapper.drag-over .file-upload-label {
+.file-upload-wrapper.drag-over .file-upload-label,
+.file-upload-wrapper.drag-over label {
   border-color: var(--primary, #435abf) !important;
   background: rgba(67,90,191,0.06) !important;
 }
 
-.file-upload-label {
+.file-upload-label,
+.file-upload-wrapper label {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1097,9 +1117,11 @@ html[dir="rtl"] #bed-config-select {
   transition: border-color 0.2s, background 0.2s;
   text-align: center;
   min-height: 100px;
+  width: 100%;
 }
 
-.file-upload-label:hover {
+.file-upload-label:hover,
+.file-upload-wrapper label:hover {
   border-color: var(--primary, #435abf);
   background: rgba(67,90,191,0.04);
 }
@@ -1235,10 +1257,9 @@ html[dir="rtl"] .input-icon {
 }
 
 .input-with-icon input,
-.input-with-icon select {
-  width: 100%;
-  height: 50px;
-  padding-inline-start: 40px;
+.input-with-icon sected {
+  border-color: var(--primary, #435abf);
+  box-shtart: 40px;
   padding-inline-end: 14px;
   border: none;
   background: transparent;
@@ -1468,9 +1489,9 @@ html[dir="rtl"] .char-counter {
 }
 
 .points-icon {
-  background: var(--accent, #8b5cf6);
-  color: #fff;
-  width: 40px;
+  backgrcted {
+  border-color: var(--primary, #435abf);
+  box-shpx;
   height: 40px;
   min-width: 40px;
   border-radius: 50%;
@@ -1637,10 +1658,9 @@ html[dir="rtl"] .char-counter {
   color: var(--text-muted, #64748b);
 }
 
-.summary-row.total {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1.5px dashed var(--border, #e2e8f0);
+.summary-row.totcted {
+  border-color: var(--primary, #435abf);
+  box-shop: 1.5px dashed var(--border, #e2e8f0);
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--primary, #435abf);
@@ -1735,10 +1755,9 @@ html[dir="rtl"] .char-counter {
   cursor: pointer;
   color: inherit;
   transition: background .2s ease, transform .2s ease;
-}
-
-.success-close-btn:hover {
-  background: rgba(148, 163, 184, 0.25);
+  z-icted {
+  border-color: var(--primary, #435abf);
+  box-sha(148, 163, 184, 0.25);
   transform: scale(1.04);
 }
 
@@ -1799,9 +1818,9 @@ html[dir="rtl"] .char-counter {
   background: linear-gradient(180deg, rgba(248,250,252,.96), rgba(255,255,255,1));
 }
 
-.receipt-head {
-  display: flex;
-  justify-content: space-between;
+.cted {
+  border-color: var(--primary, #435abf);
+  box-sh-between;
   gap: 16px;
   align-items: start;
   padding-bottom: 16px;
@@ -1874,10 +1893,9 @@ html[dir="rtl"] .char-counter {
   background: rgba(148, 163, 184, 0.08);
 }
 
-.receipt-item span {
-  display: block;
-  font-size: .82rem;
-  color: #64748b;
+.receipt-item cted {
+  border-color: var(--primary, #435abf);
+  box-sh64748b;
   margin-bottom: 6px;
 }
 
@@ -1919,46 +1937,39 @@ html[dir="rtl"] .char-counter {
   background: rgba(148, 163, 184, 0.08);
 }
 
-.receipt-notes-box span {
-  display: block;
-  font-size: .82rem;
-  color: #64748b;
+.receipt-notes-box cted {
+  border-color: var(--primary, #435abf);
+  box-sh64748b;
   margin-bottom: 8px;
 }
 
 .receipt-notes-box p {
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: 1.7;
-}
-
+  macted {
+  border-color: var(--primary, #435abf);
+  box-sh
 .receipt-foot {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px dashed rgba(148, 163, 184, 0.35);
-  font-size: .9rem;
-  color: #64748b;
-}
-
-.success-modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  border-top: 1px dashed rgba(148, 163, 184, cted {
+  border-color: var(--primary, #435abf);
+  box-shabf);
+  box-sh {
+  border-color: var(--primary, #435abf);
+  box-shflex-end;
   flex-wrap: wrap;
   margin-top: 20px;
 }
 
-/* ═══════════════════════════════════════════
-   Copy Toast
-═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════cted {
+  border-color: var(--primary, #435abf);
+  box-sh══════ */
 #copy-toast {
-  position: fixed;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
+  posicted {
+  border-color: var(--primary, #435abf);
+  box-shranslateX(-50%);
   background: var(--text, #0f172a);
   color: #fff;
   padding: 10px 22px;
@@ -1970,12 +1981,11 @@ html[dir="rtl"] .char-counter {
   gap: 8px;
   z-index: 9000;
   box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  animation: bk-toastIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-#copy-toast i {
+  animacted {
+  border-color: var(--primary, #435abf);
+  box-shr: var(--primary, #435abf);
+  box-sh(--primary, #435abf);
+  box-sh
   color: var(--success, #10b981);
   font-size: 1rem;
 }
@@ -1983,10 +1993,9 @@ html[dir="rtl"] .char-counter {
 /* ═══════════════════════════════════════════
    Skeleton
 ═══════════════════════════════════════════ */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--border, #e2e8f0) 25%,
+.skelcted {
+  border-color: var(--primary, #435abf);
+  box-sh(--border, #e2e8f0) 25%,
     rgba(255,255,255,0.6) 50%,
     var(--border, #e2e8f0) 75%
   );
@@ -2002,12 +2011,9 @@ html[dir="rtl"] .char-counter {
 }
 
 .skeleton-image {
-  height: 72px;
-  width: 90px;
-  border-radius: 10px;
-}
-
-/* ═══════════════════════════════════════════
+  hected {
+  border-color: var(--primary, #435abf);
+  box-sh═══════════════════════════════════════════
    Utilities
 ═══════════════════════════════════════════ */
 .d-none { display: none !important; }
@@ -2032,11 +2038,9 @@ html[dir="rtl"] .char-counter {
 
 .dark .step-actions {
   background: rgba(255,255,255,0.03);
-  border-color: var(--border);
-}
-
-.dark .addon-card {
-  background: rgba(255,255,255,0.03);
+  border-ccted {
+  border-color: var(--primary, #435abf);
+  box-sh: rgba(255,255,255,0.03);
 }
 
 .dark #transfer-details {
@@ -2103,11 +2107,9 @@ html[dir="rtl"] .char-counter {
 
 .dark .calendar-grid {
   background: rgba(255,255,255,0.03);
-  border-color: var(--border);
-}
-
-.dark .cal-cell {
-  color: var(--text);
+  border-ccted {
+  border-color: var(--primary, #435abf);
+  box-sh-text);
 }
 
 .dark .cal-cell.available:hover {
@@ -2205,6 +2207,13 @@ html[dir="rtl"] .char-counter {
     padding: 16px;
     border-radius: 18px;
   }
+
+  #btn-done,
+  #btn-print-receipt,
+  #btn-copy-ref {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2251,9 +2260,9 @@ html[dir="rtl"] .char-counter {
   .receipt-item,
   .receipt-price-box,
   .receipt-notes-box,
-  .receipt-ref-box {
-    background: #fff !important;
-    border: 1px solid #ddd !important;
+  .receiptcted {
+  border-color: var(--primary, #435abf);
+  box-sh1px solid #ddd !important;
   }
 
   @page {
