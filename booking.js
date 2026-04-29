@@ -1,8 +1,24 @@
 // =========================================
 //   Advanced Booking Logic — booking.js
 //   OreBooking © 2025 | Hotel Edition
-//   Enhanced Version v4.2 — Full Fixed
+//   Enhanced Version v5.0 — Full Fixed
 // =========================================
+
+// ─── Safe Storage Helpers ───────────────────
+function safeGet(key, fallback = null) {
+  try {
+    const v = window.localStorage.getItem(key);
+    return v ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeSet(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (_) {}
+}
 
 // ─── Firebase Config ───────────────────────
 const firebaseConfig = {
@@ -83,6 +99,7 @@ const STATIC_REVIEWS = [
 
 // ─── Booking State ─────────────────────────
 let currentUser = null;
+let lastSuccessfulBooking = null;
 
 const bookingState = {
   propertyId: null,
@@ -117,7 +134,7 @@ const bookingState = {
   },
   bedConfig: "double",
   purposeOfVisit: "leisure",
-  lang: localStorage.getItem("ore_lang") || "en",
+  lang: safeGet("ore_lang", "en") || "en",
   nationality: "",
   arrivalTime: "",
   specialRequests: ""
@@ -202,7 +219,13 @@ const els = {
   sbNightsCount: document.getElementById("sb-nights-count"),
   sbNightPrice: document.getElementById("sb-night-price"),
   sbBaseTotal: document.getElementById("sb-base-total"),
-  sbFinalTotal: document.getElementById("sb-final-total")
+  sbFinalTotal: document.getElementById("sb-final-total"),
+
+  successModal: document.getElementById("booking-success-modal"),
+  btnCloseSuccess: document.getElementById("btn-close-success"),
+  btnCloseSuccess2: document.getElementById("btn-close-success-2"),
+  btnPrintReceipt: document.getElementById("btn-print-receipt"),
+  btnDownloadReceipt: document.getElementById("btn-download-receipt")
 };
 
 // ─── Calendar State ────────────────────────
@@ -225,7 +248,7 @@ function parseLocalDate(str) {
 function formatDisplayDate(str) {
   if (!str) return t("Add date", "أضف تاريخ");
   const d = parseLocalDate(str);
-  if (!d) return t("Add date", "أضف تاريخ");
+  if (!d || Number.isNaN(d.getTime())) return t("Add date", "أضف تاريخ");
   return d.toLocaleDateString(
     bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
     { day: "2-digit", month: "short", year: "numeric" }
@@ -268,14 +291,16 @@ function setButtonLoading(btn, loading) {
 
   if (loading) {
     if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-circle-notch ph-spin" aria-hidden="true"></i> ${t("Processing…", "جارٍ المعالجة…")}`;
+    btn.classList.add("loading");
+    btn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${t("Processing…", "جارٍ المعالجة…")}</span>`;
   } else {
+    btn.classList.remove("loading");
     btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
   }
 }
 
 function applyStoredTheme() {
-  const theme = localStorage.getItem("ore_theme");
+  const theme = safeGet("ore_theme");
   const icon = document.querySelector("#theme-toggle i");
   if (theme === "dark") {
     document.body.classList.add("dark");
@@ -311,6 +336,48 @@ function showCopyToast(msg) {
   if (txt) txt.textContent = msg || t("Copied!", "تم النسخ!");
   toast.classList.remove("d-none");
   setTimeout(() => toast.classList.add("d-none"), 2200);
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function escapeHtml(str = "") {
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+function getSelectedPaymentMethod() {
+  return document.querySelector('input[name="payment_method"]:checked')?.value || "";
+}
+
+function getPaymentMethodLabel(method) {
+  return method === "transfer"
+    ? t("Bank Transfer", "تحويل بنكي")
+    : t("Pay at Property", "الدفع في الفندق");
+}
+
+function buildAddonSummaryText() {
+  const items = [];
+  const ad = bookingState.addons;
+  if (ad.restaurant) {
+    const map = {
+      breakfast: t("Restaurant - Breakfast", "المطعم - إفطار"),
+      halfboard: t("Restaurant - Half Board", "المطعم - نصف إقامة"),
+      fullboard: t("Restaurant - Full Board", "المطعم - إقامة كاملة")
+    };
+    items.push(map[ad.restaurantPlan] || t("Restaurant", "المطعم"));
+  }
+  if (ad.wifi) items.push(t("WiFi", "واي فاي"));
+  if (ad.parking) items.push(t("Parking", "موقف سيارات"));
+  if (ad.airportTransfer) items.push(t("Airport Transfer", "نقل المطار"));
+  if (ad.spa) items.push(t("Spa", "السبا"));
+  if (ad.lateCheckout) items.push(t("Late Checkout", "مغادرة متأخرة"));
+  if (ad.extraBed) items.push(t("Extra Bed", "سرير إضافي"));
+  if (ad.events) items.push(t("Events", "فعاليات"));
+  return items.length ? items.join(" • ") : t("None", "لا شيء");
 }
 
 // ─── Calculate Add-ons Total ────────────────
@@ -543,7 +610,7 @@ function renderReviews() {
   if (reviewsCount) reviewsCount.textContent = `(${reviews.length} ${t("reviews", "تقييم")})`;
 }
 
-// ─── Theme Toggle ────────────────────────────
+// ─── Theme Toggle ───────────────────────────
 function setupThemeToggle() {
   const btn = document.getElementById("theme-toggle");
   if (!btn) return;
@@ -552,7 +619,7 @@ function setupThemeToggle() {
     document.documentElement.classList.toggle("dark", isDark);
     const icon = btn.querySelector("i");
     if (icon) icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
-    localStorage.setItem("ore_theme", isDark ? "dark" : "light");
+    safeSet("ore_theme", isDark ? "dark" : "light");
   });
 }
 
@@ -562,7 +629,7 @@ function setupLangToggle() {
   if (!btn) return;
   btn.addEventListener("click", () => {
     bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
-    localStorage.setItem("ore_lang", bookingState.lang);
+    safeSet("ore_lang", bookingState.lang);
     translateBookingPage();
     renderCalendar();
     renderAddonsPanel();
@@ -570,6 +637,7 @@ function setupLangToggle() {
     updateBookingSummary();
     updateOccupancyCounters();
     renderChildAges();
+    updatePaymentUI();
 
     const span = btn.querySelector("span");
     if (span) span.textContent = bookingState.lang === "ar" ? "English" : "العربية";
@@ -628,11 +696,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderCalendar();
   renderReviews();
 
+  const initialHash = window.location.hash;
+  if (/^#step-[1-4]$/.test(initialHash)) {
+    const step = parseInt(initialHash.replace("#step-", ""), 10);
+    if (step >= 1 && step <= 4) goToStep(step, true);
+  } else {
+    goToStep(1, true);
+  }
+
   window.addEventListener("popstate", () => {
     const hash = window.location.hash;
     if (hash.startsWith("#step-")) {
       const step = parseInt(hash.replace("#step-", ""), 10);
-      if (step >= 1 && step <= 4) goToStep(step);
+      if (step >= 1 && step <= 4) goToStep(step, true);
     }
   });
 });
@@ -737,11 +813,11 @@ function handleError(err, context = "") {
   console.error(context, err);
   let msg = t("Unexpected error. Please try again.", "خطأ غير متوقع. يرجى المحاولة مجدداً.");
 
-  if (err.code === "storage/unauthorized") msg = t("Upload failed: no permission.", "فشل الرفع: غير مصرّح.");
-  else if (err.code === "permission-denied") msg = t("Permission denied. Please log in.", "تم رفض الإذن. يرجى تسجيل الدخول.");
-  else if (err.message?.includes("NaN")) msg = t("Invalid number in form.", "رقم غير صحيح في النموذج.");
-  else if (err.message === "not-found") msg = t("Property not found.", "العقار غير موجود.");
-  else if (err.message) msg += ` (${err.message})`;
+  if (err?.code === "storage/unauthorized") msg = t("Upload failed: no permission.", "فشل الرفع: غير مصرّح.");
+  else if (err?.code === "permission-denied") msg = t("Permission denied. Please log in.", "تم رفض الإذن. يرجى تسجيل الدخول.");
+  else if (String(err?.message || "").includes("NaN")) msg = t("Invalid number in form.", "رقم غير صحيح في النموذج.");
+  else if (err?.message === "not-found") msg = t("Property not found.", "العقار غير موجود.");
+  else if (err?.message) msg += ` (${err.message})`;
 
   showGlobalAlert(msg, "error");
   setButtonLoading(els.btnConfirm, false);
@@ -995,10 +1071,6 @@ function updateBookingSummary() {
 
   const locale = isAr ? "ar-DZ" : "en-GB";
   const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
-  const set = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
 
   const bedLabel = {
     double: t("Double", "مزدوج"),
@@ -1007,21 +1079,22 @@ function updateBookingSummary() {
     single: t("Single", "فردي")
   }[bookingState.bedConfig] || "";
 
-  set("rev-val-dates", `${parseLocalDate(bookingState.checkIn)?.toLocaleDateString(locale, fmtOpts) || ""} → ${parseLocalDate(bookingState.checkOut)?.toLocaleDateString(locale, fmtOpts) || ""}`);
-  set("rev-val-nights", `${bookingState.nights} ${t("nights", "ليالٍ")}`);
-  set("rev-val-rooms", `${bookingState.rooms} ${t("room", "غرفة")}${bookingState.rooms > 1 && !isAr ? "s" : ""} · ${bedLabel}`);
-  set("rev-val-guests", `${bookingState.adults} ${t("adults", "بالغين")}${bookingState.children > 0 ? ` + ${bookingState.children} ${t("children", "أطفال")}` : ""}`);
-  set("rev-val-addons", bookingState.addonsTotal > 0 ? `${bookingState.addonsTotal.toLocaleString()} ${curr}` : t("None", "لا شيء"));
-  set("rev-val-base", `${subtotal.toLocaleString()} ${curr}`);
-  set("rev-val-fees", `${bookingState.fee.toLocaleString()} ${curr}`);
-  set("rev-val-total", `${bookingState.totalPrice.toLocaleString()} ${curr}`);
+  setText("rev-val-dates", `${parseLocalDate(bookingState.checkIn)?.toLocaleDateString(locale, fmtOpts) || ""} → ${parseLocalDate(bookingState.checkOut)?.toLocaleDateString(locale, fmtOpts) || ""}`);
+  setText("rev-val-nights", `${bookingState.nights} ${t("nights", "ليالٍ")}`);
+  setText("rev-val-rooms", `${bookingState.rooms} ${t("room", "غرفة")}${bookingState.rooms > 1 && !isAr ? "s" : ""} · ${bedLabel}`);
+  setText("rev-val-guests", `${bookingState.adults} ${t("adults", "بالغين")}${bookingState.children > 0 ? ` + ${bookingState.children} ${t("children", "أطفال")}` : ""}`);
+  setText("rev-val-addons", bookingState.addonsTotal > 0 ? `${bookingState.addonsTotal.toLocaleString()} ${curr}` : t("None", "لا شيء"));
+  setText("rev-val-base", `${subtotal.toLocaleString()} ${curr}`);
+  setText("rev-val-fees", `${bookingState.fee.toLocaleString()} ${curr}`);
+  setText("rev-val-total", `${bookingState.totalPrice.toLocaleString()} ${curr}`);
 
-  set("final-name", els.gName?.value || "—");
+  setText("final-name", els.gName?.value || "—");
   const ciLabel = parseLocalDate(bookingState.checkIn)?.toLocaleDateString(locale, fmtOpts) || bookingState.checkIn;
   const coLabel = parseLocalDate(bookingState.checkOut)?.toLocaleDateString(locale, fmtOpts) || bookingState.checkOut;
-  set("final-dates", `${ciLabel} → ${coLabel}`);
-  set("final-total", `${bookingState.totalPrice.toLocaleString()} ${curr}`);
-  set("earned-points-preview", Math.floor(bookingState.totalPrice / 100).toString());
+  setText("final-dates", `${ciLabel} → ${coLabel}`);
+  setText("final-total", `${bookingState.totalPrice.toLocaleString()} ${curr}`);
+  setText("earned-points-preview", Math.floor(bookingState.totalPrice / 100).toString());
+  setText("final-payment", getPaymentMethodLabel(getSelectedPaymentMethod() || "cash"));
 }
 
 function renderSidebarPlaceholder() {
@@ -1044,7 +1117,7 @@ function updateStepConnectors(activeTo) {
   });
 }
 
-function goToStep(stepNum) {
+function goToStep(stepNum, skipHistory = false) {
   hideGlobalAlert();
 
   [1, 2, 3, 4].forEach(n => {
@@ -1065,7 +1138,7 @@ function goToStep(stepNum) {
   const navH = document.querySelector(".inner-nav")?.offsetHeight || 80;
   window.scrollTo({ top: navH - 10, behavior: "smooth" });
 
-  history.pushState(null, null, `#step-${stepNum}`);
+  if (!skipHistory) history.pushState(null, null, `#step-${stepNum}`);
 
   if (stepNum === 4) populateFinalSummary();
 }
@@ -1076,21 +1149,18 @@ function populateFinalSummary() {
   const curr = isAr ? "د.ج" : "DZD";
   const locale = isAr ? "ar-DZ" : "en-GB";
   const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
-  const set = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
 
-  set("final-name", els.gName?.value?.trim() || "—");
+  setText("final-name", els.gName?.value?.trim() || "—");
 
   const ci = parseLocalDate(bookingState.checkIn)?.toLocaleDateString(locale, fmtOpts) || bookingState.checkIn || "";
   const co = parseLocalDate(bookingState.checkOut)?.toLocaleDateString(locale, fmtOpts) || bookingState.checkOut || "";
-  set("final-dates", `${ci} → ${co}`);
+  setText("final-dates", `${ci} → ${co}`);
 
-  const method = document.querySelector('input[name="payment_method"]:checked')?.value || "cash";
-  set("final-payment", method === "transfer" ? t("Bank Transfer", "تحويل بنكي") : t("Pay at Property", "الدفع في الفندق"));
-  set("final-total", `${bookingState.totalPrice.toLocaleString()} ${curr}`);
-  set("earned-points-preview", Math.floor(bookingState.totalPrice / 100).toString());
+  const method = getSelectedPaymentMethod() || "cash";
+  setText("final-payment", getPaymentMethodLabel(method));
+  setText("final-total", `${bookingState.totalPrice.toLocaleString()} ${curr}`);
+  setText("earned-points-preview", Math.floor(bookingState.totalPrice / 100).toString());
+  setText("final-addons", buildAddonSummaryText());
 }
 
 // ─── Step Validation ─────────────────────────
@@ -1115,7 +1185,7 @@ function validateStep1() {
 }
 
 function validateStep2() {
-  const method = document.querySelector('input[name="payment_method"]:checked')?.value;
+  const method = getSelectedPaymentMethod();
   if (!method) {
     showGlobalAlert(t("Please select a payment method.", "يرجى اختيار طريقة الدفع."));
     return false;
@@ -1159,27 +1229,224 @@ function validateStep3() {
 
 // ─── Upload Helper ───────────────────────────
 async function uploadReceipt(file, refId) {
-  const ext = file.name.split(".").pop();
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `receipts/${refId}_${Date.now()}.${ext}`;
   const snap = await storage.ref(path).put(file);
   return await snap.ref.getDownloadURL();
 }
 
+// ─── Success Modal Helpers ──────────────────
+function populateSuccessModal(payload) {
+  if (!payload) return;
+
+  const isAr = bookingState.lang === "ar";
+  const curr = isAr ? "د.ج" : "DZD";
+  const locale = isAr ? "ar-DZ" : "en-GB";
+  const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
+
+  const ci = parseLocalDate(payload.checkIn)?.toLocaleDateString(locale, fmtOpts) || payload.checkIn;
+  const co = parseLocalDate(payload.checkOut)?.toLocaleDateString(locale, fmtOpts) || payload.checkOut;
+
+  setText("succ-ref", payload.refId || "—");
+  setText("succ-name", payload.guestName || "—");
+  setText("succ-dates", `${ci} → ${co}`);
+  setText("succ-guests", `${payload.adults} ${t("adults", "بالغين")} · ${payload.rooms} ${t("room", "غرفة")}`);
+  setText("succ-total", `${Number(payload.totalPrice || 0).toLocaleString()} ${curr}`);
+  setText("succ-email", payload.guestEmail || "—");
+  setText("succ-phone", payload.guestPhone || "—");
+
+  const badge = document.getElementById("succ-pay-badge");
+  if (badge) {
+    if (payload.paymentMethod === "transfer") {
+      badge.className = "success-pay-badge transfer";
+      badge.innerHTML = `<i class="ph-fill ph-bank" aria-hidden="true"></i> ${t("Awaiting transfer verification", "بانتظار التحقق من التحويل")}`;
+    } else {
+      badge.className = "success-pay-badge cash";
+      badge.innerHTML = `<i class="ph-fill ph-money" aria-hidden="true"></i> ${t("Pay at property", "الدفع في الفندق")}`;
+    }
+  }
+}
+
+function openSuccessModal() {
+  if (!els.successModal) return;
+  els.successModal.classList.remove("d-none");
+  els.successModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+function closeSuccessModal() {
+  if (!els.successModal) return;
+  els.successModal.classList.add("d-none");
+  els.successModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function printBookingReceipt() {
+  if (!lastSuccessfulBooking) {
+    showGlobalAlert(t("No booking data available to print.", "لا توجد بيانات حجز للطباعة."), "warning");
+    return;
+  }
+
+  const isAr = bookingState.lang === "ar";
+  const curr = isAr ? "د.ج" : "DZD";
+  const locale = isAr ? "ar-DZ" : "en-GB";
+  const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
+
+  const p = lastSuccessfulBooking;
+  const ci = parseLocalDate(p.checkIn)?.toLocaleDateString(locale, fmtOpts) || p.checkIn;
+  const co = parseLocalDate(p.checkOut)?.toLocaleDateString(locale, fmtOpts) || p.checkOut;
+  const hotelTitle = bookingState.property
+    ? (bookingState.lang === "ar" ? (bookingState.property.titleAr || bookingState.property.titleEn) : (bookingState.property.titleEn || bookingState.property.titleAr))
+    : "OreBooking";
+
+  const win = window.open("", "_blank", "width=960,height=720");
+  if (!win) {
+    showGlobalAlert(t("Popup blocked. Please allow popups to print.", "تم حظر النافذة المنبثقة. اسمح بها للطباعة."), "warning");
+    return;
+  }
+
+  win.document.write(`
+    <!doctype html>
+    <html lang="${isAr ? "ar" : "en"}" dir="${isAr ? "rtl" : "ltr"}">
+    <head>
+      <meta charset="utf-8" />
+      <title>${escapeHtml(t("Booking Receipt", "وصل الحجز"))} - ${escapeHtml(p.refId)}</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:32px;color:#111827;background:#fff}
+        .wrap{max-width:820px;margin:0 auto}
+        .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:2px solid #e5e7eb;padding-bottom:16px;margin-bottom:24px}
+        h1{margin:0 0 8px;font-size:28px}
+        .muted{color:#6b7280}
+        .box{border:1px solid #e5e7eb;border-radius:14px;padding:18px;margin-bottom:16px}
+        .row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px dashed #e5e7eb}
+        .row:last-child{border-bottom:none}
+        .label{color:#6b7280}
+        .value{font-weight:700}
+        .total{font-size:22px;color:#1d4ed8}
+        @media print{body{padding:0}.wrap{max-width:none}}
+      </style>
+    </head>
+    <body>
+      <div class="wrap">
+        <div class="head">
+          <div>
+            <h1>${escapeHtml(t("Booking Receipt", "وصل الحجز"))}</h1>
+            <div class="muted">${escapeHtml(hotelTitle)}</div>
+          </div>
+          <div>
+            <div class="muted">${escapeHtml(t("Reference", "المرجع"))}</div>
+            <div><strong>${escapeHtml(p.refId)}</strong></div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="row"><span class="label">${escapeHtml(t("Guest Name", "اسم النزيل"))}</span><span class="value">${escapeHtml(p.guestName)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Email", "البريد الإلكتروني"))}</span><span class="value">${escapeHtml(p.guestEmail)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Phone", "الهاتف"))}</span><span class="value">${escapeHtml(p.guestPhone)}</span></div>
+        </div>
+
+        <div class="box">
+          <div class="row"><span class="label">${escapeHtml(t("Check-in", "الوصول"))}</span><span class="value">${escapeHtml(ci)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Check-out", "المغادرة"))}</span><span class="value">${escapeHtml(co)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Nights", "الليالي"))}</span><span class="value">${escapeHtml(String(p.nights))}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Guests", "الضيوف"))}</span><span class="value">${escapeHtml(`${p.adults} ${t("adults", "بالغين")} / ${p.children} ${t("children", "أطفال")}`)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Rooms", "الغرف"))}</span><span class="value">${escapeHtml(String(p.rooms))}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Payment", "الدفع"))}</span><span class="value">${escapeHtml(getPaymentMethodLabel(p.paymentMethod))}</span></div>
+        </div>
+
+        <div class="box">
+          <div class="row"><span class="label">${escapeHtml(t("Base Price", "السعر الأساسي"))}</span><span class="value">${escapeHtml(Number((p.roomPrice || 0) * (p.nights || 0)).toLocaleString())} ${escapeHtml(curr)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Add-ons", "الإضافات"))}</span><span class="value">${escapeHtml(Number(p.addonsTotal || 0).toLocaleString())} ${escapeHtml(curr)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Fees", "الرسوم"))}</span><span class="value">${escapeHtml(Number(p.fee || 0).toLocaleString())} ${escapeHtml(curr)}</span></div>
+          <div class="row"><span class="label total">${escapeHtml(t("Total", "الإجمالي"))}</span><span class="value total">${escapeHtml(Number(p.totalPrice || 0).toLocaleString())} ${escapeHtml(curr)}</span></div>
+        </div>
+      </div>
+      <script>
+        window.onload = function() {
+          window.print();
+          setTimeout(function(){ window.close(); }, 300);
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
+
+function downloadBookingReceipt() {
+  if (!lastSuccessfulBooking) {
+    showGlobalAlert(t("No booking data available.", "لا توجد بيانات حجز متاحة."), "warning");
+    return;
+  }
+
+  const p = lastSuccessfulBooking;
+  const lines = [
+    `${t("Booking Reference", "مرجع الحجز")}: ${p.refId}`,
+    `${t("Guest Name", "اسم النزيل")}: ${p.guestName}`,
+    `${t("Email", "البريد الإلكتروني")}: ${p.guestEmail}`,
+    `${t("Phone", "الهاتف")}: ${p.guestPhone}`,
+    `${t("Check-in", "الوصول")}: ${p.checkIn}`,
+    `${t("Check-out", "المغادرة")}: ${p.checkOut}`,
+    `${t("Nights", "الليالي")}: ${p.nights}`,
+    `${t("Rooms", "الغرف")}: ${p.rooms}`,
+    `${t("Adults", "البالغون")}: ${p.adults}`,
+    `${t("Children", "الأطفال")}: ${p.children}`,
+    `${t("Payment", "الدفع")}: ${getPaymentMethodLabel(p.paymentMethod)}`,
+    `${t("Total", "الإجمالي")}: ${p.totalPrice}`
+  ].join("\n");
+
+  const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${p.refId || "booking-receipt"}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
 // ─── Submit Booking ──────────────────────────
 async function submitBooking() {
-  if (!validateStep3()) return;
+  if (!validateStep1()) {
+    goToStep(1);
+    return;
+  }
+
+  if (!validateStep2()) {
+    goToStep(2);
+    return;
+  }
+
+  if (!validateStep3()) {
+    goToStep(3);
+    return;
+  }
+
+  if (!bookingState.propertyId || !bookingState.property) {
+    showGlobalAlert(t("Property data is missing. Please reload the page.", "بيانات العقار غير موجودة. يرجى إعادة تحميل الصفحة."));
+    return;
+  }
+
+  if (bookingState.totalPrice <= 0 || bookingState.nights <= 0) {
+    showGlobalAlert(t("Booking total is invalid. Please review your dates.", "إجمالي الحجز غير صالح. يرجى مراجعة التواريخ."));
+    return;
+  }
 
   setButtonLoading(els.btnConfirm, true);
   hideGlobalAlert();
 
   try {
-    const selectedPayment = document.querySelector('input[name="payment_method"]:checked')?.value || "cash";
+    const selectedPayment = getSelectedPaymentMethod() || "cash";
     const isTransfer = selectedPayment === "transfer";
     let receiptUrl = "";
     const refId = `BK-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
-    if (isTransfer && els.receiptFile?.files[0]) {
-      receiptUrl = await uploadReceipt(els.receiptFile.files[0], refId);
+    if (isTransfer) {
+      const file = els.receiptFile?.files?.[0];
+      if (!file) {
+        throw new Error(t("Transfer receipt is required.", "إيصال التحويل مطلوب."));
+      }
+      receiptUrl = await uploadReceipt(file, refId);
     }
 
     const checkInDate = parseLocalDate(bookingState.checkIn);
@@ -1191,6 +1458,8 @@ async function submitBooking() {
 
     const payload = {
       propertyId: String(bookingState.propertyId),
+      propertyTitleEn: bookingState.property?.titleEn || "",
+      propertyTitleAr: bookingState.property?.titleAr || "",
       refId,
       userId: currentUser ? currentUser.uid : null,
       guestName: els.gName?.value?.trim() || "",
@@ -1207,7 +1476,7 @@ async function submitBooking() {
       rooms: bookingState.rooms,
       adults: bookingState.adults,
       children: bookingState.children,
-      childAges: bookingState.childAges,
+      childAges: bookingState.childAges.filter(v => v !== "" && v !== undefined),
       bedConfig: bookingState.bedConfig,
       nights: bookingState.nights,
       basePrice: bookingState.basePrice,
@@ -1222,37 +1491,8 @@ async function submitBooking() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    await db.collection("bookings").add(payload);
-
-    const set = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    };
-
-    const isAr = bookingState.lang === "ar";
-    const curr = isAr ? "د.ج" : "DZD";
-    const locale = isAr ? "ar-DZ" : "en-GB";
-    const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
-
-    set("succ-ref", refId);
-    set("succ-name", payload.guestName);
-
-    const ci = parseLocalDate(payload.checkIn)?.toLocaleDateString(locale, fmtOpts) || payload.checkIn;
-    const co = parseLocalDate(payload.checkOut)?.toLocaleDateString(locale, fmtOpts) || payload.checkOut;
-    set("succ-dates", `${ci} → ${co}`);
-    set("succ-guests", `${payload.adults} ${t("adults", "بالغين")}, ${payload.rooms} ${t("room", "غرفة")}`);
-    set("succ-total", `${payload.totalPrice.toLocaleString()} ${curr}`);
-
-    const badge = document.getElementById("succ-pay-badge");
-    if (badge) {
-      if (isTransfer) {
-        badge.className = "success-pay-badge transfer";
-        badge.innerHTML = `<i class="ph-fill ph-bank" aria-hidden="true"></i> ${t("Awaiting transfer verification", "بانتظار التحقق من التحويل")}`;
-      } else {
-        badge.className = "success-pay-badge cash";
-        badge.innerHTML = `<i class="ph-fill ph-money" aria-hidden="true"></i> ${t("Pay at property", "الدفع في الفندق")}`;
-      }
-    }
+    const docRef = await db.collection("bookings").add(payload);
+    lastSuccessfulBooking = { ...payload, id: docRef.id };
 
     if (currentUser) {
       const earnedPoints = Math.floor(payload.totalPrice / 100);
@@ -1263,7 +1503,9 @@ async function submitBooking() {
       } catch (_) {}
     }
 
+    populateSuccessModal(lastSuccessfulBooking);
     goToStep(4);
+    openSuccessModal();
 
     if (window.confetti) {
       window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
@@ -1288,6 +1530,14 @@ function setupEventListeners() {
   });
 
   els.btnNext3?.addEventListener("click", () => {
+    if (!validateStep1()) {
+      goToStep(1);
+      return;
+    }
+    if (!validateStep2()) {
+      goToStep(2);
+      return;
+    }
     if (validateStep3()) {
       populateFinalSummary();
       goToStep(4);
@@ -1371,7 +1621,7 @@ function setupEventListeners() {
     chip.addEventListener("click", () => {
       document.querySelectorAll(".purpose-chip").forEach(c => c.classList.remove("active"));
       chip.classList.add("active");
-      bookingState.purposeOfVisit = chip.dataset.val || chip.dataset.value || "";
+      bookingState.purposeOfVisit = chip.dataset.val || chip.dataset.value || "leisure";
     });
   });
 
@@ -1404,35 +1654,51 @@ function setupEventListeners() {
     const counter = document.getElementById("g-notes-counter");
     if (e.target.value.length > max) e.target.value = e.target.value.substring(0, max);
     if (counter) counter.textContent = `${e.target.value.length}/${max}`;
+    updateBookingSummary();
+  });
+
+  [els.gName, els.gEmail, els.gPhone, els.gArrival, els.gNationality].forEach(input => {
+    input?.addEventListener("input", () => updateBookingSummary());
+    input?.addEventListener("change", () => updateBookingSummary());
   });
 
   document.querySelectorAll(".copy-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const targetId = btn.dataset.copyTarget;
       const text = document.getElementById(targetId)?.textContent || "";
-      if (text) {
-        navigator.clipboard?.writeText(text.trim()).then(() => showCopyToast());
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text.trim());
+        showCopyToast();
+      } catch (_) {
+        showGlobalAlert(t("Copy failed on this browser.", "فشل النسخ في هذا المتصفح."), "warning");
       }
     });
   });
 
-  els.btnCopyRef?.addEventListener("click", () => {
+  els.btnCopyRef?.addEventListener("click", async () => {
     const ref = document.getElementById("succ-ref")?.textContent;
-    if (ref) {
-      navigator.clipboard?.writeText(ref).then(() =>
-        showCopyToast(t("Reference copied!", "تم نسخ رقم الحجز!"))
-      );
+    if (!ref) return;
+    try {
+      await navigator.clipboard.writeText(ref);
+      showCopyToast(t("Reference copied!", "تم نسخ رقم الحجز!"));
+    } catch (_) {
+      showGlobalAlert(t("Copy failed on this browser.", "فشل النسخ في هذا المتصفح."), "warning");
     }
   });
 
-  els.btnShareBooking?.addEventListener("click", () => {
+  els.btnShareBooking?.addEventListener("click", async () => {
+    const ref = document.getElementById("succ-ref")?.textContent;
+    if (!ref) return;
+
     if (navigator.share) {
-      const ref = document.getElementById("succ-ref")?.textContent;
-      navigator.share({
-        title: t("My OreBooking Reservation", "حجزي في OreBooking"),
-        text: `${t("My booking reference is:", "رقم مرجع حجزي هو:")} ${ref}\n${t("Hotel:", "الفندق:")} ${bookingState.property?.titleEn || "Hotel"}`,
-        url: window.location.href
-      }).catch(() => {});
+      try {
+        await navigator.share({
+          title: t("My OreBooking Reservation", "حجزي في OreBooking"),
+          text: `${t("My booking reference is:", "رقم مرجع حجزي هو:")} ${ref}\n${t("Hotel:", "الفندق:")} ${bookingState.property?.titleEn || bookingState.property?.titleAr || "Hotel"}`,
+          url: window.location.href
+        });
+      } catch (_) {}
     } else {
       showCopyToast(t("Sharing not supported on this browser", "المشاركة غير مدعومة في هذا المتصفح"));
     }
@@ -1468,19 +1734,27 @@ function setupEventListeners() {
       const isEmailInvalid = input.type === "email" && input.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim());
 
       input.classList.toggle("invalid", isEmpty || isEmailInvalid);
+      input.closest(".input-with-icon, .form-group")?.classList.toggle("invalid", isEmpty || isEmailInvalid);
 
-      const errEl = input.closest(".form-group")?.querySelector(".form-error-msg");
+      const errEl = input.closest(".form-group")?.querySelector(".form-error-msg, .field-error");
       if (errEl) {
         errEl.classList.toggle("visible", isEmpty || isEmailInvalid);
-        if (isEmpty) errEl.textContent = t("This field is required.", "هذا الحقل مطلوب.");
-        else if (isEmailInvalid) errEl.textContent = t("Please enter a valid email.", "يرجى إدخال بريد صحيح.");
+        errEl.textContent = isEmpty
+          ? t("This field is required.", "هذا الحقل مطلوب.")
+          : isEmailInvalid
+            ? t("Please enter a valid email.", "يرجى إدخال بريد صحيح.")
+            : "";
       }
     });
 
     input.addEventListener("input", () => {
       input.classList.remove("invalid");
-      const errEl = input.closest(".form-group")?.querySelector(".form-error-msg");
-      errEl?.classList.remove("visible");
+      input.closest(".input-with-icon, .form-group")?.classList.remove("invalid");
+      const errEl = input.closest(".form-group")?.querySelector(".form-error-msg, .field-error");
+      if (errEl) {
+        errEl.classList.remove("visible");
+        errEl.textContent = "";
+      }
     });
   });
 
@@ -1488,17 +1762,37 @@ function setupEventListeners() {
     r.addEventListener("change", () => {
       const method = r.value;
       const el = document.getElementById("final-payment");
-      if (el) el.textContent = method === "transfer" ? t("Bank Transfer", "تحويل بنكي") : t("Pay at Property", "الدفع في الفندق");
+      if (el) el.textContent = getPaymentMethodLabel(method);
     });
+  });
+
+  els.btnCloseSuccess?.addEventListener("click", closeSuccessModal);
+  els.btnCloseSuccess2?.addEventListener("click", closeSuccessModal);
+  els.btnPrintReceipt?.addEventListener("click", printBookingReceipt);
+  els.btnDownloadReceipt?.addEventListener("click", downloadBookingReceipt);
+
+  els.successModal?.addEventListener("click", e => {
+    if (e.target === els.successModal) closeSuccessModal();
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && els.successModal && !els.successModal.classList.contains("d-none")) {
+      closeSuccessModal();
+    }
   });
 }
 
 // ─── Update Payment UI ───────────────────────
 function updatePaymentUI() {
-  const method = document.querySelector('input[name="payment_method"]:checked')?.value;
+  const method = getSelectedPaymentMethod();
   if (els.transferBox) {
     els.transferBox.classList.toggle("d-none", method !== "transfer");
   }
+
+  document.querySelectorAll(".payment-method-label, .payment-option").forEach(lbl => {
+    const rb = lbl.querySelector('input[type="radio"]');
+    if (rb) lbl.classList.toggle("selected", rb.checked);
+  });
 }
 
 // ─── Translation Map ─────────────────────────
@@ -1591,6 +1885,11 @@ function translateBookingPage() {
       const el = document.getElementById(id);
       if (el) el.textContent = txt;
     });
+
+    if (els.gName) els.gName.placeholder = "Farouk";
+    if (els.gEmail) els.gEmail.placeholder = "example@email.com";
+    if (els.gPhone) els.gPhone.placeholder = "+213 555 000 000";
+    if (els.gNotes) els.gNotes.placeholder = "Any special requests or arrival time?";
     return;
   }
 
