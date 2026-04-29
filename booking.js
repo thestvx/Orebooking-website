@@ -1600,7 +1600,7 @@ function translateBookingPage() {
     if (el) el.textContent = txt;
   });
 
-  if (els.gName) els.gName.placeholder = "محمد أمين";
+  if (els.gName) els.gName.placeholder = "فاروق";
   if (els.gEmail) els.gEmail.placeholder = "example@email.com";
   if (els.gPhone) els.gPhone.placeholder = "+213 555 000 000";
   if (els.gNotes) els.gNotes.placeholder = "أي طلبات خاصة أو وقت الوصول؟";
