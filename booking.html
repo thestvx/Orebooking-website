@@ -15,66 +15,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
-  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
-  <!-- Canvas Confetti (optional - for success animation) -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
 
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="booking.css">
 
   <style>
-    /* ==========================================================
-       Booking Page — Inline Overrides v4.2
-       ✅ 01. --primary unified with style.css
-       ✅ 02. .inner-nav fixed — booking-page padding-top fixed
-       ✅ 03. .back-btn/.icon-btn/.lang-btn cleaned up
-       ✅ 04. body padding-bottom for mobile nav
-       ✅ 05. .booking-wrapper grid fallback at 992px
-       ✅ 06. .step-connector alignment fixed
-       ✅ 07. .booking-steps-header overflow removed
-       ✅ 08. .input-with-icon for textarea separated
-       ✅ 09. .form-row mobile fix
-       ✅ 10. payment-method :has() fallback via JS .selected
-       ✅ 11. .step-actions mobile flex-wrap
-       ✅ 12. .booking-summary-sidebar sticky top fixed
-       ✅ 13. prop-mini-img min-width
-       ✅ 14. textarea wrapper separated
-       ✅ 15. dark mode inputs
-       ✅ 16. Success overlay + print receipt
-       ✅ 17. btn-confirm-booking wired to submitBooking()
-       ✅ 18. payment_method unified name
-       ✅ 19. addons-panel + children counter added
-       ✅ 20. transfer-details section added
-    ========================================================== */
-
     :root {
-      --primary:       #435abf;
-      --primary-dark:  #34459c;
+      --primary: #435abf;
+      --primary-dark: #34459c;
       --primary-light: #657be0;
-      --accent:        #8b5cf6;
-      --bg:            #f8fafc;
-      --surface:       #ffffff;
-      --border:        #e2e8f0;
-      --text:          #0f172a;
-      --text-muted:    #64748b;
-      --success:       #10b981;
-      --error:         #ef4444;
-      --radius-lg:     24px;
-      --radius:        16px;
-      --radius-sm:     10px;
-      --shadow-sm:     0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-      --shadow:        0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.05);
-      --shadow-lg:     0 20px 40px -10px rgba(15,23,42,0.12);
-      --shadow-hover:  0 25px 50px -12px rgba(67,90,191,0.2);
-      --transition:    0.3s cubic-bezier(0.4,0,0.2,1);
+      --accent: #8b5cf6;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --radius-lg: 24px;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      --shadow: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.05);
+      --shadow-lg: 0 20px 40px -10px rgba(15,23,42,0.12);
+      --shadow-hover: 0 25px 50px -12px rgba(67,90,191,0.2);
+      --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
     }
 
     body {
@@ -86,24 +60,26 @@
     }
 
     body.dark {
-      --bg:         #020617;
-      --surface:    #0f172a;
-      --border:     #1e293b;
-      --text:       #f8fafc;
+      --bg: #020617;
+      --surface: #0f172a;
+      --border: #1e293b;
+      --text: #f8fafc;
       --text-muted: #94a3b8;
       background-image:
         radial-gradient(circle at 15% 50%, rgba(67,90,191,0.08), transparent 25%),
         radial-gradient(circle at 85% 30%, rgba(139,92,246,0.08), transparent 25%);
     }
 
-    /* FIX 02: padding-top compensates fixed navbar */
+    body.modal-open {
+      overflow: hidden;
+    }
+
     .booking-page {
       max-width: 1200px;
       margin: 0 auto;
       padding: 90px 20px 60px;
     }
 
-    /* ── Navbar ── */
     .inner-nav {
       background: rgba(255,255,255,0.88);
       backdrop-filter: blur(12px);
@@ -119,7 +95,10 @@
       z-index: 1000;
       gap: 12px;
     }
-    body.dark .inner-nav { background: rgba(15,23,42,0.88); }
+
+    body.dark .inner-nav {
+      background: rgba(15,23,42,0.88);
+    }
 
     .back-btn {
       height: 40px;
@@ -127,7 +106,9 @@
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--text);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       transition: var(--transition);
       font-weight: 600;
@@ -138,33 +119,42 @@
       text-decoration: none;
       white-space: nowrap;
     }
+
     .back-btn:hover {
       border-color: var(--primary);
       color: var(--primary);
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
-    html[dir="rtl"] .back-btn i { transform: scaleX(-1); }
+
+    html[dir="rtl"] .back-btn i {
+      transform: scaleX(-1);
+    }
 
     .icon-btn {
-      width: 40px; height: 40px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--text);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       transition: var(--transition);
       padding: 0;
       flex-shrink: 0;
       font-family: inherit;
     }
+
     .icon-btn:hover {
       border-color: var(--primary);
       color: var(--primary);
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
+
     .icon-btn:disabled {
       opacity: 0.4;
       cursor: not-allowed;
@@ -177,7 +167,9 @@
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--text);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       gap: 6px;
       cursor: pointer;
       transition: var(--transition);
@@ -188,14 +180,32 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .lang-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
 
-    .nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+    .lang-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
 
-    .logo { display: flex; align-items: center; text-decoration: none; }
-    .logo-img { height: 38px; width: auto; object-fit: contain; }
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+    }
 
-    /* ── Steps Header ── */
+    .logo {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .logo-img {
+      height: 38px;
+      width: auto;
+      object-fit: contain;
+    }
+
     .booking-steps-header {
       display: flex;
       align-items: center;
@@ -221,31 +231,41 @@
       flex-shrink: 0;
       cursor: default;
     }
-    .step-indicator.active    { opacity: 1; }
-    .step-indicator.completed { opacity: 1; }
+
+    .step-indicator.active,
+    .step-indicator.completed {
+      opacity: 1;
+    }
 
     .step-num {
-      width: 40px; height: 40px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: var(--bg);
       border: 2px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 700;
       color: var(--text-muted);
       transition: var(--transition);
       font-size: 0.95rem;
+      position: relative;
     }
+
     .step-indicator.active .step-num {
       background: linear-gradient(135deg, var(--primary), var(--accent));
       border-color: transparent;
       color: white;
       box-shadow: 0 0 0 4px rgba(67,90,191,0.18);
     }
+
     .step-indicator.completed .step-num {
       background: var(--success);
       border-color: transparent;
       color: white;
     }
+
     .step-indicator.completed .step-num::after {
       content: "✓";
       position: absolute;
@@ -268,9 +288,11 @@
       transition: background 0.4s;
       border-radius: 2px;
     }
-    .step-connector.completed { background: var(--success); }
 
-    /* ── Layout ── */
+    .step-connector.completed {
+      background: var(--success);
+    }
+
     .booking-wrapper {
       display: grid;
       grid-template-columns: 1fr 360px;
@@ -278,7 +300,6 @@
       align-items: start;
     }
 
-    /* ── Main Card ── */
     .booking-main-card {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -292,6 +313,7 @@
     .booking-step {
       display: none;
     }
+
     .booking-step.active {
       display: block;
       animation: fadeStepIn 0.35s ease forwards;
@@ -299,10 +321,9 @@
 
     @keyframes fadeStepIn {
       from { opacity: 0; transform: translateX(14px); }
-      to   { opacity: 1; transform: translateX(0); }
+      to { opacity: 1; transform: translateX(0); }
     }
 
-    /* ── Step Headers ── */
     .step-header {
       display: flex;
       align-items: center;
@@ -313,20 +334,37 @@
     }
 
     .step-header-icon {
-      width: 52px; height: 52px; min-width: 52px;
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
       border-radius: 14px;
       background: rgba(67,90,191,0.1);
       color: var(--primary);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 1.7rem;
       flex-shrink: 0;
     }
-    body.dark .step-header-icon { background: rgba(67,90,191,0.18); }
 
-    .step-title { font-size: 1.45rem; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.2; }
-    .step-subtitle { font-size: 0.92rem; color: var(--text-muted); line-height: 1.5; }
+    body.dark .step-header-icon {
+      background: rgba(67,90,191,0.18);
+    }
 
-    /* ── Auth Prompt ── */
+    .step-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+
+    .step-subtitle {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
     .auth-prompt-banner {
       display: flex;
       align-items: center;
@@ -339,12 +377,26 @@
       font-size: 0.88rem;
       color: var(--text-muted);
     }
-    .auth-prompt-banner i { color: var(--primary); font-size: 1.2rem; flex-shrink: 0; }
-    .auth-prompt-banner a { color: var(--primary); font-weight: 600; text-decoration: none; }
-    .auth-prompt-banner a:hover { text-decoration: underline; }
 
-    /* ── Form Elements ── */
-    .form-group { margin-bottom: 22px; }
+    .auth-prompt-banner i {
+      color: var(--primary);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .auth-prompt-banner a {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .auth-prompt-banner a:hover {
+      text-decoration: underline;
+    }
+
+    .form-group {
+      margin-bottom: 22px;
+    }
 
     .form-row {
       display: grid;
@@ -361,7 +413,10 @@
       margin-bottom: 8px;
       color: var(--text);
     }
-    .req-star { color: var(--error); }
+
+    .req-star {
+      color: var(--error);
+    }
 
     .input-with-icon {
       position: relative;
@@ -372,16 +427,15 @@
       display: flex;
       align-items: center;
     }
+
     .input-with-icon:focus-within {
       border-color: var(--primary);
       background: var(--surface);
       box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
     }
+
     .input-with-icon.invalid {
       border-color: var(--error);
-    }
-    .input-with-icon.invalid:focus-within {
-      box-shadow: 0 0 0 4px rgba(239,68,68,0.1);
     }
 
     .input-icon {
@@ -395,8 +449,15 @@
       transition: color 0.2s;
       z-index: 1;
     }
-    html[dir="rtl"] .input-icon { left: auto; right: 14px; }
-    .input-with-icon:focus-within .input-icon { color: var(--primary); }
+
+    html[dir="rtl"] .input-icon {
+      left: auto;
+      right: 14px;
+    }
+
+    .input-with-icon:focus-within .input-icon {
+      color: var(--primary);
+    }
 
     .input-with-icon input,
     .input-with-icon select {
@@ -412,15 +473,26 @@
       appearance: none;
       -webkit-appearance: none;
     }
+
     html[dir="rtl"] .input-with-icon input,
-    html[dir="rtl"] .input-with-icon select { padding: 0 42px 0 14px; }
+    html[dir="rtl"] .input-with-icon select {
+      padding: 0 42px 0 14px;
+    }
 
-    body.dark .input-with-icon { background: rgba(255,255,255,0.04); }
+    body.dark .input-with-icon {
+      background: rgba(255,255,255,0.04);
+    }
+
     body.dark .input-with-icon input,
-    body.dark .input-with-icon select { color: var(--text); }
-    body.dark .input-with-icon input::placeholder { color: var(--text-muted); }
+    body.dark .input-with-icon select {
+      color: var(--text);
+    }
 
-    /* Textarea wrapper */
+    body.dark .input-with-icon input::placeholder,
+    body.dark .textarea-wrapper textarea::placeholder {
+      color: var(--text-muted);
+    }
+
     .textarea-wrapper {
       position: relative;
       border-radius: var(--radius-sm);
@@ -428,21 +500,32 @@
       background: var(--bg);
       transition: var(--transition);
     }
+
     .textarea-wrapper:focus-within {
       border-color: var(--primary);
       background: var(--surface);
       box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
     }
+
     .textarea-icon {
       position: absolute;
-      left: 14px; top: 15px;
+      left: 14px;
+      top: 15px;
       font-size: 1.1rem;
       color: var(--text-muted);
       pointer-events: none;
       transition: color 0.2s;
     }
-    html[dir="rtl"] .textarea-icon { left: auto; right: 14px; }
-    .textarea-wrapper:focus-within .textarea-icon { color: var(--primary); }
+
+    html[dir="rtl"] .textarea-icon {
+      left: auto;
+      right: 14px;
+    }
+
+    .textarea-wrapper:focus-within .textarea-icon {
+      color: var(--primary);
+    }
+
     .textarea-wrapper textarea {
       width: 100%;
       border: none;
@@ -459,10 +542,14 @@
       box-sizing: border-box;
       border-radius: var(--radius-sm);
     }
-    html[dir="rtl"] .textarea-wrapper textarea { padding: 14px 42px 14px 14px; }
-    body.dark .textarea-wrapper { background: rgba(255,255,255,0.04); }
-    body.dark .textarea-wrapper textarea { color: var(--text); }
-    body.dark .textarea-wrapper textarea::placeholder { color: var(--text-muted); }
+
+    html[dir="rtl"] .textarea-wrapper textarea {
+      padding: 14px 42px 14px 14px;
+    }
+
+    body.dark .textarea-wrapper {
+      background: rgba(255,255,255,0.04);
+    }
 
     .char-counter {
       font-size: 0.75rem;
@@ -471,7 +558,10 @@
       margin-top: 4px;
       padding-right: 4px;
     }
-    html[dir="rtl"] .char-counter { text-align: left; }
+
+    html[dir="rtl"] .char-counter {
+      text-align: left;
+    }
 
     .field-error {
       display: block;
@@ -481,8 +571,9 @@
       min-height: 1em;
     }
 
-    /* ── Occupancy ── */
-    .occupancy-section { margin-top: 36px; }
+    .occupancy-section {
+      margin-top: 36px;
+    }
 
     .occupancy-row {
       display: flex;
@@ -495,13 +586,32 @@
       background: var(--bg);
       transition: border-color var(--transition);
     }
-    .occupancy-row:last-child { margin-bottom: 0; }
-    .occupancy-row:hover { border-color: var(--primary); }
 
-    .occ-label-title { font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 3px; }
-    .occ-label-sub   { font-size: 0.78rem; color: var(--text-muted); }
+    .occupancy-row:last-child {
+      margin-bottom: 0;
+    }
 
-    .occupancy-controls { display: flex; align-items: center; gap: 14px; }
+    .occupancy-row:hover {
+      border-color: var(--primary);
+    }
+
+    .occ-label-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .occ-label-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .occupancy-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
 
     .occ-count {
       font-weight: 700;
@@ -511,11 +621,35 @@
       color: var(--text);
     }
 
-    #child-ages-box { margin-top: 16px; }
-    .child-ages-title { font-size: 0.88rem; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; }
-    .child-ages-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-    .child-age-field { display: flex; flex-direction: column; gap: 4px; }
-    .child-age-field label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    #child-ages-box {
+      margin-top: 16px;
+    }
+
+    .child-ages-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .child-ages-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .child-age-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .child-age-field label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
     .child-age-select {
       height: 38px;
       padding: 0 10px;
@@ -528,17 +662,22 @@
       cursor: pointer;
     }
 
-    /* Bed config select */
     .bed-select-wrapper {
       margin-top: 20px;
       padding-top: 20px;
       border-top: 1px dashed var(--border);
     }
+
     .bed-select-wrapper label {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 0.88rem; font-weight: 600;
-      margin-bottom: 8px; color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
     }
+
     #bed-config-select {
       width: 100%;
       height: 50px;
@@ -558,10 +697,18 @@
       background-position: right 14px center;
       padding-right: 40px;
     }
-    html[dir="rtl"] #bed-config-select { background-position: left 14px center; padding-right: 14px; padding-left: 40px; }
 
-    /* Occupancy badge */
-    .occupancy-badge-wrap { margin-top: 14px; text-align: center; }
+    html[dir="rtl"] #bed-config-select {
+      background-position: left 14px center;
+      padding-right: 14px;
+      padding-left: 40px;
+    }
+
+    .occupancy-badge-wrap {
+      margin-top: 14px;
+      text-align: center;
+    }
+
     #occupancy-summary-badge {
       display: inline-block;
       background: rgba(67,90,191,0.08);
@@ -573,7 +720,6 @@
       font-weight: 600;
     }
 
-    /* ── Buttons ── */
     .step-actions {
       display: flex;
       justify-content: flex-end;
@@ -583,7 +729,10 @@
       border-top: 1px solid var(--border);
       flex-wrap: wrap;
     }
-    .step-actions-between { justify-content: space-between; }
+
+    .step-actions-between {
+      justify-content: space-between;
+    }
 
     .primary-btn {
       height: 50px;
@@ -596,15 +745,19 @@
       font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
-      display: flex; align-items: center; gap: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       transition: var(--transition);
       box-shadow: 0 6px 16px rgba(67,90,191,0.3);
       white-space: nowrap;
     }
+
     .primary-btn:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 10px 22px rgba(67,90,191,0.4);
     }
+
     .primary-btn:disabled {
       background: var(--border);
       color: var(--text-muted);
@@ -612,10 +765,12 @@
       cursor: not-allowed;
       transform: none;
     }
+
     .primary-btn.green-btn {
       background: linear-gradient(135deg, var(--success), #059669);
       box-shadow: 0 6px 16px rgba(16,185,129,0.3);
     }
+
     .primary-btn.green-btn:hover:not(:disabled) {
       box-shadow: 0 10px 22px rgba(16,185,129,0.4);
     }
@@ -631,17 +786,27 @@
       font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
-      display: flex; align-items: center; gap: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       transition: var(--transition);
       white-space: nowrap;
     }
-    .ghost-btn:hover { background: var(--bg); color: var(--text); border-color: var(--text-muted); }
 
-    /* ── Addons Panel ── */
-    #addons-panel { margin-top: 32px; }
+    .ghost-btn:hover {
+      background: var(--bg);
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
 
-    /* ── Payment Methods ── */
-    .payment-section { margin-bottom: 28px; }
+    #addons-panel {
+      margin-top: 32px;
+    }
+
+    .payment-section {
+      margin-bottom: 28px;
+    }
+
     .section-label {
       font-size: 0.8rem;
       font-weight: 700;
@@ -669,23 +834,32 @@
       background: var(--bg);
       position: relative;
     }
-    .payment-method-label:hover { border-color: var(--primary); background: var(--surface); }
+
+    .payment-method-label:hover {
+      border-color: var(--primary);
+      background: var(--surface);
+    }
 
     .payment-method-label.selected,
     .payment-method-label:has(input:checked) {
       border-color: var(--primary);
       background: rgba(67,90,191,0.05);
     }
+
     body.dark .payment-method-label.selected,
-    body.dark .payment-method-label:has(input:checked) { background: rgba(67,90,191,0.12); }
+    body.dark .payment-method-label:has(input:checked) {
+      background: rgba(67,90,191,0.12);
+    }
 
     .payment-method-label .radio-circle {
-      width: 20px; height: 20px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       border: 2px solid var(--border);
       transition: var(--transition);
       flex-shrink: 0;
     }
+
     .payment-method-label.selected .radio-circle,
     .payment-method-label:has(input:checked) .radio-circle {
       border-color: var(--primary);
@@ -693,7 +867,6 @@
       box-shadow: inset 0 0 0 3px var(--surface);
     }
 
-    /* Transfer Details Box */
     #transfer-details {
       background: rgba(67,90,191,0.04);
       border: 1.5px dashed rgba(67,90,191,0.3);
@@ -701,7 +874,10 @@
       padding: 20px;
       margin-top: 20px;
     }
-    body.dark #transfer-details { background: rgba(67,90,191,0.08); }
+
+    body.dark #transfer-details {
+      background: rgba(67,90,191,0.08);
+    }
 
     .transfer-info-grid {
       display: grid;
@@ -709,12 +885,14 @@
       gap: 14px;
       margin-bottom: 20px;
     }
+
     .transfer-info-item {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 12px 14px;
     }
+
     .transfer-info-item .ti-label {
       font-size: 0.72rem;
       text-transform: uppercase;
@@ -723,13 +901,13 @@
       font-weight: 600;
       margin-bottom: 4px;
     }
+
     .transfer-info-item .ti-value {
       font-size: 0.9rem;
       font-weight: 700;
       color: var(--text);
     }
 
-    /* File Upload */
     .file-upload-wrapper {
       border: 2px dashed var(--border);
       border-radius: var(--radius-sm);
@@ -739,20 +917,39 @@
       transition: var(--transition);
       background: var(--bg);
     }
+
     .file-upload-wrapper:hover,
     .file-upload-wrapper.drag-over {
       border-color: var(--primary);
       background: rgba(67,90,191,0.04);
     }
-    .file-upload-wrapper label { cursor: pointer; }
-    .file-upload-wrapper input[type="file"] { display: none; }
+
+    .file-upload-wrapper label {
+      cursor: pointer;
+    }
+
+    .file-upload-wrapper input[type="file"] {
+      display: none;
+    }
+
     .file-upload-icon {
       font-size: 2.2rem;
       color: var(--primary);
       margin-bottom: 8px;
     }
-    .file-upload-txt { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 4px; }
-    .file-upload-sub { font-size: 0.78rem; color: var(--text-muted); opacity: 0.7; }
+
+    .file-upload-txt {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .file-upload-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
     #receipt-preview {
       margin-top: 12px;
       display: flex;
@@ -763,13 +960,27 @@
       border-radius: 8px;
       padding: 10px 14px;
     }
-    #receipt-file-name { font-size: 0.85rem; color: var(--text); font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #btn-remove-receipt {
-      background: none; border: none; color: var(--error);
-      cursor: pointer; font-size: 1.1rem; padding: 0; flex-shrink: 0;
+
+    #receipt-file-name {
+      font-size: 0.85rem;
+      color: var(--text);
+      font-weight: 600;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    /* ── Summary Sidebar ── */
+    #btn-remove-receipt {
+      background: none;
+      border: none;
+      color: var(--error);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
     .booking-summary-sidebar {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -789,7 +1000,10 @@
       gap: 8px;
       color: var(--text);
     }
-    .sidebar-title i { color: var(--primary); }
+
+    .sidebar-title i {
+      color: var(--primary);
+    }
 
     .prop-mini-card {
       display: flex;
@@ -816,12 +1030,16 @@
       margin-bottom: 4px;
       line-height: 1.3;
     }
+
     .prop-mini-details p {
       font-size: 0.8rem;
       color: var(--text-muted);
-      display: flex; align-items: center; gap: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
       margin-top: 4px;
     }
+
     .prop-type-badge {
       display: inline-block;
       margin-top: 8px;
@@ -843,7 +1061,11 @@
       color: var(--text);
       gap: 8px;
     }
-    .summary-row span:first-child { color: var(--text-muted); }
+
+    .summary-row span:first-child {
+      color: var(--text-muted);
+    }
+
     .summary-row.total {
       margin-top: 16px;
       padding-top: 16px;
@@ -852,7 +1074,10 @@
       font-weight: 800;
       color: var(--primary);
     }
-    .summary-row.total span { color: var(--primary); }
+
+    .summary-row.total span {
+      color: var(--primary);
+    }
 
     #price-breakdown .price-row {
       display: flex;
@@ -863,25 +1088,42 @@
       border-bottom: 1px solid var(--border);
       gap: 6px;
     }
-    #price-breakdown .price-row:last-child { border-bottom: none; }
-    #price-breakdown .price-row--addon { color: var(--primary); font-size: 0.8rem; }
-    #price-breakdown .price-row--fee   { color: var(--text-muted); }
+
+    #price-breakdown .price-row:last-child {
+      border-bottom: none;
+    }
+
+    #price-breakdown .price-row--addon {
+      color: var(--primary);
+      font-size: 0.8rem;
+    }
+
+    #price-breakdown .price-row--fee {
+      color: var(--text-muted);
+    }
+
     #price-breakdown .price-row--total {
       font-weight: 800;
       font-size: 0.98rem;
       color: var(--text);
       padding-top: 10px;
     }
-    #price-breakdown .price-highlight { color: var(--primary); }
+
+    #price-breakdown .price-highlight {
+      color: var(--primary);
+    }
+
     .sum-placeholder-txt {
       color: var(--text-muted);
       font-size: 0.85rem;
       text-align: center;
       padding: 16px 0;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
-    /* Rating bar in sidebar */
     .sidebar-rating {
       display: flex;
       align-items: center;
@@ -890,18 +1132,33 @@
       font-size: 0.82rem;
       color: var(--text-muted);
     }
-    .sidebar-rating .stars { color: #f59e0b; font-size: 0.85rem; }
-    #sum-rating { font-weight: 700; color: var(--text); }
 
-    /* ── Calendar ── */
-    .calendar-section { width: 100%; }
+    .sidebar-rating .stars {
+      color: #f59e0b;
+      font-size: 0.85rem;
+    }
+
+    #sum-rating {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .calendar-section {
+      width: 100%;
+    }
+
     .calendar-nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
     }
-    #calendar-month-label { font-size: 1rem; font-weight: 700; color: var(--text); }
+
+    #calendar-month-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
 
     .calendar-grid {
       background: var(--bg);
@@ -922,7 +1179,12 @@
       border: 1.5px solid var(--border);
       gap: 8px;
     }
-    .date-summary-item { text-align: center; flex: 1; }
+
+    .date-summary-item {
+      text-align: center;
+      flex: 1;
+    }
+
     .date-summary-label {
       display: block;
       font-size: 0.72rem;
@@ -932,16 +1194,19 @@
       letter-spacing: 0.4px;
       font-weight: 600;
     }
+
     .date-summary-value {
       font-weight: 700;
       font-size: 0.9rem;
       color: var(--primary);
     }
+
     .date-summary-divider {
       width: 1px;
       height: 38px;
       background: var(--border);
     }
+
     #disp-nights {
       background: var(--surface);
       padding: 4px 12px;
@@ -952,7 +1217,6 @@
       color: var(--text);
     }
 
-    /* Warning */
     .booking-warning {
       color: #c0392b;
       background: #fef2f2;
@@ -965,9 +1229,13 @@
       align-items: center;
       gap: 8px;
     }
-    body.dark .booking-warning { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: #f87171; }
 
-    /* Global Alert */
+    body.dark .booking-warning {
+      background: rgba(239,68,68,0.1);
+      border-color: rgba(239,68,68,0.25);
+      color: #f87171;
+    }
+
     .booking-alert {
       padding: 13px 18px;
       border-radius: var(--radius-sm);
@@ -979,17 +1247,19 @@
       gap: 10px;
       line-height: 1.4;
     }
-    .booking-alert.error   { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; }
+
+    .booking-alert.error { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; }
     .booking-alert.success { background: #dcfce7; color: #059669; border: 1px solid #bbf7d0; }
     .booking-alert.warning { background: #fff7ed; color: #d97706; border: 1px solid #fed7aa; }
-    .booking-alert.info    { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-    body.dark .booking-alert.error   { background: rgba(225,29,72,0.08); border-color: rgba(225,29,72,0.25); }
+    .booking-alert.info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+    body.dark .booking-alert.error { background: rgba(225,29,72,0.08); border-color: rgba(225,29,72,0.25); }
     body.dark .booking-alert.success { background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.25); }
 
-    /* Reviews Section */
-    #reviews-section { margin-top: 40px; }
+    #reviews-section {
+      margin-top: 40px;
+    }
 
-    /* ── Step 4 — Final Summary ── */
     .final-summary-block {
       background: var(--bg);
       border: 1.5px solid var(--border);
@@ -997,13 +1267,17 @@
       padding: 22px;
       margin-bottom: 20px;
     }
+
     .final-summary-block h3 {
       font-size: 1rem;
       font-weight: 700;
       margin-bottom: 18px;
-      display: flex; align-items: center; gap: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       color: var(--text);
     }
+
     .final-row {
       display: flex;
       justify-content: space-between;
@@ -1011,7 +1285,11 @@
       margin-bottom: 12px;
       gap: 8px;
     }
-    .final-row span:first-child { color: var(--text-muted); }
+
+    .final-row span:first-child {
+      color: var(--text-muted);
+    }
+
     .final-total-row {
       display: flex;
       justify-content: space-between;
@@ -1024,23 +1302,31 @@
       border-top: 1.5px dashed var(--border);
     }
 
-    /* Points Box */
     .points-box {
       background: rgba(139,92,246,0.06);
       border: 1px solid rgba(139,92,246,0.18);
       border-radius: var(--radius-sm);
       padding: 16px 18px;
-      display: flex; gap: 14px; align-items: flex-start;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
       margin-top: 16px;
     }
+
     .points-icon {
       background: var(--accent);
       color: white;
-      width: 40px; height: 40px; min-width: 40px;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
     }
+
     .points-text .points-title {
       font-weight: 700;
       color: var(--accent);
@@ -1048,9 +1334,14 @@
       display: block;
       font-size: 0.9rem;
     }
-    .points-text p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
 
-    /* Copy Toast */
+    .points-text p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+
     #copy-toast {
       position: fixed;
       bottom: 28px;
@@ -1069,359 +1360,537 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.2);
       white-space: nowrap;
     }
-    #copy-toast i { color: #4ade80; }
 
-    /* d-none utility */
-    .d-none { display: none !important; }
-    .font-bold { font-weight: 700; }
+    #copy-toast i {
+      color: #4ade80;
+    }
 
-    /* Skeleton */
+    .d-none {
+      display: none !important;
+    }
+
+    .font-bold {
+      font-weight: 700;
+    }
+
     .skeleton {
       background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }
+
     body.dark .skeleton {
       background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
       background-size: 200% 100%;
     }
-    .skeleton-text { border-radius: 4px; }
+
+    .skeleton-text {
+      border-radius: 4px;
+    }
+
     @keyframes shimmer {
-      0%   { background-position: 200% 0; }
+      0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
 
-    /* ─── SUCCESS OVERLAY ─────────────────────────── */
-    .booking-success-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 9999;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 20px 16px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.35s ease;
-      overflow-y: auto;
-    }
-    .booking-success-overlay.active {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .bso-card {
-      background: #ffffff;
-      border-radius: 20px;
-      width: 100%;
-      max-width: 680px;
-      padding: 40px 44px;
-      box-shadow: 0 32px 80px rgba(0,0,0,0.25);
-      animation: bsoSlideIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
-      margin: auto;
-    }
-    body.dark .bso-card { background: #1E293B; }
-    @keyframes bsoSlideIn {
-      from { transform: translateY(36px) scale(0.97); opacity: 0; }
-      to   { transform: translateY(0) scale(1); opacity: 1; }
-    }
-    .bso-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 28px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid #E5E7EB;
-    }
-    body.dark .bso-header { border-color: #334155; }
-    .bso-logo img { height: 32px; object-fit: contain; }
-    .bso-badge-confirmed {
-      display: flex;
+    .purpose-chip {
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #DCFCE7;
-      color: #15803D;
-      font-weight: 600;
-      font-size: 0.8rem;
-      padding: 5px 12px;
+      padding: 7px 16px;
       border-radius: 999px;
-      border: 1px solid #BBF7D0;
-      white-space: nowrap;
-    }
-    .bso-badge-confirmed i { color: #22C55E; font-size: 1rem; }
-    .bso-hero { text-align: center; margin-bottom: 30px; }
-    .bso-checkmark-anim { width: 62px; height: 62px; margin: 0 auto 14px; }
-    .bso-checkmark-anim svg { width: 100%; height: 100%; }
-    .bso-circle-anim {
-      stroke-dasharray: 170;
-      stroke-dashoffset: 170;
-      animation: drawCircle 0.55s 0.25s ease forwards;
-    }
-    .bso-tick-anim {
-      stroke-dasharray: 40;
-      stroke-dashoffset: 40;
-      animation: drawTick 0.35s 0.8s ease forwards;
-    }
-    @keyframes drawCircle { to { stroke-dashoffset: 0; } }
-    @keyframes drawTick   { to { stroke-dashoffset: 0; } }
-    .bso-title { font-size: 1.5rem; font-weight: 800; color: #111827; margin: 0 0 8px; }
-    body.dark .bso-title { color: #F1F5F9; }
-    .bso-sub { color: #6B7280; font-size: 0.88rem; max-width: 460px; margin: 0 auto 20px; line-height: 1.6; }
-    body.dark .bso-sub { color: #94A3B8; }
-    .bso-ref-box {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: #F0F9FF;
-      border: 2px dashed #BAE6FD;
-      border-radius: 12px;
-      padding: 10px 20px;
-    }
-    body.dark .bso-ref-box { background: #1A2744; border-color: #3B82F6; }
-    .bso-ref-label { font-size: 0.75rem; color: #6B7280; font-weight: 600; letter-spacing: 0.3px; }
-    body.dark .bso-ref-label { color: #94A3B8; }
-    .bso-ref-number {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: #1D4ED8;
-      letter-spacing: 2px;
-      font-family: 'Courier New', monospace;
-    }
-    .bso-copy-btn {
-      background: none;
-      border: 1px solid #BAE6FD;
-      border-radius: 8px;
-      padding: 4px 8px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
-      color: #3B82F6;
-      font-size: 1rem;
-      transition: background 0.15s;
+      transition: var(--transition);
     }
-    .bso-copy-btn:hover { background: #DBEAFE; }
-    .bso-details-grid {
+
+    .purpose-chip:hover,
+    .purpose-chip.active {
+      border-color: var(--primary);
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+    }
+
+    body.dark .purpose-chip {
+      background: rgba(255,255,255,0.04);
+    }
+
+    body.dark .purpose-chip.active {
+      background: rgba(67,90,191,0.15);
+    }
+
+    /* Success Modal */
+    .booking-success-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 22px;
+      place-items: center;
+      padding: 24px;
     }
-    .bso-detail-block {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      background: #F9FAFB;
-      border: 1px solid #F3F4F6;
-      border-radius: 12px;
-      padding: 12px 14px;
+
+    .booking-success-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(11, 18, 32, 0.58);
+      backdrop-filter: blur(8px);
     }
-    body.dark .bso-detail-block { background: #1A2744; border-color: #334155; }
-    .bso-detail-icon {
-      width: 34px; height: 34px; min-width: 34px;
-      border-radius: 8px;
-      background: #EFF6FF;
-      display: flex; align-items: center; justify-content: center;
-      color: #3B82F6; font-size: 1.05rem;
-      flex-shrink: 0;
+
+    .booking-success-dialog {
+      position: relative;
+      width: min(920px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      border-radius: 28px;
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
+      padding: 28px;
+      z-index: 2;
+      animation: successModalIn .35s ease;
     }
-    body.dark .bso-detail-icon { background: #1E3A5F; }
-    .bso-detail-block > div { display: flex; flex-direction: column; gap: 2px; }
-    .bso-detail-label { font-size: 0.7rem; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
-    .bso-detail-value { font-size: 0.85rem; font-weight: 700; color: #111827; line-height: 1.3; }
-    body.dark .bso-detail-value { color: #F1F5F9; }
-    .bso-detail-sub { font-size: 0.76rem; color: #6B7280; }
-    .bso-addons-section {
-      background: #F0FDF4;
-      border: 1px solid #BBF7D0;
-      border-radius: 12px;
-      padding: 14px 18px;
-      margin-bottom: 18px;
+
+    @keyframes successModalIn {
+      from { opacity: 0; transform: translateY(18px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .bso-addons-section h4 {
-      font-size: 0.83rem;
+
+    body.dark .booking-success-dialog {
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    .success-close-btn {
+      position: absolute;
+      top: 16px;
+      inset-inline-end: 16px;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.15);
+      cursor: pointer;
+      color: inherit;
+    }
+
+    .success-modal-top {
+      text-align: center;
+      padding: 8px 12px 20px;
+    }
+
+    .success-icon-wrap {
+      position: relative;
+      width: 86px;
+      height: 86px;
+      margin: 0 auto 14px;
+    }
+
+    .success-icon-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.04));
+      animation: pulseRing 1.8s infinite;
+    }
+
+    .success-icon-core {
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-size: 2rem;
+      box-shadow: 0 16px 30px rgba(16, 185, 129, 0.35);
+    }
+
+    @keyframes pulseRing {
+      0% { transform: scale(.92); opacity: .65; }
+      70% { transform: scale(1.08); opacity: .2; }
+      100% { transform: scale(.92); opacity: .65; }
+    }
+
+    .success-kicker {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
       font-weight: 700;
-      color: #15803D;
-      margin: 0 0 10px;
-      display: flex; align-items: center; gap: 6px;
+      font-size: .85rem;
     }
-    .bso-addons-list {
-      list-style: none; margin: 0; padding: 0;
-      display: flex; flex-wrap: wrap; gap: 6px;
+
+    .success-subtitle {
+      max-width: 640px;
+      margin: 10px auto 0;
+      color: #64748b;
+      line-height: 1.7;
     }
-    .bso-addons-list li {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 0.78rem; color: #166534;
-      background: #DCFCE7;
-      padding: 3px 10px; border-radius: 999px;
+
+    body.dark .success-subtitle {
+      color: #cbd5e1;
     }
-    .bso-addons-list li i { color: #22C55E; font-size: 0.82rem; }
-    .bso-price-summary {
-      border: 1px solid #E5E7EB;
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 18px;
+
+    .success-receipt-card {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 24px;
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(248,250,252,.96), rgba(255,255,255,1));
     }
-    body.dark .bso-price-summary { border-color: #334155; }
-    .bso-price-row {
+
+    body.dark .success-receipt-card {
+      background: linear-gradient(180deg, rgba(15,23,42,.98), rgba(17,24,39,1));
+      border-color: rgba(148, 163, 184, 0.16);
+    }
+
+    .receipt-head {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      font-size: 0.84rem;
-      color: #374151;
-      border-bottom: 1px solid #F3F4F6;
+      gap: 16px;
+      align-items: start;
+      padding-bottom: 16px;
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
     }
-    body.dark .bso-price-row { color: #CBD5E1; border-color: #334155; }
-    .bso-price-row:last-child { border-bottom: none; }
-    .bso-price-total {
-      background: #1E3A5F !important;
-      color: #fff !important;
-      font-weight: 800;
-      font-size: 0.95rem;
-      padding: 14px 16px;
+
+    .receipt-head h3 {
+      margin: 0 0 4px;
+      font-size: 1.35rem;
     }
-    .bso-price-total span { color: #fff !important; }
-    .bso-footer-note {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      background: #FFF7ED;
-      border: 1px solid #FED7AA;
-      border-radius: 10px;
-      padding: 12px 16px;
-      margin-bottom: 22px;
+
+    .receipt-head p {
+      margin: 0;
+      color: #64748b;
     }
-    body.dark .bso-footer-note { background: #1C1917; border-color: #78350F; }
-    .bso-footer-note i { color: #EA580C; font-size: 1.05rem; flex-shrink: 0; margin-top: 1px; }
-    .bso-footer-note p { margin: 0; font-size: 0.8rem; color: #92400E; line-height: 1.55; }
-    body.dark .bso-footer-note p { color: #FCD34D; }
-    .bso-actions {
-      display: flex; gap: 12px; flex-wrap: wrap;
+
+    .receipt-ref-box {
+      text-align: end;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.05);
     }
-    .bso-btn-print, .bso-btn-home {
-      flex: 1;
-      min-width: 140px;
+
+    body.dark .receipt-ref-box {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .receipt-ref-box span {
+      display: block;
+      font-size: .8rem;
+      color: #64748b;
+    }
+
+    .receipt-ref-box strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.1rem;
+      letter-spacing: .08em;
+    }
+
+    .receipt-status-row {
+      padding: 18px 0 6px;
+    }
+
+    .success-pay-badge {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
       gap: 8px;
-      padding: 13px 20px;
-      border-radius: 12px;
-      font-size: 0.9rem;
+      padding: 10px 14px;
+      border-radius: 999px;
       font-weight: 700;
-      cursor: pointer;
-      transition: all 0.18s;
-      border: none;
-      font-family: inherit;
     }
-    .bso-btn-print {
-      background: #1E3A5F;
-      color: #fff;
-    }
-    .bso-btn-print:hover { background: #1D4ED8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(29,78,216,0.28); }
-    .bso-btn-home {
-      background: #F3F4F6;
-      color: #374151;
-      border: 1px solid #E5E7EB;
-    }
-    body.dark .bso-btn-home { background: #334155; color: #CBD5E1; border-color: #475569; }
-    .bso-btn-home:hover { background: #E5E7EB; }
-    body.dark .bso-btn-home:hover { background: #475569; }
-    .bso-print-footer { display: none; margin-top: 28px; padding-top: 16px; border-top: 1px solid #E5E7EB; text-align: center; font-size: 0.72rem; color: #9CA3AF; }
 
-    /* RTL adjustments for overlay */
-    [dir="rtl"] .bso-detail-block,
-    [dir="rtl"] .bso-footer-note,
-    [dir="rtl"] .bso-ref-box { flex-direction: row-reverse; }
-    [dir="rtl"] .bso-badge-confirmed,
-    [dir="rtl"] .bso-addons-section h4 { flex-direction: row-reverse; }
+    .success-pay-badge.cash {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1d4ed8;
+    }
 
-    /* ─── PRINT STYLES ───────────────────────── */
+    .success-pay-badge.transfer {
+      background: rgba(245, 158, 11, 0.14);
+      color: #b45309;
+    }
+
+    .receipt-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .receipt-item {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(148, 163, 184, 0.08);
+    }
+
+    .receipt-item span {
+      display: block;
+      font-size: .82rem;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .receipt-item strong {
+      display: block;
+      font-size: .98rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .receipt-price-box {
+      margin-top: 18px;
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(15, 23, 42, 0.04);
+    }
+
+    body.dark .receipt-price-box {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .receipt-price-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.26);
+    }
+
+    .receipt-price-row:last-child {
+      border-bottom: 0;
+    }
+
+    .receipt-price-row.total {
+      font-size: 1.08rem;
+      font-weight: 800;
+    }
+
+    .receipt-notes-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(148, 163, 184, 0.08);
+    }
+
+    .receipt-notes-box span {
+      display: block;
+      font-size: .82rem;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .receipt-notes-box p {
+      margin: 0;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .receipt-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.35);
+      font-size: .9rem;
+      color: #64748b;
+    }
+
+    .success-modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
     @media print {
-      .no-print,
-      .bso-actions,
-      .inner-nav,
-      .booking-page,
-      .booking-success-overlay { display: none !important; }
+      body * {
+        visibility: hidden !important;
+      }
 
-      body * { visibility: hidden; }
-      #bso-printable,
-      #bso-printable * { visibility: visible; }
-      #bso-printable {
-        position: fixed;
-        top: 0; left: 0;
-        margin: 0;
-        padding: 28px 36px;
-        border-radius: 0;
-        box-shadow: none;
-        max-width: 100%;
+      #booking-print-area,
+      #booking-print-area * {
+        visibility: visible !important;
+      }
+
+      #booking-print-area {
+        position: absolute;
+        inset: 0;
         width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
         background: #fff !important;
         color: #000 !important;
+        box-shadow: none !important;
       }
-      .bso-price-total {
-        background: #1E3A5F !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+
+      .receipt-item,
+      .receipt-price-box,
+      .receipt-notes-box,
+      .receipt-ref-box {
+        background: #fff !important;
+        border: 1px solid #ddd !important;
       }
-      .bso-badge-confirmed, .bso-addons-list li {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .bso-print-footer { display: block !important; }
-      .no-print { display: none !important; }
-      @page { size: A4 portrait; margin: 14mm 18mm; }
     }
 
-    /* ─── RESPONSIVE ─────────────────────────── */
     @media (max-width: 992px) {
-      .booking-wrapper { grid-template-columns: 1fr; }
-      .booking-summary-sidebar { position: static; order: -1; }
+      .booking-wrapper {
+        grid-template-columns: 1fr;
+      }
+
+      .booking-summary-sidebar {
+        position: static;
+        order: -1;
+      }
     }
 
     @media (max-width: 768px) {
-      .booking-page { padding: 80px 14px 40px; }
-      .inner-nav    { padding: 0 14px; height: 64px; }
-      body { padding-bottom: 70px; }
-      .booking-steps-header { padding: 14px 16px; margin-bottom: 16px; }
-      .step-label { display: none; }
-      .step-num   { width: 32px; height: 32px; font-size: 0.82rem; }
-      .step-connector { margin: 0 6px; margin-bottom: 0; }
-      .booking-main-card { padding: 20px 16px; border-radius: var(--radius); }
-      .step-title { font-size: 1.15rem; }
-      .step-header { margin-bottom: 20px; padding-bottom: 16px; gap: 12px; }
-      .step-header-icon { width: 44px; height: 44px; min-width: 44px; font-size: 1.4rem; border-radius: 12px; }
-      .form-row { grid-template-columns: 1fr; gap: 0; }
-      .payment-grid { grid-template-columns: 1fr; gap: 12px; }
-      .transfer-info-grid { grid-template-columns: 1fr; }
-      .step-actions { flex-direction: column-reverse; gap: 10px; }
-      .step-actions-between { flex-direction: row; }
-      .primary-btn, .ghost-btn { justify-content: center; }
-      .step-actions:not(.step-actions-between) .primary-btn { width: 100%; }
-      .step-actions:not(.step-actions-between) .ghost-btn   { width: 100%; }
-      .booking-summary-sidebar { padding: 16px; border-radius: var(--radius); }
-      .prop-mini-img { width: 72px; min-width: 72px; height: 58px; }
-      #nav-back-txt { display: none; }
-      .back-btn { padding: 0 12px; }
-      .bso-card { padding: 24px 20px; border-radius: 16px; }
-      .bso-details-grid { grid-template-columns: 1fr; }
-      .bso-title { font-size: 1.25rem; }
-      .bso-actions { flex-direction: column; }
-      .bso-btn-print, .bso-btn-home { flex: unset; width: 100%; }
+      .booking-page {
+        padding: 80px 14px 40px;
+      }
+
+      .inner-nav {
+        padding: 0 14px;
+        height: 64px;
+      }
+
+      body {
+        padding-bottom: 70px;
+      }
+
+      .booking-steps-header {
+        padding: 14px 16px;
+        margin-bottom: 16px;
+      }
+
+      .step-label {
+        display: none;
+      }
+
+      .step-num {
+        width: 32px;
+        height: 32px;
+        font-size: 0.82rem;
+      }
+
+      .step-connector {
+        margin: 0 6px;
+        margin-bottom: 0;
+      }
+
+      .booking-main-card {
+        padding: 20px 16px;
+        border-radius: var(--radius);
+      }
+
+      .step-title {
+        font-size: 1.15rem;
+      }
+
+      .step-header {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        gap: 12px;
+      }
+
+      .step-header-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        font-size: 1.4rem;
+        border-radius: 12px;
+      }
+
+      .form-row,
+      .payment-grid,
+      .transfer-info-grid,
+      .receipt-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .step-actions {
+        flex-direction: column-reverse;
+        gap: 10px;
+      }
+
+      .step-actions-between {
+        flex-direction: row;
+      }
+
+      .primary-btn,
+      .ghost-btn {
+        justify-content: center;
+      }
+
+      .step-actions:not(.step-actions-between) .primary-btn,
+      .step-actions:not(.step-actions-between) .ghost-btn {
+        width: 100%;
+      }
+
+      .booking-summary-sidebar {
+        padding: 16px;
+        border-radius: var(--radius);
+      }
+
+      .prop-mini-img {
+        width: 72px;
+        min-width: 72px;
+        height: 58px;
+      }
+
+      #nav-back-txt {
+        display: none;
+      }
+
+      .back-btn {
+        padding: 0 12px;
+      }
+
+      .receipt-head,
+      .receipt-foot,
+      .success-modal-actions {
+        flex-direction: column;
+      }
+
+      .receipt-ref-box {
+        text-align: start;
+      }
     }
 
     @media (max-width: 480px) {
-      .booking-page { padding-left: 10px; padding-right: 10px; }
-      .booking-steps-header { display: none; }
-      .date-summary { flex-direction: column; gap: 10px; align-items: flex-start; }
-      .date-summary-divider { display: none; }
+      .booking-page {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .booking-steps-header {
+        display: none;
+      }
+
+      .date-summary {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .date-summary-divider {
+        display: none;
+      }
     }
   </style>
 </head>
 
 <body>
 
-  <!-- ===================== NAVBAR ===================== -->
   <nav class="navbar inner-nav" role="navigation" aria-label="Booking navigation">
     <button id="back-btn" class="back-btn font-medium" type="button" aria-label="Back to property">
       <i class="ph ph-arrow-left"></i>
@@ -1453,12 +1922,9 @@
     </div>
   </nav>
 
-  <!-- ===================== MAIN ===================== -->
   <main class="booking-page" id="booking-page" role="main">
 
-    <!-- ── Steps Progress Bar ── -->
     <div class="booking-steps-header" id="steps-header" role="tablist" aria-label="Booking steps">
-
       <div class="step-indicator active" data-step="1" role="tab" aria-selected="true" tabindex="0">
         <div class="step-num">1</div>
         <div class="step-label" id="lbl-step1">Dates &amp; Rooms</div>
@@ -1481,25 +1947,15 @@
         <div class="step-num">4</div>
         <div class="step-label" id="lbl-step4">Confirmation</div>
       </div>
+    </div>
 
-    </div><!-- /steps-header -->
-
-    <!-- ── Two-Column Layout ── -->
     <div class="booking-wrapper">
 
-      <!-- ════════════════════════════════════
-           LEFT: Main Form Card
-      ════════════════════════════════════════ -->
       <div class="booking-main-card" id="booking-main-card">
 
-        <!-- Global Alert Banner -->
         <div id="booking-global-alert" class="booking-alert d-none" role="alert" aria-live="assertive"></div>
 
-        <!-- ──────────────────────────────────
-             STEP 1 — Dates & Occupancy
-        ─────────────────────────────────────── -->
         <div class="booking-step active" id="step-1" role="tabpanel" aria-labelledby="lbl-step1">
-
           <div class="step-header">
             <div class="step-header-icon">
               <i class="ph ph-calendar-check"></i>
@@ -1510,7 +1966,6 @@
             </div>
           </div>
 
-          <!-- Calendar -->
           <div class="calendar-section">
             <div class="calendar-nav">
               <button class="icon-btn" id="cal-prev" type="button" aria-label="Previous month">
@@ -1528,7 +1983,6 @@
               </div>
             </div>
 
-            <!-- Date Summary Bar -->
             <div class="date-summary" aria-live="polite">
               <div class="date-summary-item">
                 <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
@@ -1550,16 +2004,14 @@
               <i class="ph ph-warning-circle"></i>
               <span id="min-nights-msg"></span>
             </div>
-          </div><!-- /calendar-section -->
+          </div>
 
-          <!-- Occupancy & Rooms -->
           <div class="occupancy-section">
             <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
               <i class="ph-fill ph-users" style="color:var(--primary);"></i>
               <span id="lbl-who-coming">Occupancy &amp; Rooms</span>
             </h3>
 
-            <!-- Rooms -->
             <div class="occupancy-row">
               <div>
                 <div class="occ-label-title" id="lbl-rooms-title">Rooms</div>
@@ -1576,7 +2028,6 @@
               </div>
             </div>
 
-            <!-- Adults -->
             <div class="occupancy-row">
               <div>
                 <div class="occ-label-title" id="lbl-adults-title">Adults</div>
@@ -1593,7 +2044,6 @@
               </div>
             </div>
 
-            <!-- Children -->
             <div class="occupancy-row">
               <div>
                 <div class="occ-label-title" id="lbl-children-title">Children</div>
@@ -1610,10 +2060,8 @@
               </div>
             </div>
 
-            <!-- Child Ages (dynamic) -->
             <div id="child-ages-box" class="d-none"></div>
 
-            <!-- Bed Config -->
             <div class="bed-select-wrapper">
               <label for="bed-config-select">
                 <i class="ph ph-bed" style="color:var(--primary);"></i>
@@ -1627,12 +2075,10 @@
               </select>
             </div>
 
-            <!-- Occupancy Summary Badge -->
             <div class="occupancy-badge-wrap">
               <span id="occupancy-summary-badge">1 room · 2 adults</span>
             </div>
-
-          </div><!-- /occupancy-section -->
+          </div>
 
           <div class="step-actions">
             <button class="primary-btn" id="btn-next-1" type="button" disabled aria-disabled="true">
@@ -1640,13 +2086,9 @@
               <i class="ph ph-arrow-right"></i>
             </button>
           </div>
-        </div><!-- /step-1 -->
+        </div>
 
-        <!-- ──────────────────────────────────
-             STEP 2 — Add-ons & Payment
-        ─────────────────────────────────────── -->
         <div class="booking-step" id="step-2" role="tabpanel" aria-labelledby="lbl-step2">
-
           <div class="step-header">
             <div class="step-header-icon">
               <i class="ph ph-sparkle"></i>
@@ -1657,15 +2099,12 @@
             </div>
           </div>
 
-          <!-- Add-ons Panel (dynamic) -->
           <div id="addons-panel"></div>
 
-          <!-- Payment Method -->
           <div class="payment-section" style="margin-top:36px;">
             <div class="section-label" id="lbl-pay-method">Payment Method</div>
 
             <div class="payment-grid" role="radiogroup" aria-label="Payment method">
-
               <label class="payment-method-label selected" id="pay-label-cash" for="pay-cash">
                 <input type="radio" name="payment_method" id="pay-cash" value="cash" checked style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1689,14 +2128,13 @@
                   <div style="font-size:0.8rem; color:var(--text-muted);" id="pay-transfer-sub">Transfer to our account</div>
                 </div>
               </label>
+            </div>
 
-            </div><!-- /payment-grid -->
-
-            <!-- Transfer Details Box -->
             <div id="transfer-details" class="d-none">
               <h4 style="font-size:0.88rem; font-weight:700; margin-bottom:16px; color:var(--primary); display:flex; align-items:center; gap:7px;">
                 <i class="ph ph-bank"></i> <span id="lbl-bank-info">Bank Account Details</span>
               </h4>
+
               <div class="transfer-info-grid">
                 <div class="transfer-info-item">
                   <div class="ti-label" id="lbl-bank-name">Bank</div>
@@ -1716,11 +2154,11 @@
                 </div>
               </div>
 
-              <!-- Receipt Upload -->
               <p style="font-size:0.85rem; font-weight:600; margin-bottom:10px;" id="lbl-upload-receipt">
                 <i class="ph ph-paperclip" style="color:var(--primary);"></i>
                 Upload Transfer Receipt <span class="req-star">*</span>
               </p>
+
               <div class="file-upload-wrapper" id="file-drop-zone">
                 <label for="receipt-file">
                   <div class="file-upload-icon"><i class="ph ph-cloud-arrow-up"></i></div>
@@ -1729,6 +2167,7 @@
                   <input type="file" id="receipt-file" name="receipt" accept="image/*,.pdf">
                 </label>
               </div>
+
               <div id="receipt-preview" class="d-none">
                 <i class="ph-fill ph-file-image" style="color:var(--primary); font-size:1.3rem;"></i>
                 <span id="receipt-file-name">file.jpg</span>
@@ -1736,9 +2175,8 @@
                   <i class="ph ph-x-circle"></i>
                 </button>
               </div>
-            </div><!-- /transfer-details -->
-
-          </div><!-- /payment-section -->
+            </div>
+          </div>
 
           <div class="step-actions step-actions-between">
             <button class="ghost-btn" id="btn-prev-2" type="button">
@@ -1750,13 +2188,9 @@
               <i class="ph ph-arrow-right"></i>
             </button>
           </div>
-        </div><!-- /step-2 -->
+        </div>
 
-        <!-- ──────────────────────────────────
-             STEP 3 — Guest Details
-        ─────────────────────────────────────── -->
         <div class="booking-step" id="step-3" role="tabpanel" aria-labelledby="lbl-step3">
-
           <div class="step-header">
             <div class="step-header-icon">
               <i class="ph ph-user-circle"></i>
@@ -1767,18 +2201,15 @@
             </div>
           </div>
 
-          <!-- Auth Prompt (shown when not logged in) -->
           <div id="auth-prompt" class="auth-prompt-banner d-none">
             <i class="ph ph-info"></i>
             <span id="lbl-auth-prompt">
-              <a href="#" id="link-login-booking" id="lbl-login-link">Log in</a>
+              <a href="#" id="link-login-booking">Log in</a>
               to speed up your booking and earn loyalty points.
             </span>
           </div>
 
           <form id="guest-form" novalidate autocomplete="on">
-
-            <!-- Full Name -->
             <div class="form-group">
               <label for="g-name" id="lbl-fname">
                 <i class="ph ph-identification-card" style="color:var(--primary);"></i>
@@ -1786,13 +2217,11 @@
               </label>
               <div class="input-with-icon">
                 <i class="ph ph-identification-card input-icon"></i>
-                <input type="text" id="g-name" name="name" required
-                       placeholder="Mohammed Amine" autocomplete="name" aria-required="true">
+                <input type="text" id="g-name" name="name" required placeholder="Mohammed Amine" autocomplete="name" aria-required="true">
               </div>
               <span class="field-error" id="err-name"></span>
             </div>
 
-            <!-- Email + Phone -->
             <div class="form-row">
               <div class="form-group">
                 <label for="g-email" id="lbl-email">
@@ -1801,8 +2230,7 @@
                 </label>
                 <div class="input-with-icon">
                   <i class="ph ph-envelope-simple input-icon"></i>
-                  <input type="email" id="g-email" name="email" required
-                         placeholder="you@example.com" autocomplete="email" aria-required="true">
+                  <input type="email" id="g-email" name="email" required placeholder="you@example.com" autocomplete="email" aria-required="true">
                 </div>
                 <span class="field-error" id="err-email"></span>
               </div>
@@ -1814,14 +2242,12 @@
                 </label>
                 <div class="input-with-icon">
                   <i class="ph ph-phone input-icon"></i>
-                  <input type="tel" id="g-phone" name="phone" required
-                         placeholder="+213 555 000 000" dir="ltr" autocomplete="tel" aria-required="true">
+                  <input type="tel" id="g-phone" name="phone" required placeholder="+213 555 000 000" dir="ltr" autocomplete="tel" aria-required="true">
                 </div>
                 <span class="field-error" id="err-phone"></span>
               </div>
             </div>
 
-            <!-- Nationality + Arrival Time -->
             <div class="form-row">
               <div class="form-group">
                 <label for="g-nationality" id="lbl-nationality">
@@ -1830,8 +2256,7 @@
                 </label>
                 <div class="input-with-icon">
                   <i class="ph ph-globe input-icon"></i>
-                  <input type="text" id="g-nationality" name="nationality"
-                         placeholder="Algerian" autocomplete="country-name">
+                  <input type="text" id="g-nationality" name="nationality" placeholder="Algerian" autocomplete="country-name">
                 </div>
               </div>
 
@@ -1847,29 +2272,19 @@
               </div>
             </div>
 
-            <!-- Purpose of Visit -->
             <div class="form-group">
               <label id="lbl-purpose-txt">
                 <i class="ph ph-suitcase" style="color:var(--primary);"></i>
                 <span id="lbl-purpose">Purpose of Visit</span>
               </label>
               <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
-                <button type="button" class="purpose-chip active" data-val="leisure">
-                  <i class="ph ph-sun"></i> Leisure
-                </button>
-                <button type="button" class="purpose-chip" data-val="business">
-                  <i class="ph ph-briefcase"></i> Business
-                </button>
-                <button type="button" class="purpose-chip" data-val="family">
-                  <i class="ph ph-house"></i> Family
-                </button>
-                <button type="button" class="purpose-chip" data-val="event">
-                  <i class="ph ph-confetti"></i> Event
-                </button>
+                <button type="button" class="purpose-chip active" data-val="leisure"><i class="ph ph-sun"></i> Leisure</button>
+                <button type="button" class="purpose-chip" data-val="business"><i class="ph ph-briefcase"></i> Business</button>
+                <button type="button" class="purpose-chip" data-val="family"><i class="ph ph-house"></i> Family</button>
+                <button type="button" class="purpose-chip" data-val="event"><i class="ph ph-confetti"></i> Event</button>
               </div>
             </div>
 
-            <!-- Special Requests -->
             <div class="form-group">
               <label for="g-notes" id="lbl-notes">
                 <i class="ph ph-chat-text" style="color:var(--primary);"></i>
@@ -1877,13 +2292,11 @@
               </label>
               <div class="textarea-wrapper">
                 <i class="ph ph-chat-text textarea-icon"></i>
-                <textarea id="g-notes" name="notes" rows="3"
-                          placeholder="Any special requests or questions…"></textarea>
+                <textarea id="g-notes" name="notes" rows="3" placeholder="Any special requests or questions…"></textarea>
               </div>
               <div class="char-counter"><span id="g-notes-counter">0</span>/500</div>
             </div>
 
-            <!-- Agree to Policy -->
             <div class="form-group" style="display:flex; align-items:flex-start; gap:12px;">
               <input type="checkbox" id="agree-policy" style="margin-top:3px; accent-color:var(--primary); width:16px; height:16px; flex-shrink:0;">
               <label for="agree-policy" style="cursor:pointer; font-size:0.86rem; color:var(--text-muted); font-weight:400;">
@@ -1893,7 +2306,6 @@
                 <a href="#" style="color:var(--primary); font-weight:600;" id="lbl-privacy">privacy policy</a>.
               </label>
             </div>
-
           </form>
 
           <div class="step-actions step-actions-between">
@@ -1906,13 +2318,9 @@
               <i class="ph ph-check-circle"></i>
             </button>
           </div>
-        </div><!-- /step-3 -->
+        </div>
 
-        <!-- ──────────────────────────────────
-             STEP 4 — Review & Confirm
-        ─────────────────────────────────────── -->
         <div class="booking-step" id="step-4" role="tabpanel" aria-labelledby="lbl-step4">
-
           <div class="step-header">
             <div class="step-header-icon" style="background:rgba(16,185,129,0.1); color:var(--success);">
               <i class="ph ph-shield-check"></i>
@@ -1923,7 +2331,6 @@
             </div>
           </div>
 
-          <!-- Final Summary Card -->
           <div class="final-summary-block">
             <h3>
               <i class="ph ph-file-text" style="color:var(--primary);"></i>
@@ -1951,7 +2358,6 @@
             </div>
           </div>
 
-          <!-- Loyalty Points Preview -->
           <div class="points-box">
             <div class="points-icon">
               <i class="ph ph-gift"></i>
@@ -1971,28 +2377,21 @@
               <i class="ph ph-arrow-left"></i>
               <span id="btn-back-4">Back</span>
             </button>
-            <!-- FIX: id="btn-confirm-booking" — matches booking.js exactly -->
-            <button class="primary-btn green-btn" id="btn-confirm-booking" type="button"
-                    onclick="submitBooking()" aria-label="Confirm and submit booking">
+            <button class="primary-btn green-btn" id="btn-confirm-booking" type="button" aria-label="Confirm and submit booking">
               <i class="ph ph-check"></i>
               <span id="btn-confirm-txt">Confirm Booking</span>
             </button>
           </div>
-        </div><!-- /step-4 -->
+        </div>
 
-      </div><!-- /booking-main-card -->
+      </div>
 
-      <!-- ════════════════════════════════════
-           RIGHT: Booking Summary Sidebar
-      ════════════════════════════════════════ -->
       <aside class="booking-summary-sidebar" aria-label="Booking summary">
-
         <div class="sidebar-title">
           <i class="ph-fill ph-receipt"></i>
           <span id="lbl-sidebar-title">Booking Summary</span>
         </div>
 
-        <!-- Property Mini Card -->
         <div class="prop-mini-card">
           <img
             src="images/placeholder.jpg"
@@ -2015,14 +2414,12 @@
           </div>
         </div>
 
-        <!-- Rating -->
         <div class="sidebar-rating">
           <span class="stars">★★★★★</span>
           <span id="sum-rating">—</span>
           <span id="sum-reviews-count"></span>
         </div>
 
-        <!-- Price Breakdown (dynamic) -->
         <div id="price-breakdown" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
           <div class="summary-row">
             <span><span id="sb-nights-count">0</span> nights × <span id="sb-night-price">0 DZD</span></span>
@@ -2037,51 +2434,153 @@
             <span><span id="sb-final-total">0</span> DZD</span>
           </div>
         </div>
+      </aside>
 
-      </aside><!-- /sidebar -->
+    </div>
 
-    </div><!-- /booking-wrapper -->
-
-    <!-- Reviews Section (dynamic) -->
     <div id="reviews-section" style="margin-top:48px;"></div>
-
   </main>
 
-  <!-- ── Copy Toast ── -->
   <div id="copy-toast" class="d-none" role="status" aria-live="polite">
     <i class="ph-fill ph-check-circle"></i>
     <span id="copy-toast-txt">Copied!</span>
   </div>
 
-  <!-- ── Purpose Chip Styles (inline) ── -->
-  <style>
-    .purpose-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 16px;
-      border-radius: 999px;
-      border: 1.5px solid var(--border);
-      background: var(--bg);
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .purpose-chip:hover,
-    .purpose-chip.active {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.08);
-      color: var(--primary);
-    }
-    body.dark .purpose-chip { background: rgba(255,255,255,0.04); }
-    body.dark .purpose-chip.active { background: rgba(67,90,191,0.15); }
-  </style>
+  <!-- Success Modal -->
+  <div id="booking-success-modal" class="booking-success-modal d-none" aria-hidden="true">
+    <div class="booking-success-backdrop" data-close-success-modal></div>
 
-  <!-- Scripts -->
+    <div class="booking-success-dialog" role="dialog" aria-modal="true" aria-labelledby="success-modal-title">
+      <button type="button" class="success-close-btn" id="btn-close-success-modal" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+
+      <div class="success-modal-top">
+        <div class="success-icon-wrap">
+          <div class="success-icon-ring"></div>
+          <div class="success-icon-core">
+            <i class="ph-fill ph-check"></i>
+          </div>
+        </div>
+
+        <span class="success-kicker">Reservation Confirmed</span>
+        <h2 id="success-modal-title">Your booking has been received successfully</h2>
+        <p class="success-subtitle">
+          Your reservation request is now registered. Please save your booking reference and print your receipt.
+        </p>
+      </div>
+
+      <div id="booking-print-area" class="success-receipt-card">
+        <div class="receipt-head">
+          <div>
+            <h3>OreBooking</h3>
+            <p>Official Reservation Receipt</p>
+          </div>
+          <div class="receipt-ref-box">
+            <span>Booking Ref</span>
+            <strong id="succ-ref">BK-XXXXXX</strong>
+          </div>
+        </div>
+
+        <div class="receipt-status-row">
+          <div id="succ-pay-badge" class="success-pay-badge cash">
+            <i class="ph-fill ph-money"></i>
+            Pay at property
+          </div>
+        </div>
+
+        <div class="receipt-grid">
+          <div class="receipt-item">
+            <span>Guest Name</span>
+            <strong id="succ-name">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Email</span>
+            <strong id="succ-email">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Phone</span>
+            <strong id="succ-phone">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Nationality</span>
+            <strong id="succ-nationality">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Dates</span>
+            <strong id="succ-dates">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Guests</span>
+            <strong id="succ-guests">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Rooms</span>
+            <strong id="succ-rooms">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Arrival Time</span>
+            <strong id="succ-arrival">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Property</span>
+            <strong id="succ-property">—</strong>
+          </div>
+          <div class="receipt-item">
+            <span>Payment</span>
+            <strong id="succ-payment-method">—</strong>
+          </div>
+        </div>
+
+        <div class="receipt-price-box">
+          <div class="receipt-price-row">
+            <span>Base Price</span>
+            <strong id="succ-base">—</strong>
+          </div>
+          <div class="receipt-price-row">
+            <span>Add-ons</span>
+            <strong id="succ-addons">—</strong>
+          </div>
+          <div class="receipt-price-row">
+            <span>Service Fee</span>
+            <strong id="succ-fee">—</strong>
+          </div>
+          <div class="receipt-price-row total">
+            <span>Total</span>
+            <strong id="succ-total">—</strong>
+          </div>
+        </div>
+
+        <div class="receipt-notes-box">
+          <span>Special Requests</span>
+          <p id="succ-notes">—</p>
+        </div>
+
+        <div class="receipt-foot">
+          <span id="succ-created-at">—</span>
+          <span>Thank you for choosing OreBooking</span>
+        </div>
+      </div>
+
+      <div class="success-modal-actions">
+        <button type="button" class="ghost-btn" id="btn-copy-ref-modal">
+          <i class="ph ph-copy"></i>
+          Copy Reference
+        </button>
+
+        <button type="button" class="ghost-btn" id="btn-print-booking-slip">
+          <i class="ph ph-printer"></i>
+          Print Receipt
+        </button>
+
+        <button type="button" class="primary-btn" id="btn-done-success-modal">
+          <i class="ph ph-check-circle"></i>
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="booking.js"></script>
-
 </body>
 </html>
