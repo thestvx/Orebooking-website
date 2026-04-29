@@ -1424,7 +1424,6 @@
       background: rgba(67,90,191,0.15);
     }
 
-    /* Success Modal */
     .booking-success-modal {
       position: fixed;
       inset: 0;
@@ -1476,6 +1475,7 @@
       background: rgba(148, 163, 184, 0.15);
       cursor: pointer;
       color: inherit;
+      z-index: 5;
     }
 
     .success-modal-top {
@@ -2448,10 +2448,16 @@
 
   <!-- Success Modal -->
   <div id="booking-success-modal" class="booking-success-modal d-none" aria-hidden="true">
-    <div class="booking-success-backdrop" data-close-success-modal></div>
+    <div class="booking-success-backdrop" data-close-success-modal data-action="close-success"></div>
 
     <div class="booking-success-dialog" role="dialog" aria-modal="true" aria-labelledby="success-modal-title">
-      <button type="button" class="success-close-btn" id="btn-close-success-modal" aria-label="Close">
+      <button
+        type="button"
+        class="success-close-btn"
+        id="btn-close-success"
+        data-action="close-success"
+        aria-label="Close"
+      >
         <i class="ph ph-x"></i>
       </button>
 
@@ -2563,17 +2569,32 @@
       </div>
 
       <div class="success-modal-actions">
-        <button type="button" class="ghost-btn" id="btn-copy-ref-modal">
+        <button
+          type="button"
+          class="ghost-btn"
+          id="btn-copy-ref"
+          data-action="copy-ref"
+        >
           <i class="ph ph-copy"></i>
           Copy Reference
         </button>
 
-        <button type="button" class="ghost-btn" id="btn-print-booking-slip">
+        <button
+          type="button"
+          class="ghost-btn"
+          id="btn-print-receipt"
+          data-action="print-receipt"
+        >
           <i class="ph ph-printer"></i>
           Print Receipt
         </button>
 
-        <button type="button" class="primary-btn" id="btn-done-success-modal">
+        <button
+          type="button"
+          class="primary-btn"
+          id="btn-done"
+          data-action="done"
+        >
           <i class="ph ph-check-circle"></i>
           Done
         </button>
