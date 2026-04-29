@@ -1,7 +1,7 @@
 // =========================================
 //   Advanced Booking Logic — booking.js
 //   OreBooking © 2025 | Hotel Edition
-//   Enhanced Version v5.0 — Full Fixed
+//   Enhanced Version v5.1 — Modal/Print Fix
 // =========================================
 
 // ─── Safe Storage Helpers ───────────────────
@@ -222,9 +222,9 @@ const els = {
   sbFinalTotal: document.getElementById("sb-final-total"),
 
   successModal: document.getElementById("booking-success-modal"),
-  btnCloseSuccess: document.getElementById("btn-close-success"),
-  btnCloseSuccess2: document.getElementById("btn-close-success-2"),
-  btnPrintReceipt: document.getElementById("btn-print-receipt"),
+  btnCloseSuccess: document.getElementById("btn-close-success") || document.getElementById("btn-done") || document.getElementById("done-btn") || document.getElementById("success-done-btn"),
+  btnCloseSuccess2: document.getElementById("btn-close-success-2") || document.getElementById("btn-done-2"),
+  btnPrintReceipt: document.getElementById("btn-print-receipt") || document.getElementById("print-receipt-btn") || document.getElementById("success-print-btn"),
   btnDownloadReceipt: document.getElementById("btn-download-receipt")
 };
 
@@ -378,6 +378,36 @@ function buildAddonSummaryText() {
   if (ad.extraBed) items.push(t("Extra Bed", "سرير إضافي"));
   if (ad.events) items.push(t("Events", "فعاليات"));
   return items.length ? items.join(" • ") : t("None", "لا شيء");
+}
+
+function getBookingDataForReceipt() {
+  if (lastSuccessfulBooking) return lastSuccessfulBooking;
+
+  const refId = document.getElementById("succ-ref")?.textContent?.trim() || "";
+  const guestName = document.getElementById("succ-name")?.textContent?.trim() || "";
+  const guestEmail = document.getElementById("succ-email")?.textContent?.trim() || "";
+  const guestPhone = document.getElementById("succ-phone")?.textContent?.trim() || "";
+  const totalText = document.getElementById("succ-total")?.textContent?.trim() || "";
+
+  if (!refId && !guestName) return null;
+
+  return {
+    refId,
+    guestName,
+    guestEmail,
+    guestPhone,
+    checkIn: bookingState.checkIn || "",
+    checkOut: bookingState.checkOut || "",
+    nights: bookingState.nights || 0,
+    rooms: bookingState.rooms || 1,
+    adults: bookingState.adults || 0,
+    children: bookingState.children || 0,
+    paymentMethod: getSelectedPaymentMethod() || "cash",
+    roomPrice: bookingState.roomPrice || 0,
+    addonsTotal: bookingState.addonsTotal || 0,
+    fee: bookingState.fee || 0,
+    totalPrice: bookingState.totalPrice || parseFloat(String(totalText).replace(/[^\d.]/g, "")) || 0
+  };
 }
 
 // ─── Calculate Add-ons Total ────────────────
@@ -1281,8 +1311,11 @@ function closeSuccessModal() {
   document.body.classList.remove("modal-open");
 }
 
+// ─── Receipt Actions ─────────────────────────
 function printBookingReceipt() {
-  if (!lastSuccessfulBooking) {
+  const p = getBookingDataForReceipt();
+
+  if (!p) {
     showGlobalAlert(t("No booking data available to print.", "لا توجد بيانات حجز للطباعة."), "warning");
     return;
   }
@@ -1292,9 +1325,8 @@ function printBookingReceipt() {
   const locale = isAr ? "ar-DZ" : "en-GB";
   const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
 
-  const p = lastSuccessfulBooking;
-  const ci = parseLocalDate(p.checkIn)?.toLocaleDateString(locale, fmtOpts) || p.checkIn;
-  const co = parseLocalDate(p.checkOut)?.toLocaleDateString(locale, fmtOpts) || p.checkOut;
+  const ci = p.checkIn ? (parseLocalDate(p.checkIn)?.toLocaleDateString(locale, fmtOpts) || p.checkIn) : "—";
+  const co = p.checkOut ? (parseLocalDate(p.checkOut)?.toLocaleDateString(locale, fmtOpts) || p.checkOut) : "—";
   const hotelTitle = bookingState.property
     ? (bookingState.lang === "ar" ? (bookingState.property.titleAr || bookingState.property.titleEn) : (bookingState.property.titleEn || bookingState.property.titleAr))
     : "OreBooking";
@@ -1305,12 +1337,13 @@ function printBookingReceipt() {
     return;
   }
 
+  win.document.open();
   win.document.write(`
     <!doctype html>
     <html lang="${isAr ? "ar" : "en"}" dir="${isAr ? "rtl" : "ltr"}">
     <head>
       <meta charset="utf-8" />
-      <title>${escapeHtml(t("Booking Receipt", "وصل الحجز"))} - ${escapeHtml(p.refId)}</title>
+      <title>${escapeHtml(t("Booking Receipt", "وصل الحجز"))} - ${escapeHtml(p.refId || "BOOKING")}</title>
       <style>
         body{font-family:Arial,sans-serif;padding:32px;color:#111827;background:#fff}
         .wrap{max-width:820px;margin:0 auto}
@@ -1335,23 +1368,23 @@ function printBookingReceipt() {
           </div>
           <div>
             <div class="muted">${escapeHtml(t("Reference", "المرجع"))}</div>
-            <div><strong>${escapeHtml(p.refId)}</strong></div>
+            <div><strong>${escapeHtml(p.refId || "—")}</strong></div>
           </div>
         </div>
 
         <div class="box">
-          <div class="row"><span class="label">${escapeHtml(t("Guest Name", "اسم النزيل"))}</span><span class="value">${escapeHtml(p.guestName)}</span></div>
-          <div class="row"><span class="label">${escapeHtml(t("Email", "البريد الإلكتروني"))}</span><span class="value">${escapeHtml(p.guestEmail)}</span></div>
-          <div class="row"><span class="label">${escapeHtml(t("Phone", "الهاتف"))}</span><span class="value">${escapeHtml(p.guestPhone)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Guest Name", "اسم النزيل"))}</span><span class="value">${escapeHtml(p.guestName || "—")}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Email", "البريد الإلكتروني"))}</span><span class="value">${escapeHtml(p.guestEmail || "—")}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Phone", "الهاتف"))}</span><span class="value">${escapeHtml(p.guestPhone || "—")}</span></div>
         </div>
 
         <div class="box">
           <div class="row"><span class="label">${escapeHtml(t("Check-in", "الوصول"))}</span><span class="value">${escapeHtml(ci)}</span></div>
           <div class="row"><span class="label">${escapeHtml(t("Check-out", "المغادرة"))}</span><span class="value">${escapeHtml(co)}</span></div>
-          <div class="row"><span class="label">${escapeHtml(t("Nights", "الليالي"))}</span><span class="value">${escapeHtml(String(p.nights))}</span></div>
-          <div class="row"><span class="label">${escapeHtml(t("Guests", "الضيوف"))}</span><span class="value">${escapeHtml(`${p.adults} ${t("adults", "بالغين")} / ${p.children} ${t("children", "أطفال")}`)}</span></div>
-          <div class="row"><span class="label">${escapeHtml(t("Rooms", "الغرف"))}</span><span class="value">${escapeHtml(String(p.rooms))}</span></div>
-          <div class="row"><span class="label">${escapeHtml(t("Payment", "الدفع"))}</span><span class="value">${escapeHtml(getPaymentMethodLabel(p.paymentMethod))}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Nights", "الليالي"))}</span><span class="value">${escapeHtml(String(p.nights || 0))}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Guests", "الضيوف"))}</span><span class="value">${escapeHtml(`${p.adults || 0} ${t("adults", "بالغين")} / ${p.children || 0} ${t("children", "أطفال")}`)}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Rooms", "الغرف"))}</span><span class="value">${escapeHtml(String(p.rooms || 1))}</span></div>
+          <div class="row"><span class="label">${escapeHtml(t("Payment", "الدفع"))}</span><span class="value">${escapeHtml(getPaymentMethodLabel(p.paymentMethod || "cash"))}</span></div>
         </div>
 
         <div class="box">
@@ -1363,36 +1396,40 @@ function printBookingReceipt() {
       </div>
       <script>
         window.onload = function() {
-          window.print();
-          setTimeout(function(){ window.close(); }, 300);
+          setTimeout(function() {
+            window.focus();
+            window.print();
+          }, 250);
         };
       <\/script>
     </body>
     </html>
   `);
   win.document.close();
+  try { win.focus(); } catch (_) {}
 }
 
 function downloadBookingReceipt() {
-  if (!lastSuccessfulBooking) {
+  const p = getBookingDataForReceipt();
+
+  if (!p) {
     showGlobalAlert(t("No booking data available.", "لا توجد بيانات حجز متاحة."), "warning");
     return;
   }
 
-  const p = lastSuccessfulBooking;
   const lines = [
-    `${t("Booking Reference", "مرجع الحجز")}: ${p.refId}`,
-    `${t("Guest Name", "اسم النزيل")}: ${p.guestName}`,
-    `${t("Email", "البريد الإلكتروني")}: ${p.guestEmail}`,
-    `${t("Phone", "الهاتف")}: ${p.guestPhone}`,
-    `${t("Check-in", "الوصول")}: ${p.checkIn}`,
-    `${t("Check-out", "المغادرة")}: ${p.checkOut}`,
-    `${t("Nights", "الليالي")}: ${p.nights}`,
-    `${t("Rooms", "الغرف")}: ${p.rooms}`,
-    `${t("Adults", "البالغون")}: ${p.adults}`,
-    `${t("Children", "الأطفال")}: ${p.children}`,
-    `${t("Payment", "الدفع")}: ${getPaymentMethodLabel(p.paymentMethod)}`,
-    `${t("Total", "الإجمالي")}: ${p.totalPrice}`
+    `${t("Booking Reference", "مرجع الحجز")}: ${p.refId || ""}`,
+    `${t("Guest Name", "اسم النزيل")}: ${p.guestName || ""}`,
+    `${t("Email", "البريد الإلكتروني")}: ${p.guestEmail || ""}`,
+    `${t("Phone", "الهاتف")}: ${p.guestPhone || ""}`,
+    `${t("Check-in", "الوصول")}: ${p.checkIn || ""}`,
+    `${t("Check-out", "المغادرة")}: ${p.checkOut || ""}`,
+    `${t("Nights", "الليالي")}: ${p.nights || 0}`,
+    `${t("Rooms", "الغرف")}: ${p.rooms || 1}`,
+    `${t("Adults", "البالغون")}: ${p.adults || 0}`,
+    `${t("Children", "الأطفال")}: ${p.children || 0}`,
+    `${t("Payment", "الدفع")}: ${getPaymentMethodLabel(p.paymentMethod || "cash")}`,
+    `${t("Total", "الإجمالي")}: ${p.totalPrice || 0}`
   ].join("\n");
 
   const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
@@ -1766,10 +1803,37 @@ function setupEventListeners() {
     });
   });
 
-  els.btnCloseSuccess?.addEventListener("click", closeSuccessModal);
-  els.btnCloseSuccess2?.addEventListener("click", closeSuccessModal);
-  els.btnPrintReceipt?.addEventListener("click", printBookingReceipt);
-  els.btnDownloadReceipt?.addEventListener("click", downloadBookingReceipt);
+  [
+    els.btnCloseSuccess,
+    els.btnCloseSuccess2,
+    document.getElementById("btn-done"),
+    document.getElementById("done-btn"),
+    document.getElementById("success-done-btn")
+  ].filter(Boolean).forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeSuccessModal();
+    });
+  });
+
+  [
+    els.btnPrintReceipt,
+    document.getElementById("print-receipt-btn"),
+    document.getElementById("success-print-btn")
+  ].filter(Boolean).forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      printBookingReceipt();
+    });
+  });
+
+  els.btnDownloadReceipt?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    downloadBookingReceipt();
+  });
 
   els.successModal?.addEventListener("click", e => {
     if (e.target === els.successModal) closeSuccessModal();
@@ -1817,90 +1881,4 @@ const TRANSLATIONS = {
     "lbl-who-coming": "الإشغال والغرف",
     "lbl-rooms-title": "غرف",
     "lbl-rooms-sub": "الحد الأقصى 5",
-    "lbl-adults-title": "بالغون",
-    "lbl-adults-sub": "13 سنة فما فوق",
-    "lbl-fname": "الاسم الكامل",
-    "lbl-email": "البريد الإلكتروني",
-    "lbl-phone": "رقم الهاتف",
-    "lbl-notes": "طلبات خاصة (اختياري)",
-    "lbl-sidebar-title": "ملخص الحجز",
-    "btn-next-1-txt": "الخطوة التالية",
-    "btn-next-2-txt": "الخطوة التالية",
-    "btn-next-3-txt": "مراجعة التفاصيل",
-    "btn-back-2": "رجوع",
-    "btn-back-3": "رجوع",
-    "btn-back-4": "رجوع",
-    "btn-confirm-txt": "تأكيد الحجز"
-  }
-};
-
-function translateBookingPage() {
-  const dir = bookingState.lang === "ar" ? "rtl" : "ltr";
-  const lang = bookingState.lang === "ar" ? "ar" : "en";
-
-  document.documentElement.setAttribute("dir", dir);
-  document.documentElement.setAttribute("lang", lang);
-  document.body.style.fontFamily = bookingState.lang === "ar"
-    ? "'Tajawal', sans-serif"
-    : "'Outfit', sans-serif";
-
-  if (bookingState.lang !== "ar") {
-    const enMap = {
-      "nav-back-txt": "Back to Property",
-      "lbl-step1": "Dates & Rooms",
-      "lbl-step2": "Add-ons & Pay",
-      "lbl-step3": "Guest Details",
-      "lbl-step4": "Confirmation",
-      "st-title-1": "When are you traveling?",
-      "st-sub-1": "Select your check-in dates and room preferences.",
-      "st-title-2": "Enhance your stay",
-      "st-sub-2": "Select extras and choose your payment method.",
-      "st-title-3": "Who is booking?",
-      "st-sub-3": "Enter your contact details so we can confirm your reservation.",
-      "st-title-4": "Review & Confirm",
-      "st-sub-4": "Please review your booking details before final confirmation.",
-      "lbl-chk-in": "Check-in",
-      "lbl-chk-out": "Check-out",
-      "lbl-nights": "Nights",
-      "lbl-who-coming": "Occupancy & Rooms",
-      "lbl-rooms-title": "Rooms",
-      "lbl-rooms-sub": "Max 5",
-      "lbl-adults-title": "Adults",
-      "lbl-adults-sub": "Ages 13 or above",
-      "lbl-fname": "Full Name",
-      "lbl-email": "Email",
-      "lbl-phone": "Phone Number",
-      "lbl-notes": "Special Requests (Optional)",
-      "lbl-sidebar-title": "Booking Summary",
-      "btn-next-1-txt": "Next Step",
-      "btn-next-2-txt": "Next Step",
-      "btn-next-3-txt": "Review Details",
-      "btn-back-2": "Back",
-      "btn-back-3": "Back",
-      "btn-back-4": "Back",
-      "btn-confirm-txt": "Confirm Booking"
-    };
-
-    Object.entries(enMap).forEach(([id, txt]) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = txt;
-    });
-
-    if (els.gName) els.gName.placeholder = "Farouk";
-    if (els.gEmail) els.gEmail.placeholder = "example@email.com";
-    if (els.gPhone) els.gPhone.placeholder = "+213 555 000 000";
-    if (els.gNotes) els.gNotes.placeholder = "Any special requests or arrival time?";
-    return;
-  }
-
-  const dict = TRANSLATIONS.ar;
-  Object.entries(dict).forEach(([id, txt]) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = txt;
-  });
-
-  if (els.gName) els.gName.placeholder = "فاروق";
-  if (els.gEmail) els.gEmail.placeholder = "example@email.com";
-  if (els.gPhone) els.gPhone.placeholder = "+213 555 000 000";
-  if (els.gNotes) els.gNotes.placeholder = "أي طلبات خاصة أو وقت الوصول؟";
-}
+   
