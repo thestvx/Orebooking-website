@@ -1,5 +1,5 @@
 // ==========================================
-// 🔥 1. FIREBASE CONFIGURATION
+// 1. FIREBASE CONFIGURATION
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
@@ -18,7 +18,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // ==========================================
-// 🌍 2. GLOBAL STATE & TRANSLATIONS
+// 2. GLOBAL STATE & TRANSLATIONS
 // ==========================================
 const state = {
   lang: localStorage.getItem("ore_lang") || "en",
@@ -150,7 +150,7 @@ const translations = {
 };
 
 // ==========================================
-// 🏠 3. STATIC MOCK DATA & WILAYAS
+// 3. STATIC MOCK DATA & WILAYAS
 // ==========================================
 const properties = [
   {
@@ -265,7 +265,7 @@ const algerianWilayas = [
 ];
 
 // ==========================================
-// ⚙️ 4. CORE INITIALIZATION
+// 4. CORE INITIALIZATION
 // ==========================================
 const langBtn = document.getElementById("lang-toggle");
 const themeBtn = document.getElementById("theme-toggle");
@@ -283,6 +283,8 @@ const myFavoritesBtn = document.getElementById("my-favorites-btn");
 const myBookingsBtn = document.getElementById("my-bookings-btn");
 const homeLogoBtn = document.getElementById("home-logo-btn");
 
+let currentPropImages = [];
+
 function init() {
   applyInitialState();
 
@@ -296,6 +298,7 @@ function init() {
   renderPropertyDetails();
   initScrollTopBtn();
   initMobileNav();
+  initSliderTouch();
   initPasswordToggles();
   initPasswordStrength();
   initForgotPassword();
@@ -304,6 +307,7 @@ function init() {
   if (langBtn) langBtn.addEventListener("click", toggleLanguage);
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
   if (openAuthBtn) openAuthBtn.addEventListener("click", handleAuthButtonClick);
+  if (closeAuthBtn) closeAuthBtn.addEventListener("click", closeModal);
 
   if (homeLogoBtn) {
     homeLogoBtn.addEventListener("click", e => {
@@ -318,16 +322,20 @@ function init() {
     myFavoritesBtn.addEventListener("click", () => {
       if (profileDropdown) profileDropdown.classList.remove("active");
       state.currentView = "favorites";
+
       const hero = document.getElementById("hero-section");
       const cats = document.getElementById("categories-container");
       if (hero) hero.style.display = "none";
       if (cats) cats.style.display = "none";
+
       hideClearSearchBtn();
+
       const sectionTitle = document.getElementById("section-main-title");
       if (sectionTitle) {
         sectionTitle.removeAttribute("data-i18n");
         sectionTitle.textContent = translations[state.lang].my_favorites;
       }
+
       renderListings();
     });
   }
@@ -349,8 +357,11 @@ function init() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
       const lb = document.getElementById("lightbox");
-      if (lb && lb.classList.contains("active")) closeLightbox();
-      else if (authModal && authModal.classList.contains("active")) closeModal();
+      if (lb && lb.classList.contains("active")) {
+        closeLightbox();
+      } else if (authModal && authModal.classList.contains("active")) {
+        closeModal();
+      }
 
       const bookingsModal = document.getElementById("bookings-modal");
       if (bookingsModal && bookingsModal.classList.contains("active")) {
@@ -361,8 +372,6 @@ function init() {
       if (sd) sd.classList.remove("active");
     }
   });
-
-  if (closeAuthBtn) closeAuthBtn.addEventListener("click", closeModal);
 
   document.getElementById("go-to-register")?.addEventListener("click", e => {
     e.preventDefault();
@@ -401,21 +410,71 @@ function init() {
 }
 
 // ==========================================
-// 🔝 SCROLL-TO-TOP BUTTON
+// 5. GENERAL HELPERS
+// ==========================================
+function escapeHtml(str = "") {
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+function escapeAttr(str = "") {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function propertyMatchesCategory(property, category) {
+  const haystack = [
+    property.title_en,
+    property.title_ar,
+    property.desc_en,
+    property.desc_ar,
+    ...(property.features_en || []),
+    ...(property.features_ar || [])
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  switch (category) {
+    case "Apartments":
+      return /apartment|شقة|شقق/.test(haystack);
+    case "Villas":
+      return /villa|فلل|فيلا/.test(haystack);
+    case "Resorts":
+      return /resort|camp|منتجع|كوخ/.test(haystack);
+    case "Pools":
+      return /pool|swimming|مسبح|مسابح/.test(haystack);
+    default:
+      return true;
+  }
+}
+
+// ==========================================
+// 6. SCROLL-TO-TOP BUTTON
 // ==========================================
 function initScrollTopBtn() {
   const btn = document.getElementById("scroll-top-btn");
   if (!btn) return;
-  window.addEventListener("scroll", () => {
-    btn.classList.toggle("visible", window.scrollY > 400);
-  }, { passive: true });
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      btn.classList.toggle("visible", window.scrollY > 400);
+    },
+    { passive: true }
+  );
+
   btn.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
 
 // ==========================================
-// 📱 MOBILE BOTTOM NAV
+// 7. MOBILE BOTTOM NAV
 // ==========================================
 function initMobileNav() {
   const nav = document.getElementById("mobile-bottom-nav");
@@ -425,6 +484,7 @@ function initMobileNav() {
     btn.addEventListener("click", () => {
       nav.querySelectorAll(".mob-nav-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+
       const target = btn.getAttribute("data-target");
       if (target === "home") resetToHome();
       if (target === "favorites") myFavoritesBtn?.click();
@@ -434,13 +494,14 @@ function initMobileNav() {
 }
 
 // ==========================================
-// 🔒 PASSWORD SHOW/HIDE TOGGLES
+// 8. PASSWORD UI
 // ==========================================
 function initPasswordToggles() {
   document.querySelectorAll(".toggle-pass-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const input = btn.closest(".pass-wrapper")?.querySelector("input");
       if (!input) return;
+
       const isText = input.type === "text";
       input.type = isText ? "password" : "text";
       btn.innerHTML = isText
@@ -450,9 +511,6 @@ function initPasswordToggles() {
   });
 }
 
-// ==========================================
-// 🔑 PASSWORD STRENGTH METER
-// ==========================================
 function initPasswordStrength() {
   const input = document.getElementById("reg-password");
   const wrapper = document.getElementById("password-strength");
@@ -468,9 +526,11 @@ function initPasswordStrength() {
       en: ["", "Weak", "Fair", "Good", "Strong"],
       ar: ["", "ضعيفة", "مقبولة", "جيدة", "قوية"]
     };
+
     barsEl.forEach((bar, i) => {
       bar.style.background = i < score ? colors[score - 1] : "var(--border-color)";
     });
+
     if (label) {
       label.textContent = val.length ? labels[state.lang][score] : "";
       label.style.color = score > 0 ? colors[score - 1] : "var(--text-muted)";
@@ -479,7 +539,9 @@ function initPasswordStrength() {
 }
 
 function calcPasswordStrength(val) {
-  if (!val || val.length < 6) return 1;
+  if (!val) return 0;
+  if (val.length < 6) return 1;
+
   let score = 1;
   if (val.length >= 8) score++;
   if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
@@ -488,7 +550,40 @@ function calcPasswordStrength(val) {
 }
 
 // ==========================================
-// 🏠 4.1 RESET TO HOME
+// 9. FORGOT PASSWORD
+// ==========================================
+function initForgotPassword() {}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+
+  const emailInput =
+    document.getElementById("forgot-email") ||
+    forgotForm?.querySelector('input[type="email"]');
+
+  const email = emailInput?.value.trim();
+  if (!email) {
+    showMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email", "error");
+    return;
+  }
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showMessage(translations[state.lang].reset_sent, "success");
+    forgotForm?.reset();
+  } catch (error) {
+    const isAr = state.lang === "ar";
+    const map = {
+      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد" : "No account found with this email",
+      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
+      "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
+    };
+    showMessage(map[error.code] || error.message, "error");
+  }
+}
+
+// ==========================================
+// 10. RESET TO HOME
 // ==========================================
 function resetToHome() {
   state.currentView = "home";
@@ -514,11 +609,12 @@ function resetToHome() {
   document.querySelectorAll(".mob-nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelector('.mob-nav-btn[data-target="home"]')?.classList.add("active");
 
+  renderCategories();
   renderListings();
 }
 
 // ==========================================
-// 🔍 4.2 CLEAR SEARCH BUTTON
+// 11. CLEAR SEARCH BUTTON
 // ==========================================
 function initClearSearchBtn() {
   const clearBtn = document.getElementById("clear-search-btn");
@@ -537,7 +633,7 @@ function hideClearSearchBtn() {
 }
 
 // ==========================================
-// 🔍 4.5 SMART SEARCH WITH WILAYAS
+// 12. SMART SEARCH WITH WILAYAS
 // ==========================================
 function initSmartSearch() {
   const searchInput = document.getElementById("search-location");
@@ -562,7 +658,9 @@ function initSmartSearch() {
     `;
 
     if (wilayas.length > 0) {
-      html += wilayas.map(w => `
+      html += wilayas
+        .map(
+          w => `
         <div class="search-item" onclick="selectWilaya('${w.ar.replace(/'/g, "\\'")}', '${w.en.replace(/'/g, "\\'")}')">
           <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
           <div class="search-item-info">
@@ -570,7 +668,9 @@ function initSmartSearch() {
             <span class="search-item-sub">${state.lang === "en" ? "Algeria" : "الجزائر"} — ${w.id}</span>
           </div>
         </div>
-      `).join("");
+      `
+        )
+        .join("");
     } else {
       html += `
         <div class="no-results">
@@ -589,16 +689,19 @@ function initSmartSearch() {
 
   searchInput.addEventListener("input", e => {
     const val = e.target.value.trim().toLowerCase();
+
     if (!val) {
       renderWilayas(algerianWilayas);
       return;
     }
 
-    const filtered = algerianWilayas.filter(w =>
-      (w.ar && w.ar.includes(e.target.value.trim())) ||
-      (w.en && w.en.toLowerCase().includes(val)) ||
-      String(w.id) === val
+    const filtered = algerianWilayas.filter(
+      w =>
+        (w.ar && w.ar.includes(e.target.value.trim())) ||
+        (w.en && w.en.toLowerCase().includes(val)) ||
+        String(w.id) === val
     );
+
     renderWilayas(filtered);
   });
 
@@ -609,6 +712,7 @@ function initSmartSearch() {
   });
 
   let focusedIndex = -1;
+
   searchInput.addEventListener("keydown", e => {
     const items = searchDropdown.querySelectorAll(".search-item");
     if (!items.length) return;
@@ -626,7 +730,7 @@ function initSmartSearch() {
       if (focusedIndex >= 0 && items[focusedIndex]) {
         items[focusedIndex].click();
       } else {
-        if (searchBtn) searchBtn.click();
+        searchBtn?.click();
       }
       focusedIndex = -1;
     } else if (e.key === "Escape") {
@@ -648,11 +752,13 @@ function initSmartSearch() {
       searchInput.value = "";
       state.activeSearch = "";
       hideClearSearchBtn();
+
       const sectionTitle = document.getElementById("section-main-title");
       if (sectionTitle) {
         sectionTitle.setAttribute("data-i18n", "trending");
         sectionTitle.textContent = translations[state.lang].trending;
       }
+
       renderListings();
       document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -675,6 +781,7 @@ function initSmartSearch() {
     searchBtn.addEventListener("click", e => {
       e.preventDefault();
       searchDropdown.classList.remove("active");
+
       const val = searchInput.value.trim();
       const valLow = val.toLowerCase();
 
@@ -692,11 +799,12 @@ function initSmartSearch() {
         sectionTitle.textContent = state.lang === "en" ? `Results: "${val}"` : `نتائج: "${val}"`;
       }
 
-      const filtered = state.liveProperties.filter(p =>
-        (p.title_en && p.title_en.toLowerCase().includes(valLow)) ||
-        (p.title_ar && p.title_ar.includes(val)) ||
-        (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
-        (p.location_ar && p.location_ar.includes(val))
+      const filtered = state.liveProperties.filter(
+        p =>
+          (p.title_en && p.title_en.toLowerCase().includes(valLow)) ||
+          (p.title_ar && p.title_ar.includes(val)) ||
+          (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
+          (p.location_ar && p.location_ar.includes(val))
       );
 
       renderListings(filtered);
@@ -707,17 +815,20 @@ function initSmartSearch() {
   function filterAndRender(enName, arName) {
     const enLow = enName ? enName.toLowerCase() : "";
     const arTrim = arName || "";
-    const filtered = state.liveProperties.filter(p =>
-      (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
-      (p.location_ar && p.location_ar.includes(arTrim))
+
+    const filtered = state.liveProperties.filter(
+      p =>
+        (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
+        (p.location_ar && p.location_ar.includes(arTrim))
     );
+
     renderListings(filtered);
     document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
 // ==========================================
-// 🔥 5. جلب العقارات من Firestore
+// 13. LOAD PROPERTIES FROM FIRESTORE
 // ==========================================
 async function loadPropertiesFromFirestore() {
   const container = document.getElementById("listings-grid");
@@ -742,8 +853,8 @@ async function loadPropertiesFromFirestore() {
           title_ar: d.titleAr || d.title_ar || "",
           location_en: d.locationEn || d.location_en || "",
           location_ar: d.locationAr || d.location_ar || "",
-          price: d.price || 0,
-          rating: d.rating || 4.8,
+          price: Number(d.price || 0),
+          rating: Number(d.rating || 4.8),
           image: d.imageUrl || d.image || "",
           images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ""],
           urgency: d.urgency || null,
@@ -767,12 +878,13 @@ async function loadPropertiesFromFirestore() {
 }
 
 // ==========================================
-// 🌍 6. THEME, LOGO & LANGUAGE
+// 14. THEME, LOGO & LANGUAGE
 // ==========================================
 function updateLogo() {
   const mainLogo = document.getElementById("main-logo");
   const modalLogo = document.getElementById("modal-logo");
   const logoPath = state.theme === "dark" ? "logos/orebooking2.png" : "logos/orebooking.png";
+
   if (mainLogo) mainLogo.src = logoPath;
   if (modalLogo) modalLogo.src = logoPath;
 }
@@ -811,11 +923,12 @@ function toggleLanguage() {
 
     if (state.activeSearch && state.currentView !== "favorites") {
       const val = state.activeSearch.toLowerCase();
-      const filtered = state.liveProperties.filter(p =>
-        (p.title_en && p.title_en.toLowerCase().includes(val)) ||
-        (p.title_ar && p.title_ar.includes(state.activeSearch)) ||
-        (p.location_en && p.location_en.toLowerCase().includes(val)) ||
-        (p.location_ar && p.location_ar.includes(state.activeSearch))
+      const filtered = state.liveProperties.filter(
+        p =>
+          (p.title_en && p.title_en.toLowerCase().includes(val)) ||
+          (p.title_ar && p.title_ar.includes(state.activeSearch)) ||
+          (p.location_en && p.location_en.toLowerCase().includes(val)) ||
+          (p.location_ar && p.location_ar.includes(state.activeSearch))
       );
       renderListings(filtered);
     } else {
@@ -841,6 +954,7 @@ function toggleLanguage() {
 
 function updateLanguageUI() {
   const dict = translations[state.lang];
+
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (dict[key] !== undefined) el.textContent = dict[key];
@@ -886,7 +1000,7 @@ function _updatePropertyPageTexts() {
 }
 
 // ==========================================
-// 📦 7. FAVORITES
+// 15. FAVORITES
 // ==========================================
 function loadFavorites() {
   if (state.user) {
@@ -951,20 +1065,26 @@ function goToProperty(id) {
 }
 
 // ==========================================
-// 🔔 TOAST NOTIFICATIONS
+// 16. TOAST NOTIFICATIONS
 // ==========================================
 function showToast(message, type = "info", duration = 3000) {
   let container = document.getElementById("toast-container");
+
   if (!container) {
     container = document.createElement("div");
     container.id = "toast-container";
     document.body.appendChild(container);
   }
 
-  const icons = { success: "ph-check-circle", error: "ph-x-circle", info: "ph-info" };
+  const icons = {
+    success: "ph-check-circle",
+    error: "ph-x-circle",
+    info: "ph-info"
+  };
+
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<i class="ph ${icons[type] || "ph-info"}"></i><span>${message}</span>`;
+  toast.innerHTML = `<i class="ph ${icons[type] || "ph-info"}"></i><span>${escapeHtml(message)}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -975,11 +1095,13 @@ function showToast(message, type = "info", duration = 3000) {
 
 function showFavToast(message) {
   let el = document.getElementById("fav-toast");
+
   if (!el) {
     el = document.createElement("div");
     el.id = "fav-toast";
     document.body.appendChild(el);
   }
+
   el.textContent = message;
   el.classList.add("show");
   clearTimeout(el._timer);
@@ -987,7 +1109,7 @@ function showFavToast(message) {
 }
 
 // ==========================================
-// 📋 MY BOOKINGS
+// 17. MY BOOKINGS
 // ==========================================
 function initBookingsModal() {
   const modal = document.getElementById("bookings-modal");
@@ -1005,6 +1127,7 @@ function initBookingsModal() {
 function closeBookingsModal() {
   const modal = document.getElementById("bookings-modal");
   if (!modal) return;
+
   modal.classList.remove("active");
   document.body.classList.remove("modal-open");
 }
@@ -1034,63 +1157,72 @@ async function showMyBookings() {
   }
 
   try {
-    const snap = await db.collection("bookings")
+    const snap = await db
+      .collection("bookings")
       .where("userId", "==", state.user.uid)
       .orderBy("createdAt", "desc")
       .get();
 
     if (snap.empty) {
-      if (body) body.innerHTML = `
-        <div style="text-align:center;padding:40px;color:var(--text-muted);">
-          <i class="ph ph-calendar-x" style="font-size:3rem;display:block;margin-bottom:12px;opacity:0.4;"></i>
-          <p>${translations[state.lang].no_bookings}</p>
-        </div>
-      `;
+      if (body) {
+        body.innerHTML = `
+          <div style="text-align:center;padding:40px;color:var(--text-muted);">
+            <i class="ph ph-calendar-x" style="font-size:3rem;display:block;margin-bottom:12px;opacity:0.4;"></i>
+            <p>${translations[state.lang].no_bookings}</p>
+          </div>
+        `;
+      }
       return;
     }
 
     if (body) {
-      body.innerHTML = snap.docs.map(doc => {
-        const b = doc.data();
-        const isAr = state.lang === "ar";
-        const title = isAr ? (b.title_ar || b.propertyTitle || "") : (b.title_en || b.propertyTitle || "");
-        return `
-          <div class="booking-card">
-            <strong>${escapeHtml(title)}</strong>
-            <span class="text-muted text-sm">${escapeHtml(b.checkIn || "")} → ${escapeHtml(b.checkOut || "")}</span>
-            <span class="status-badge ${escapeHtml(b.status || "pending")}">${escapeHtml(b.status || "pending")}</span>
-          </div>
-        `;
-      }).join("");
+      body.innerHTML = snap.docs
+        .map(doc => {
+          const b = doc.data();
+          const isAr = state.lang === "ar";
+          const title = isAr ? (b.title_ar || b.propertyTitle || b.propertyTitleAr || "") : (b.title_en || b.propertyTitle || b.propertyTitleEn || "");
+          return `
+            <div class="booking-card">
+              <strong>${escapeHtml(title)}</strong>
+              <span class="text-muted text-sm">${escapeHtml(b.checkIn || "")} → ${escapeHtml(b.checkOut || "")}</span>
+              <span class="status-badge ${escapeAttr(b.status || "pending")}">${escapeHtml(b.status || "pending")}</span>
+            </div>
+          `;
+        })
+        .join("");
     }
   } catch (err) {
     console.error("Bookings fetch error:", err);
-    if (body) body.innerHTML = `<p class="text-center text-muted" style="padding:24px;">${state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات." : "Error loading bookings."}</p>`;
+    if (body) {
+      body.innerHTML = `<p class="text-center text-muted" style="padding:24px;">${
+        state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات." : "Error loading bookings."
+      }</p>`;
+    }
   }
 }
 
 // ==========================================
-// 🏠 8. RENDER LISTINGS
+// 18. RENDER LISTINGS
 // ==========================================
 function renderCategories() {
   const container = document.getElementById("categories-container");
   if (!container) return;
 
-  container.innerHTML = categories.map(cat => `
-    <button class="category-chip ${state.activeCategory === cat.label_en ? "active" : ""}" data-category="${cat.label_en}">
-      <i class="ph ${cat.icon}"></i>
-      <span>${state.lang === "ar" ? cat.label_ar : cat.label_en}</span>
-    </button>
-  `).join("");
+  container.innerHTML = categories
+    .map(
+      cat => `
+      <button class="category-chip ${state.activeCategory === cat.label_en ? "active" : ""}" data-category="${cat.label_en}">
+        <i class="ph ${cat.icon}"></i>
+        <span>${state.lang === "ar" ? cat.label_ar : cat.label_en}</span>
+      </button>
+    `
+    )
+    .join("");
 
   container.querySelectorAll(".category-chip").forEach(btn => {
     btn.addEventListener("click", () => {
       const category = btn.dataset.category;
-      if (state.activeCategory === category) {
-        state.activeCategory = null;
-      } else {
-        state.activeCategory = category;
-      }
+      state.activeCategory = state.activeCategory === category ? null : category;
       renderCategories();
       renderListings();
     });
@@ -1114,422 +1246,565 @@ function renderListings(customList = null) {
   if (!list.length) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;text-align:center;padding:40px 20px;">
-        <i class="ph ph-house-line" style="font-size:3rem;opacity:.45;"></i>
+        <i class="ph ${
+          state.currentView === "favorites" ? "ph-heart-break" : "ph-house-line"
+        }" style="font-size:3rem;opacity:.45;"></i>
         <p style="margin-top:12px;color:var(--text-muted);">
-          ${state.currentView === "favorites" ? translations[state.lang].no_favorites : translations[state.lang].no_results}
+          ${
+            state.currentView === "favorites"
+              ? translations[state.lang].no_favorites
+              : translations[state.lang].no_results
+          }
         </p>
       </div>
     `;
     return;
   }
 
-  grid.innerHTML = list.map(p => {
-    const isFav = state.favorites.includes(String(p.id));
-    const title = state.lang === "ar" ? p.title_ar : p.title_en;
-    const location = state.lang === "ar" ? p.location_ar : p.location_en;
-    const urgencyText = p.urgency ? translations[state.lang][`urgency_${p.urgency}`] || "" : "";
+  grid.innerHTML = list
+    .map(p => {
+      const isFav = state.favorites.includes(String(p.id));
+      const title = state.lang === "ar" ? p.title_ar : p.title_en;
+      const location = state.lang === "ar" ? p.location_ar : p.location_en;
+      const urgencyText = p.urgency ? translations[state.lang][`urgency_${p.urgency}`] || "" : "";
 
-    return `
-      <article class="listing-card" onclick="goToProperty('${String(p.id)}')">
-        <div class="listing-card-media">
-          <img src="${escapeAttr(p.image || "images/placeholder.jpg")}" alt="${escapeAttr(title)}" loading="lazy">
-          <button class="fav-btn ${isFav ? "active" : ""}" data-id="${String(p.id)}" aria-label="favorite">
-            <i class="ph${isFav ? "-fill" : ""} ph-heart"></i>
-          </button>
-          ${urgencyText ? `<span class="urgency-badge ${p.urgency}">${urgencyText}</span>` : ""}
-        </div>
-        <div class="listing-card-body">
-          <div class="listing-card-top">
-            <h3>${escapeHtml(title)}</h3>
-            <span class="rating"><i class="ph-fill ph-star"></i> ${Number(p.rating || 0).toFixed(2)}</span>
+      return `
+        <article class="listing-card" data-id="${escapeAttr(String(p.id))}">
+          <div class="listing-card-media">
+            <img src="${escapeAttr(p.image || "images/placeholder.jpg")}" alt="${escapeAttr(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+            ${
+              urgencyText
+                ? `
+              <div class="urgency-label">
+                <i class="ph-fill ph-fire"></i>
+                <span>${escapeHtml(urgencyText)}</span>
+              </div>
+            `
+                : ""
+            }
+            <button class="fav-btn ${isFav ? "active" : ""}" data-id="${escapeAttr(String(p.id))}" aria-label="favorite" type="button">
+              <i class="ph${isFav ? "-fill" : ""} ph-heart"></i>
+            </button>
           </div>
-          <p class="listing-location">${escapeHtml(location)}</p>
-          <p class="listing-price"><strong>${Number(p.price || 0).toLocaleString()}</strong> DZD / ${translations[state.lang].night}</p>
-        </div>
-      </article>
-    `;
-  }).join("");
+
+          <div class="listing-card-body">
+            <div class="listing-card-top">
+              <h3 class="listing-card-title">${escapeHtml(title)}</h3>
+              <div class="listing-card-rating">
+                <i class="ph-fill ph-star"></i>
+                <span>${escapeHtml(String(p.rating ?? 0))}</span>
+              </div>
+            </div>
+
+            <p class="listing-card-location">${escapeHtml(location)}</p>
+
+            <div class="listing-card-bottom">
+              <div class="listing-card-price">
+                <strong>${Number(p.price || 0).toLocaleString()}</strong>
+                <span>${state.lang === "ar" ? " دج / " : " DZD / "}${translations[state.lang].night}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  grid.querySelectorAll(".listing-card").forEach(card => {
+    card.addEventListener("click", e => {
+      if (e.target.closest(".fav-btn")) return;
+      goToProperty(card.dataset.id);
+    });
+  });
 
   grid.querySelectorAll(".fav-btn").forEach(btn => {
-    btn.addEventListener("click", e => {
-      toggleFavorite(e, btn.dataset.id);
-    });
+    btn.addEventListener("click", e => toggleFavorite(e, btn.dataset.id));
   });
 }
 
-function propertyMatchesCategory(property, categoryEn) {
-  const hay = [
-    property.title_en,
-    property.title_ar,
-    property.desc_en,
-    property.desc_ar,
-    ...(property.features_en || []),
-    ...(property.features_ar || [])
-  ].join(" ").toLowerCase();
-
-  const map = {
-    Apartments: ["apartment", "apartments", "شقة", "شقق"],
-    Villas: ["villa", "villas", "فيلا", "فلل"],
-    Resorts: ["resort", "resorts", "منتجع", "منتجعات", "camp"],
-    Pools: ["pool", "pools", "مسبح", "مسابح"]
-  };
-
-  return (map[categoryEn] || []).some(k => hay.includes(k.toLowerCase()));
-}
-
 // ==========================================
-// 🏡 9. PROPERTY DETAILS PAGE
+// 19. PROPERTY DETAILS PAGE
 // ==========================================
 function renderPropertyDetails() {
-  const page = document.body;
-  const propertyRoot = document.getElementById("property-page");
-  const propertyId = new URLSearchParams(window.location.search).get("id");
+  const urlParams = new URLSearchParams(window.location.search);
+  const propId = urlParams.get("id");
+  if (!propId) return;
 
-  if (!propertyId || !propertyRoot) return;
+  let prop = state.liveProperties.find(p => String(p.id) === String(propId));
+  if (!prop) prop = properties.find(p => String(p.id) === String(propId));
 
-  const allProps = state.liveProperties.length ? state.liveProperties : properties;
-  const property = allProps.find(p => String(p.id) === String(propertyId));
-  if (!property) return;
+  if (prop) {
+    fillPropertyPage(prop);
+    return;
+  }
 
-  const isAr = state.lang === "ar";
-  const title = isAr ? property.title_ar : property.title_en;
-  const location = isAr ? property.location_ar : property.location_en;
-  const desc = isAr ? property.desc_ar : property.desc_en;
-  const features = isAr ? property.features_ar : property.features_en;
+  db.collection("properties")
+    .doc(propId)
+    .get()
+    .then(doc => {
+      if (!doc.exists) return;
 
-  const titleEl = document.getElementById("property-title");
-  const locEl = document.getElementById("property-location");
-  const descEl = document.getElementById("property-description");
-  const priceEl = document.getElementById("property-price");
-  const ratingEl = document.getElementById("property-rating");
-  const mainImg = document.getElementById("property-main-image");
-  const gallery = document.getElementById("property-gallery");
-  const featuresWrap = document.getElementById("property-features");
-  const bookBtn = document.getElementById("book-now-btn");
-  const shareBtn = document.getElementById("share-btn");
-  const favBtn = document.getElementById("property-fav-btn");
+      const d = doc.data();
+      fillPropertyPage({
+        id: String(doc.id),
+        title_en: d.titleEn || d.title_en || "",
+        title_ar: d.titleAr || d.title_ar || "",
+        location_en: d.locationEn || d.location_en || "",
+        location_ar: d.locationAr || d.location_ar || "",
+        price: Number(d.price || 0),
+        rating: Number(d.rating || 4.8),
+        image: d.imageUrl || d.image || "",
+        images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ""],
+        urgency: d.urgency || null,
+        desc_en: d.descEn || d.desc_en || "",
+        desc_ar: d.descAr || d.desc_ar || "",
+        features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
+        features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
+        lat: d.lat || null,
+        lng: d.lng || null
+      });
+    })
+    .catch(err => {
+      console.error("Property fetch error:", err);
+    });
+}
+
+function fillPropertyPage(prop) {
+  const titleEl = document.getElementById("prop-title");
+  const ratingEl = document.getElementById("prop-rating");
+  const locationEl = document.getElementById("prop-location");
+  const descEl = document.getElementById("prop-desc");
+  const featuresEl = document.getElementById("prop-features");
+  const priceEl = document.getElementById("prop-price");
+  const trackEl = document.getElementById("slider-track");
+  const dotsEl = document.getElementById("slider-dots");
+  const bookNowLink = document.getElementById("book-now-link");
+
+  const title = state.lang === "ar" ? prop.title_ar : prop.title_en;
+  const location = state.lang === "ar" ? prop.location_ar : prop.location_en;
+  const desc = state.lang === "ar" ? prop.desc_ar : prop.desc_en;
+  const features = state.lang === "ar" ? prop.features_ar : prop.features_en;
 
   if (titleEl) titleEl.textContent = title;
-  if (locEl) locEl.textContent = location;
+  if (ratingEl) ratingEl.textContent = prop.rating;
+  if (locationEl) locationEl.textContent = location;
   if (descEl) descEl.textContent = desc;
-  if (priceEl) priceEl.textContent = `${Number(property.price || 0).toLocaleString()} DZD`;
-  if (ratingEl) ratingEl.textContent = Number(property.rating || 0).toFixed(2);
+  if (priceEl) priceEl.textContent = `${Number(prop.price || 0).toLocaleString()}${state.lang === "ar" ? " دج" : " DZD"}`;
 
-  if (mainImg) {
-    mainImg.src = property.images?.[0] || property.image || "images/placeholder.jpg";
-    mainImg.alt = title;
-    mainImg.addEventListener("click", () => openLightbox(property.images || [property.image], 0));
+  if (featuresEl) {
+    featuresEl.innerHTML = Array.isArray(features)
+      ? features
+          .map(
+            f => `
+          <li>
+            <i class="ph-fill ph-check-circle"></i>
+            <span>${escapeHtml(f)}</span>
+          </li>
+        `
+          )
+          .join("")
+      : "";
   }
 
-  if (gallery) {
-    gallery.innerHTML = (property.images || []).map((img, idx) => `
-      <img src="${escapeAttr(img)}" alt="${escapeAttr(title)} ${idx + 1}" class="gallery-thumb" loading="lazy">
-    `).join("");
+  currentPropImages = Array.isArray(prop.images) && prop.images.length ? prop.images : [prop.image].filter(Boolean);
+  state.currentImageIndex = 0;
 
-    gallery.querySelectorAll(".gallery-thumb").forEach((img, idx) => {
-      img.addEventListener("click", () => {
-        if (mainImg) mainImg.src = property.images[idx];
-      });
-      img.addEventListener("dblclick", () => openLightbox(property.images, idx));
-    });
+  if (trackEl) {
+    trackEl.innerHTML = currentPropImages
+      .map(
+        img => `
+        <img src="${escapeAttr(img)}" alt="Property Image" onclick="openLightbox()" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+      `
+      )
+      .join("");
   }
 
-  if (featuresWrap) {
-    featuresWrap.innerHTML = (features || []).map(item => `
-      <div class="feature-item"><i class="ph ph-check-circle"></i><span>${escapeHtml(item)}</span></div>
-    `).join("");
+  if (dotsEl) {
+    dotsEl.innerHTML = currentPropImages
+      .map(
+        (_, i) => `
+        <button class="slider-dot ${i === 0 ? "active" : ""}" onclick="goToSlide(event, ${i})"></button>
+      `
+      )
+      .join("");
   }
 
-  if (bookBtn) {
-    bookBtn.onclick = () => {
-      window.location.href = `booking.html?id=${String(property.id)}`;
-    };
+  const prevBtns = document.querySelectorAll(".slider-btn.prev-btn, .prev-btn");
+  const nextBtns = document.querySelectorAll(".slider-btn.next-btn, .next-btn");
+  const badge = document.getElementById("slider-count-badge");
+
+  if (currentPropImages.length <= 1) {
+    prevBtns.forEach(b => (b.style.display = "none"));
+    nextBtns.forEach(b => (b.style.display = "none"));
+    if (dotsEl) dotsEl.style.display = "none";
+    if (badge) badge.style.display = "none";
+  } else {
+    prevBtns.forEach(b => (b.style.display = ""));
+    nextBtns.forEach(b => (b.style.display = ""));
+    if (dotsEl) dotsEl.style.display = "";
+    if (badge) badge.style.display = "";
   }
 
-  if (shareBtn) {
-    shareBtn.onclick = async () => {
-      const url = window.location.href;
-      const text = `${title} — OreBooking`;
-      if (navigator.share) {
-        try {
-          await navigator.share({ title, text, url });
-        } catch (_) {}
-      } else {
-        navigator.clipboard?.writeText(url);
-        showToast(isAr ? "تم نسخ الرابط" : "Link copied", "success");
-      }
-    };
-  }
-
-  if (favBtn) {
-    const isFav = state.favorites.includes(String(property.id));
-    favBtn.classList.toggle("active", isFav);
-    favBtn.innerHTML = `<i class="ph${isFav ? "-fill" : ""} ph-heart"></i>`;
-    favBtn.onclick = e => toggleFavorite(e, property.id);
-  }
-
-  if (property.lat && property.lng) {
-    const mapLink = document.getElementById("open-maps-link");
-    if (mapLink) {
-      mapLink.href = `https://www.google.com/maps?q=${property.lat},${property.lng}`;
-      mapLink.target = "_blank";
-      mapLink.rel = "noopener noreferrer";
-    }
+  if (bookNowLink && prop.id) {
+    bookNowLink.href = `booking.html?id=${prop.id}`;
   }
 
   document.title = `${title} | OreBooking`;
-  page.setAttribute("data-property-loaded", "true");
+  updateSlider();
+
+  if (typeof window.initPropertyMap === "function") {
+    setTimeout(() => {
+      window.initPropertyMap(prop.lat, prop.lng, location, state.lang);
+    }, 200);
+  }
 }
 
-// ==========================================
-// 🖼️ 10. LIGHTBOX
-// ==========================================
-function ensureLightbox() {
-  let lb = document.getElementById("lightbox");
-  if (lb) return lb;
+window.prevSlide = function (e) {
+  if (e) e.stopPropagation();
+  if (!currentPropImages.length) return;
 
-  lb = document.createElement("div");
-  lb.id = "lightbox";
-  lb.className = "lightbox";
-  lb.innerHTML = `
-    <button class="lb-close" aria-label="close"><i class="ph ph-x"></i></button>
-    <button class="lb-prev" aria-label="prev"><i class="ph ph-caret-left"></i></button>
-    <img class="lb-image" alt="preview">
-    <button class="lb-next" aria-label="next"><i class="ph ph-caret-right"></i></button>
-  `;
-  document.body.appendChild(lb);
+  state.currentImageIndex =
+    state.currentImageIndex > 0 ? state.currentImageIndex - 1 : currentPropImages.length - 1;
 
-  lb.querySelector(".lb-close").addEventListener("click", closeLightbox);
-  lb.addEventListener("click", e => {
-    if (e.target === lb) closeLightbox();
-  });
-  lb.querySelector(".lb-prev").addEventListener("click", prevLightboxImage);
-  lb.querySelector(".lb-next").addEventListener("click", nextLightboxImage);
+  updateSlider();
+};
 
-  return lb;
-}
+window.nextSlide = function (e) {
+  if (e) e.stopPropagation();
+  if (!currentPropImages.length) return;
 
-let lightboxImages = [];
+  state.currentImageIndex =
+    state.currentImageIndex < currentPropImages.length - 1 ? state.currentImageIndex + 1 : 0;
 
-function openLightbox(images, index = 0) {
-  const lb = ensureLightbox();
-  lightboxImages = images || [];
+  updateSlider();
+};
+
+window.goToSlide = function (e, index) {
+  if (e) e.stopPropagation();
+  if (!currentPropImages.length) return;
+  if (index < 0 || index >= currentPropImages.length) return;
+
   state.currentImageIndex = index;
-  updateLightboxImage();
+  updateSlider();
+};
+
+function updateSlider() {
+  const trackEl = document.getElementById("slider-track");
+  if (trackEl) {
+    const offset = state.currentImageIndex * 100;
+    trackEl.style.transform =
+      state.lang === "ar" ? `translateX(${offset}%)` : `translateX(-${offset}%)`;
+  }
+
+  const lb = document.getElementById("lightbox");
+  const lbImg = document.getElementById("lightbox-img");
+  if (lbImg && lb?.classList.contains("active")) {
+    if (currentPropImages[state.currentImageIndex]) {
+      lbImg.src = currentPropImages[state.currentImageIndex];
+      lbImg.classList.remove("zoomed");
+    }
+  }
+
+  document.querySelectorAll(".slider-dot").forEach((dot, i) => {
+    dot.classList.toggle("active", i === state.currentImageIndex);
+  });
+
+  const badge = document.getElementById("slider-count-badge");
+  if (badge && currentPropImages.length > 1) {
+    badge.textContent = `${state.currentImageIndex + 1} / ${currentPropImages.length}`;
+  }
+}
+
+function initSliderTouch() {
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  document.addEventListener(
+    "touchstart",
+    e => {
+      if (!e.target.closest(".slider-container")) return;
+      touchStartX = e.changedTouches[0].screenX;
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    "touchend",
+    e => {
+      if (!e.target.closest(".slider-container")) return;
+
+      touchEndX = e.changedTouches[0].screenX;
+      const diff = touchStartX - touchEndX;
+
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) window.nextSlide(null);
+        else window.prevSlide(null);
+      }
+    },
+    { passive: true }
+  );
+}
+
+// ==========================================
+// 20. LIGHTBOX
+// ==========================================
+window.openLightbox = function () {
+  const lb = document.getElementById("lightbox");
+  const lbImg = document.getElementById("lightbox-img");
+
+  if (!lb || !lbImg || !currentPropImages.length) return;
+
+  lbImg.src = currentPropImages[state.currentImageIndex];
   lb.classList.add("active");
-  document.body.classList.add("modal-open");
-}
+  document.body.style.overflow = "hidden";
+};
 
-function closeLightbox() {
+window.closeLightbox = function () {
   const lb = document.getElementById("lightbox");
-  if (!lb) return;
-  lb.classList.remove("active");
-  document.body.classList.remove("modal-open");
-}
+  const lbImg = document.getElementById("lightbox-img");
 
-function updateLightboxImage() {
-  const lb = document.getElementById("lightbox");
-  const img = lb?.querySelector(".lb-image");
-  if (!img || !lightboxImages.length) return;
-  img.src = lightboxImages[state.currentImageIndex];
-}
+  if (lb) lb.classList.remove("active");
+  if (lbImg) lbImg.classList.remove("zoomed");
+  document.body.style.overflow = "";
+};
 
-function prevLightboxImage() {
-  if (!lightboxImages.length) return;
-  state.currentImageIndex = (state.currentImageIndex - 1 + lightboxImages.length) % lightboxImages.length;
-  updateLightboxImage();
-}
-
-function nextLightboxImage() {
-  if (!lightboxImages.length) return;
-  state.currentImageIndex = (state.currentImageIndex + 1) % lightboxImages.length;
-  updateLightboxImage();
-}
+window.toggleZoom = function (e) {
+  e.stopPropagation();
+  const img = document.getElementById("lightbox-img");
+  if (img) img.classList.toggle("zoomed");
+};
 
 // ==========================================
-// 🔐 11. AUTH MODAL
+// 21. FIREBASE AUTH
 // ==========================================
+function showMessage(msg, type = "error") {
+  if (!authMessage) return;
+
+  authMessage.textContent = msg;
+  authMessage.className = `auth-message ${type}`;
+  authMessage.style.display = "block";
+
+  authModal?.querySelector(".modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
+
+  clearTimeout(showMessage._timer);
+  showMessage._timer = setTimeout(() => {
+    if (authMessage) authMessage.style.display = "none";
+  }, 5000);
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const email = document.getElementById("login-email")?.value.trim();
+  const password = document.getElementById("login-password")?.value;
+  const btn = loginForm?.querySelector('button[type="submit"]');
+  const isAr = state.lang === "ar";
+
+  if (!email || !password) {
+    showMessage(isAr ? "أدخل البريد وكلمة المرور" : "Please enter email and password", "error");
+    return;
+  }
+
+  if (btn) {
+    btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
+    btn.disabled = true;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    closeModal();
+    loginForm?.reset();
+  } catch (error) {
+    const msgs = {
+      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد" : "No account found with this email",
+      "auth/wrong-password": isAr ? "كلمة المرور غير صحيحة" : "Incorrect password",
+      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
+      "auth/too-many-requests": isAr
+        ? "تم تعطيل المحاولة مؤقتاً بسبب كثرة المحاولات"
+        : "Account temporarily disabled due to many failed attempts",
+      "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
+    };
+
+    showMessage(msgs[error.code] || (isAr ? "بيانات الدخول غير صحيحة" : "Invalid email or password"), "error");
+  } finally {
+    if (btn) {
+      btn.innerHTML = `<span>${isAr ? "تسجيل الدخول" : "Sign In"}</span>`;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+
+  const name = document.getElementById("reg-name")?.value.trim();
+  const email = document.getElementById("reg-email")?.value.trim();
+  const password = document.getElementById("reg-password")?.value;
+  const btn = registerForm?.querySelector('button[type="submit"]');
+  const isAr = state.lang === "ar";
+
+  if (!name || name.length < 2) {
+    showMessage(isAr ? "الاسم يجب أن يكون حرفين على الأقل" : "Name must be at least 2 characters", "error");
+    return;
+  }
+
+  if (!email || !password) {
+    showMessage(isAr ? "أدخل جميع الحقول المطلوبة" : "Please fill all required fields", "error");
+    return;
+  }
+
+  if (btn) {
+    btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
+    btn.disabled = true;
+  }
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await cred.user.updateProfile({ displayName: name });
+    await cred.user.reload();
+
+    state.user = auth.currentUser;
+    closeModal();
+    registerForm?.reset();
+    updateUserUI();
+    showMessage(
+      isAr ? `مرحباً ${name}! تم إنشاء الحساب بنجاح.` : `Welcome ${name}! Your account was created.`,
+      "success"
+    );
+  } catch (error) {
+    const msgs = {
+      "auth/email-already-in-use": isAr ? "البريد مستخدم بالفعل" : "Email is already in use",
+      "auth/weak-password": isAr ? "كلمة المرور ضعيفة، الحد الأدنى 6 أحرف" : "Password too weak, min 6 characters",
+      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
+      "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
+    };
+
+    showMessage(msgs[error.code] || error.message, "error");
+  } finally {
+    if (btn) {
+      btn.innerHTML = `<span>${isAr ? "إنشاء الحساب" : "Create Account"}</span>`;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function handleGoogleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  try {
+    await auth.signInWithPopup(provider);
+    closeModal();
+  } catch (error) {
+    if (error.code === "auth/popup-closed-by-user") return;
+    console.error("Google Auth Error:", error);
+    showMessage(
+      state.lang === "ar" ? "حدث خطأ أثناء تسجيل الدخول بجوجل" : "Error signing in with Google",
+      "error"
+    );
+  }
+}
+
+function handleLogout() {
+  auth
+    .signOut()
+    .then(() => {
+      if (profileDropdown) profileDropdown.classList.remove("active");
+
+      state.currentView = "home";
+      state.activeSearch = "";
+      state.favorites = [];
+
+      if (document.getElementById("listings-grid")) {
+        const heroEl = document.getElementById("hero-section");
+        const catsEl = document.getElementById("categories-container");
+        if (heroEl) heroEl.style.display = "block";
+        if (catsEl) catsEl.style.display = "flex";
+
+        const searchInput = document.getElementById("search-location");
+        if (searchInput) searchInput.value = "";
+
+        hideClearSearchBtn();
+
+        const sectionTitle = document.getElementById("section-main-title");
+        if (sectionTitle) {
+          sectionTitle.setAttribute("data-i18n", "trending");
+          sectionTitle.textContent = translations[state.lang].trending;
+        }
+
+        renderCategories();
+        renderListings();
+      }
+    })
+    .catch(err => {
+      console.error("Logout error:", err);
+    });
+}
+
 function handleAuthButtonClick() {
   if (state.user) {
-    profileDropdown?.classList.toggle("active");
+    if (profileDropdown) profileDropdown.classList.toggle("active");
   } else {
     openModal();
   }
 }
 
+function updateUserUI() {
+  if (!openAuthBtn) return;
+
+  if (state.user) {
+    const name = state.user.displayName || state.user.email || "U";
+    const initial = name.charAt(0).toUpperCase();
+
+    openAuthBtn.innerHTML = `<span class="font-bold">${escapeHtml(initial)}</span>`;
+    openAuthBtn.classList.add("auth-btn-logged");
+    openAuthBtn.classList.remove("auth-btn-guest");
+
+    const nameEl = document.getElementById("dropdown-user-name");
+    const emailEl = document.getElementById("dropdown-user-email");
+
+    if (nameEl) nameEl.textContent = state.user.displayName || (state.lang === "ar" ? "مستخدم" : "User");
+    if (emailEl) emailEl.textContent = state.user.email || "";
+  } else {
+    openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
+    openAuthBtn.classList.add("auth-btn-guest");
+    openAuthBtn.classList.remove("auth-btn-logged");
+
+    if (profileDropdown) profileDropdown.classList.remove("active");
+  }
+}
+
 function openModal() {
   if (!authModal) return;
+  switchForm("login");
   authModal.classList.add("active");
   document.body.classList.add("modal-open");
-  switchForm("login");
 }
 
 function closeModal() {
   if (!authModal) return;
   authModal.classList.remove("active");
   document.body.classList.remove("modal-open");
-  clearAuthMessage();
+
+  if (authMessage) authMessage.style.display = "none";
+
+  setTimeout(() => switchForm("login"), 250);
 }
 
 function switchForm(type) {
-  loginForm?.classList.add("hidden");
-  registerForm?.classList.add("hidden");
-  forgotForm?.classList.add("hidden");
+  if (!loginForm || !registerForm) return;
 
-  if (type === "login") loginForm?.classList.remove("hidden");
-  if (type === "register") registerForm?.classList.remove("hidden");
-  if (type === "forgot") forgotForm?.classList.remove("hidden");
+  loginForm.classList.remove("active");
+  registerForm.classList.remove("active");
+  forgotForm?.classList.remove("active");
 
-  clearAuthMessage();
-}
+  if (type === "register") registerForm.classList.add("active");
+  else if (type === "forgot") forgotForm?.classList.add("active");
+  else loginForm.classList.add("active");
 
-function showMessage(message, type = "info") {
-  if (!authMessage) return;
-  authMessage.className = `auth-message ${type}`;
-  authMessage.textContent = message;
-  authMessage.style.display = "block";
-}
-
-function clearAuthMessage() {
-  if (!authMessage) return;
-  authMessage.textContent = "";
-  authMessage.className = "auth-message";
-  authMessage.style.display = "none";
-}
-
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById("login-email")?.value.trim();
-  const password = document.getElementById("login-password")?.value;
-
-  if (!email || !password) {
-    showMessage(state.lang === "ar" ? "املأ جميع الحقول." : "Please fill all fields.", "error");
-    return;
-  }
-
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-    showMessage(state.lang === "ar" ? "تم تسجيل الدخول بنجاح." : "Logged in successfully.", "success");
-    setTimeout(closeModal, 700);
-  } catch (err) {
-    console.error(err);
-    showMessage(mapFirebaseError(err), "error");
-  }
-}
-
-async function handleRegister(e) {
-  e.preventDefault();
-  const name = document.getElementById("reg-name")?.value.trim();
-  const email = document.getElementById("reg-email")?.value.trim();
-  const password = document.getElementById("reg-password")?.value;
-
-  if (!name || !email || !password) {
-    showMessage(state.lang === "ar" ? "املأ جميع الحقول." : "Please fill all fields.", "error");
-    return;
-  }
-
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(email, password);
-    await cred.user.updateProfile({ displayName: name });
-    showMessage(state.lang === "ar" ? "تم إنشاء الحساب بنجاح." : "Account created successfully.", "success");
-    setTimeout(closeModal, 700);
-  } catch (err) {
-    console.error(err);
-    showMessage(mapFirebaseError(err), "error");
-  }
-}
-
-function initForgotPassword() {}
-
-async function handleForgotPassword(e) {
-  e.preventDefault();
-  const email = document.getElementById("forgot-email")?.value.trim();
-  if (!email) {
-    showMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني." : "Enter your email.", "error");
-    return;
-  }
-
-  try {
-    await auth.sendPasswordResetEmail(email);
-    showMessage(translations[state.lang].reset_sent, "success");
-  } catch (err) {
-    console.error(err);
-    showMessage(mapFirebaseError(err), "error");
-  }
-}
-
-async function handleGoogleLogin() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    await auth.signInWithPopup(provider);
-    closeModal();
-  } catch (err) {
-    console.error(err);
-    showMessage(mapFirebaseError(err), "error");
-  }
-}
-
-async function handleLogout() {
-  try {
-    await auth.signOut();
-    profileDropdown?.classList.remove("active");
-    showToast(state.lang === "ar" ? "تم تسجيل الخروج." : "Logged out.", "success");
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function updateUserUI() {
-  const authBtnText = document.getElementById("auth-btn-text");
-  const userName = document.getElementById("profile-user-name");
-  const userEmail = document.getElementById("profile-user-email");
-
-  if (state.user) {
-    if (authBtnText) authBtnText.textContent = state.user.displayName || state.user.email || "Profile";
-    if (userName) userName.textContent = state.user.displayName || "OreBooking User";
-    if (userEmail) userEmail.textContent = state.user.email || "";
-    document.body.classList.add("user-logged-in");
-  } else {
-    if (authBtnText) authBtnText.textContent = state.lang === "ar" ? "تسجيل الدخول" : "Login";
-    if (userName) userName.textContent = state.lang === "ar" ? "زائر" : "Guest";
-    if (userEmail) userEmail.textContent = "";
-    document.body.classList.remove("user-logged-in");
-  }
+  if (authMessage) authMessage.style.display = "none";
 }
 
 // ==========================================
-// 🧰 12. HELPERS
-// ==========================================
-function mapFirebaseError(err) {
-  const code = err?.code || "";
-  const isAr = state.lang === "ar";
-
-  const map = {
-    "auth/invalid-email": isAr ? "البريد الإلكتروني غير صالح." : "Invalid email address.",
-    "auth/user-not-found": isAr ? "المستخدم غير موجود." : "User not found.",
-    "auth/wrong-password": isAr ? "كلمة المرور غير صحيحة." : "Incorrect password.",
-    "auth/email-already-in-use": isAr ? "البريد مستخدم بالفعل." : "Email already in use.",
-    "auth/weak-password": isAr ? "كلمة المرور ضعيفة." : "Weak password.",
-    "auth/popup-closed-by-user": isAr ? "تم إغلاق نافذة تسجيل الدخول." : "Popup closed before completing sign in."
-  };
-
-  return map[code] || (isAr ? "حدث خطأ غير متوقع." : "An unexpected error occurred.");
-}
-
-function escapeHtml(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeAttr(str = "") {
-  return escapeHtml(str);
-}
-
-// ==========================================
-// 🚀 13. START
+// 22. START
 // ==========================================
 document.addEventListener("DOMContentLoaded", init);
