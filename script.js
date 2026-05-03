@@ -1115,7 +1115,7 @@ function initBookingsModal() {
   const modal = document.getElementById("bookings-modal");
   if (!modal) return;
 
-  modal.querySelectorAll("[data-close-bookings], .close-bookings-btn").forEach(btn => {
+  modal.querySelectorAll("[data-close-bookings], .close-bookings-btn, #close-bookings-btn").forEach(btn => {
     btn.addEventListener("click", closeBookingsModal);
   });
 
@@ -1147,7 +1147,7 @@ async function showMyBookings() {
   modal.classList.add("active");
   document.body.classList.add("modal-open");
 
-  const body = modal.querySelector(".bookings-body") || modal.querySelector(".modal-content");
+  const body = document.getElementById("bookings-list") || modal.querySelector(".bookings-body") || modal.querySelector(".modal-content");
   if (body) {
     body.innerHTML = `
       <div style="text-align:center;padding:40px;">
@@ -1182,10 +1182,12 @@ async function showMyBookings() {
           const isAr = state.lang === "ar";
           const title = isAr ? (b.title_ar || b.propertyTitle || b.propertyTitleAr || "") : (b.title_en || b.propertyTitle || b.propertyTitleEn || "");
           return `
-            <div class="booking-card">
-              <strong>${escapeHtml(title)}</strong>
-              <span class="text-muted text-sm">${escapeHtml(b.checkIn || "")} → ${escapeHtml(b.checkOut || "")}</span>
-              <span class="status-badge ${escapeAttr(b.status || "pending")}">${escapeHtml(b.status || "pending")}</span>
+            <div class="booking-card" style="padding:16px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+              <strong style="display:block;margin-bottom:8px;">${escapeHtml(title)}</strong>
+              <span class="text-muted" style="display:block;font-size:0.85rem;margin-bottom:8px;">${escapeHtml(b.checkIn || "")} &rarr; ${escapeHtml(b.checkOut || "")}</span>
+              <span class="status-badge" style="display:inline-block;padding:4px 10px;background:rgba(108,99,255,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:500;">
+                ${escapeHtml(b.status || "pending")}
+              </span>
             </div>
           `;
         })
@@ -1208,118 +1210,118 @@ function renderCategories() {
   const container = document.getElementById("categories-container");
   if (!container) return;
 
-  container.innerHTML = categories
-    .map(
-      cat => `
-      <button class="category-chip ${state.activeCategory === cat.label_en ? "active" : ""}" data-category="${cat.label_en}">
-        <i class="ph ${cat.icon}"></i>
-        <span>${state.lang === "ar" ? cat.label_ar : cat.label_en}</span>
-      </button>
-    `
-    )
-    .join("");
-
-  container.querySelectorAll(".category-chip").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const category = btn.dataset.category;
-      state.activeCategory = state.activeCategory === category ? null : category;
-      renderCategories();
-      renderListings();
-    });
-  });
+  container.innerHTML = categories.map((cat, index) => `
+    <button class="category-item ${index === 0 && !state.activeCategory ? 'active' : ''}" 
+            onclick="selectCategory(this, '${cat.label_en}')">
+      <i class="ph ${cat.icon}"></i>
+      <span class="font-medium">${state.lang === "en" ? cat.label_en : cat.label_ar}</span>
+    </button>
+  `).join("");
 }
 
-function renderListings(customList = null) {
-  const grid = document.getElementById("listings-grid");
-  if (!grid) return;
+window.selectCategory = function(el, categoryLabel) {
+  document.querySelectorAll(".category-item").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  state.activeCategory = categoryLabel;
+  renderListings();
+};
 
-  let list = Array.isArray(customList) ? customList : [...state.liveProperties];
+window.sortListings = function(sortType) {
+  state.sortBy = sortType;
+  renderListings();
+};
+
+function renderListings(customArray = null) {
+  const container = document.getElementById("listings-grid");
+  if (!container) return;
+
+  const dict = translations[state.lang];
+  const currency = state.lang === "en" ? " DZD" : " د.ج";
+  
+  let itemsToShow = customArray !== null ? customArray : state.liveProperties;
+
+  if (state.activeCategory && !customArray && state.currentView !== "favorites") {
+    itemsToShow = itemsToShow.filter(p => propertyMatchesCategory(p, state.activeCategory));
+  }
 
   if (state.currentView === "favorites") {
-    list = list.filter(p => state.favorites.includes(String(p.id)));
+    itemsToShow = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
+  }
+  
+  if (state.sortBy && state.sortBy !== "default") {
+    itemsToShow = [...itemsToShow].sort((a, b) => {
+      if (state.sortBy === "price_asc") return a.price - b.price;
+      if (state.sortBy === "price_desc") return b.price - a.price;
+      if (state.sortBy === "rating") return b.rating - a.rating;
+      return 0;
+    });
   }
 
-  if (state.activeCategory) {
-    list = list.filter(p => propertyMatchesCategory(p, state.activeCategory));
-  }
-
-  if (!list.length) {
-    grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1;text-align:center;padding:40px 20px;">
-        <i class="ph ${
-          state.currentView === "favorites" ? "ph-heart-break" : "ph-house-line"
-        }" style="font-size:3rem;opacity:.45;"></i>
-        <p style="margin-top:12px;color:var(--text-muted);">
-          ${
-            state.currentView === "favorites"
-              ? translations[state.lang].no_favorites
-              : translations[state.lang].no_results
-          }
-        </p>
+  if (state.currentView === "favorites" && itemsToShow.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+        <i class="ph ph-heart-break" style="font-size:3.5rem; color:var(--text-muted); margin-bottom:16px; display:block; opacity:0.5;"></i>
+        <p style="font-size:1.1rem; color:var(--text-muted);">${dict.no_favorites}</p>
       </div>
     `;
     return;
   }
 
-  grid.innerHTML = list
-    .map(p => {
-      const isFav = state.favorites.includes(String(p.id));
-      const title = state.lang === "ar" ? p.title_ar : p.title_en;
-      const location = state.lang === "ar" ? p.location_ar : p.location_en;
-      const urgencyText = p.urgency ? translations[state.lang][`urgency_${p.urgency}`] || "" : "";
+  if (itemsToShow.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
+        <i class="ph ph-magnifying-glass" style="font-size:3.5rem; display:block; margin-bottom:16px; opacity:0.5;"></i>
+        <h3 style="margin-bottom:8px; color:var(--text-main);" class="font-bold">${customArray !== null ? dict.no_results : dict.no_props}</h3>
+      </div>
+    `;
+    return;
+  }
 
-      return `
-        <article class="listing-card" data-id="${escapeAttr(String(p.id))}">
-          <div class="listing-card-media">
-            <img src="${escapeAttr(p.image || "images/placeholder.jpg")}" alt="${escapeAttr(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-            ${
-              urgencyText
-                ? `
-              <div class="urgency-label">
-                <i class="ph-fill ph-fire"></i>
-                <span>${escapeHtml(urgencyText)}</span>
-              </div>
-            `
-                : ""
-            }
-            <button class="fav-btn ${isFav ? "active" : ""}" data-id="${escapeAttr(String(p.id))}" aria-label="favorite" type="button">
-              <i class="ph${isFav ? "-fill" : ""} ph-heart"></i>
-            </button>
-          </div>
-
-          <div class="listing-card-body">
-            <div class="listing-card-top">
-              <h3 class="listing-card-title">${escapeHtml(title)}</h3>
-              <div class="listing-card-rating">
-                <i class="ph-fill ph-star"></i>
-                <span>${escapeHtml(String(p.rating ?? 0))}</span>
-              </div>
-            </div>
-
-            <p class="listing-card-location">${escapeHtml(location)}</p>
-
-            <div class="listing-card-bottom">
-              <div class="listing-card-price">
-                <strong>${Number(p.price || 0).toLocaleString()}</strong>
-                <span>${state.lang === "ar" ? " دج / " : " DZD / "}${translations[state.lang].night}</span>
-              </div>
-            </div>
-          </div>
-        </article>
+  container.innerHTML = itemsToShow.map(prop => {
+    const isFav = state.favorites.includes(String(prop.id));
+    const title = state.lang === "en" ? prop.title_en : prop.title_ar;
+    const location = state.lang === "en" ? prop.location_en : prop.location_ar;
+    
+    let urgencyHtml = "";
+    if (prop.urgency) {
+      const urgencyText = prop.urgency === "few" ? dict.urgency_few : dict.urgency_hot;
+      urgencyHtml = `
+        <div class="urgency-label">
+          <i class="ph-fill ph-fire"></i>
+          <span>${urgencyText}</span>
+        </div>
       `;
-    })
-    .join("");
+    }
 
-  grid.querySelectorAll(".listing-card").forEach(card => {
-    card.addEventListener("click", e => {
-      if (e.target.closest(".fav-btn")) return;
-      goToProperty(card.dataset.id);
-    });
-  });
-
-  grid.querySelectorAll(".fav-btn").forEach(btn => {
-    btn.addEventListener("click", e => toggleFavorite(e, btn.dataset.id));
-  });
+    return `
+      <div class="card" onclick="goToProperty('${prop.id}')">
+        <div class="card-img-wrapper">
+          <img src="${escapeAttr(prop.image)}" alt="${escapeAttr(title)}" class="card-img" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+          ${urgencyHtml}
+          <button class="fav-btn ${isFav ? "active" : ""}" onclick="toggleFavorite(event, '${prop.id}')" aria-label="Favorite">
+            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
+          </button>
+        </div>
+        <div class="card-content">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title font-bold">${escapeHtml(title)}</h3>
+              <p class="card-location">${escapeHtml(location)}</p>
+            </div>
+            <div class="card-rating">
+              <i class="ph-fill ph-star"></i>
+              <span>${prop.rating}</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-price">
+              ${Number(prop.price).toLocaleString()} ${currency} <span>/ ${dict.night}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 // ==========================================
@@ -1330,46 +1332,44 @@ function renderPropertyDetails() {
   const propId = urlParams.get("id");
   if (!propId) return;
 
-  let prop = state.liveProperties.find(p => String(p.id) === String(propId));
-  if (!prop) prop = properties.find(p => String(p.id) === String(propId));
+  let prop = properties.find(p => String(p.id) === String(propId));
 
-  if (prop) {
-    fillPropertyPage(prop);
-    return;
-  }
-
-  db.collection("properties")
-    .doc(propId)
-    .get()
-    .then(doc => {
-      if (!doc.exists) return;
-
-      const d = doc.data();
-      fillPropertyPage({
-        id: String(doc.id),
-        title_en: d.titleEn || d.title_en || "",
-        title_ar: d.titleAr || d.title_ar || "",
-        location_en: d.locationEn || d.location_en || "",
-        location_ar: d.locationAr || d.location_ar || "",
-        price: Number(d.price || 0),
-        rating: Number(d.rating || 4.8),
-        image: d.imageUrl || d.image || "",
-        images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ""],
-        urgency: d.urgency || null,
-        desc_en: d.descEn || d.desc_en || "",
-        desc_ar: d.descAr || d.desc_ar || "",
-        features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
-        features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
-        lat: d.lat || null,
-        lng: d.lng || null
+  if (!prop) {
+    db.collection("properties").doc(propId).get()
+      .then(doc => {
+        if (!doc.exists) return;
+        const d = doc.data();
+        fillPropertyPage({
+          id: String(doc.id),
+          title_en: d.titleEn || d.title_en || "",
+          title_ar: d.titleAr || d.title_ar || "",
+          location_en: d.locationEn || d.location_en || "",
+          location_ar: d.locationAr || d.location_ar || "",
+          price: Number(d.price || 0),
+          rating: Number(d.rating || 4.8),
+          image: d.imageUrl || d.image || "",
+          images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ""],
+          urgency: d.urgency || null,
+          desc_en: d.descEn || d.desc_en || "",
+          desc_ar: d.descAr || d.desc_ar || "",
+          features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
+          features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
+          lat: d.lat || null,
+          lng: d.lng || null
+        });
+      })
+      .catch(err => {
+        console.error("Property fetch error:", err);
       });
-    })
-    .catch(err => {
-      console.error("Property fetch error:", err);
-    });
+  } else {
+    fillPropertyPage(prop);
+  }
 }
 
 function fillPropertyPage(prop) {
+  const dict = translations[state.lang];
+  const currency = state.lang === "en" ? " DZD" : " د.ج";
+  
   const titleEl = document.getElementById("prop-title");
   const ratingEl = document.getElementById("prop-rating");
   const locationEl = document.getElementById("prop-location");
@@ -1378,112 +1378,90 @@ function fillPropertyPage(prop) {
   const priceEl = document.getElementById("prop-price");
   const trackEl = document.getElementById("slider-track");
   const dotsEl = document.getElementById("slider-dots");
-  const bookNowLink = document.getElementById("book-now-link");
 
-  const title = state.lang === "ar" ? prop.title_ar : prop.title_en;
-  const location = state.lang === "ar" ? prop.location_ar : prop.location_en;
-  const desc = state.lang === "ar" ? prop.desc_ar : prop.desc_en;
-  const features = state.lang === "ar" ? prop.features_ar : prop.features_en;
-
-  if (titleEl) titleEl.textContent = title;
+  if (titleEl) titleEl.textContent = state.lang === "en" ? prop.title_en : prop.title_ar;
   if (ratingEl) ratingEl.textContent = prop.rating;
-  if (locationEl) locationEl.textContent = location;
-  if (descEl) descEl.textContent = desc;
-  if (priceEl) priceEl.textContent = `${Number(prop.price || 0).toLocaleString()}${state.lang === "ar" ? " دج" : " DZD"}`;
+  if (locationEl) locationEl.textContent = state.lang === "en" ? prop.location_en : prop.location_ar;
+  if (descEl) descEl.textContent = state.lang === "en" ? prop.desc_en : prop.desc_ar;
+  if (priceEl) priceEl.textContent = Number(prop.price).toLocaleString() + currency;
 
   if (featuresEl) {
-    featuresEl.innerHTML = Array.isArray(features)
-      ? features
-          .map(
-            f => `
-          <li>
-            <i class="ph-fill ph-check-circle"></i>
-            <span>${escapeHtml(f)}</span>
-          </li>
-        `
-          )
-          .join("")
-      : "";
+    const features = state.lang === "en" ? prop.features_en : prop.features_ar;
+    if (Array.isArray(features) && features.length > 0) {
+      featuresEl.innerHTML = features.map(f => `<li><i class="ph-fill ph-check-circle"></i> ${escapeHtml(f)}</li>`).join("");
+    }
   }
 
-  currentPropImages = Array.isArray(prop.images) && prop.images.length ? prop.images : [prop.image].filter(Boolean);
-  state.currentImageIndex = 0;
-
-  if (trackEl) {
-    trackEl.innerHTML = currentPropImages
-      .map(
-        img => `
-        <img src="${escapeAttr(img)}" alt="Property Image" onclick="openLightbox()" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-      `
-      )
-      .join("");
+  if (trackEl && Array.isArray(prop.images)) {
+    currentPropImages = prop.images;
+    state.currentImageIndex = 0;
+    trackEl.innerHTML = currentPropImages.map(img => `<img src="${escapeAttr(img)}" alt="Property Image" onclick="openLightbox()" loading="lazy" onerror="this.src='images/placeholder.jpg'">`).join("");
+    
+    if (dotsEl) {
+      dotsEl.innerHTML = currentPropImages.map((_, i) => `<button class="slider-dot ${i === 0 ? "active" : ""}" onclick="goToSlide(event, ${i})"></button>`).join("");
+    }
   }
 
-  if (dotsEl) {
-    dotsEl.innerHTML = currentPropImages
-      .map(
-        (_, i) => `
-        <button class="slider-dot ${i === 0 ? "active" : ""}" onclick="goToSlide(event, ${i})"></button>
-      `
-      )
-      .join("");
-  }
-
-  const prevBtns = document.querySelectorAll(".slider-btn.prev-btn, .prev-btn");
-  const nextBtns = document.querySelectorAll(".slider-btn.next-btn, .next-btn");
+  const prevBtns = document.querySelectorAll(".slider-btn.prev-btn");
+  const nextBtns = document.querySelectorAll(".slider-btn.next-btn");
   const badge = document.getElementById("slider-count-badge");
+  const fullscBtn = document.querySelector(".slider-fullscreen-btn");
 
   if (currentPropImages.length <= 1) {
-    prevBtns.forEach(b => (b.style.display = "none"));
-    nextBtns.forEach(b => (b.style.display = "none"));
+    prevBtns.forEach(b => b.style.display = "none");
+    nextBtns.forEach(b => b.style.display = "none");
     if (dotsEl) dotsEl.style.display = "none";
     if (badge) badge.style.display = "none";
   } else {
-    prevBtns.forEach(b => (b.style.display = ""));
-    nextBtns.forEach(b => (b.style.display = ""));
-    if (dotsEl) dotsEl.style.display = "";
-    if (badge) badge.style.display = "";
+    prevBtns.forEach(b => b.style.display = "flex");
+    nextBtns.forEach(b => b.style.display = "flex");
+    if (dotsEl) dotsEl.style.display = "flex";
+    if (badge) badge.style.display = "flex";
+    if (fullscBtn) fullscBtn.style.display = "flex";
   }
 
+  if (typeof window.updateImageBadge === "function") {
+    window.updateImageBadge(0, currentPropImages.length);
+  }
+
+  updateSlider();
+
+  document.title = (state.lang === "en" ? prop.title_en : prop.title_ar) + " | OreBooking";
+
+  const bookNowLink = document.getElementById("book-now-link");
   if (bookNowLink && prop.id) {
     bookNowLink.href = `booking.html?id=${prop.id}`;
   }
 
-  document.title = `${title} | OreBooking`;
-  updateSlider();
-
   if (typeof window.initPropertyMap === "function") {
-    setTimeout(() => {
-      window.initPropertyMap(prop.lat, prop.lng, location, state.lang);
-    }, 200);
+    const locationName = state.lang === "en" ? prop.location_en : prop.location_ar;
+    setTimeout(() => window.initPropertyMap(prop.lat, prop.lng, locationName, state.lang), 200);
   }
+
+  if (typeof window.showPropertyContent === "function") {
+    window.showPropertyContent();
+  }
+  
+  _updatePropertyPageTexts();
 }
 
-window.prevSlide = function (e) {
+window.prevSlide = function(e) {
   if (e) e.stopPropagation();
   if (!currentPropImages.length) return;
-
-  state.currentImageIndex =
-    state.currentImageIndex > 0 ? state.currentImageIndex - 1 : currentPropImages.length - 1;
-
+  state.currentImageIndex = state.currentImageIndex === 0 ? currentPropImages.length - 1 : state.currentImageIndex - 1;
   updateSlider();
 };
 
-window.nextSlide = function (e) {
+window.nextSlide = function(e) {
   if (e) e.stopPropagation();
   if (!currentPropImages.length) return;
-
-  state.currentImageIndex =
-    state.currentImageIndex < currentPropImages.length - 1 ? state.currentImageIndex + 1 : 0;
-
+  state.currentImageIndex = state.currentImageIndex === currentPropImages.length - 1 ? 0 : state.currentImageIndex + 1;
   updateSlider();
 };
 
-window.goToSlide = function (e, index) {
+window.goToSlide = function(e, index) {
   if (e) e.stopPropagation();
-  if (!currentPropImages.length) return;
-  if (index < 0 || index >= currentPropImages.length) return;
-
+  if (!currentPropImages.length || index < 0 || index >= currentPropImages.length) return;
   state.currentImageIndex = index;
   updateSlider();
 };
@@ -1492,26 +1470,22 @@ function updateSlider() {
   const trackEl = document.getElementById("slider-track");
   if (trackEl) {
     const offset = state.currentImageIndex * 100;
-    trackEl.style.transform =
-      state.lang === "ar" ? `translateX(${offset}%)` : `translateX(-${offset}%)`;
+    trackEl.style.transform = state.lang === "ar" ? `translateX(${offset}%)` : `translateX(-${offset}%)`;
   }
 
   const lb = document.getElementById("lightbox");
   const lbImg = document.getElementById("lightbox-img");
-  if (lbImg && lb?.classList.contains("active")) {
-    if (currentPropImages[state.currentImageIndex]) {
-      lbImg.src = currentPropImages[state.currentImageIndex];
-      lbImg.classList.remove("zoomed");
-    }
+  if (lbImg && lb?.classList.contains("active") && currentPropImages[state.currentImageIndex]) {
+    lbImg.src = currentPropImages[state.currentImageIndex];
+    lbImg.classList.remove("zoomed");
   }
 
   document.querySelectorAll(".slider-dot").forEach((dot, i) => {
     dot.classList.toggle("active", i === state.currentImageIndex);
   });
 
-  const badge = document.getElementById("slider-count-badge");
-  if (badge && currentPropImages.length > 1) {
-    badge.textContent = `${state.currentImageIndex + 1} / ${currentPropImages.length}`;
+  if (typeof window.updateImageBadge === "function") {
+    window.updateImageBadge(state.currentImageIndex, currentPropImages.length);
   }
 }
 
@@ -1519,91 +1493,78 @@ function initSliderTouch() {
   let touchStartX = 0;
   let touchEndX = 0;
 
-  document.addEventListener(
-    "touchstart",
-    e => {
-      if (!e.target.closest(".slider-container")) return;
-      touchStartX = e.changedTouches[0].screenX;
-    },
-    { passive: true }
-  );
+  document.addEventListener("touchstart", e => {
+    if (!e.target.closest(".slider-container")) return;
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
 
-  document.addEventListener(
-    "touchend",
-    e => {
-      if (!e.target.closest(".slider-container")) return;
+  document.addEventListener("touchend", e => {
+    if (!e.target.closest(".slider-container")) return;
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  }, { passive: true });
 
-      touchEndX = e.changedTouches[0].screenX;
-      const diff = touchStartX - touchEndX;
-
-      if (Math.abs(diff) > 50) {
-        if (diff > 0) window.nextSlide(null);
-        else window.prevSlide(null);
+  function handleSwipe() {
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        state.lang === "ar" ? window.prevSlide(null) : window.nextSlide(null);
+      } else {
+        state.lang === "ar" ? window.nextSlide(null) : window.prevSlide(null);
       }
-    },
-    { passive: true }
-  );
+    }
+  }
 }
 
-// ==========================================
-// 20. LIGHTBOX
-// ==========================================
-window.openLightbox = function () {
+window.openLightbox = function() {
   const lb = document.getElementById("lightbox");
   const lbImg = document.getElementById("lightbox-img");
-
-  if (!lb || !lbImg || !currentPropImages.length) return;
-
-  lbImg.src = currentPropImages[state.currentImageIndex];
-  lb.classList.add("active");
-  document.body.style.overflow = "hidden";
+  if (lb && lbImg && currentPropImages.length > 0) {
+    lbImg.src = currentPropImages[state.currentImageIndex];
+    lb.classList.add("active");
+    document.body.style.overflow = "hidden";
+  }
 };
 
-window.closeLightbox = function () {
+window.closeLightbox = function() {
   const lb = document.getElementById("lightbox");
   const lbImg = document.getElementById("lightbox-img");
-
-  if (lb) lb.classList.remove("active");
-  if (lbImg) lbImg.classList.remove("zoomed");
-  document.body.style.overflow = "";
+  if (lb) {
+    lb.classList.remove("active");
+    document.body.style.overflow = "";
+    if (lbImg) lbImg.classList.remove("zoomed");
+  }
 };
 
-window.toggleZoom = function (e) {
+window.toggleZoom = function(e) {
   e.stopPropagation();
   const img = document.getElementById("lightbox-img");
   if (img) img.classList.toggle("zoomed");
 };
 
 // ==========================================
-// 21. FIREBASE AUTH
+// 20. FIREBASE AUTH
 // ==========================================
 function showMessage(msg, type = "error") {
   if (!authMessage) return;
-
   authMessage.textContent = msg;
   authMessage.className = `auth-message ${type}`;
   authMessage.style.display = "block";
+  
+  const modalContent = authModal?.querySelector(".modal-content");
+  if (modalContent) modalContent.scrollTo({ top: 0, behavior: "smooth" });
 
-  authModal?.querySelector(".modal-content")?.scrollTo({ top: 0, behavior: "smooth" });
-
-  clearTimeout(showMessage._timer);
-  showMessage._timer = setTimeout(() => {
+  setTimeout(() => {
     if (authMessage) authMessage.style.display = "none";
   }, 5000);
 }
 
 async function handleLogin(e) {
   e.preventDefault();
-
   const email = document.getElementById("login-email")?.value.trim();
   const password = document.getElementById("login-password")?.value;
-  const btn = loginForm?.querySelector('button[type="submit"]');
+  const btn = loginForm.querySelector('button[type="submit"]');
   const isAr = state.lang === "ar";
-
-  if (!email || !password) {
-    showMessage(isAr ? "أدخل البريد وكلمة المرور" : "Please enter email and password", "error");
-    return;
-  }
 
   if (btn) {
     btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
@@ -1613,19 +1574,17 @@ async function handleLogin(e) {
   try {
     await auth.signInWithEmailAndPassword(email, password);
     closeModal();
-    loginForm?.reset();
+    loginForm.reset();
   } catch (error) {
     const msgs = {
-      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد" : "No account found with this email",
+      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد الإلكتروني" : "No account found with this email",
       "auth/wrong-password": isAr ? "كلمة المرور غير صحيحة" : "Incorrect password",
-      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
-      "auth/too-many-requests": isAr
-        ? "تم تعطيل المحاولة مؤقتاً بسبب كثرة المحاولات"
-        : "Account temporarily disabled due to many failed attempts",
-      "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
+      "auth/invalid-email": isAr ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format",
+      "auth/too-many-requests": isAr ? "تم تعطيل الحساب مؤقتًا بسبب كثرة المحاولات" : "Account temporarily disabled due to many failed attempts",
+      "auth/network-request-failed": isAr ? "تحقق من اتصالك بالإنترنت" : "Check your internet connection",
+      "auth/invalid-credential": isAr ? "البريد الإلكتروني أو كلمة المرور غير صحيحة" : "Invalid email or password"
     };
-
-    showMessage(msgs[error.code] || (isAr ? "بيانات الدخول غير صحيحة" : "Invalid email or password"), "error");
+    showMessage(msgs[error.code] || (isAr ? "حدث خطأ أثناء تسجيل الدخول" : "Error signing in"), "error");
   } finally {
     if (btn) {
       btn.innerHTML = `<span>${isAr ? "تسجيل الدخول" : "Sign In"}</span>`;
@@ -1636,20 +1595,14 @@ async function handleLogin(e) {
 
 async function handleRegister(e) {
   e.preventDefault();
-
   const name = document.getElementById("reg-name")?.value.trim();
   const email = document.getElementById("reg-email")?.value.trim();
   const password = document.getElementById("reg-password")?.value;
-  const btn = registerForm?.querySelector('button[type="submit"]');
+  const btn = registerForm.querySelector('button[type="submit"]');
   const isAr = state.lang === "ar";
 
-  if (!name || name.length < 2) {
+  if (name.length < 2) {
     showMessage(isAr ? "الاسم يجب أن يكون حرفين على الأقل" : "Name must be at least 2 characters", "error");
-    return;
-  }
-
-  if (!email || !password) {
-    showMessage(isAr ? "أدخل جميع الحقول المطلوبة" : "Please fill all required fields", "error");
     return;
   }
 
@@ -1662,23 +1615,18 @@ async function handleRegister(e) {
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await cred.user.updateProfile({ displayName: name });
     await cred.user.reload();
-
     state.user = auth.currentUser;
     closeModal();
-    registerForm?.reset();
+    registerForm.reset();
     updateUserUI();
-    showMessage(
-      isAr ? `مرحباً ${name}! تم إنشاء الحساب بنجاح.` : `Welcome ${name}! Your account was created.`,
-      "success"
-    );
+    showToast(isAr ? `أهلاً بك ${name}! تم إنشاء حسابك.` : `Welcome ${name}! Your account was created.`, "success");
   } catch (error) {
     const msgs = {
-      "auth/email-already-in-use": isAr ? "البريد مستخدم بالفعل" : "Email is already in use",
-      "auth/weak-password": isAr ? "كلمة المرور ضعيفة، الحد الأدنى 6 أحرف" : "Password too weak, min 6 characters",
-      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
-      "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
+      "auth/email-already-in-use": isAr ? "هذا البريد الإلكتروني مستخدم بالفعل" : "Email is already in use",
+      "auth/weak-password": isAr ? "كلمة المرور ضعيفة (6 أحرف على الأقل)" : "Password too weak (min 6 characters)",
+      "auth/invalid-email": isAr ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format",
+      "auth/network-request-failed": isAr ? "تحقق من اتصالك بالإنترنت" : "Check your internet connection"
     };
-
     showMessage(msgs[error.code] || error.message, "error");
   } finally {
     if (btn) {
@@ -1690,54 +1638,44 @@ async function handleRegister(e) {
 
 async function handleGoogleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
-
   try {
     await auth.signInWithPopup(provider);
     closeModal();
   } catch (error) {
     if (error.code === "auth/popup-closed-by-user") return;
     console.error("Google Auth Error:", error);
-    showMessage(
-      state.lang === "ar" ? "حدث خطأ أثناء تسجيل الدخول بجوجل" : "Error signing in with Google",
-      "error"
-    );
+    showMessage(state.lang === "ar" ? "خطأ أثناء تسجيل الدخول بواسطة قوقل" : "Error signing in with Google", "error");
   }
 }
 
 function handleLogout() {
-  auth
-    .signOut()
-    .then(() => {
-      if (profileDropdown) profileDropdown.classList.remove("active");
+  auth.signOut().then(() => {
+    if (profileDropdown) profileDropdown.classList.remove("active");
+    state.currentView = "home";
+    state.activeSearch = "";
+    state.favorites = [];
+    
+    if (document.getElementById("listings-grid")) {
+      const heroEl = document.getElementById("hero-section");
+      const catsEl = document.getElementById("categories-container");
+      if (heroEl) heroEl.style.display = "block";
+      if (catsEl) catsEl.style.display = "flex";
 
-      state.currentView = "home";
-      state.activeSearch = "";
-      state.favorites = [];
+      const searchInput = document.getElementById("search-location");
+      if (searchInput) searchInput.value = "";
+      hideClearSearchBtn();
 
-      if (document.getElementById("listings-grid")) {
-        const heroEl = document.getElementById("hero-section");
-        const catsEl = document.getElementById("categories-container");
-        if (heroEl) heroEl.style.display = "block";
-        if (catsEl) catsEl.style.display = "flex";
-
-        const searchInput = document.getElementById("search-location");
-        if (searchInput) searchInput.value = "";
-
-        hideClearSearchBtn();
-
-        const sectionTitle = document.getElementById("section-main-title");
-        if (sectionTitle) {
-          sectionTitle.setAttribute("data-i18n", "trending");
-          sectionTitle.textContent = translations[state.lang].trending;
-        }
-
-        renderCategories();
-        renderListings();
+      const sectionTitle = document.getElementById("section-main-title");
+      if (sectionTitle) {
+        sectionTitle.setAttribute("data-i18n", "trending");
+        sectionTitle.textContent = translations[state.lang].trending;
       }
-    })
-    .catch(err => {
-      console.error("Logout error:", err);
-    });
+      
+      renderListings();
+    }
+    
+    showToast(state.lang === "ar" ? "تم تسجيل الخروج بنجاح" : "Logged out successfully", "info");
+  });
 }
 
 function handleAuthButtonClick() {
@@ -1754,8 +1692,7 @@ function updateUserUI() {
   if (state.user) {
     const name = state.user.displayName || state.user.email || "U";
     const initial = name.charAt(0).toUpperCase();
-
-    openAuthBtn.innerHTML = `<span class="font-bold">${escapeHtml(initial)}</span>`;
+    openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
     openAuthBtn.classList.add("auth-btn-logged");
     openAuthBtn.classList.remove("auth-btn-guest");
 
@@ -1763,12 +1700,11 @@ function updateUserUI() {
     const emailEl = document.getElementById("dropdown-user-email");
 
     if (nameEl) nameEl.textContent = state.user.displayName || (state.lang === "ar" ? "مستخدم" : "User");
-    if (emailEl) emailEl.textContent = state.user.email || "";
+    if (emailEl) emailEl.textContent = state.user.email;
   } else {
-    openAuthBtn.innerHTML = `<i class="ph ph-user"></i>`;
+    openAuthBtn.innerHTML = '<i class="ph ph-user"></i>';
     openAuthBtn.classList.add("auth-btn-guest");
     openAuthBtn.classList.remove("auth-btn-logged");
-
     if (profileDropdown) profileDropdown.classList.remove("active");
   }
 }
@@ -1784,27 +1720,26 @@ function closeModal() {
   if (!authModal) return;
   authModal.classList.remove("active");
   document.body.classList.remove("modal-open");
-
   if (authMessage) authMessage.style.display = "none";
-
-  setTimeout(() => switchForm("login"), 250);
+  setTimeout(() => switchForm("login"), 350);
 }
 
 function switchForm(type) {
-  if (!loginForm || !registerForm) return;
+  if (!loginForm || !registerForm || !forgotForm) return;
 
   loginForm.classList.remove("active");
   registerForm.classList.remove("active");
-  forgotForm?.classList.remove("active");
+  forgotForm.classList.remove("active");
 
-  if (type === "register") registerForm.classList.add("active");
-  else if (type === "forgot") forgotForm?.classList.add("active");
-  else loginForm.classList.add("active");
+  if (type === "register") {
+    registerForm.classList.add("active");
+  } else if (type === "forgot") {
+    forgotForm.classList.add("active");
+  } else {
+    loginForm.classList.add("active");
+  }
 
   if (authMessage) authMessage.style.display = "none";
 }
 
-// ==========================================
-// 22. START
-// ==========================================
 document.addEventListener("DOMContentLoaded", init);
