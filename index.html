@@ -15,19 +15,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
-  <!-- Phosphor Icons CSS -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <!-- Main CSS (مع كاسر الكاش لضمان تحميل التحديثات) -->
+  <link rel="stylesheet" href="style.css?v=2.0">
+
+  <!-- Phosphor Icons (السكريبت الرسمي بدلاً من روابط الـ CSS المعطلة) -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css">
 
   <style>
     /* ─── Phosphor Icons Fix ─────────────────── */
@@ -220,13 +217,12 @@
     .mob-nav-btn.active { color: var(--primary); }
 
     /* ─── Navbar Mobile Fix ──────────────────── */
-    /* FIX: يضمن ظهور زر اللغة وكل عناصر nav-actions على الجوال */
     .nav-actions {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: nowrap;
-      overflow: visible;  /* FIX: منع اختفاء العناصر */
+      overflow: visible;  
       flex-shrink: 0;
     }
 
@@ -235,20 +231,14 @@
         padding: 10px 14px;
         gap: 8px;
       }
-      /* إخفاء الـ rewards badge على الجوال لتوفير مساحة */
       .rewards-badge { display: none !important; }
-
       .nav-actions { gap: 4px; }
-
-      /* تصغير الأزرار */
       .icon-btn {
         width: 36px; height: 36px;
         font-size: 1.05rem;
         padding: 0;
         flex-shrink: 0;
       }
-
-      /* FIX: زر اللغة يظهر دائماً */
       #lang-toggle {
         display: flex !important;
         align-items: center;
@@ -259,14 +249,8 @@
         border-radius: 8px;
         min-width: fit-content;
       }
-
-      /* زر البروفايل */
       .profile-menu { width: 36px; height: 36px; flex-shrink: 0; }
-
-      /* الشعار */
       .logo-img { height: 28px; }
-
-      /* body padding لأجل mobile bottom nav */
       body { padding-bottom: 64px; }
       #mobile-bottom-nav { display: block; }
     }
@@ -307,7 +291,7 @@
 
     <div class="nav-actions">
 
-      <!-- Rewards Badge (مخفي على الجوال) -->
+      <!-- Rewards Badge -->
       <div class="rewards-badge" role="status" aria-label="Reward points">
         <i class="ph-fill ph-star" aria-hidden="true"></i>
         <span id="user-points">1,250</span>
@@ -319,7 +303,7 @@
         <i class="ph ph-moon" aria-hidden="true"></i>
       </button>
 
-      <!-- Language Toggle — يظهر دائماً حتى على الجوال -->
+      <!-- Language Toggle -->
       <button id="lang-toggle" class="lang-btn font-medium" aria-label="Switch language">
         العربية
       </button>
@@ -376,7 +360,6 @@
           data-i18n-placeholder="location_placeholder"
           autocomplete="off"
           aria-label="Search by location"
-          aria-autocomplete="list"
           aria-controls="search-dropdown"
           aria-expanded="false"
         >
@@ -385,7 +368,7 @@
 
       <div class="search-divider" aria-hidden="true"></div>
 
-      <!-- Dates (placeholder — يمكن ربطه بـ date picker لاحقاً) -->
+      <!-- Dates -->
       <div class="search-field">
         <label class="font-medium" for="search-dates" data-i18n="dates">Dates</label>
         <input
@@ -446,7 +429,7 @@
         <!-- Clear Search -->
         <button
           id="clear-search-btn"
-          style="display:none; background:var(--bg-color); border:1px solid var(--border-color); padding:6px 12px; border-radius:8px; font-size:0.82rem; font-family:inherit; cursor:pointer; display:none; align-items:center; gap:4px;"
+          style="display:none; background:var(--bg-color); border:1px solid var(--border-color); padding:6px 12px; border-radius:8px; font-size:0.82rem; font-family:inherit; cursor:pointer; align-items:center; gap:4px;"
           aria-label="Clear search"
         >
           <i class="ph ph-x" aria-hidden="true"></i>
@@ -669,21 +652,7 @@
 
   <!-- ═══ Scripts ═══════════════════════════════ -->
   <script src="script.js"></script>
-
-  <!-- Phosphor Icons JS (async + fallback) -->
-  <script>
-    (function() {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/dist/phosphor.umd.js';
-      s.async = true;
-      s.onerror = function() {
-        var f = document.createElement('script');
-        f.src = 'https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.umd.js';
-        document.head.appendChild(f);
-      };
-      document.body.appendChild(s);
-    })();
-  </script>
+  <script src="search.js"></script>
 
   <!-- Inline enhancements (Scroll-to-Top, Toast, Password, Auth flows) -->
   <script>
@@ -841,9 +810,6 @@
       document.getElementById('auth-modal')?.classList.add('active');
     });
   </script>
-
-  <!-- Smart Search Logic -->
-  <script src="search.js"></script>
 
 </body>
 </html>
