@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="OreBooking – Discover and book premium hotels, apartments, and villas.">
-  <meta name="theme-color" content="#6C63FF">
+  <meta name="theme-color" content="#435abf">
   <title>OreBooking - Premium Stays</title>
 
   <!-- Favicon -->
@@ -18,7 +18,7 @@
   <!-- Main CSS (مع كاسر الكاش لضمان تحميل التحديثات) -->
   <link rel="stylesheet" href="style.css?v=2.0">
 
-  <!-- Phosphor Icons (السكريبت الرسمي بدلاً من روابط الـ CSS المعطلة) -->
+  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
   <!-- Firebase SDKs -->
@@ -47,20 +47,22 @@
       left: 0; right: 0;
       background: var(--surface-color);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-hover);
       z-index: 200;
-      max-height: 320px;
+      max-height: 340px;
       overflow-y: auto;
       display: none;
       padding: 8px 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-color) transparent;
     }
     .search-dropdown.active {
       display: block;
-      animation: fadeInDown 0.2s ease;
+      animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .search-item {
-      padding: 12px 16px;
+      padding: 10px 16px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -68,30 +70,33 @@
       transition: background 0.15s;
     }
     .search-item:hover, .search-item.selected {
-      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      background: rgba(67,90,191,0.07);
+    }
+    .dark .search-item:hover, .dark .search-item.selected {
+      background: rgba(67,90,191,0.15);
     }
     .search-icon-box {
-      width: 40px; height: 40px;
+      width: 38px; height: 38px; min-width: 38px;
       background: var(--bg-color);
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       color: var(--primary);
-      font-size: 1.2rem;
-      flex-shrink: 0;
+      font-size: 1.1rem;
     }
-    .search-item-info  { display: flex; flex-direction: column; }
-    .search-item-title { font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
-    .search-item-sub   { font-size: 0.75rem; color: var(--text-muted); }
-    .no-results        { padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    .search-item-info  { display: flex; flex-direction: column; min-width: 0; }
+    .search-item-title { font-weight: 600; color: var(--text-main); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .search-item-sub   { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .no-results        { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    .no-results i      { font-size: 2rem; display: block; margin-bottom: 8px; opacity: 0.4; }
 
     /* ─── Scroll-to-Top ──────────────────────── */
     #scroll-top-btn {
       position: fixed;
-      bottom: 24px;
+      bottom: 80px;
       inset-inline-end: 24px;
       width: 44px; height: 44px;
       border-radius: 50%;
-      background: var(--primary, #6C63FF);
+      background: var(--primary);
       color: #fff;
       border: none;
       cursor: pointer;
@@ -110,7 +115,7 @@
     /* ─── Toast ──────────────────────────────── */
     #toast-container {
       position: fixed;
-      bottom: 24px;
+      bottom: 80px;
       inset-inline-end: 20px;
       display: flex;
       flex-direction: column;
@@ -131,18 +136,18 @@
       box-shadow: 0 8px 20px rgba(0,0,0,0.1);
       animation: toastIn 0.3s ease;
       pointer-events: auto;
-      max-width: 280px;
+      max-width: 300px;
     }
     .toast.toast-success { border-color: #22c55e; }
     .toast.toast-error   { border-color: #ef4444; }
-    .toast.toast-info    { border-color: var(--primary, #6C63FF); }
+    .toast.toast-info    { border-color: var(--primary); }
     .toast.toast-out     { animation: toastOut 0.3s ease forwards; }
     .toast.toast-success i { color: #22c55e; }
     .toast.toast-error   i { color: #ef4444; }
-    .toast.toast-info    i { color: var(--primary, #6C63FF); }
+    .toast.toast-info    i { color: var(--primary); }
 
     /* ─── Password Strength ──────────────────── */
-    #password-strength { margin: -4px 0 10px; }
+    #password-strength { margin: -4px 0 12px; }
     .strength-bars     { display: flex; gap: 4px; margin-bottom: 4px; }
     .str-bar {
       flex: 1; height: 4px;
@@ -154,7 +159,7 @@
 
     /* ─── Show/Hide Password ─────────────────── */
     .pass-wrapper { position: relative; }
-    .pass-wrapper input { padding-inline-end: 44px; }
+    .pass-wrapper input { padding-inline-end: 44px !important; }
     .toggle-pass-btn {
       position: absolute;
       inset-inline-end: 12px;
@@ -166,22 +171,26 @@
       font-size: 1rem;
       display: flex; align-items: center; justify-content: center;
       padding: 4px;
+      transition: color 0.2s;
     }
     .toggle-pass-btn:hover { color: var(--primary); }
 
-    /* ─── Forgot Password Form ───────────────── */
-    #forgot-form { display: none; }
-    #forgot-form.active { display: block; }
+    /* ─── Auth Forms ─────────────────────────── */
+    .auth-form {
+      display: none;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .auth-form.active { display: block; }
 
     /* ─── Fav Toast ──────────────────────────── */
     #fav-toast {
       position: fixed;
-      bottom: 28px;
+      bottom: 80px;
       left: 50%;
       transform: translateX(-50%) translateY(16px);
       background: var(--surface-color);
       border: 1px solid var(--border-color);
-      border-radius: 99px;
+      border-radius: var(--radius-full);
       padding: 10px 22px;
       font-size: 0.88rem;
       color: var(--text-main);
@@ -201,8 +210,10 @@
       bottom: 0; left: 0; right: 0;
       background: var(--surface-color);
       border-top: 1px solid var(--border-color);
-      padding: 8px 0 env(safe-area-inset-bottom, 8px);
+      padding-bottom: env(safe-area-inset-bottom, 8px);
+      padding-top: 6px;
       z-index: 800;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.07);
     }
     .mobile-nav-inner { display: flex; justify-content: space-around; }
     .mob-nav-btn {
@@ -212,18 +223,20 @@
       font-size: 0.65rem; font-family: inherit;
       cursor: pointer; padding: 4px 12px;
       transition: color 0.2s;
+      min-height: 44px;
+      justify-content: center;
     }
-    .mob-nav-btn i   { font-size: 1.3rem; }
+    .mob-nav-btn i   { font-size: 1.35rem; }
     .mob-nav-btn.active { color: var(--primary); }
 
     /* ─── Navbar Mobile Fix ──────────────────── */
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex-wrap: nowrap;
+      gap: 10px;
       overflow: visible;  
       flex-shrink: 0;
+      margin-inline-start: auto;
     }
 
     @media (max-width: 768px) {
@@ -238,6 +251,7 @@
         font-size: 1.05rem;
         padding: 0;
         flex-shrink: 0;
+        min-width: 36px; min-height: 36px;
       }
       #lang-toggle {
         display: flex !important;
@@ -257,16 +271,20 @@
 
     @media (max-width: 380px) {
       #lang-toggle   { font-size: 0.72rem; padding: 4px 8px; }
-      .icon-btn, .profile-menu { width: 32px; height: 32px; }
+      .icon-btn, .profile-menu { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
     }
 
     /* ─── Animations ─────────────────────────── */
     @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-10px); }
+      from { opacity: 0; transform: translateY(-8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     @keyframes toastIn  { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
     @keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateX(30px)} }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -419,7 +437,7 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 
         <!-- Sort -->
-        <select id="sort-select" aria-label="Sort listings" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--surface-color);color:var(--text-main);font-size:0.82rem;font-family:inherit;cursor:pointer;">
+        <select id="sort-select" aria-label="Sort listings" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--surface-color);color:var(--text-main);font-size:0.82rem;font-family:inherit;cursor:pointer;outline:none;">
           <option value="default"    data-i18n="sort_default">Sort: Default</option>
           <option value="price_asc"  data-i18n="sort_price_asc">Price ↑</option>
           <option value="price_desc" data-i18n="sort_price_desc">Price ↓</option>
@@ -429,7 +447,8 @@
         <!-- Clear Search -->
         <button
           id="clear-search-btn"
-          style="display:none; background:var(--bg-color); border:1px solid var(--border-color); padding:6px 12px; border-radius:8px; font-size:0.82rem; font-family:inherit; cursor:pointer; align-items:center; gap:4px;"
+          class="ghost-btn"
+          style="display:none; padding:6px 12px; font-size:0.82rem; min-height:auto;"
           aria-label="Clear search"
         >
           <i class="ph ph-x" aria-hidden="true"></i>
@@ -457,7 +476,7 @@
 
     <!-- Load More -->
     <div style="text-align:center;margin-top:32px;">
-      <button id="load-more-btn" style="display:none;" class="primary-btn" aria-label="Load more">
+      <button id="load-more-btn" style="display:none;" class="primary-btn" style="width:auto;display:inline-flex;" aria-label="Load more">
         <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
         <span data-i18n="load_more">Load More</span>
       </button>
