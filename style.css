@@ -220,7 +220,6 @@ i[class*="ph-"], i[class*=" ph-"] {
 }
 
 /* --- Navbar --- */
-/* FIX: z-index 300 for search-dropdown, 200 overflow:visible for nav-actions */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -230,7 +229,7 @@ i[class*="ph-"], i[class*=" ph-"] {
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
-  z-index: 300; /* FIX: was 100 */
+  z-index: 300; 
   transition: var(--transition);
   gap: 12px;
 }
@@ -248,13 +247,12 @@ i[class*="ph-"], i[class*=" ph-"] {
   object-fit: contain;
 }
 
-/* FIX: overflow:visible */
 .nav-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  overflow: visible; /* FIX: browsers hidden */
+  overflow: visible; 
   margin-inline-start: auto;
 }
 
@@ -286,7 +284,7 @@ i[class*="ph-"], i[class*=" ph-"] {
   min-width: 44px;
   min-height: 44px;
   font-family: inherit;
-  flex-shrink: 0; /* FIX */
+  flex-shrink: 0; 
 }
 
 .lang-btn {
@@ -665,13 +663,12 @@ html[dir="rtl"] .search-bar {
 }
 
 /* --- Section Header --- */
-/* FIX: flex-wrap & overflow */
 .section-header {
   padding: 32px 0 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap; /* FIX */
+  flex-wrap: wrap; 
   justify-content: space-between;
 }
 
@@ -849,7 +846,7 @@ html[dir="rtl"] .search-bar {
 /* --- Toast Notifications --- */
 #toast-container {
   position: fixed;
-  bottom: 80px; /* mobile bottom nav */
+  bottom: 80px; 
   inset-inline-end: 20px;
   display: flex;
   flex-direction: column;
@@ -937,7 +934,7 @@ html[dir="rtl"] .search-bar {
 
 /* --- Mobile Bottom Nav --- */
 #mobile-bottom-nav {
-  display: none; /* mobile breakpoint */
+  display: none; 
   position: fixed;
   bottom: 0;
   left: 0;
@@ -1138,7 +1135,6 @@ html[dir="rtl"] .search-bar {
   position: relative;
 }
 
-/* FIX: auth-forms .active */
 .auth-form {
   display: none;
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1435,3 +1431,41 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
 
 .prop-map-section { margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--border-color); }
 .prop-map-section h3 { font-size: 1.15rem; margin-bottom: 14px; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar { padding: 10px 16px; }
+  .logo-img { height: 40px; }
+  
+  .nav-actions { gap: 6px; }
+  
+  .icon-btn, .lang-btn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px;
+  }
+  
+  .lang-btn { padding: 6px 10px; font-size: 0.8rem; }
+  
+  .hero { padding: 50px 16px 20px; }
+  .search-bar { flex-direction: column; padding: 12px; border-radius: var(--radius-xl); gap: 8px; }
+  .search-divider { height: 1px; width: 100%; }
+  .search-btn { width: 100%; justify-content: center; }
+  
+  .prop-content-grid { grid-template-columns: 1fr; gap: 24px; }
+  .features-list { grid-template-columns: 1fr; }
+  
+  #mobile-bottom-nav { display: block; }
+  body { padding-bottom: 70px; } /* Space for mobile nav */
+}
+
+@media (max-width: 480px) {
+  .nav-actions .lang-btn span { display: none; } /* Hide text if icon is used, or keep text small */
+  .lang-btn { font-size: 0.75rem; padding: 4px 8px; }
+  .icon-btn, .lang-btn, .profile-menu {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
