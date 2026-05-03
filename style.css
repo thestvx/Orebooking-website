@@ -1,1652 +1,1437 @@
-// ============================================================
-//  OreBooking — script.js
-//  Version: 4.2 — submitBooking Fixed
-//  ✅ btnConfirm correctly triggers submitBooking
-//  ✅ validateStep3 / agreePolicy fixed
-//  ✅ paymentmethod name unified
-//  ✅ Firebase Timestamps safe
-//  ✅ success modal after booking
-// ============================================================
+/* ============================================================
+   OreBooking — style.css
+   Version: 2.0 (Fixed & Enhanced)
+   
+   Fixes:
+   - Mobile navbar lang-btn (< 480px)
+   - lang-btn font-size=0
+   - .nav-actions overflow:visible & flex-shrink:0
+   - Navbar z-index for search-dropdown
+   - Modal bottom-sheet padding for safe-area
+   - body padding-bottom for mobile bottom nav
+   - pass-wrapper, toggle-pass-btn, password-strength bar
+   - Toast styles
+   - Scroll-to-top button
+   - Mobile bottom nav
+   - .section-header flex-wrap & overflow
+   - Dark mode search-dropdown
+   - input invalid state
+   - Fav toast
+   - Forgot form, auth-form, bookings-modal modal-content
+============================================================ */
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-  authDomain: "orebooking-website.firebaseapp.com",
-  projectId: "orebooking-website",
-  storageBucket: "orebooking-website.firebasestorage.app",
-  messagingSenderId: "1012887567747",
-  appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-  measurementId: "G-5GKMRMVHC3"
-};
+/* --- Variables & Design System --- */
+:root {
+  --primary: #435abf;
+  --primary-hover: #34459c;
+  --accent: #657be0;
+  
+  --bg-color: #f8fafc;
+  --surface-color: #ffffff;
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-muted-color: #64748b;
+  --border-color: #e2e8f0;
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-const storage = firebase.storage();
+  --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.08);
+  --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
 
-const STATIC_REVIEWS = [
-  {
-    name: "Karim B.",
-    avatar: "KB",
-    rating: 5,
-    date: "2025-03-15",
-    stay: "3 nights · March 2025",
-    texten: "Exceptional stay. The room was spotless, the staff incredibly welcoming. The restaurant breakfast was outstanding — fresh juices, variety of pastries. Will definitely return.",
-    textar: "إقامة استثنائية. الغرفة كانت نظيفة جداً، والموظفون ودودون للغاية. الإفطار في المطعم كان رائعاً.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "positive"
-  },
-  {
-    name: "Siham M.",
-    avatar: "SM",
-    rating: 4,
-    date: "2025-02-20",
-    stay: "2 nights · February 2025",
-    texten: "Very comfortable rooms and the WiFi was fast and stable throughout our stay. The only downside was that the pool area could use more loungers during peak hours. Overall a great experience.",
-    textar: "غرف مريحة جداً والواي فاي كان سريعاً. الجانب السلبي الوحيد هو منطقة المسبح التي تحتاج المزيد من الكراسي.",
-    country: "Tunisia",
-    flag: "🇹🇳",
-    type: "constructive"
-  },
-  {
-    name: "Youcef A.",
-    avatar: "YA",
-    rating: 3,
-    date: "2025-01-08",
-    stay: "4 nights · January 2025",
-    texten: "The hotel has great potential. Location is perfect and the events team organised a lovely evening. However, room service was slow and our room wasn't cleaned one afternoon.",
-    textar: "الفندق لديه إمكانيات كبيرة. الموقع ممتاز وفريق الفعاليات رائع. لكن خدمة الغرف كانت بطيئة.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "mixed"
-  },
-  {
-    name: "Nadia L.",
-    avatar: "NL",
-    rating: 5,
-    date: "2024-12-28",
-    stay: "5 nights · December 2024",
-    texten: "We celebrated New Year's here and it was magical. The New Year's Eve event was incredible — live music, fireworks, amazing food. Staff went above and beyond for us.",
-    textar: "احتفلنا برأس السنة هنا وكان سحرياً. الحفل كان رائعاً — موسيقى حية، ألعاب نارية، طعام ممتاز.",
-    country: "France",
-    flag: "🇫🇷",
-    type: "positive"
-  },
-  {
-    name: "Mourad T.",
-    avatar: "MT",
-    rating: 2,
-    date: "2024-11-12",
-    stay: "1 night · November 2024",
-    texten: "Disappointed with this visit. The air conditioning in our room was broken and despite reporting it twice, it wasn't fixed. The TV also had issues.",
-    textar: "خابت آمالي في هذه الزيارة. تكييف الغرفة كان معطلاً ولم يُصلَح رغم الإبلاغ مرتين.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "negative"
-  },
-  {
-    name: "Amira K.",
-    avatar: "AK",
-    rating: 4,
-    date: "2024-10-05",
-    stay: "3 nights · October 2024",
-    texten: "Beautiful hotel, very clean and modern. The restaurant demi-pension option was worth it — dinner buffet was diverse and delicious. WiFi speed could be improved in the upper floors.",
-    textar: "فندق جميل ونظيف وعصري. خيار نصف الإقامة كان يستحق — بوفيه العشاء كان متنوعاً ولذيذاً.",
-    country: "Morocco",
-    flag: "🇲🇦",
-    type: "constructive"
-  },
-  {
-    name: "Salim R.",
-    avatar: "SR",
-    rating: 5,
-    date: "2024-09-18",
-    stay: "7 nights · September 2024",
-    texten: "Best hotel stay I've had in years. Came with family including two kids — the animation team kept the children entertained every evening. Kids club is excellent.",
-    textar: "أفضل إقامة فندقية منذ سنوات. جئت مع العائلة وطفلين — فريق الترفيه أبقى الأطفال مشغولين كل مساء.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "positive"
-  },
-  {
-    name: "Leila F.",
-    avatar: "LF",
-    rating: 3,
-    date: "2024-08-22",
-    stay: "2 nights · August 2024",
-    texten: "The hotel is in a great location and check-in was smooth. However, the restaurant lunch service felt rushed and the portions were small for the price. The pool area and spa were highlights.",
-    textar: "الفندق في موقع ممتاز والتسجيل كان سلساً. لكن خدمة الغداء كانت متسرعة والكميات صغيرة مقابل السعر.",
-    country: "Algeria",
-    flag: "🇩🇿",
-    type: "mixed"
-  }
-];
-
-let currentUser = null;
-
-const bookingState = {
-  propertyId: null,
-  property: null,
-  checkIn: null,
-  checkOut: null,
-  rooms: 1,
-  adults: 2,
-  children: 0,
-  childAges: [],
-  beds: 1,
-  nights: 0,
-  totalPrice: 0,
-  basePrice: 0,
-  roomPrice: 0,
-  fee: 0,
-  addonsTotal: 0,
-  maxGuests: 10,
-  maxRooms: 5,
-  minNights: 1,
-  bookedDates: [],
-  addons: {
-    restaurant: false,
-    restaurantPlan: "breakfast",
-    wifi: false,
-    parking: false,
-    airportTransfer: false,
-    spa: false,
-    lateCheckout: false,
-    extraBed: false,
-    events: false
-  },
-  bedConfig: "double",
-  purposeOfVisit: "leisure",
-  lang: localStorage.getItem("orelang") || "en",
-  nationality: "",
-  arrivalTime: "",
-  specialRequests: ""
-};
-
-const ADDON_PRICES = {
-  restaurantbreakfast: 800,
-  restauranthalfboard: 1800,
-  restaurantfullboard: 3200,
-  wifi: 300,
-  parking: 500,
-  airportTransfer: 2500,
-  spa: 2000,
-  lateCheckout: 1200,
-  extraBed: 1000,
-  events: 500
-};
-
-const els = {
-  step1: document.getElementById("step-1"),
-  step2: document.getElementById("step-2"),
-  step3: document.getElementById("step-3"),
-  step4: document.getElementById("step-4"),
-
-  btnNext1: document.getElementById("btn-next-1"),
-  btnNext2: document.getElementById("btn-next-2"),
-  btnNext3: document.getElementById("btn-next-3"),
-  btnPrev2: document.getElementById("btn-prev-2"),
-  btnPrev3: document.getElementById("btn-prev-3"),
-  btnPrev4: document.getElementById("btn-prev-4"),
-  btnConfirm: document.getElementById("btn-confirm-booking"),
-
-  btnRoomMinus: document.getElementById("btn-minus-room"),
-  btnRoomPlus: document.getElementById("btn-plus-room"),
-  roomCount: document.getElementById("rooms-count"),
-
-  btnAdultMinus: document.getElementById("btn-minus-adult"),
-  btnAdultPlus: document.getElementById("btn-plus-adult"),
-  adultCount: document.getElementById("adults-count"),
-
-  btnChildMinus: document.getElementById("btn-minus-child"),
-  btnChildPlus: document.getElementById("btn-plus-child"),
-  childCount: document.getElementById("children-count"),
-  childAgesBox: document.getElementById("child-ages-box"),
-  bedSelect: document.getElementById("bed-config-select"),
-
-  calPrev: document.getElementById("cal-prev"),
-  calNext: document.getElementById("cal-next"),
-  calGrid: document.getElementById("calendar-grid"),
-  monthLabel: document.getElementById("calendar-month-label"),
-
-  guestForm: document.getElementById("guest-form"),
-  agreePolicy: document.getElementById("agree-policy"),
-  payRadios: document.getElementsByName("paymentmethod"),
-  receiptFile: document.getElementById("receipt-file"),
-  transferBox: document.getElementById("transfer-details"),
-
-  dispCheckin: document.getElementById("disp-checkin"),
-  dispCheckout: document.getElementById("disp-checkout"),
-  dispNights: document.getElementById("disp-nights"),
-  warnEl: document.getElementById("min-nights-warning"),
-  globalAlert: document.getElementById("booking-global-alert"),
-  priceBreakdown: document.getElementById("price-breakdown"),
-
-  gName: document.getElementById("g-name"),
-  gEmail: document.getElementById("g-email"),
-  gPhone: document.getElementById("g-phone"),
-  gNotes: document.getElementById("g-notes"),
-  gArrival: document.getElementById("g-arrival-time"),
-  gNationality: document.getElementById("g-nationality"),
-  gPurpose: document.getElementById("g-purpose"),
-  authPrompt: document.getElementById("auth-prompt"),
-  linkLogin: document.getElementById("link-login-booking"),
-  btnCopyRef: document.getElementById("btn-copy-ref"),
-  btnShareBooking: document.getElementById("btn-share-booking"),
-
-  propMiniImg: document.getElementById("prop-mini-img"),
-  propMiniTitle: document.getElementById("prop-mini-title"),
-  propMiniLoc: document.getElementById("prop-mini-loc"),
-  propMiniType: document.getElementById("prop-mini-type"),
-  sbNightsCount: document.getElementById("sb-nights-count"),
-  sbNightPrice: document.getElementById("sb-night-price"),
-  sbBaseTotal: document.getElementById("sb-base-total"),
-  sbFinalTotal: document.getElementById("sb-final-total")
-};
-
-let calViewDate = new Date();
-calViewDate.setDate(1);
-
-const t = (en, ar) => bookingState.lang === "ar" ? ar : en;
-
-function formatDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+  
+  --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-function parseLocalDate(str) {
-  if (!str) return null;
-  const [y, m, d] = str.split("-").map(Number);
-  return new Date(y, m - 1, d);
+.dark {
+  --bg-color: #0f172a;
+  --surface-color: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-muted-color: #94a3b8;
+  --border-color: #334155;
+  --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.4);
+  --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.25);
 }
 
-function formatDisplayDate(str) {
-  if (!str) return t("Add date", "أضف تاريخ");
-  const d = parseLocalDate(str);
-  if (!d) return t("Add date", "أضف تاريخ");
-  return d.toLocaleDateString(bookingState.lang === "ar" ? "ar-DZ" : "en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  });
+/* --- Reset & Base --- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-function showGlobalAlert(msg, type = "error") {
-  const el = els.globalAlert;
-  if (!el) return;
-  const icons = {
-    error: "warning",
-    success: "check-circle",
-    info: "info",
-    warning: "warning-circle"
-  };
-  el.className = `booking-alert ${type}`;
-  el.innerHTML = `<i class="ph ph-${icons[type] || "info"}" aria-hidden="true"></i><span>${msg}</span>`;
-  el.classList.remove("d-none");
-  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+html {
+  scroll-behavior: smooth;
 }
 
-function hideGlobalAlert() {
-  els.globalAlert?.classList.add("d-none");
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-function showWarn(msg) {
-  if (!els.warnEl) return;
-  els.warnEl.textContent = msg;
-  els.warnEl.classList.remove("d-none");
+body.modal-open {
+  overflow: hidden;
 }
 
-function hideWarn() {
-  els.warnEl?.classList.add("d-none");
+html[dir="ltr"] body { font-family: 'Poppins', sans-serif; }
+html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
+
+img {
+  display: block;
+  max-width: 100%;
 }
 
-function setButtonLoading(btn, loading) {
-  if (!btn) return;
-  btn.disabled = loading;
-  btn.setAttribute("aria-disabled", String(loading));
-  if (loading) {
-    btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-circle-notch ph-spin" aria-hidden="true"></i> ${t("Processing…", "جاري المعالجة…")}`;
-  } else {
-    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
-  }
+a {
+  color: inherit;
 }
 
-function applyStoredTheme() {
-  const theme = localStorage.getItem("oretheme");
-  const icon = document.querySelector("#theme-toggle i");
-  if (theme === "dark") {
-    document.body.classList.add("dark");
-    document.documentElement.classList.add("dark");
-    if (icon) icon.className = "ph ph-sun";
-  } else {
-    document.body.classList.remove("dark");
-    document.documentElement.classList.remove("dark");
-    if (icon) icon.className = "ph ph-moon";
-  }
+/* --- Typography & Utilities --- */
+.font-regular { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
+.text-sm { font-size: 0.85rem; }
+
+.text-danger { color: #e11d48; }
+.text-muted { color: var(--text-muted); }
+.text-muted-color { color: var(--text-muted-color); }
+.text-center { text-align: center; }
+.text-success { color: #059669; }
+.text-uppercase { text-transform: uppercase; }
+.d-none { display: none !important; }
+
+.text-primary { color: var(--primary); text-decoration: none; }
+.text-primary:hover { text-decoration: underline; }
+
+/* Spacing */
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 16px; }
+.mt-4 { margin-top: 24px; }
+.mt-16 { margin-top: 16px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 16px; }
+.mb-4 { margin-bottom: 24px; }
+.pt-4 { padding-top: 24px; }
+.p-3 { padding: 16px; }
+.p-4 { padding: 24px; }
+
+.auth-btn-logged {
+  background-color: var(--accent) !important;
 }
 
-function showSidebarSkeleton() {
-  ["sum-name", "sum-loc", "sum-price-night"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.innerHTML = `<span class="skeleton skeleton-text" style="width:60%;display:inline-block;height:0.9em"></span>`;
-    }
-  });
-  document.getElementById("sum-img")?.classList.add("skeleton");
+.auth-btn-guest {
+  background-color: var(--primary) !important;
 }
 
-function showCopyToast(msg) {
-  const toast = document.getElementById("copy-toast");
-  const txt = document.getElementById("copy-toast-txt");
-  if (!toast) {
-    const el = document.createElement("div");
-    el.id = "copy-toast";
-    el.className = "copy-toast";
-    el.innerHTML = `<i class="ph-fill ph-check-circle"></i><span id="copy-toast-txt">${msg || t("Copied!", "تم النسخ!")}</span>`;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2200);
-    return;
-  }
-  if (txt) txt.textContent = msg || t("Copied!", "تم النسخ!");
-  toast.classList.remove("d-none");
-  setTimeout(() => toast.classList.add("d-none"), 2200);
+/* --- Phosphor Icons Fix --- */
+i[class*="ph-"], i[class*=" ph-"], span[class*="ph-"], span[class*=" ph-"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  speak: none;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
-function calcAddonsTotal() {
-  let total = 0;
-  const s = bookingState.addons;
-  const nights = bookingState.nights || 0;
-  const rooms = bookingState.rooms;
-  const guests = bookingState.adults + bookingState.children;
-
-  if (s.restaurant) total += (ADDON_PRICES[`restaurant${s.restaurantPlan}`] || 0) * nights * guests;
-  if (s.wifi) total += ADDON_PRICES.wifi * nights * rooms;
-  if (s.parking) total += ADDON_PRICES.parking * nights;
-  if (s.airportTransfer) total += ADDON_PRICES.airportTransfer;
-  if (s.spa) total += ADDON_PRICES.spa * nights;
-  if (s.lateCheckout) total += ADDON_PRICES.lateCheckout * rooms;
-  if (s.extraBed) total += ADDON_PRICES.extraBed * nights * rooms;
-  if (s.events) total += ADDON_PRICES.events * nights * guests;
-
-  bookingState.addonsTotal = total;
-  return total;
+i[class*="ph-"], i[class*=" ph-"] {
+  font-size: 1em;
+  width: 1.1em;
+  min-width: 1.1em;
+  text-align: center;
 }
 
-function renderChildAges() {
-  const box = els.childAgesBox;
-  if (!box) return;
-  if (bookingState.children === 0) {
-    box.classList.add("d-none");
-    return;
-  }
-
-  box.classList.remove("d-none");
-  const isAr = bookingState.lang === "ar";
-
-  let html = `<p class="child-ages-title">${t("Children's ages at check-in", "أعمار الأطفال عند الوصول")}</p>`;
-  html += `<div class="child-ages-grid">`;
-
-  for (let i = 0; i < bookingState.children; i++) {
-    const currentAge = bookingState.childAges[i] ?? "";
-    html += `
-      <div class="child-age-field">
-        <label for="child-age-${i}">${t("Child", "طفل")} ${i + 1}</label>
-        <select id="child-age-${i}" class="child-age-select" data-child-index="${i}" aria-label="${t("Age of child", "عمر الطفل")} ${i + 1}">
-          <option value="">${t("Age?", "العمر؟")}</option>
-          ${Array.from({ length: 18 }, (_, j) => `
-            <option value="${j}" ${currentAge == j ? "selected" : ""}>
-              ${j === 0 ? t("< 1 yr", "أقل من سنة") : isAr ? `${j} سنة` : `${j} yrs`}
-            </option>
-          `).join("")}
-        </select>
-      </div>
-    `;
-  }
-
-  html += `</div>`;
-  box.innerHTML = html;
-
-  box.querySelectorAll(".child-age-select").forEach(sel => {
-    sel.addEventListener("change", e => {
-      const idx = parseInt(e.target.dataset.childIndex, 10);
-      bookingState.childAges[idx] = parseInt(e.target.value, 10);
-    });
-  });
+.nav-actions i,
+.dropdown-item i,
+.category-item i,
+.action-btn i,
+.primary-btn i,
+.ghost-btn i,
+.back-btn i,
+.search-btn i,
+.social-btn i,
+.icon-btn i,
+.profile-menu i,
+.fav-btn i,
+.slider-btn i,
+.close-modal-btn i,
+.close-lightbox i,
+.lightbox-btn i,
+.nav-item i,
+.stat-icon i,
+.btn-approve i,
+.btn-reject i,
+.mob-nav-btn i,
+.toggle-pass-btn i {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-function renderAddonsPanel() {
-  const container = document.getElementById("addons-panel");
-  if (!container) return;
+/* --- Animations --- */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 0.8s linear infinite; }
+.ph-spin { animation: spin 1s linear infinite; }
+.ph-circle-notch { animation: spin 0.8s linear infinite; }
 
-  const isAr = bookingState.lang === "ar";
-  const curr = isAr ? " د.ج" : " DZD";
-
-  const addonItems = [
-    { key: "restaurant", icon: "ph-fork-knife", label: t("Restaurant", "المطعم"), desc: t("Add meal plan for all guests", "أضف خطة وجبات لجميع الضيوف"), badge: null, subOptions: true },
-    { key: "wifi", icon: "ph-wifi-high", label: t("High-Speed WiFi", "واي فاي سريع"), desc: `${ADDON_PRICES.wifi.toLocaleString()}${curr}/${t("room/night", "غرفة/ليلة")}`, badge: t("Popular", "شائع") },
-    { key: "parking", icon: "ph-car", label: t("Secure Parking", "موقف آمن"), desc: `${ADDON_PRICES.parking.toLocaleString()}${curr}/${t("night", "ليلة")}`, badge: null },
-    { key: "airportTransfer", icon: "ph-airplane-takeoff", label: t("Airport Transfer", "نقل المطار"), desc: `${ADDON_PRICES.airportTransfer.toLocaleString()}${curr} ${t("one-way", "ذهاب")}`, badge: null },
-    { key: "spa", icon: "ph-flower-lotus", label: t("Spa & Wellness", "سبا وعافية"), desc: `${ADDON_PRICES.spa.toLocaleString()}${curr}/${t("person/night", "شخص/ليلة")}`, badge: null },
-    { key: "lateCheckout", icon: "ph-clock-countdown", label: t("Late Checkout until 4PM", "مغادرة متأخرة حتى 4م"), desc: `${ADDON_PRICES.lateCheckout.toLocaleString()}${curr}/${t("room", "غرفة")}`, badge: t("Subject to availability", "حسب التوفر") },
-    { key: "extraBed", icon: "ph-bed", label: t("Extra Bed", "سرير إضافي"), desc: `${ADDON_PRICES.extraBed.toLocaleString()}${curr}/${t("room/night", "غرفة/ليلة")}`, badge: null },
-    { key: "events", icon: "ph-confetti", label: t("Entertainment & Events", "ترفيه وفعاليات"), desc: t("Nightly shows, pool parties, cultural evenings", "عروض ليلية، حفلات المسبح"), badge: t("Popular", "شائع") }
-  ];
-
-  let html = `<h3 class="addons-title"><i class="ph ph-sparkle" aria-hidden="true"></i> ${t("Enhance Your Stay", "حسّن إقامتك")}</h3>`;
-  html += `<div class="addons-grid">`;
-
-  addonItems.forEach(item => {
-    const checked = bookingState.addons[item.key];
-    html += `
-      <label class="addon-card ${checked ? "selected" : ""}" for="addon-${item.key}">
-        <div class="addon-card-header">
-          <div class="addon-icon"><i class="ph ${item.icon}" aria-hidden="true"></i></div>
-          <div class="addon-info">
-            <span class="addon-label">${item.label}</span>
-            ${item.badge ? `<span class="addon-badge">${item.badge}</span>` : ""}
-            <span class="addon-desc">${item.desc}</span>
-          </div>
-        </div>
-
-        <div class="addon-checkbox ${checked ? "checked" : ""}" aria-hidden="true">
-          ${checked ? `<i class="ph-fill ph-check" style="font-size:0.75rem;color:#fff"></i>` : ""}
-        </div>
-
-        <input type="checkbox" id="addon-${item.key}" class="addon-cb-input" data-key="${item.key}" ${checked ? "checked" : ""} aria-label="${item.label}" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0">
-
-        ${item.subOptions && checked ? `
-          <div class="addon-sub-options">
-            <p class="sub-label">${t("Meal Plan", "خطة الوجبات")}</p>
-            <div class="sub-radio-group">
-              <label class="sub-radio ${bookingState.addons.restaurantPlan === "breakfast" ? "active" : ""}">
-                <input type="radio" name="restaurantplan" value="breakfast" ${bookingState.addons.restaurantPlan === "breakfast" ? "checked" : ""}>
-                <span>${t("Breakfast", "إفطار")}</span>
-                <small>${ADDON_PRICES.restaurantbreakfast.toLocaleString()}${curr}/${t("pers.", "شخص")}</small>
-              </label>
-              <label class="sub-radio ${bookingState.addons.restaurantPlan === "halfboard" ? "active" : ""}">
-                <input type="radio" name="restaurantplan" value="halfboard" ${bookingState.addons.restaurantPlan === "halfboard" ? "checked" : ""}>
-                <span>${t("Half-Board", "نصف إقامة")}</span>
-                <small>${ADDON_PRICES.restauranthalfboard.toLocaleString()}${curr}/${t("pers.", "شخص")}</small>
-              </label>
-              <label class="sub-radio ${bookingState.addons.restaurantPlan === "fullboard" ? "active" : ""}">
-                <input type="radio" name="restaurantplan" value="fullboard" ${bookingState.addons.restaurantPlan === "fullboard" ? "checked" : ""}>
-                <span>${t("Full-Board", "إقامة كاملة")}</span>
-                <small>${ADDON_PRICES.restaurantfullboard.toLocaleString()}${curr}/${t("pers.", "شخص")}</small>
-              </label>
-            </div>
-          </div>
-        ` : ""}
-      </label>
-    `;
-  });
-
-  html += `</div>`;
-  container.innerHTML = html;
-
-  container.querySelectorAll(".addon-card").forEach(card => {
-    card.addEventListener("click", e => {
-      if (e.target.closest(".addon-sub-options")) return;
-      const cb = card.querySelector(".addon-cb-input");
-      if (!cb) return;
-      const key = cb.dataset.key;
-      bookingState.addons[key] = !bookingState.addons[key];
-      renderAddonsPanel();
-      updateBookingSummary();
-    });
-  });
-
-  container.querySelectorAll("input[name='restaurantplan']").forEach(r => {
-    r.addEventListener("change", e => {
-      bookingState.addons.restaurantPlan = e.target.value;
-      renderAddonsPanel();
-      updateBookingSummary();
-    });
-  });
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-function renderReviews() {
-  const container = document.getElementById("reviews-section");
-  if (!container) return;
-
-  const isAr = bookingState.lang === "ar";
-  const reviews = STATIC_REVIEWS;
-  const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
-  const ratingDist = [5, 4, 3, 2, 1].map(star => ({
-    star,
-    count: reviews.filter(r => r.rating === star).length,
-    pct: Math.round((reviews.filter(r => r.rating === star).length / reviews.length) * 100)
-  }));
-
-  const starsHtml = rating =>
-    Array.from({ length: 5 }, (_, i) =>
-      `<i class="ph-fill ph-star ${i < rating ? "star-filled" : "star-empty"}" aria-hidden="true"></i>`
-    ).join("");
-
-  let html = `
-    <div class="reviews-header">
-      <h3 class="reviews-title">${t("Guest Reviews", "تقييمات الضيوف")}</h3>
-      <div class="reviews-overview">
-        <div class="reviews-score">
-          <span class="score-big">${avgRating}</span>
-          <div class="score-meta">
-            <div class="stars-row">${starsHtml(Math.round(avgRating))}</div>
-            <span class="score-count">${reviews.length} ${t("reviews", "تقييم")}</span>
-          </div>
-        </div>
-        <div class="rating-bars">
-          ${ratingDist.map(d => `
-            <div class="rating-bar-row">
-              <span class="bar-label">${d.star} <i class="ph-fill ph-star star-filled" aria-hidden="true"></i></span>
-              <div class="bar-track"><div class="bar-fill" style="width:${d.pct}%"></div></div>
-              <span class="bar-count">${d.count}</span>
-            </div>
-          `).join("")}
-        </div>
-      </div>
-    </div>
-    <div class="reviews-list">
-  `;
-
-  reviews.forEach(rev => {
-    const text = isAr ? rev.textar : rev.texten;
-    const typeClass = {
-      positive: "rev-positive",
-      negative: "rev-negative",
-      mixed: "rev-mixed",
-      constructive: "rev-constructive"
-    }[rev.type] || "";
-
-    const date = parseLocalDate(rev.date)?.toLocaleDateString(isAr ? "ar-DZ" : "en-GB", {
-      month: "long",
-      year: "numeric"
-    });
-
-    html += `
-      <div class="review-card ${typeClass}">
-        <div class="review-top">
-          <div class="reviewer-avatar" aria-hidden="true">${rev.avatar}</div>
-          <div class="reviewer-info">
-            <span class="reviewer-name">${rev.name} <span class="reviewer-flag">${rev.flag}</span></span>
-            <span class="reviewer-stay">${rev.stay}</span>
-          </div>
-          <div class="review-rating" aria-label="${t("Rating", "التقييم")}: ${rev.rating}/5">
-            ${starsHtml(rev.rating)}
-          </div>
-        </div>
-        <p class="review-text">${text}</p>
-        <span class="review-date">${date || ""}</span>
-      </div>
-    `;
-  });
-
-  html += `</div>`;
-  container.innerHTML = html;
-
-  const ratingStrip = document.getElementById("sum-rating");
-  const reviewsCount = document.getElementById("sum-reviews-count");
-  if (ratingStrip) ratingStrip.textContent = avgRating;
-  if (reviewsCount) reviewsCount.textContent = `${reviews.length} ${t("reviews", "تقييم")}`;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-function setupThemeToggle() {
-  const btn = document.getElementById("theme-toggle");
-  if (!btn) return;
-
-  btn.addEventListener("click", () => {
-    const isDark = document.body.classList.toggle("dark");
-    document.documentElement.classList.toggle("dark", isDark);
-    const icon = btn.querySelector("i");
-    if (icon) icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
-    localStorage.setItem("oretheme", isDark ? "dark" : "light");
-  });
+@keyframes shimmer {
+  0% { background-position: -800px 0; }
+  100% { background-position: 800px 0; }
 }
 
-function setupLangToggle() {
-  const btn = document.getElementById("lang-toggle");
-  if (!btn) return;
-
-  btn.addEventListener("click", () => {
-    bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
-    localStorage.setItem("orelang", bookingState.lang);
-    translateBookingPage();
-    renderCalendar();
-    renderAddonsPanel();
-    renderReviews();
-    updateBookingSummary();
-    updateOccupancyCounters();
-    const span = btn.querySelector("span");
-    if (span) span.textContent = bookingState.lang === "ar" ? "English" : "العربية";
-  });
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateX(30px); }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const params = new URLSearchParams(window.location.search);
-  bookingState.propertyId = params.get("id");
-
-  if (!bookingState.propertyId) {
-    showGlobalAlert(t("No property selected. Redirecting…", "لم يتم تحديد عقار. جاري التحويل…"), "error");
-    setTimeout(() => {
-      window.location.href = "index.html";
-    }, 2000);
-    return;
-  }
-
-  applyStoredTheme();
-  translateBookingPage();
-  setupThemeToggle();
-  setupLangToggle();
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (user) {
-      if (els.gName && !els.gName.value) els.gName.value = user.displayName || "";
-      if (els.gEmail && !els.gEmail.value) els.gEmail.value = user.email || "";
-      els.authPrompt?.classList.add("d-none");
-    } else {
-      els.authPrompt?.classList.remove("d-none");
-    }
-  });
-
-  document.getElementById("back-btn")?.addEventListener("click", () => {
-    if (document.referrer && document.referrer.includes(window.location.hostname)) {
-      history.back();
-    } else {
-      window.location.href = `index.html${bookingState.propertyId ? `#prop-${bookingState.propertyId}` : ""}`;
-    }
-  });
-
-  els.linkLogin?.addEventListener("click", e => {
-    e.preventDefault();
-    if (window.opener) {
-      window.opener.postMessage("open-auth-modal", "*");
-    } else {
-      window.location.href = "index.html?login=1";
-    }
-  });
-
-  setupEventListeners();
-  showSidebarSkeleton();
-  await loadPropertyDetails();
-  await loadBookedDates();
-  updateOccupancyCounters();
-  renderChildAges();
-  renderAddonsPanel();
-  updatePaymentUI();
-  updateBookingSummary();
-  renderCalendar();
-  renderReviews();
-
-  window.addEventListener("popstate", () => {
-    const hash = window.location.hash;
-    if (hash.startsWith("#step-")) {
-      const step = parseInt(hash.replace("#step-", ""), 10);
-      if (step >= 1 && step <= 4) goToStep(step);
-    }
-  });
-});
-
-async function loadPropertyDetails() {
-  try {
-    const doc = await db.collection("properties").doc(String(bookingState.propertyId)).get();
-    if (!doc.exists) throw new Error("not-found");
-
-    const p = doc.data();
-    bookingState.property = p;
-    bookingState.basePrice = Number(p.price) || 0;
-    bookingState.minNights = Number(p.minNights) || 1;
-    bookingState.maxGuests = Number(p.maxGuests) || 10;
-    bookingState.maxRooms = Number(p.maxRooms) || 5;
-
-    const isAr = bookingState.lang === "ar";
-    const curr = isAr ? " د.ج" : " DZD";
-    const title = (isAr ? p.titleAr : p.titleEn) || p.titleEn || p.titleAr || "";
-    const loc = (isAr ? p.locationAr : p.locationEn) || p.locationEn || p.locationAr || "";
-    const type = (isAr ? p.typeAr : p.type) || p.type || "";
-
-    const setTxt = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    };
-
-    setTxt("sum-name", title);
-    setTxt("sum-price-night", `${bookingState.basePrice.toLocaleString()}${curr}`);
-
-    const locEl = document.getElementById("sum-loc");
-    if (locEl) locEl.innerHTML = `<i class="ph ph-map-pin" aria-hidden="true"></i><span>${loc}</span>`;
-
-    const imgEl = document.getElementById("sum-img") || els.propMiniImg;
-    if (imgEl) {
-      const src = p.imageUrl || (Array.isArray(p.images) ? p.images[0] : "") || "images/placeholder.jpg";
-      imgEl.src = src;
-      imgEl.alt = `${title} Property`;
-      imgEl.onerror = () => imgEl.src = "images/placeholder.jpg";
-      imgEl.classList.remove("skeleton");
-    }
-
-    if (els.propMiniTitle) els.propMiniTitle.textContent = title;
-    if (els.propMiniLoc) els.propMiniLoc.textContent = loc;
-    if (els.propMiniType) els.propMiniType.textContent = type;
-    if (els.sbNightPrice) els.sbNightPrice.textContent = `${bookingState.basePrice.toLocaleString()}${curr}`;
-
-    document.title = `${t("Book", "احجز")} ${title} — OreBooking`;
-  } catch (err) {
-    handleError(err, "loadPropertyDetails");
-  }
+/* --- Container --- */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
-async function loadBookedDates() {
-  try {
-    const snap = await db.collection("bookings")
-      .where("propertyId", "==", String(bookingState.propertyId))
-      .where("status", "in", ["pending", "confirmed"])
-      .get();
-
-    bookingState.bookedDates = [];
-
-    snap.forEach(docSnap => {
-      const b = docSnap.data();
-      if (!b.checkIn || !b.checkOut) return;
-
-      let curr = b.checkInDate ? b.checkInDate.toDate() : (b.checkIn?.toDate ? b.checkIn.toDate() : parseLocalDate(b.checkIn));
-      const end = b.checkOutDate ? b.checkOutDate.toDate() : (b.checkOut?.toDate ? b.checkOut.toDate() : parseLocalDate(b.checkOut));
-
-      if (!curr || !end) return;
-
-      curr.setHours(0, 0, 0, 0);
-      while (curr < end) {
-        bookingState.bookedDates.push(formatDateStr(curr));
-        curr = new Date(curr);
-        curr.setDate(curr.getDate() + 1);
-      }
-    });
-  } catch (err) {
-    handleError(err, "loadBookedDates");
-  }
+/* --- Navbar --- */
+/* FIX: z-index 300 for search-dropdown, 200 overflow:visible for nav-actions */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 40px;
+  background-color: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 300; /* FIX: was 100 */
+  transition: var(--transition);
+  gap: 12px;
 }
 
-function isDateBooked(dateStr) {
-  return bookingState.bookedDates.includes(dateStr);
+.logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
 }
 
-function hasBookedDatesInRange(startStr, endStr) {
-  let curr = parseLocalDate(startStr);
-  const end = parseLocalDate(endStr);
-  if (!curr || !end) return false;
-
-  while (curr < end) {
-    if (isDateBooked(formatDateStr(curr))) return true;
-    curr.setDate(curr.getDate() + 1);
-  }
-  return false;
+.logo-img {
+  height: 56px;
+  max-width: 200px;
+  object-fit: contain;
 }
 
-function handleError(err, context) {
-  console.error(context, err);
-  let msg = t("Unexpected error. Please try again.", "حدث خطأ غير متوقع. يرجى المحاولة مجدداً.");
-
-  if (err.code === "storage/unauthorized") {
-    msg = t("Upload failed — no permission.", "فشل الرفع — لا توجد صلاحية.");
-  } else if (err.code === "permission-denied") {
-    msg = t("Permission denied. Please log in.", "تم رفض الإذن. يرجى تسجيل الدخول.");
-  } else if (err.message?.includes("NaN")) {
-    msg = t("Invalid number in form.", "رقم غير صالح في النموذج.");
-  } else if (err.message === "not-found") {
-    msg = t("Property not found.", "العقار غير موجود.");
-  } else if (err.message) {
-    msg = err.message;
-  }
-
-  showGlobalAlert(msg, "error");
-  setButtonLoading(els.btnConfirm, false);
+/* FIX: overflow:visible */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  overflow: visible; /* FIX: browsers hidden */
+  margin-inline-start: auto;
 }
 
-const MONTH_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const MONTH_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-const DAYS_EN = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const DAYS_AR = ["أح", "إث", "ثل", "أر", "خم", "جم", "سب"];
+.rewards-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(245,158,11,0.1);
+  color: #d97706;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.dark .rewards-badge { color: #fbbf24; }
 
-function renderCalendar() {
-  const grid = els.calGrid;
-  if (!grid) return;
-
-  grid.innerHTML = "";
-  const isAr = bookingState.lang === "ar";
-  const m = calViewDate.getMonth();
-  const y = calViewDate.getFullYear();
-
-  if (els.monthLabel) els.monthLabel.textContent = `${isAr ? MONTH_AR[m] : MONTH_EN[m]} ${y}`;
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (els.calPrev) els.calPrev.disabled = new Date(y, m, 1) <= currentMonthStart;
-
-  (isAr ? DAYS_AR : DAYS_EN).forEach(d => {
-    const el = document.createElement("div");
-    el.className = "cal-day-name";
-    el.textContent = d;
-    el.setAttribute("aria-hidden", "true");
-    grid.appendChild(el);
-  });
-
-  const firstDay = new Date(y, m, 1).getDay();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-
-  for (let i = 0; i < firstDay; i++) {
-    const e = document.createElement("div");
-    e.className = "cal-cell empty";
-    e.setAttribute("aria-hidden", "true");
-    grid.appendChild(e);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const cellDate = new Date(y, m, d);
-    const dateStr = formatDateStr(cellDate);
-    const isPast = cellDate < now;
-    const isBooked = isDateBooked(dateStr);
-    const isToday = dateStr === formatDateStr(now);
-
-    const cell = document.createElement("div");
-    const classes = ["cal-cell"];
-    if (isToday) classes.push("today");
-
-    cell.setAttribute("data-date", dateStr);
-    cell.setAttribute("role", "gridcell");
-
-    if (isPast || isBooked) {
-      classes.push("disabled");
-      cell.setAttribute("aria-disabled", "true");
-      cell.setAttribute("tabindex", "-1");
-      cell.setAttribute("aria-label", `${dateStr} — ${isBooked ? t("Booked", "محجوز") : t("Unavailable", "غير متاح")}`);
-    } else {
-      cell.setAttribute("tabindex", "0");
-      let label = dateStr;
-
-      if (dateStr === bookingState.checkIn && dateStr === bookingState.checkOut) {
-        classes.push("check-in", "check-out");
-        label = t("Same day", "نفس اليوم");
-      } else if (dateStr === bookingState.checkIn) {
-        classes.push("check-in");
-        label = t("Check-in", "الوصول");
-      } else if (dateStr === bookingState.checkOut) {
-        classes.push("check-out");
-        label = t("Checkout", "المغادرة");
-      } else if (
-        bookingState.checkIn &&
-        bookingState.checkOut &&
-        dateStr > bookingState.checkIn &&
-        dateStr < bookingState.checkOut
-      ) {
-        classes.push("in-range");
-        label = t("Selected", "محدد");
-      } else {
-        classes.push("available");
-      }
-
-      cell.setAttribute("aria-label", label);
-      cell.addEventListener("click", () => handleDateClick(dateStr));
-      cell.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleDateClick(dateStr);
-        }
-      });
-    }
-
-    cell.className = classes.join(" ");
-    cell.innerHTML = `<span aria-hidden="true">${d}</span>`;
-    grid.appendChild(cell);
-  }
+.icon-btn, .lang-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 10px;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  font-family: inherit;
+  flex-shrink: 0; /* FIX */
 }
 
-function handleDateClick(dateStr) {
-  hideWarn();
-
-  const bothSelected = bookingState.checkIn && bookingState.checkOut;
-  const noneSelected = !bookingState.checkIn;
-
-  if (noneSelected || bothSelected) {
-    bookingState.checkIn = dateStr;
-    bookingState.checkOut = null;
-  } else if (dateStr < bookingState.checkIn) {
-    bookingState.checkIn = dateStr;
-    bookingState.checkOut = null;
-  } else if (hasBookedDatesInRange(bookingState.checkIn, dateStr)) {
-    showWarn(t("Booked dates exist in this range. Choose different dates.", "توجد تواريخ محجوزة في هذا النطاق. اختر تواريخ مختلفة."));
-    return;
-  } else {
-    bookingState.checkOut = dateStr;
-  }
-
-  updateBookingSummary();
-  renderCalendar();
+.lang-btn {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
-function updateOccupancyCounters() {
-  if (els.roomCount) els.roomCount.textContent = bookingState.rooms;
-  if (els.adultCount) els.adultCount.textContent = bookingState.adults;
-  if (els.childCount) els.childCount.textContent = bookingState.children;
-
-  if (els.btnRoomMinus) els.btnRoomMinus.disabled = bookingState.rooms <= 1;
-  if (els.btnRoomPlus) els.btnRoomPlus.disabled = bookingState.rooms >= bookingState.maxRooms;
-  if (els.btnAdultMinus) els.btnAdultMinus.disabled = bookingState.adults <= 1;
-  if (els.btnAdultPlus) els.btnAdultPlus.disabled = (bookingState.adults + bookingState.children) >= bookingState.maxGuests;
-  if (els.btnChildMinus) els.btnChildMinus.disabled = bookingState.children <= 0;
-  if (els.btnChildPlus) els.btnChildPlus.disabled = (bookingState.adults + bookingState.children) >= bookingState.maxGuests;
-
-  const badge = document.getElementById("occupancy-summary-badge");
-  if (badge) {
-    const isAr = bookingState.lang === "ar";
-    const roomTxt = `${bookingState.rooms} ${t("room", "غرفة")}${bookingState.rooms > 1 && !isAr ? "s" : ""}`;
-    const adultTxt = `${bookingState.adults} ${t("adult", "بالغ")}${bookingState.adults > 1 && !isAr ? "s" : ""}`;
-    const childTxt = bookingState.children > 0 ? ` · ${bookingState.children} ${t("child", "طفل")}${bookingState.children > 1 && !isAr ? "ren" : ""}` : "";
-    badge.textContent = `${roomTxt} · ${adultTxt}${childTxt}`;
-  }
+.icon-btn:hover, .lang-btn:hover {
+  background-color: var(--bg-color);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
-function updateBookingSummary() {
-  const isAr = bookingState.lang === "ar";
-  const curr = isAr ? " د.ج" : " DZD";
+.icon-btn i { font-size: 1.15rem; }
 
-  if (els.dispCheckin) els.dispCheckin.textContent = formatDisplayDate(bookingState.checkIn);
-  if (els.dispCheckout) els.dispCheckout.textContent = formatDisplayDate(bookingState.checkOut);
-
-  if (!bookingState.checkIn || !bookingState.checkOut) {
-    if (els.dispNights) els.dispNights.textContent = "";
-    if (els.btnNext1) {
-      els.btnNext1.disabled = true;
-      els.btnNext1.setAttribute("aria-disabled", "true");
-    }
-    renderSidebarPlaceholder();
-    return;
-  }
-
-  const d1 = parseLocalDate(bookingState.checkIn);
-  const d2 = parseLocalDate(bookingState.checkOut);
-  if (!d1 || !d2) return;
-
-  bookingState.nights = Math.round((d2 - d1) / 86400000);
-
-  if (els.dispNights) els.dispNights.textContent = bookingState.nights;
-
-  if (bookingState.nights < bookingState.minNights) {
-    showWarn(t(`Minimum stay is ${bookingState.minNights} night${bookingState.minNights > 1 ? "s" : ""}.`, `الحد الأدنى للإقامة هو ${bookingState.minNights} ليلة.`));
-    if (els.btnNext1) {
-      els.btnNext1.disabled = true;
-      els.btnNext1.setAttribute("aria-disabled", "true");
-    }
-    renderSidebarPlaceholder();
-    return;
-  }
-
-  hideWarn();
-  if (els.btnNext1) {
-    els.btnNext1.disabled = false;
-    els.btnNext1.removeAttribute("aria-disabled");
-  }
-
-  bookingState.roomPrice = bookingState.basePrice * bookingState.rooms;
-  const subtotal = bookingState.roomPrice * bookingState.nights;
-  calcAddonsTotal();
-  bookingState.fee = Math.round((subtotal + bookingState.addonsTotal) * 0.08);
-  bookingState.totalPrice = subtotal + bookingState.addonsTotal + bookingState.fee;
-
-  if (els.sbNightsCount) els.sbNightsCount.textContent = bookingState.nights;
-  if (els.sbNightPrice) els.sbNightPrice.textContent = `${bookingState.roomPrice.toLocaleString()}${curr}`;
-  if (els.sbBaseTotal) els.sbBaseTotal.textContent = subtotal.toLocaleString();
-  if (els.sbFinalTotal) els.sbFinalTotal.textContent = bookingState.totalPrice.toLocaleString();
-
-  if (els.priceBreakdown) {
-    const ad = bookingState.addons;
-    const addonLines = [];
-
-    if (ad.restaurant) {
-      const planKey = `restaurant${ad.restaurantPlan}`;
-      const planCost = (ADDON_PRICES[planKey] || 0) * bookingState.nights * (bookingState.adults + bookingState.children);
-      const planLabel = {
-        breakfast: t("Breakfast", "إفطار"),
-        halfboard: t("Half-Board", "نصف إقامة"),
-        fullboard: t("Full-Board", "إقامة كاملة")
-      }[ad.restaurantPlan];
-      addonLines.push([`${t("Restaurant", "المطعم")} (${planLabel})`, planCost]);
-    }
-
-    if (ad.wifi) addonLines.push([t("WiFi", "واي فاي"), ADDON_PRICES.wifi * bookingState.nights * bookingState.rooms]);
-    if (ad.parking) addonLines.push([t("Parking", "موقف"), ADDON_PRICES.parking * bookingState.nights]);
-    if (ad.airportTransfer) addonLines.push([t("Airport Transfer", "نقل مطار"), ADDON_PRICES.airportTransfer]);
-    if (ad.spa) addonLines.push([t("Spa", "سبا"), ADDON_PRICES.spa * bookingState.nights]);
-    if (ad.lateCheckout) addonLines.push([t("Late Checkout", "مغادرة متأخرة"), ADDON_PRICES.lateCheckout * bookingState.rooms]);
-    if (ad.extraBed) addonLines.push([t("Extra Bed", "سرير إضافي"), ADDON_PRICES.extraBed * bookingState.nights * bookingState.rooms]);
-    if (ad.events) addonLines.push([t("Events", "فعاليات"), ADDON_PRICES.events * bookingState.nights * (bookingState.adults + bookingState.children)]);
-
-    els.priceBreakdown.innerHTML = `
-      <div class="price-row">
-        <span>${bookingState.basePrice.toLocaleString()}${curr} × ${bookingState.rooms} ${t("room", "غرفة")}${bookingState.rooms > 1 && !isAr ? "s" : ""} × ${bookingState.nights} ${t("nights", "ليالي")}</span>
-        <span>${subtotal.toLocaleString()}${curr}</span>
-      </div>
-      ${addonLines.map(([label, cost]) => `<div class="price-row price-row--addon"><span>${label}</span><span>${cost.toLocaleString()}${curr}</span></div>`).join("")}
-      <div class="price-row price-row--fee"><span>${t("Service Fee (8%)", "رسوم الخدمة (8٪)")}</span><span>${bookingState.fee.toLocaleString()}${curr}</span></div>
-      <div class="price-row price-row--total"><span>${t("Total", "الإجمالي")}</span><span class="price-highlight">${bookingState.totalPrice.toLocaleString()}${curr}</span></div>
-    `;
-  }
-
-  const locale = isAr ? "ar-DZ" : "en-GB";
-  const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
-  const set = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
-
-  const bedLabel = {
-    double: t("Double", "مزدوج"),
-    twin: t("Twin", "توأم"),
-    king: t("King", "كينغ"),
-    single: t("Single", "مفرد")
-  }[bookingState.bedConfig] || "";
-
-  set("rev-val-dates", `${parseLocalDate(bookingState.checkIn)?.toLocaleDateString(locale, fmtOpts) || ""} → ${parseLocalDate(bookingState.checkOut)?.toLocaleDateString(locale, fmtOpts) || ""}`);
-  set("rev-val-nights", `${bookingState.nights} ${t("nights", "ليالي")}`);
-  set("rev-val-rooms", `${bookingState.rooms} ${t("room", "غرفة")}${bookingState.rooms > 1 && !isAr ? "s" : ""} — ${bedLabel}`);
-  set("rev-val-guests", `${bookingState.adults} ${t("adults", "بالغون")}${bookingState.children > 0 ? ` · ${bookingState.children} ${t("children", "أطفال")}` : ""}`);
-  set("rev-val-addons", bookingState.addonsTotal > 0 ? `${bookingState.addonsTotal.toLocaleString()}${curr}` : t("None", "لا شيء"));
-  set("rev-val-base", `${subtotal.toLocaleString()}${curr}`);
-  set("rev-val-fees", `${bookingState.fee.toLocaleString()}${curr}`);
-  set("rev-val-total", `${bookingState.totalPrice.toLocaleString()}${curr}`);
-  set("final-total", `${bookingState.totalPrice.toLocaleString()}${curr}`);
-  set("earned-points-preview", String(Math.floor(bookingState.totalPrice / 100)));
+/* --- Profile Dropdown --- */
+.profile-container {
+  position: relative;
 }
 
-function renderSidebarPlaceholder() {
-  if (els.priceBreakdown) {
-    els.priceBreakdown.innerHTML = `
-      <p class="sum-placeholder-txt">
-        <i class="ph ph-calendar-blank" style="margin-inline-end:6px" aria-hidden="true"></i>
-        ${t("Select dates to see price details", "اختر التواريخ لرؤية تفاصيل السعر")}
-      </p>
-    `;
-  }
-
-  if (els.sbNightsCount) els.sbNightsCount.textContent = "0";
-  if (els.sbBaseTotal) els.sbBaseTotal.textContent = "0";
-  if (els.sbFinalTotal) els.sbFinalTotal.textContent = "0";
+.profile-menu {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-full);
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
-function getStepIndicator(n) {
-  return document.querySelector(`.step-indicator[data-step="${n}"]`);
+.profile-menu:hover {
+  background-color: var(--primary-hover);
+  transform: scale(1.05);
 }
 
-function updateStepConnectors(activeTo) {
-  document.querySelectorAll(".step-connector").forEach((con, idx) => {
-    con.classList.toggle("completed", idx < activeTo - 1);
-  });
+.profile-dropdown {
+  position: absolute;
+  top: 120%;
+  inset-inline-end: 0;
+  width: 230px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition: var(--transition);
+  z-index: 310;
+  overflow: hidden;
 }
 
-function goToStep(stepNum) {
-  hideGlobalAlert();
-
-  [1, 2, 3, 4].forEach(n => {
-    const el = els[`step${n}`];
-    const ind = getStepIndicator(n);
-
-    if (el) el.classList.toggle("active", n === stepNum);
-
-    if (ind) {
-      ind.classList.toggle("active", n === stepNum);
-      ind.classList.toggle("completed", n < stepNum);
-      ind.setAttribute("aria-selected", n === stepNum ? "true" : "false");
-    }
-  });
-
-  updateStepConnectors(stepNum);
-
-  const navH = document.querySelector(".inner-nav")?.offsetHeight || 80;
-  window.scrollTo({ top: navH - 10, behavior: "smooth" });
-
-  history.pushState(null, null, `#step-${stepNum}`);
-
-  if (stepNum === 4) populateFinalSummary();
+.profile-dropdown.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
-const goToStep1 = () => goToStep(1);
-const goToStep2 = () => goToStep(2);
-const goToStep3 = () => goToStep(3);
-const goToStep4 = () => goToStep(4);
-
-function populateFinalSummary() {
-  const isAr = bookingState.lang === "ar";
-  const curr = isAr ? " د.ج" : " DZD";
-  const locale = isAr ? "ar-DZ" : "en-GB";
-  const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
-
-  const set = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
-
-  set("final-name", els.gName?.value?.trim() || "");
-
-  const ci = parseLocalDate(bookingState.checkIn)?.toLocaleDateString(locale, fmtOpts) || bookingState.checkIn || "";
-  const co = parseLocalDate(bookingState.checkOut)?.toLocaleDateString(locale, fmtOpts) || bookingState.checkOut || "";
-  set("final-dates", `${ci} → ${co}`);
-
-  const method = document.querySelector("input[name='paymentmethod']:checked")?.value || "cash";
-  set("final-payment", method === "transfer" ? t("Bank Transfer", "تحويل بنكي") : t("Pay at Property", "الدفع في المكان"));
-  set("final-total", `${bookingState.totalPrice.toLocaleString()}${curr}`);
-  set("earned-points-preview", String(Math.floor(bookingState.totalPrice / 100)));
+.dropdown-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background-color: var(--bg-color);
+}
+.dropdown-header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-function validateStep1() {
-  if (!bookingState.checkIn || !bookingState.checkOut) {
-    showGlobalAlert(t("Please select check-in and check-out dates.", "يرجى تحديد تاريخ الوصول والمغادرة."), "error");
-    return false;
-  }
-
-  if (bookingState.nights < bookingState.minNights) {
-    showGlobalAlert(t(`Minimum stay is ${bookingState.minNights} night${bookingState.minNights > 1 ? "s" : ""}.`, `الحد الأدنى للإقامة هو ${bookingState.minNights} ليلة.`), "error");
-    return false;
-  }
-
-  if (bookingState.children > 0 && bookingState.childAges.some(a => a === undefined || a === "")) {
-    showGlobalAlert(t("Please select ages for all children.", "يرجى تحديد أعمار جميع الأطفال."), "error");
-    els.childAgesBox?.scrollIntoView({ behavior: "smooth", block: "center" });
-    return false;
-  }
-
-  return true;
+.dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: start;
+  text-decoration: none;
+  min-height: 44px;
 }
 
-function validateStep2() {
-  const method = document.querySelector("input[name='paymentmethod']:checked")?.value;
-  if (!method) {
-    showGlobalAlert(t("Please select a payment method.", "يرجى اختيار طريقة الدفع."), "error");
-    return false;
-  }
-
-  if (method === "transfer" && els.receiptFile && !els.receiptFile.files[0]) {
-    showGlobalAlert(t("Please upload the transfer receipt.", "يرجى رفع إيصال التحويل."), "error");
-    return false;
-  }
-
-  return true;
+.dropdown-item:hover {
+  background-color: var(--bg-color);
 }
 
-function validateStep3() {
-  if (!els.gName?.value?.trim()) {
-    showGlobalAlert(t("Please enter your full name.", "يرجى إدخال اسمك الكامل."), "error");
-    els.gName?.focus();
-    return false;
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!els.gEmail?.value?.trim() || !emailRegex.test(els.gEmail.value.trim())) {
-    showGlobalAlert(t("Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صحيح."), "error");
-    els.gEmail?.focus();
-    return false;
-  }
-
-  if (!els.gPhone?.value?.trim()) {
-    showGlobalAlert(t("Please enter your phone number.", "يرجى إدخال رقم هاتفك."), "error");
-    els.gPhone?.focus();
-    return false;
-  }
-
-  if (els.agreePolicy && !els.agreePolicy.checked) {
-    showGlobalAlert(t("You must agree to the house rules.", "يجب الموافقة على قواعد المنزل."), "error");
-    return false;
-  }
-
-  return true;
+.dropdown-item i {
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
-async function uploadReceipt(file, refId) {
-  const ext = file.name.split(".").pop();
-  const path = `receipts/${refId}_${Date.now()}.${ext}`;
-  const snap = await storage.ref(path).put(file);
-  return await snap.ref.getDownloadURL();
+/* --- Hero --- */
+.hero {
+  text-align: center;
+  padding: 70px 20px 36px;
 }
 
-async function submitBooking() {
-  if (!validateStep3()) return;
-
-  setButtonLoading(els.btnConfirm, true);
-  hideGlobalAlert();
-
-  try {
-    const isTransfer = document.querySelector("input[name='paymentmethod']:checked")?.value === "transfer";
-    let receiptUrl = "";
-    const refId = `BK-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
-    if (isTransfer && els.receiptFile?.files[0]) {
-      receiptUrl = await uploadReceipt(els.receiptFile.files[0], refId);
-    }
-
-    const checkInDate = parseLocalDate(bookingState.checkIn);
-    const checkOutDate = parseLocalDate(bookingState.checkOut);
-
-    if (!checkInDate || !checkOutDate) {
-      throw new Error(t("Invalid booking dates.", "تواريخ الحجز غير صالحة."));
-    }
-
-    const payload = {
-      propertyId: String(bookingState.propertyId),
-      refId,
-      userId: currentUser ? currentUser.uid : null,
-      guestName: els.gName?.value?.trim() || "",
-      guestEmail: els.gEmail?.value?.trim() || "",
-      guestPhone: els.gPhone?.value?.trim() || "",
-      nationality: els.gNationality?.value || "",
-      purpose: bookingState.purposeOfVisit,
-      arrivalTime: els.gArrival?.value || "",
-      notes: els.gNotes?.value?.trim() || "",
-      checkIn: bookingState.checkIn,
-      checkOut: bookingState.checkOut,
-      checkInDate: firebase.firestore.Timestamp.fromDate(checkInDate),
-      checkOutDate: firebase.firestore.Timestamp.fromDate(checkOutDate),
-      rooms: bookingState.rooms,
-      adults: bookingState.adults,
-      children: bookingState.children,
-      childAges: bookingState.childAges,
-      bedConfig: bookingState.bedConfig,
-      nights: bookingState.nights,
-      basePrice: bookingState.basePrice,
-      roomPrice: bookingState.roomPrice,
-      fee: bookingState.fee,
-      addonsTotal: bookingState.addonsTotal,
-      totalPrice: bookingState.totalPrice,
-      addons: bookingState.addons,
-      paymentMethod: isTransfer ? "transfer" : "cash",
-      receiptUrl,
-      status: "pending",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    await db.collection("bookings").add(payload);
-
-    const set = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    };
-
-    const isAr = bookingState.lang === "ar";
-    const curr = isAr ? " د.ج" : " DZD";
-    const locale = isAr ? "ar-DZ" : "en-GB";
-    const fmtOpts = { day: "2-digit", month: "short", year: "numeric" };
-
-    set("succ-ref", refId);
-    set("succ-name", payload.guestName);
-
-    const ci = parseLocalDate(payload.checkIn)?.toLocaleDateString(locale, fmtOpts) || payload.checkIn;
-    const co = parseLocalDate(payload.checkOut)?.toLocaleDateString(locale, fmtOpts) || payload.checkOut;
-
-    set("succ-dates", `${ci} → ${co}`);
-    set("succ-guests", `${payload.adults} ${t("adults", "بالغون")} · ${payload.rooms} ${t("room", "غرفة")}`);
-    set("succ-total", `${payload.totalPrice.toLocaleString()}${curr}`);
-
-    const badge = document.getElementById("succ-pay-badge");
-    if (badge) {
-      if (isTransfer) {
-        badge.className = "success-pay-badge transfer";
-        badge.innerHTML = `<i class="ph-fill ph-bank" aria-hidden="true"></i> ${t("Awaiting transfer verification", "في انتظار التحقق من التحويل")}`;
-      } else {
-        badge.className = "success-pay-badge cash";
-        badge.innerHTML = `<i class="ph-fill ph-money" aria-hidden="true"></i> ${t("Pay at property", "الدفع في المكان")}`;
-      }
-    }
-
-    if (currentUser) {
-      const earnedPoints = Math.floor(payload.totalPrice / 100);
-      try {
-        await db.collection("users").doc(currentUser.uid).set(
-          {
-            loyaltyPoints: firebase.firestore.FieldValue.increment(earnedPoints)
-          },
-          { merge: true }
-        );
-      } catch (e) {
-        console.warn("Points update failed", e);
-      }
-    }
-
-    const successModal = document.getElementById("booking-success-modal");
-    if (successModal) {
-      successModal.classList.remove("d-none");
-      successModal.classList.add("active");
-      document.body.classList.add("modal-open");
-    } else {
-      goToStep4();
-    }
-
-    if (window.confetti) {
-      window.confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
-    }
-  } catch (err) {
-    handleError(err, "submitBooking");
-  } finally {
-    setButtonLoading(els.btnConfirm, false);
-  }
+.hero h1 {
+  font-size: clamp(1.6rem, 4vw + 0.5rem, 3rem);
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-function setupEventListeners() {
-  els.btnNext1?.addEventListener("click", () => {
-    if (validateStep1()) goToStep2();
-  });
-
-  els.btnNext2?.addEventListener("click", () => {
-    if (validateStep2()) goToStep3();
-  });
-
-  els.btnNext3?.addEventListener("click", () => {
-    if (validateStep3()) {
-      populateFinalSummary();
-      goToStep4();
-    }
-  });
-
-  els.btnPrev2?.addEventListener("click", goToStep1);
-  els.btnPrev3?.addEventListener("click", goToStep2);
-  els.btnPrev4?.addEventListener("click", goToStep3);
-
-  els.btnConfirm?.addEventListener("click", () => submitBooking());
-
-  els.calPrev?.addEventListener("click", () => {
-    calViewDate.setMonth(calViewDate.getMonth() - 1);
-    renderCalendar();
-  });
-
-  els.calNext?.addEventListener("click", () => {
-    calViewDate.setMonth(calViewDate.getMonth() + 1);
-    renderCalendar();
-  });
-
-  const handleCounter = (type, dir) => {
-    if (type === "room") {
-      bookingState.rooms = Math.max(1, Math.min(bookingState.rooms + dir, bookingState.maxRooms));
-      if (bookingState.adults < bookingState.rooms) bookingState.adults = bookingState.rooms;
-    } else if (type === "adult") {
-      const newAdults = bookingState.adults + dir;
-      if (newAdults < 1) return;
-      if (newAdults + bookingState.children > bookingState.maxGuests) return;
-      bookingState.adults = newAdults;
-    } else if (type === "child") {
-      const newChildren = bookingState.children + dir;
-      if (newChildren < 0) return;
-      if (bookingState.adults + newChildren > bookingState.maxGuests) return;
-      bookingState.children = newChildren;
-      if (dir > 0) bookingState.childAges.push(undefined);
-      else bookingState.childAges.pop();
-      renderChildAges();
-    }
-
-    updateOccupancyCounters();
-    updateBookingSummary();
-  };
-
-  els.btnRoomMinus?.addEventListener("click", () => handleCounter("room", -1));
-  els.btnRoomPlus?.addEventListener("click", () => handleCounter("room", 1));
-  els.btnAdultMinus?.addEventListener("click", () => handleCounter("adult", -1));
-  els.btnAdultPlus?.addEventListener("click", () => handleCounter("adult", 1));
-  els.btnChildMinus?.addEventListener("click", () => handleCounter("child", -1));
-  els.btnChildPlus?.addEventListener("click", () => handleCounter("child", 1));
-
-  els.bedSelect?.addEventListener("change", e => {
-    bookingState.bedConfig = e.target.value;
-    updateBookingSummary();
-  });
-
-  Array.from(els.payRadios).forEach(r =>
-    r.addEventListener("change", () => {
-      updatePaymentUI();
-
-      document.querySelectorAll(".payment-method-label, .payment-option").forEach(lbl => {
-        const rb = lbl.querySelector("input[type='radio']");
-        if (rb) lbl.classList.toggle("selected", rb.checked);
-      });
-
-      const method = document.querySelector("input[name='paymentmethod']:checked")?.value || "cash";
-      const el = document.getElementById("final-payment");
-      if (el) el.textContent = method === "transfer" ? t("Bank Transfer", "تحويل بنكي") : t("Pay at Property", "الدفع في المكان");
-    })
-  );
-
-  document.querySelectorAll(".payment-method-label, .payment-option").forEach(lbl => {
-    const rb = lbl.querySelector("input[type='radio']");
-    if (rb) lbl.classList.toggle("selected", rb.checked);
-  });
-
-  document.querySelectorAll(".purpose-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      document.querySelectorAll(".purpose-chip").forEach(c => c.classList.remove("active"));
-      chip.classList.add("active");
-      bookingState.purposeOfVisit = chip.dataset.val || chip.dataset.value;
-    });
-  });
-
-  els.receiptFile?.addEventListener("change", e => {
-    const file = e.target.files[0];
-    const preview = document.getElementById("receipt-preview");
-    const nameEl = document.getElementById("receipt-file-name");
-
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showGlobalAlert(t("File too large. Max 5MB.", "حجم الملف كبير جداً. الحد الأقصى 5MB."), "error");
-        e.target.value = "";
-        return;
-      }
-      if (nameEl) nameEl.textContent = file.name;
-      preview?.classList.remove("d-none");
-    } else {
-      preview?.classList.add("d-none");
-    }
-  });
-
-  document.getElementById("btn-remove-receipt")?.addEventListener("click", () => {
-    if (els.receiptFile) els.receiptFile.value = "";
-    document.getElementById("receipt-preview")?.classList.add("d-none");
-  });
-
-  els.gNotes?.addEventListener("input", e => {
-    const max = 500;
-    const counter = document.getElementById("g-notes-counter");
-    if (e.target.value.length > max) {
-      e.target.value = e.target.value.substring(0, max);
-    }
-    if (counter) counter.textContent = `${e.target.value.length}/${max}`;
-  });
-
-  document.querySelectorAll(".copy-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const targetId = btn.dataset.copyTarget;
-      const text = document.getElementById(targetId)?.textContent;
-      if (text) navigator.clipboard?.writeText(text.trim()).then(() => showCopyToast(t("Copied!", "تم النسخ!")));
-    });
-  });
-
-  els.btnCopyRef?.addEventListener("click", () => {
-    const ref = document.getElementById("succ-ref")?.textContent;
-    if (ref) navigator.clipboard?.writeText(ref).then(() => showCopyToast(t("Reference copied!", "تم نسخ المرجع!")));
-  });
-
-  els.btnShareBooking?.addEventListener("click", () => {
-    if (navigator.share) {
-      const ref = document.getElementById("succ-ref")?.textContent;
-      navigator.share({
-        title: t("My OreBooking Reservation", "حجزي على OreBooking"),
-        text: `${t("My booking reference is", "رقم حجزي هو")}: ${ref} — ${bookingState.property?.titleEn || "Hotel"}`,
-        url: window.location.href
-      }).catch(() => {});
-    } else {
-      showCopyToast(t("Sharing not supported on this browser", "المشاركة غير مدعومة في هذا المتصفح"));
-    }
-  });
-
-  const fileWrapper = document.querySelector(".file-upload-wrapper");
-  if (fileWrapper) {
-    fileWrapper.addEventListener("dragover", e => {
-      e.preventDefault();
-      fileWrapper.classList.add("drag-over");
-    });
-
-    fileWrapper.addEventListener("dragleave", () => {
-      fileWrapper.classList.remove("drag-over");
-    });
-
-    fileWrapper.addEventListener("drop", e => {
-      e.preventDefault();
-      fileWrapper.classList.remove("drag-over");
-
-      const file = e.dataTransfer?.files[0];
-      if (file && els.receiptFile) {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        els.receiptFile.files = dt.files;
-        els.receiptFile.dispatchEvent(new Event("change"));
-      }
-    });
-  }
-
-  [els.gName, els.gEmail, els.gPhone].forEach(input => {
-    if (!input) return;
-
-    input.addEventListener("blur", () => {
-      const isEmpty = !input.value.trim();
-      const isEmailInvalid = input.type === "email" && input.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim());
-      input.classList.toggle("invalid", isEmpty || isEmailInvalid);
-
-      const errEl = input.closest(".form-group, .input-group")?.querySelector(".form-error-msg, .field-error");
-      if (errEl) {
-        errEl.classList.toggle("visible", isEmpty || isEmailInvalid);
-        if (isEmpty) errEl.textContent = t("This field is required.", "هذا الحقل مطلوب.");
-        else if (isEmailInvalid) errEl.textContent = t("Please enter a valid email.", "يرجى إدخال بريد إلكتروني صحيح.");
-      }
-    });
-
-    input.addEventListener("input", () => {
-      input.classList.remove("invalid");
-      const errEl = input.closest(".form-group, .input-group")?.querySelector(".form-error-msg, .field-error");
-      errEl?.classList.remove("visible");
-    });
-  });
-
-  document.querySelectorAll("[data-close-success]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const modal = document.getElementById("booking-success-modal");
-      if (modal) {
-        modal.classList.remove("active");
-        modal.classList.add("d-none");
-      }
-      document.body.classList.remove("modal-open");
-    });
-  });
+.hero p {
+  font-size: clamp(0.95rem, 1.5vw + 0.3rem, 1.125rem);
+  color: var(--text-muted);
+  margin-bottom: 36px;
+  max-width: 560px;
+  margin-inline: auto;
+  line-height: 1.6;
 }
 
-function updatePaymentUI() {
-  const method = document.querySelector("input[name='paymentmethod']:checked")?.value;
-  if (els.transferBox) {
-    els.transferBox.classList.toggle("d-none", method !== "transfer");
-  }
+/* --- Search Bar --- */
+.search-bar {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--surface-color);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-soft);
+  padding: 8px 8px 8px 28px;
+  border: 1px solid var(--border-color);
+  max-width: 800px;
+  width: 100%;
+  transition: var(--transition);
 }
 
-const TRANSLATIONS = {
-  ar: {
-    "nav-back-txt": "العودة للعقار",
-    "lbl-step1": "التواريخ والغرف",
-    "lbl-step2": "الإضافات والدفع",
-    "lbl-step3": "بيانات الضيف",
-    "lbl-step4": "التأكيد",
-    "st-title-1": "متى ستسافر؟",
-    "st-sub-1": "اختر تواريخ الوصول والمغادرة وتفضيلات الغرف.",
-    "st-title-2": "حسّن إقامتك",
-    "st-sub-2": "اختر الإضافات وطريقة الدفع.",
-    "st-title-3": "من يقوم بالحجز؟",
-    "st-sub-3": "أدخل بياناتك للتواصل وتأكيد الحجز.",
-    "st-title-4": "مراجعة وتأكيد",
-    "st-sub-4": "يرجى مراجعة تفاصيل الحجز قبل التأكيد النهائي.",
-    "lbl-chk-in": "الوصول",
-    "lbl-chk-out": "المغادرة",
-    "lbl-nights": "الليالي",
-    "lbl-who-coming": "الإشغال والغرف",
-    "lbl-rooms-title": "الغرف",
-    "lbl-rooms-sub": "الحد الأقصى 5",
-    "lbl-adults-title": "البالغون",
-    "lbl-adults-sub": "13 سنة فأكثر",
-    "lbl-fname": "الاسم الكامل",
-    "lbl-email": "البريد الإلكتروني",
-    "lbl-phone": "رقم الهاتف",
-    "lbl-notes": "طلبات خاصة (اختياري)",
-    "lbl-sidebar-title": "ملخص الحجز",
-    "btn-next-1-txt": "الخطوة التالية",
-    "btn-next-2-txt": "الخطوة التالية",
-    "btn-next-3-txt": "مراجعة التفاصيل",
-    "btn-back-2": "رجوع",
-    "btn-back-3": "رجوع",
-    "btn-back-4": "رجوع",
-    "btn-confirm-txt": "تأكيد الحجز"
-  }
-};
-
-function translateBookingPage() {
-  const dir = bookingState.lang === "ar" ? "rtl" : "ltr";
-  const lang = bookingState.lang === "ar" ? "ar" : "en";
-
-  document.documentElement.setAttribute("dir", dir);
-  document.documentElement.setAttribute("lang", lang);
-  document.body.style.fontFamily = bookingState.lang === "ar" ? "'Tajawal', sans-serif" : "'Outfit', sans-serif";
-
-  if (bookingState.lang !== "ar") {
-    const enMap = {
-      "nav-back-txt": "Back to Property",
-      "lbl-step1": "Dates & Rooms",
-      "lbl-step2": "Add-ons & Pay",
-      "lbl-step3": "Guest Details",
-      "lbl-step4": "Confirmation",
-      "st-title-1": "When are you traveling?",
-      "st-sub-1": "Select your check-in dates and room preferences.",
-      "st-title-2": "Enhance your stay",
-      "st-sub-2": "Select extras and choose your payment method.",
-      "st-title-3": "Who is booking?",
-      "st-sub-3": "Enter your contact details so we can confirm your reservation.",
-      "st-title-4": "Review & Confirm",
-      "st-sub-4": "Please review your booking details before final confirmation.",
-      "lbl-chk-in": "Check-in",
-      "lbl-chk-out": "Check-out",
-      "lbl-nights": "Nights",
-      "lbl-who-coming": "Occupancy & Rooms",
-      "lbl-rooms-title": "Rooms",
-      "lbl-rooms-sub": "Max 5",
-      "lbl-adults-title": "Adults",
-      "lbl-adults-sub": "Ages 13 or above",
-      "lbl-fname": "Full Name",
-      "lbl-email": "Email",
-      "lbl-phone": "Phone Number",
-      "lbl-notes": "Special Requests (Optional)",
-      "lbl-sidebar-title": "Booking Summary",
-      "btn-next-1-txt": "Next Step",
-      "btn-next-2-txt": "Next Step",
-      "btn-next-3-txt": "Review Details",
-      "btn-back-2": "Back",
-      "btn-back-3": "Back",
-      "btn-back-4": "Back",
-      "btn-confirm-txt": "Confirm Booking"
-    };
-
-    Object.entries(enMap).forEach(([id, txt]) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = txt;
-    });
-  } else {
-    Object.entries(TRANSLATIONS.ar).forEach(([id, txt]) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = txt;
-    });
-  }
-
-  if (els.gName) els.gName.placeholder = bookingState.lang === "ar" ? "مثال: محمد أمين" : "John Doe";
-  if (els.gEmail) els.gEmail.placeholder = "example@email.com";
-  if (els.gPhone) els.gPhone.placeholder = bookingState.lang === "ar" ? "+213 555 000 000" : "+213 555 000 000";
-  if (els.gNotes) els.gNotes.placeholder = bookingState.lang === "ar" ? "أي طلبات خاصة أو ملاحظات للفريق…" : "Any special requests or notes for the team…";
+.search-bar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67,90,191,0.1), var(--shadow-soft);
 }
+
+html[dir="rtl"] .search-bar {
+  padding: 8px 28px 8px 8px;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  text-align: start;
+  flex: 1;
+  padding: 4px 16px;
+  min-width: 0;
+  position: relative;
+}
+
+.search-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.search-field input {
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-family: inherit;
+  width: 100%;
+}
+
+.search-divider {
+  width: 1px;
+  height: 32px;
+  background-color: var(--border-color);
+  flex-shrink: 0;
+}
+
+.search-btn {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 13px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-btn:hover {
+  background-color: var(--primary-hover);
+  transform: scale(1.02);
+}
+
+.search-btn i { font-size: 1.1rem; }
+
+/* --- Search Dropdown --- */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hover);
+  z-index: 200;
+  max-height: 340px;
+  overflow-y: auto;
+  display: none;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.dark .search-dropdown {
+  background: var(--surface-color);
+  border-color: var(--border-color);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+}
+
+.search-dropdown.active {
+  display: block;
+  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-dropdown-section-title {
+  padding: 8px 16px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.search-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s;
+}
+
+.search-item:hover, .search-item.selected {
+  background: rgba(67,90,191,0.07);
+}
+
+.dark .search-item:hover, .dark .search-item.selected {
+  background: rgba(67,90,191,0.15);
+}
+
+.search-icon-box {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: var(--bg-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.search-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.search-item-title {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-item-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-item-price {
+  margin-inline-start: auto;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.no-results {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.no-results i {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.4;
+}
+
+/* --- Categories --- */
+.categories {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding: 32px 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.categories::-webkit-scrollbar { display: none; }
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  opacity: 0.7;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: var(--radius-xl);
+  min-width: 60px;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.category-item:hover, .category-item.active {
+  color: var(--primary);
+  opacity: 1;
+}
+
+.category-item i {
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.category-item span {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* --- Section Header --- */
+/* FIX: flex-wrap & overflow */
+.section-header {
+  padding: 32px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap; /* FIX */
+  justify-content: space-between;
+}
+
+.section-header h2 {
+  font-size: clamp(1.2rem, 2vw + 0.4rem, 1.75rem);
+}
+
+/* --- Listings Grid --- */
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px,100%),1fr));
+  gap: 24px;
+  padding-bottom: 60px;
+}
+
+.listings-empty {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.listings-empty i {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.35;
+  display: flex;
+  justify-content: center;
+}
+
+/* --- Card Skeleton --- */
+.card-skeleton {
+  border-radius: var(--radius-2xl);
+  height: 320px;
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--surface-color) 50%, var(--border-color) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border: 1px solid var(--border-color);
+}
+
+/* --- Card --- */
+.card {
+  background-color: var(--surface-color);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--accent);
+}
+
+.card-img-wrapper {
+  position: relative;
+  height: 220px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s ease;
+}
+
+.card:hover .card-img {
+  transform: scale(1.05);
+}
+
+.urgency-label {
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 12px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(4px);
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #e11d48;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.dark .urgency-label { background: rgba(15,23,42,0.95); }
+
+.fav-btn {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(4px);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: var(--transition);
+  font-size: 1rem;
+}
+.fav-btn:hover { background: white; transform: scale(1.1); }
+.fav-btn.active { color: #e11d48; }
+
+.dark .fav-btn { background: rgba(15,23,42,0.75); color: var(--text-main); }
+.dark .fav-btn:hover { background: var(--surface-color); }
+
+.card-content {
+  padding: 16px 18px 18px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  color: var(--text-main);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.card-location {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.card-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.card-rating i {
+  color: #fbbf24;
+  font-size: 0.95rem;
+}
+
+.card-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-price {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.card-price span {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* --- Toast Notifications --- */
+#toast-container {
+  position: fixed;
+  bottom: 80px; /* mobile bottom nav */
+  inset-inline-end: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  animation: toastIn 0.3s ease;
+  pointer-events: auto;
+  max-width: 300px;
+}
+
+.toast.toast-success { border-color: #22c55e; }
+.toast.toast-error { border-color: #ef4444; }
+.toast.toast-info { border-color: var(--primary); }
+
+.toast.toast-out { animation: toastOut 0.3s ease forwards; }
+
+.toast.toast-success i { color: #22c55e; }
+.toast.toast-error i { color: #ef4444; }
+.toast.toast-info i { color: var(--primary); }
+
+/* --- Fav Toast --- */
+#fav-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 10px 22px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 8000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#fav-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* --- Scroll-to-Top --- */
+#scroll-top-btn {
+  position: fixed;
+  bottom: 80px;
+  inset-inline-end: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 16px rgba(108,99,255,0.35);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 500;
+  pointer-events: none;
+}
+#scroll-top-btn.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#scroll-top-btn:hover { filter: brightness(1.1); }
+
+/* --- Mobile Bottom Nav --- */
+#mobile-bottom-nav {
+  display: none; /* mobile breakpoint */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface-color);
+  border-top: 1px solid var(--border-color);
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  padding-top: 6px;
+  z-index: 800;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.07);
+}
+
+.mobile-nav-inner {
+  display: flex;
+  justify-content: space-around;
+}
+
+.mob-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 12px;
+  transition: color 0.2s;
+  min-height: 44px;
+  justify-content: center;
+}
+
+.mob-nav-btn i { font-size: 1.35rem; }
+.mob-nav-btn.active { color: var(--primary); }
+
+/* --- Password Wrapper Show/Hide --- */
+.pass-wrapper {
+  position: relative;
+}
+.pass-wrapper input {
+  padding-inline-end: 44px !important;
+}
+
+.toggle-pass-btn {
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.toggle-pass-btn:hover { color: var(--primary); }
+
+/* --- Password Strength --- */
+#password-strength {
+  margin: -4px 0 12px;
+}
+.strength-bars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.str-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--border-color);
+  transition: background 0.3s;
+}
+#strength-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* --- Input Validation States --- */
+.input-group input.invalid, .input-group select.invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important;
+}
+.field-error {
+  display: none;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+}
+.field-error.visible { display: block; }
+
+/* --- Footer --- */
+.footer {
+  background-color: var(--surface-color);
+  border-top: 1px solid var(--border-color);
+  padding: 28px 0;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.developed-by {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.developers-names {
+  color: var(--primary);
+  margin-inline-start: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* --- Modal Overlay --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 460px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: none;
+}
+.modal-content::-webkit-scrollbar { display: none; }
+
+.modal-overlay.active .modal-content {
+  transform: translateY(0) scale(1);
+}
+
+/* Bookings modal override */
+#bookings-modal .modal-content {
+  max-width: 580px;
+  max-height: 80vh;
+}
+
+.auth-card {
+  background-color: var(--surface-color);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 16px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: var(--transition);
+  z-index: 10;
+  font-size: 1rem;
+}
+.close-modal-btn:hover { background: var(--border-color); }
+
+.auth-header {
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-content {
+  padding: 28px 24px 32px;
+  position: relative;
+}
+
+/* FIX: auth-forms .active */
+.auth-form {
+  display: none;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.auth-form.active { display: block; }
+
+.auth-title {
+  font-size: 1.6rem;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}
+
+.auth-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+.auth-message {
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  display: none;
+}
+.auth-message.error { background: #fee2e2; color: #e11d48; border: 1px solid #fecdd3; display: block; }
+.auth-message.success { background: #dcfce7; color: #059669; border: 1px solid #bbf7d0; display: block; }
+.dark .auth-message.error { background: rgba(225,29,72,0.12); border-color: rgba(225,29,72,0.3); }
+.dark .auth-message.success { background: rgba(5,150,105,0.12); border-color: rgba(5,150,105,0.3); }
+
+/* --- Input Groups --- */
+.input-group {
+  margin-bottom: 18px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 7px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.input-group input, .input-group select {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.input-group textarea {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  outline: none;
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.7;
+  display: block;
+  box-sizing: border-box;
+}
+
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67,90,191,0.15);
+  background-color: var(--surface-color);
+}
+
+.input-group input[type="file"] { padding: 9px 15px; cursor: pointer; }
+
+.dark .input-group input::placeholder, 
+.dark .input-group textarea::placeholder, 
+.dark .search-field input::placeholder,
+.dark .input-half input::placeholder {
+  color: var(--text-muted);
+}
+.dark .input-group input, .dark .input-group select, .dark .input-group textarea {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  border-color: var(--border-color);
+}
+
+.input-group small {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* --- Auth Options --- */
+.auth-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 0.85rem;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.forgot-link { color: var(--primary); text-decoration: none; white-space: nowrap; }
+.forgot-link:hover { text-decoration: underline; }
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  user-select: none;
+}
+.checkbox-container input { display: none; }
+.checkmark {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: var(--transition);
+}
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+.checkbox-container input:checked ~ .checkmark::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* --- Buttons --- */
+.primary-btn {
+  width: 100%;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: var(--radius-xl);
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.primary-btn:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+.primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+.primary-btn i { font-size: 1.1rem; }
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 11px 18px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 44px;
+}
+.ghost-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: rgba(67,90,191,0.05);
+}
+
+/* --- Auth Divider & Social --- */
+.auth-divider {
+  text-align: center;
+  margin: 22px 0;
+  position: relative;
+}
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--border-color);
+  z-index: 1;
+}
+.auth-divider span {
+  position: relative;
+  z-index: 2;
+  background-color: var(--surface-color);
+  padding: 0 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.social-logins { display: flex; gap: 10px; margin-bottom: 20px; }
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  padding: 11px;
+  border-radius: var(--radius-xl);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 44px;
+}
+.social-btn:hover { background-color: var(--bg-color); border-color: var(--primary); }
+.social-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.social-btn i { font-size: 1.15rem; }
+
+.switch-form-text { text-align: center; font-size: 0.875rem; color: var(--text-muted); margin-top: 8px; }
+.switch-form-text a { color: var(--primary); font-weight: 600; text-decoration: none; margin-inline-start: 4px; }
+.switch-form-text a:hover { text-decoration: underline; }
+
+/* --- Property Details Page --- */
+.inner-nav { justify-content: flex-start; gap: 16px; }
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-main);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  transition: var(--transition);
+  font-size: 0.9rem;
+  font-family: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  min-height: 44px;
+  cursor: pointer;
+}
+.back-btn:hover { background-color: var(--border-color); }
+html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
+
+.property-container { padding-top: 28px; padding-bottom: 80px; }
+.prop-header { margin-bottom: 20px; }
+.prop-title { font-size: clamp(1.4rem, 3vw + 0.3rem, 2.25rem); margin-bottom: 10px; line-height: 1.2; }
+.prop-meta { display: flex; gap: 14px; font-size: 0.95rem; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
+.prop-rating { color: var(--text-main); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.prop-rating i { color: #fbbf24; }
+.prop-location { display: flex; align-items: center; gap: 4px; }
+
+.prop-content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 40px; align-items: start; }
+.prop-details h2 { font-size: 1.4rem; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; }
+.prop-description { color: var(--text-muted); line-height: 1.75; margin-bottom: 28px; font-size: 1rem; }
+.prop-features h3 { font-size: 1.15rem; margin-bottom: 14px; }
+.features-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.features-list li { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; color: var(--text-main); }
+.features-list i { font-size: 1.2rem; color: var(--primary); flex-shrink: 0; width: 1.2rem; text-align: center; }
+
+.prop-map-section { margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--border-color); }
+.prop-map-section h3 { font-size: 1.15rem; margin-bottom: 14px; }
