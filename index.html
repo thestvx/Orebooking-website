@@ -261,13 +261,12 @@
       .hero { padding-top: 60px; }
       .hero h1 { font-size: 2.2rem; }
       .navbar { padding: 12px 16px; }
-      .rewards-badge { display: none; } /* Hide on small mobile to save space */
+      .rewards-badge { display: none; }
     }
     
     #mobile-bottom-nav { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(0,0,0,0.05); }
     .dark #mobile-bottom-nav { background: rgba(15,23,42,0.9); border-top-color: rgba(255,255,255,0.05); }
 
-    /* Fix for section header alignment */
     .section-header-wrapper {
       display: flex; 
       justify-content: space-between; 
@@ -282,7 +281,6 @@
       gap: 12px;
       flex-wrap: wrap;
     }
-
   </style>
 </head>
 <body>
@@ -332,7 +330,6 @@
             <button class="dropdown-item" id="my-bookings-btn" role="menuitem"><i class="ph ph-list-checks"></i> <span data-i18n="my_bookings">My Bookings</span></button>
             <button class="dropdown-item" id="my-favorites-btn" role="menuitem"><i class="ph ph-heart"></i> <span data-i18n="my_favorites">My Favorites</span></button>
             <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
-            <!-- Fixed Logout Button Structure -->
             <button class="dropdown-item text-danger" id="fixed-logout-btn" role="menuitem">
               <i class="ph ph-sign-out"></i> <span data-i18n="logout">Log Out</span>
             </button>
@@ -387,7 +384,7 @@
   <!-- ═══ Listings ═════════════════════════════ -->
   <main class="container" id="main-content" role="main" style="padding-top: 20px;">
 
-    <!-- FIXED: Ensure the header controls stay aligned left and right perfectly without jumping -->
+    <!-- FIXED: Header Layout -->
     <div class="section-header-wrapper animate-up delay-4">
       <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">Trending Destinations</h2>
 
@@ -399,7 +396,7 @@
           <option value="rating" data-i18n="sort_rating">Top Rated</option>
         </select>
 
-        <!-- Removed the clear search button entirely from DOM to prevent layout shifts -->
+        <!-- Removed the clear search button entirely from HTML DOM -->
       </div>
     </div>
 
@@ -461,7 +458,7 @@
       <div class="auth-content">
         <div id="auth-message" class="auth-message" style="display:none; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem;"></div>
         
-        <form id="login-form" class="auth-form active" novalidate style="display: flex; flex-direction: column; gap: 16px;">
+        <form id="login-form" class="auth-form active" novalidate onsubmit="event.preventDefault();" style="display: flex; flex-direction: column; gap: 16px;">
           <h2 class="font-bold auth-title" data-i18n="welcome_back" style="margin: 0; text-align: center; font-size: 1.5rem;">Welcome back</h2>
           <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="login-email" data-i18n="email" style="font-size: 0.9rem; font-weight: 600;">Email</label><input type="email" id="login-email" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
           <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="login-password" data-i18n="password" style="font-size: 0.9rem; font-weight: 600;">Password</label><div class="pass-wrapper" style="position: relative;"><input type="password" id="login-password" required style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"><button type="button" class="toggle-pass-btn" data-target="login-password" style="position: absolute; top: 50%; transform: translateY(-50%); inset-inline-end: 12px; background: none; border: none; color: var(--text-muted); cursor: pointer;"><i class="ph ph-eye"></i></button></div></div>
@@ -471,7 +468,7 @@
           <p class="switch-form-text" style="text-align: center; font-size: 0.9rem; margin-top: 16px;"><span data-i18n="no_account">Don't have an account?</span> <a href="#" id="go-to-register" class="font-bold text-primary" data-i18n="sign_up" style="color: var(--primary); text-decoration: none;">Sign up</a></p>
         </form>
 
-        <form id="register-form" class="auth-form" novalidate style="display: none; flex-direction: column; gap: 16px;">
+        <form id="register-form" class="auth-form" novalidate onsubmit="event.preventDefault();" style="display: none; flex-direction: column; gap: 16px;">
           <h2 class="font-bold auth-title" data-i18n="create_account" style="margin: 0; text-align: center; font-size: 1.5rem;">Create Account</h2>
           <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="reg-name" style="font-size: 0.9rem; font-weight: 600;">Name</label><input type="text" id="reg-name" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
           <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="reg-email" style="font-size: 0.9rem; font-weight: 600;">Email</label><input type="email" id="reg-email" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
@@ -480,7 +477,7 @@
           <p class="switch-form-text" style="text-align: center; font-size: 0.9rem; margin-top: 16px;"><a href="#" id="go-to-login" class="font-bold text-primary" style="color: var(--primary); text-decoration: none;">Sign in instead</a></p>
         </form>
 
-        <form id="forgot-form" class="auth-form" novalidate style="display: none; flex-direction: column; gap: 16px;">
+        <form id="forgot-form" class="auth-form" novalidate onsubmit="event.preventDefault();" style="display: none; flex-direction: column; gap: 16px;">
           <h2 class="font-bold auth-title" style="margin: 0; text-align: center; font-size: 1.5rem;">Reset Password</h2>
           <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="forgot-email" style="font-size: 0.9rem; font-weight: 600;">Email</label><input type="email" id="forgot-email" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
           <button type="submit" class="primary-btn" id="forgot-submit-btn" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 8px;">Send Reset Link</button>
@@ -562,18 +559,64 @@
         if (el) el.style.display = (f === id) ? 'flex' : 'none';
       });
     }
-    
-    // Auth Modal open/close logic fallback
+
     const _authModalEl = document.getElementById('auth-modal');
-    document.getElementById('open-auth-btn')?.addEventListener('click', () => {
-      _authModalEl.style.opacity = '1';
-      _authModalEl.style.pointerEvents = 'auto';
-      _authModalEl.classList.add('active');
+
+    // ── Firebase Auth State Update ──
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+          // Update profile text
+          const nameEl = document.getElementById('dropdown-user-name');
+          const emailEl = document.getElementById('dropdown-user-email');
+          if(nameEl) nameEl.textContent = user.displayName || 'User';
+          if(emailEl) emailEl.textContent = user.email || '';
+
+          // Close modal automatically if logged in
+          if (_authModalEl && _authModalEl.classList.contains('active')) {
+            _authModalEl.style.opacity = '0';
+            _authModalEl.style.pointerEvents = 'none';
+            _authModalEl.classList.remove('active');
+          }
+        } else {
+          // Hide dropdown if user logs out
+          const profileDropdown = document.getElementById('profile-dropdown');
+          if (profileDropdown) profileDropdown.classList.remove('active');
+        }
+      });
+    }
+
+    // ── Profile / Login Button Logic ──
+    document.getElementById('open-auth-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+        document.getElementById('profile-dropdown')?.classList.toggle('active');
+      } else {
+        if (_authModalEl) {
+          _authModalEl.style.opacity = '1';
+          _authModalEl.style.pointerEvents = 'auto';
+          _authModalEl.classList.add('active');
+        }
+      }
     });
+
+    // Close Dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('profile-dropdown');
+      const authBtn = document.getElementById('open-auth-btn');
+      if (dropdown && dropdown.classList.contains('active')) {
+        if (!dropdown.contains(e.target) && !authBtn.contains(e.target)) {
+          dropdown.classList.remove('active');
+        }
+      }
+    });
+
     document.getElementById('close-auth-btn')?.addEventListener('click', () => {
-      _authModalEl.style.opacity = '0';
-      _authModalEl.style.pointerEvents = 'none';
-      _authModalEl.classList.remove('active');
+      if (_authModalEl) {
+        _authModalEl.style.opacity = '0';
+        _authModalEl.style.pointerEvents = 'none';
+        _authModalEl.classList.remove('active');
+      }
     });
 
     document.getElementById('go-to-register')?.addEventListener('click', e => { e.preventDefault(); showAuthForm('register-form'); });
@@ -591,24 +634,21 @@
       });
     });
     
-    // Mobile Bottom Nav logic
+    // ── Mobile Bottom Nav ──
     var _mobBtns = document.querySelectorAll('.mob-nav-btn');
     function _setMobActive(id) { _mobBtns.forEach(b => b.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
     document.getElementById('mob-nav-home')?.addEventListener('click', () => { _setMobActive('mob-nav-home'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-    // ── FIXED LOGOUT LOGIC ────────────────────────
+    // ── Fixed Logout Logic ──
     document.getElementById('fixed-logout-btn')?.addEventListener('click', () => {
-      if (firebase && firebase.auth) {
+      if (typeof firebase !== 'undefined' && firebase.auth) {
         firebase.auth().signOut().then(() => {
-          // إخفاء القائمة المنسدلة
           const profileDropdown = document.getElementById('profile-dropdown');
           if (profileDropdown) profileDropdown.classList.remove('active');
-          
-          // تحديث الصفحة فور تسجيل الخروج للتأكد من زوال حالة تسجيل الدخول
           window.location.reload();
         }).catch((error) => {
           console.error("Logout Error:", error);
-          alert("حدث خطأ أثناء تسجيل الخروج. يرجى المحاولة مرة أخرى.");
+          alert("حدث خطأ أثناء تسجيل الخروج.");
         });
       }
     });
