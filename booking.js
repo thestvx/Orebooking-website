@@ -141,7 +141,7 @@ const els = {
   btnChildPlus: document.getElementById("btn-plus-child"),
   childCount: document.getElementById("children-count"),
   childAgesBox: document.getElementById("child-ages-box"),
-  
+
   calPrev: document.getElementById("cal-prev"),
   calNext: document.getElementById("cal-next"),
   calGrid: document.getElementById("calendar-grid"),
@@ -195,7 +195,6 @@ function formatDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// 🔧 FIX: إنشاء التاريخ ليكون الساعة 12 ظهراً لتفادي تراجع التاريخ بسبب المنطقة الزمنية
 function parseLocalDate(str) {
   if (!str) return null;
   const [y, m, d] = str.split("-").map(Number);
@@ -313,7 +312,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   setupNavigation();
   setupGuestControls();
-  
+
   await loadPropertyDetails();
   await loadBookedDates();
 
@@ -330,8 +329,7 @@ async function loadPropertyDetails() {
   try {
     let docRef = db.collection("properties").doc(String(bookingState.propertyId));
     let doc;
-    
-    // 🔧 FIX: إجبار جلب أحدث البيانات من السيرفر
+
     try { doc = await docRef.get({ source: 'server' }); } 
     catch (e) { doc = await docRef.get(); }
 
@@ -358,7 +356,7 @@ async function loadPropertyDetails() {
     if (els.propMiniLoc) els.propMiniLoc.textContent = loc || "—";
     if (els.propMiniType) els.propMiniType.textContent = isAr ? (p.typeAr || p.type) : (p.typeEn || p.type);
     if (els.sbNightPrice) els.sbNightPrice.textContent = `${bookingState.basePrice.toLocaleString()} ${curr}`;
-    
+
   } catch (err) {
     handleError(err, "[loadPropertyDetails]");
   }
@@ -370,7 +368,7 @@ async function loadBookedDates() {
     const snap = await db.collection("bookings")
       .where("propertyId", "==", String(bookingState.propertyId))
       .where("status", "in", ["pending", "confirmed"])
-      .get({ source: 'server' }); // 🔧 FIX: جلب من السيرفر مباشرة لتفادي الكاش
+      .get({ source: 'server' });
 
     bookingState.bookedDates = [];
     snap.forEach(docSnap => {
@@ -473,9 +471,9 @@ function renderCalendar() {
       } else if (dateStr === bookingState.checkOut) {
         classes.push("check-out");
       } else if (bookingState.checkIn && bookingState.checkOut && dateStr > bookingState.checkIn && dateStr < bookingState.checkOut) {
-        classes.push("in-range"); // 🔧 FIX: تلوين الأيام بين الوصول والمغادرة
+        classes.push("in-range");
       }
-      
+
       cell.addEventListener("click", () => handleDateClick(dateStr));
     }
 
@@ -526,7 +524,7 @@ function handleDateClick(dateStr) {
       }
     }
   }
-  
+
   renderCalendar();
   updateBookingSummary();
 }
@@ -544,13 +542,13 @@ function setupGuestControls() {
     const newVal = bookingState[key] + delta;
     if (newVal >= min && newVal <= max) {
       bookingState[key] = newVal;
-      
+
       if (key === "children") {
         if (delta > 0) bookingState.childAges.push("");
         else bookingState.childAges.pop();
         renderChildAges();
       }
-      
+
       updateOccupancyCounters();
       calcAddonsTotal(); // Recalculate if addons depend on guests
       updateBookingSummary();
@@ -620,7 +618,7 @@ function renderAddonsPanel() {
   const container = document.getElementById("addons-panel");
   if (!container) return;
   const isAr = bookingState.lang === "ar";
-  
+
   const items = [
     { key: "wifi", label: t("High-Speed WiFi", "واي فاي عالي السرعة") },
     { key: "parking", label: t("Secure Parking", "موقف سيارات آمن") },
@@ -657,7 +655,7 @@ function updateBookingSummary() {
   bookingState.totalPrice = bookingState.roomPrice + bookingState.fee + bookingState.addonsTotal;
 
   if (els.sbNightsCount) els.sbNightsCount.textContent = bookingState.nights;
-  
+
   if (els.sbFeeAmount && els.sbFeeRow) {
     if (bookingState.fee > 0) {
       els.sbFeeAmount.textContent = `${bookingState.fee.toLocaleString()} ${curr}`;
@@ -684,8 +682,7 @@ function updateBookingSummary() {
 // ─── Render Reviews ─────────────────────────
 function renderReviews() {
   const container = document.getElementById("reviews-section");
-  if (!container || !document.querySelector(".reviews-list")) return; // Only if in step 1 context where review lists exist
-  // Static logic implementation for displaying stars goes here (Skipped detailed HTML construction to save space, assuming it's part of the template)
+  if (!container || !document.querySelector(".reviews-list")) return;
 }
 
 // ─── Setup Navigation ───────────────────────
@@ -700,7 +697,7 @@ function setupNavigation() {
         ind.classList.remove('completed');
       } else ind.classList.remove('completed', 'active');
     });
-    
+
     const targetStep = document.getElementById(`step-${stepNum}`);
     if (targetStep) targetStep.classList.add('active');
     hideGlobalAlert();
@@ -720,7 +717,7 @@ function setupNavigation() {
       showGlobalAlert(t("Please enter your name.", "يرجى إدخال اسمك."));
       return;
     }
-    
+
     bookingState.paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || "transfer";
 
     // Populate Review Step
@@ -735,7 +732,7 @@ function setupNavigation() {
         ? `<i class="ph ph-bank"></i> ${t("Bank Transfer", "تحويل بنكي")}`
         : `<i class="ph ph-money"></i> ${t("Pay at Property", "الدفع في الفندق")}`;
     }
-    
+
     const earnedPoints = Math.floor(bookingState.totalPrice / 100);
     if (els.revPoints) els.revPoints.textContent = earnedPoints;
 
@@ -758,7 +755,7 @@ function setupNavigation() {
   els.receiptFile?.addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     try {
       const storageRef = storage.ref(`receipts/booking_${Date.now()}_${file.name}`);
       const snapshot = await storageRef.put(file);
@@ -777,7 +774,7 @@ function setupNavigation() {
     }
 
     setButtonLoading(els.btnConfirm, true);
-    
+
     try {
       const bookingRef = db.collection("bookings").doc();
       const payload = {
@@ -807,7 +804,7 @@ function setupNavigation() {
       }
 
       showGlobalAlert(t("Booking Confirmed Successfully!", "تم تأكيد الحجز بنجاح!"), "success");
-      
+
       setTimeout(() => {
         window.location.href = "index.html"; 
       }, 4000);
