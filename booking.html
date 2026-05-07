@@ -24,9 +24,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
 
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="booking.css">
-
   <style>
     :root {
       --primary: #435abf;
@@ -57,6 +54,9 @@
         radial-gradient(at 50% 0%, hsla(225,39%,30%,0.04) 0, transparent 50%),
         radial-gradient(at 100% 0%, hsla(260,49%,30%,0.04) 0, transparent 50%);
       background-attachment: fixed;
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      color: var(--text);
     }
 
     body.dark {
@@ -70,15 +70,15 @@
         radial-gradient(circle at 85% 30%, rgba(139,92,246,0.08), transparent 25%);
     }
 
-    body.modal-open {
-      overflow: hidden;
+    html[dir="rtl"] body {
+      font-family: 'Tajawal', sans-serif;
     }
 
-    .booking-page {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 90px 20px 60px;
-    }
+    * { box-sizing: border-box; }
+
+    body.modal-open { overflow: hidden; }
+
+    .booking-page { max-width: 1200px; margin: 0 auto; padding: 90px 20px 60px; }
 
     .inner-nav {
       background: rgba(255,255,255,0.88);
@@ -96,2512 +96,356 @@
       gap: 12px;
     }
 
-    body.dark .inner-nav {
-      background: rgba(15,23,42,0.88);
-    }
+    body.dark .inner-nav { background: rgba(15,23,42,0.88); }
 
     .back-btn {
-      height: 40px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition);
-      font-weight: 600;
-      padding: 0 16px;
-      gap: 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      text-decoration: none;
-      white-space: nowrap;
+      height: 40px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: var(--transition); font-weight: 600; padding: 0 16px; gap: 8px;
+      font-family: inherit; font-size: 0.9rem; text-decoration: none; white-space: nowrap;
     }
+    .back-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    html[dir="rtl"] .back-btn i { transform: scaleX(-1); }
 
-    .back-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
+    .icon-btn, .lang-btn {
+      height: 40px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: var(--transition); font-weight: 600; font-family: inherit;
     }
+    .icon-btn { width: 40px; border-radius: 50%; flex-shrink: 0; }
+    .lang-btn { padding: 0 14px; gap: 6px; font-size: 0.875rem; white-space: nowrap; flex-shrink: 0; }
+    .icon-btn:hover, .lang-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 
-    html[dir="rtl"] .back-btn i {
-      transform: scaleX(-1);
-    }
-
-    .icon-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition);
-      padding: 0;
-      flex-shrink: 0;
-      font-family: inherit;
-    }
-
-    .icon-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .icon-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .lang-btn {
-      height: 40px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: var(--transition);
-      font-weight: 600;
-      padding: 0 14px;
-      font-family: inherit;
-      font-size: 0.875rem;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .lang-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-1px);
-    }
-
-    .nav-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-    }
-
-    .logo-img {
-      height: 38px;
-      width: auto;
-      object-fit: contain;
-    }
+    .nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+    .logo { display: flex; align-items: center; text-decoration: none; font-weight: 800; font-size: 1.4rem; color: var(--primary); gap: 6px; }
 
     .booking-steps-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--surface);
-      padding: 24px 32px;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      margin-bottom: 32px;
-      position: relative;
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); padding: 24px 32px; border-radius: var(--radius-lg);
+      box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 32px; position: relative;
     }
 
-    .step-indicator {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      position: relative;
-      z-index: 2;
-      opacity: 0.4;
-      transition: var(--transition);
-      flex-shrink: 0;
-      cursor: default;
-    }
+    .step-indicator { display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; z-index: 2; opacity: 0.4; transition: var(--transition); flex-shrink: 0; cursor: default; }
+    .step-indicator.active, .step-indicator.completed { opacity: 1; }
+    .step-num { width: 40px; height: 40px; border-radius: 50%; background: var(--bg); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--text-muted); transition: var(--transition); font-size: 0.95rem; position: relative; }
+    .step-indicator.active .step-num { background: linear-gradient(135deg, var(--primary), var(--accent)); border-color: transparent; color: white; box-shadow: 0 0 0 4px rgba(67,90,191,0.18); }
+    .step-indicator.completed .step-num { background: var(--success); border-color: transparent; color: white; }
+    .step-indicator.completed .step-num::after { content: "✓"; position: absolute; }
+    .step-label { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; }
 
-    .step-indicator.active,
-    .step-indicator.completed {
-      opacity: 1;
-    }
+    .step-connector { flex: 1; height: 2px; background: var(--border); margin: 0 10px; align-self: center; margin-bottom: 28px; transition: background 0.4s; border-radius: 2px; }
+    .step-connector.completed { background: var(--success); }
 
-    .step-num {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--bg);
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: var(--text-muted);
-      transition: var(--transition);
-      font-size: 0.95rem;
-      position: relative;
-    }
+    .booking-wrapper { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: start; }
+    .booking-main-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border); padding: 36px 40px; min-height: 500px; position: relative; }
 
-    .step-indicator.active .step-num {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      border-color: transparent;
-      color: white;
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.18);
-    }
+    .booking-step { display: none; }
+    .booking-step.active { display: block; animation: fadeStepIn 0.35s ease forwards; }
 
-    .step-indicator.completed .step-num {
-      background: var(--success);
-      border-color: transparent;
-      color: white;
-    }
+    @keyframes fadeStepIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: translateX(0); } }
 
-    .step-indicator.completed .step-num::after {
-      content: "✓";
-      position: absolute;
-    }
+    .step-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .step-header-icon { width: 52px; height: 52px; min-width: 52px; border-radius: 14px; background: rgba(67,90,191,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; flex-shrink: 0; }
+    body.dark .step-header-icon { background: rgba(67,90,191,0.18); }
+    .step-title { font-size: 1.45rem; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.2; }
+    .step-subtitle { font-size: 0.92rem; color: var(--text-muted); line-height: 1.5; }
 
-    .step-label {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text);
-      white-space: nowrap;
-    }
+    .step-actions { display: flex; justify-content: flex-end; gap: 14px; margin-top: 36px; padding-top: 22px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .step-actions-between { justify-content: space-between; }
 
-    .step-connector {
-      flex: 1;
-      height: 2px;
-      background: var(--border);
-      margin: 0 10px;
-      align-self: center;
-      margin-bottom: 28px;
-      transition: background 0.4s;
-      border-radius: 2px;
+    .primary-btn, .ghost-btn {
+      height: 50px; padding: 0 28px; border-radius: var(--radius-sm); font-family: inherit; font-size: 1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: var(--transition); white-space: nowrap; border: none;
     }
+    .primary-btn { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 6px 16px rgba(67,90,191,0.3); }
+    .primary-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(67,90,191,0.4); }
+    .primary-btn.green-btn { background: linear-gradient(135deg, var(--success), #059669); box-shadow: 0 6px 16px rgba(16,185,129,0.3); }
+    .primary-btn.green-btn:hover:not(:disabled) { box-shadow: 0 10px 22px rgba(16,185,129,0.4); }
+    .ghost-btn { background: transparent; color: var(--text-muted); border: 1.5px solid var(--border); }
+    .ghost-btn:hover { background: var(--bg); color: var(--text); border-color: var(--text-muted); }
 
-    .step-connector.completed {
-      background: var(--success);
-    }
-
-    .booking-wrapper {
+    /* =========================================
+       REVIEW SECTION SPECIFIC STYLES (NEW CSS)
+       ========================================= */
+    #reviews-section { margin-top: 24px; }
+    
+    .review-grid {
       display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 28px;
-      align-items: start;
-    }
-
-    .booking-main-card {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      padding: 36px 40px;
-      min-height: 500px;
-      position: relative;
-    }
-
-    .booking-step {
-      display: none;
-    }
-
-    .booking-step.active {
-      display: block;
-      animation: fadeStepIn 0.35s ease forwards;
-    }
-
-    @keyframes fadeStepIn {
-      from { opacity: 0; transform: translateX(14px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    .step-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .step-header-icon {
-      width: 52px;
-      height: 52px;
-      min-width: 52px;
-      border-radius: 14px;
-      background: rgba(67,90,191,0.1);
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.7rem;
-      flex-shrink: 0;
-    }
-
-    body.dark .step-header-icon {
-      background: rgba(67,90,191,0.18);
-    }
-
-    .step-title {
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 4px;
-      line-height: 1.2;
-    }
-
-    .step-subtitle {
-      font-size: 0.92rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    .auth-prompt-banner {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(67,90,191,0.06);
-      border: 1px solid rgba(67,90,191,0.2);
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
       margin-bottom: 24px;
-      font-size: 0.88rem;
-      color: var(--text-muted);
     }
 
-    .auth-prompt-banner i {
-      color: var(--primary);
-      font-size: 1.2rem;
-      flex-shrink: 0;
-    }
-
-    .auth-prompt-banner a {
-      color: var(--primary);
-      font-weight: 600;
-      text-decoration: none;
-    }
-
-    .auth-prompt-banner a:hover {
-      text-decoration: underline;
-    }
-
-    .form-group {
-      margin-bottom: 22px;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-    }
-
-    .form-group label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-
-    .req-star {
-      color: var(--error);
-    }
-
-    .input-with-icon {
-      position: relative;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
+    .review-card {
       background: var(--bg);
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-    }
-
-    .input-with-icon:focus-within {
-      border-color: var(--primary);
-      background: var(--surface);
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
-    }
-
-    .input-with-icon.invalid {
-      border-color: var(--error);
-    }
-
-    .input-icon {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      pointer-events: none;
-      transition: color 0.2s;
-      z-index: 1;
-    }
-
-    html[dir="rtl"] .input-icon {
-      left: auto;
-      right: 14px;
-    }
-
-    .input-with-icon:focus-within .input-icon {
-      color: var(--primary);
-    }
-
-    .input-with-icon input,
-    .input-with-icon select {
-      width: 100%;
-      height: 50px;
-      padding: 0 14px 0 42px;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-size: 0.95rem;
-      font-family: inherit;
-      outline: none;
-      appearance: none;
-      -webkit-appearance: none;
-    }
-
-    html[dir="rtl"] .input-with-icon input,
-    html[dir="rtl"] .input-with-icon select {
-      padding: 0 42px 0 14px;
-    }
-
-    body.dark .input-with-icon {
-      background: rgba(255,255,255,0.04);
-    }
-
-    body.dark .input-with-icon input,
-    body.dark .input-with-icon select {
-      color: var(--text);
-    }
-
-    body.dark .input-with-icon input::placeholder,
-    body.dark .textarea-wrapper textarea::placeholder {
-      color: var(--text-muted);
-    }
-
-    .textarea-wrapper {
-      position: relative;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
-      background: var(--bg);
-      transition: var(--transition);
-    }
-
-    .textarea-wrapper:focus-within {
-      border-color: var(--primary);
-      background: var(--surface);
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
-    }
-
-    .textarea-icon {
-      position: absolute;
-      left: 14px;
-      top: 15px;
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      pointer-events: none;
-      transition: color 0.2s;
-    }
-
-    html[dir="rtl"] .textarea-icon {
-      left: auto;
-      right: 14px;
-    }
-
-    .textarea-wrapper:focus-within .textarea-icon {
-      color: var(--primary);
-    }
-
-    .textarea-wrapper textarea {
-      width: 100%;
-      border: none;
-      background: transparent;
-      padding: 14px 14px 14px 42px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 0.95rem;
-      outline: none;
-      resize: vertical;
-      min-height: 100px;
-      line-height: 1.6;
-      display: block;
-      box-sizing: border-box;
-      border-radius: var(--radius-sm);
-    }
-
-    html[dir="rtl"] .textarea-wrapper textarea {
-      padding: 14px 42px 14px 14px;
-    }
-
-    body.dark .textarea-wrapper {
-      background: rgba(255,255,255,0.04);
-    }
-
-    .char-counter {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-align: right;
-      margin-top: 4px;
-      padding-right: 4px;
-    }
-
-    html[dir="rtl"] .char-counter {
-      text-align: left;
-    }
-
-    .field-error {
-      display: block;
-      font-size: 0.8rem;
-      color: var(--error);
-      margin-top: 5px;
-      min-height: 1em;
-    }
-
-    .occupancy-section {
-      margin-top: 36px;
-    }
-
-    .occupancy-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 18px;
       border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
-      margin-bottom: 12px;
-      background: var(--bg);
-      transition: border-color var(--transition);
-    }
-
-    .occupancy-row:last-child {
-      margin-bottom: 0;
-    }
-
-    .occupancy-row:hover {
-      border-color: var(--primary);
-    }
-
-    .occ-label-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: var(--text);
-      margin-bottom: 3px;
-    }
-
-    .occ-label-sub {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    .occupancy-controls {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .occ-count {
-      font-weight: 700;
-      font-size: 1.1rem;
-      min-width: 28px;
-      text-align: center;
-      color: var(--text);
-    }
-
-    #child-ages-box {
-      margin-top: 16px;
-    }
-
-    .child-ages-title {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .child-ages-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .child-age-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .child-age-field label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .child-age-select {
-      height: 38px;
-      padding: 0 10px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--text);
-      font-family: inherit;
-      font-size: 0.88rem;
-      cursor: pointer;
-    }
-
-    .bed-select-wrapper {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px dashed var(--border);
-    }
-
-    .bed-select-wrapper label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-
-    #bed-config-select {
-      width: 100%;
-      height: 50px;
-      padding: 0 14px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: var(--bg);
-      color: var(--text);
-      font-family: inherit;
-      font-size: 0.95rem;
-      cursor: pointer;
-      outline: none;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 40px;
-    }
-
-    html[dir="rtl"] #bed-config-select {
-      background-position: left 14px center;
-      padding-right: 14px;
-      padding-left: 40px;
-    }
-
-    .occupancy-badge-wrap {
-      margin-top: 14px;
-      text-align: center;
-    }
-
-    #occupancy-summary-badge {
-      display: inline-block;
-      background: rgba(67,90,191,0.08);
-      border: 1px solid rgba(67,90,191,0.2);
-      color: var(--primary);
-      padding: 5px 16px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .step-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 14px;
-      margin-top: 36px;
-      padding-top: 22px;
-      border-top: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-
-    .step-actions-between {
-      justify-content: space-between;
-    }
-
-    .primary-btn {
-      height: 50px;
-      padding: 0 28px;
-      border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      border: none;
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transition: var(--transition);
-      box-shadow: 0 6px 16px rgba(67,90,191,0.3);
-      white-space: nowrap;
-    }
-
-    .primary-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 22px rgba(67,90,191,0.4);
-    }
-
-    .primary-btn:disabled {
-      background: var(--border);
-      color: var(--text-muted);
-      box-shadow: none;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .primary-btn.green-btn {
-      background: linear-gradient(135deg, var(--success), #059669);
-      box-shadow: 0 6px 16px rgba(16,185,129,0.3);
-    }
-
-    .primary-btn.green-btn:hover:not(:disabled) {
-      box-shadow: 0 10px 22px rgba(16,185,129,0.4);
-    }
-
-    .ghost-btn {
-      height: 50px;
-      padding: 0 22px;
-      border-radius: var(--radius-sm);
-      background: transparent;
-      color: var(--text-muted);
-      border: 1.5px solid var(--border);
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: var(--transition);
-      white-space: nowrap;
-    }
-
-    .ghost-btn:hover {
-      background: var(--bg);
-      color: var(--text);
-      border-color: var(--text-muted);
-    }
-
-    #addons-panel {
-      margin-top: 32px;
-    }
-
-    .payment-section {
-      margin-bottom: 28px;
-    }
-
-    .section-label {
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.7px;
-      color: var(--text-muted);
-      margin-bottom: 14px;
-    }
-
-    .payment-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    .payment-method-label {
-      border: 2px solid var(--border);
-      padding: 20px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: var(--transition);
-      background: var(--bg);
-      position: relative;
-    }
-
-    .payment-method-label:hover {
-      border-color: var(--primary);
-      background: var(--surface);
-    }
-
-    .payment-method-label.selected,
-    .payment-method-label:has(input:checked) {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.05);
-    }
-
-    body.dark .payment-method-label.selected,
-    body.dark .payment-method-label:has(input:checked) {
-      background: rgba(67,90,191,0.12);
-    }
-
-    .payment-method-label .radio-circle {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      transition: var(--transition);
-      flex-shrink: 0;
-    }
-
-    .payment-method-label.selected .radio-circle,
-    .payment-method-label:has(input:checked) .radio-circle {
-      border-color: var(--primary);
-      background: var(--primary);
-      box-shadow: inset 0 0 0 3px var(--surface);
-    }
-
-    #transfer-details {
-      background: rgba(67,90,191,0.04);
-      border: 1.5px dashed rgba(67,90,191,0.3);
-      border-radius: var(--radius-sm);
-      padding: 20px;
-      margin-top: 20px;
-    }
-
-    body.dark #transfer-details {
-      background: rgba(67,90,191,0.08);
-    }
-
-    .transfer-info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .transfer-info-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-    }
-
-    .transfer-info-item .ti-label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .transfer-info-item .ti-value {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .file-upload-wrapper {
-      border: 2px dashed var(--border);
-      border-radius: var(--radius-sm);
-      padding: 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: var(--transition);
-      background: var(--bg);
-    }
-
-    .file-upload-wrapper:hover,
-    .file-upload-wrapper.drag-over {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.04);
-    }
-
-    .file-upload-wrapper label {
-      cursor: pointer;
-    }
-
-    .file-upload-wrapper input[type="file"] {
-      display: none;
-    }
-
-    .file-upload-icon {
-      font-size: 2.2rem;
-      color: var(--primary);
-      margin-bottom: 8px;
-    }
-
-    .file-upload-txt {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .file-upload-sub {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      opacity: 0.7;
-    }
-
-    #receipt-preview {
-      margin-top: 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-    }
-
-    #receipt-file-name {
-      font-size: 0.85rem;
-      color: var(--text);
-      font-weight: 600;
-      flex: 1;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      transition: var(--transition);
     }
+    .review-card:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+    .review-card.full-width { grid-column: 1 / -1; }
 
-    #btn-remove-receipt {
-      background: none;
-      border: none;
-      color: var(--error);
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0;
-      flex-shrink: 0;
+    .review-card-header {
+      background: rgba(67,90,191,0.05);
+      border-bottom: 1.5px solid var(--border);
+      padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
     }
+    body.dark .review-card-header { background: rgba(255,255,255,0.02); }
 
-    .booking-summary-sidebar {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      padding: 24px;
-      position: sticky;
-      top: 88px;
+    .review-card-header h3 {
+      font-size: 1rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; margin: 0;
     }
+    .review-card-header h3 i { color: var(--primary); font-size: 1.2rem; }
 
-    .sidebar-title {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text);
+    .edit-btn {
+      background: none; border: none; color: var(--primary); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 4px; transition: var(--transition); padding: 4px 8px; border-radius: 6px;
     }
+    .edit-btn:hover { background: rgba(67,90,191,0.1); }
 
-    .sidebar-title i {
-      color: var(--primary);
-    }
+    .review-card-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .review-data { display: flex; flex-direction: column; gap: 6px; }
+    .review-data.full-width { flex-direction: row; justify-content: space-between; align-items: center; }
 
-    .prop-mini-card {
-      display: flex;
-      gap: 14px;
-      padding-bottom: 18px;
-      border-bottom: 1px dashed var(--border);
-      margin-bottom: 18px;
-    }
-
-    .prop-mini-img {
-      width: 90px;
-      min-width: 90px;
-      height: 72px;
-      border-radius: 10px;
-      object-fit: cover;
-      border: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .prop-mini-details h4 {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 4px;
-      line-height: 1.3;
-    }
-
-    .prop-mini-details p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    .prop-type-badge {
-      display: inline-block;
-      margin-top: 8px;
-      background: var(--bg);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      font-size: 0.88rem;
-      color: var(--text);
-      gap: 8px;
-    }
-
-    .summary-row span:first-child {
-      color: var(--text-muted);
-    }
-
-    .summary-row.total {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1.5px dashed var(--border);
-      font-size: 1.1rem;
-      font-weight: 800;
-      color: var(--primary);
-    }
-
-    .summary-row.total span {
-      color: var(--primary);
-    }
-
-    #price-breakdown .price-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-      gap: 6px;
-    }
-
-    #price-breakdown .price-row:last-child {
-      border-bottom: none;
-    }
-
-    #price-breakdown .price-row--addon {
-      color: var(--primary);
-      font-size: 0.8rem;
-    }
-
-    #price-breakdown .price-row--fee {
-      color: var(--text-muted);
-    }
-
-    #price-breakdown .price-row--total {
-      font-weight: 800;
-      font-size: 0.98rem;
-      color: var(--text);
-      padding-top: 10px;
-    }
-
-    #price-breakdown .price-highlight {
-      color: var(--primary);
-    }
-
-    .sum-placeholder-txt {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 16px 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .sidebar-rating {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 8px;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-
-    .sidebar-rating .stars {
-      color: #f59e0b;
-      font-size: 0.85rem;
-    }
-
-    #sum-rating {
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .calendar-section {
-      width: 100%;
-    }
-
-    .calendar-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    #calendar-month-label {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .calendar-grid {
-      background: var(--bg);
-      border-radius: var(--radius);
-      padding: 14px;
-      border: 1px solid var(--border);
-      min-height: 260px;
-    }
-
-    .date-summary {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg);
-      padding: 14px 18px;
-      border-radius: var(--radius-sm);
-      margin-top: 20px;
-      border: 1.5px solid var(--border);
-      gap: 8px;
-    }
-
-    .date-summary-item {
-      text-align: center;
-      flex: 1;
-    }
-
-    .date-summary-label {
-      display: block;
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      font-weight: 600;
-    }
-
-    .date-summary-value {
-      font-weight: 700;
-      font-size: 0.9rem;
-      color: var(--primary);
-    }
-
-    .date-summary-divider {
-      width: 1px;
-      height: 38px;
-      background: var(--border);
-    }
-
-    #disp-nights {
-      background: var(--surface);
-      padding: 4px 12px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .booking-warning {
-      color: #c0392b;
-      background: #fef2f2;
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 1px solid #fecdd3;
-      margin-top: 12px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    body.dark .booking-warning {
-      background: rgba(239,68,68,0.1);
-      border-color: rgba(239,68,68,0.25);
-      color: #f87171;
-    }
-
-    .booking-alert {
-      padding: 13px 18px;
-      border-radius: var(--radius-sm);
-      margin-bottom: 18px;
-      font-size: 0.88rem;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      line-height: 1.4;
-    }
-
-    .booking-alert.error { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; }
-    .booking-alert.success { background: #dcfce7; color: #059669; border: 1px solid #bbf7d0; }
-    .booking-alert.warning { background: #fff7ed; color: #d97706; border: 1px solid #fed7aa; }
-    .booking-alert.info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-
-    body.dark .booking-alert.error { background: rgba(225,29,72,0.08); border-color: rgba(225,29,72,0.25); }
-    body.dark .booking-alert.success { background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.25); }
-
-    #reviews-section {
-      margin-top: 40px;
-    }
-
-    .final-summary-block {
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 22px;
-      margin-bottom: 20px;
-    }
-
-    .final-summary-block h3 {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text);
-    }
-
-    .final-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      margin-bottom: 12px;
-      gap: 8px;
-    }
-
-    .final-row span:first-child {
-      color: var(--text-muted);
-    }
-
-    .final-total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 1.2rem;
-      color: var(--primary);
-      font-weight: 800;
-      margin-top: 6px;
-      padding-top: 14px;
-      border-top: 1.5px dashed var(--border);
-    }
+    .rd-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+    .rd-value { font-size: 1rem; font-weight: 600; color: var(--text); }
 
     .points-box {
-      background: rgba(139,92,246,0.06);
-      border: 1px solid rgba(139,92,246,0.18);
-      border-radius: var(--radius-sm);
-      padding: 16px 18px;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      margin-top: 16px;
+      background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.18); border-radius: var(--radius-sm);
+      padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start; margin-bottom: 24px;
     }
+    .points-icon { background: var(--accent); color: white; width: 44px; height: 44px; min-width: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+    .points-text .points-title { font-weight: 700; color: var(--accent); margin-bottom: 6px; display: block; font-size: 1rem; }
+    .points-text p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
 
-    .points-icon {
-      background: var(--accent);
-      color: white;
-      width: 40px;
-      height: 40px;
-      min-width: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      flex-shrink: 0;
+    .policy-agreement {
+      padding: 20px; background: rgba(245, 158, 11, 0.08); border: 1.5px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-sm);
     }
+    body.dark .policy-agreement { background: rgba(245, 158, 11, 0.1); }
+    .policy-agreement .agree-text { font-size: 0.95rem; color: var(--text); line-height: 1.5; }
+    .policy-agreement a { color: var(--primary); font-weight: 700; text-decoration: none; }
+    .policy-agreement a:hover { text-decoration: underline; }
 
-    .points-text .points-title {
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 4px;
-      display: block;
-      font-size: 0.9rem;
-    }
+    .checkbox-container { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; user-select: none; }
+    .checkbox-container input { display: none; }
+    .checkmark { width: 22px; height: 22px; border: 2px solid var(--text-muted); border-radius: 6px; position: relative; transition: var(--transition); flex-shrink: 0; margin-top: 2px; background: var(--surface); }
+    .checkbox-container input:checked ~ .checkmark { background: var(--primary); border-color: var(--primary); }
+    .checkbox-container input:checked ~ .checkmark::after { content: ""; position: absolute; top: 3px; left: 7px; width: 5px; height: 10px; border: solid white; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
 
-    .points-text p {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-      margin: 0;
-    }
+    /* =========================================
+       SIDEBAR SUMMARY
+       ========================================= */
+    .booking-summary-sidebar { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border); padding: 24px; position: sticky; top: 88px; }
+    .sidebar-title { font-size: 1rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+    .sidebar-title i { color: var(--primary); }
+    
+    .prop-mini-card { display: flex; gap: 14px; padding-bottom: 18px; border-bottom: 1px dashed var(--border); margin-bottom: 18px; }
+    .prop-mini-img { width: 90px; min-width: 90px; height: 72px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+    .prop-mini-details h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
+    .prop-mini-details p { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+    
+    .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.88rem; color: var(--text); gap: 8px; }
+    .summary-row span:first-child { color: var(--text-muted); }
+    .summary-row.total { margin-top: 16px; padding-top: 16px; border-top: 1.5px dashed var(--border); font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+    .summary-row.total span { color: var(--primary); }
 
-    #copy-toast {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e293b;
-      color: white;
-      padding: 10px 22px;
-      border-radius: 99px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 9000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-      white-space: nowrap;
-    }
-
-    #copy-toast i {
-      color: #4ade80;
-    }
-
-    .d-none {
-      display: none !important;
-    }
-
-    .font-bold {
-      font-weight: 700;
-    }
-
-    .skeleton {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-
-    body.dark .skeleton {
-      background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-      background-size: 200% 100%;
-    }
-
-    .skeleton-text {
-      border-radius: 4px;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    .purpose-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 16px;
-      border-radius: 999px;
-      border: 1.5px solid var(--border);
-      background: var(--bg);
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .purpose-chip:hover,
-    .purpose-chip.active {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.08);
-      color: var(--primary);
-    }
-
-    body.dark .purpose-chip {
-      background: rgba(255,255,255,0.04);
-    }
-
-    body.dark .purpose-chip.active {
-      background: rgba(67,90,191,0.15);
-    }
-
-    .booking-success-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-    }
-
-    .booking-success-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(11, 18, 32, 0.58);
-      backdrop-filter: blur(8px);
-    }
-
-    .booking-success-dialog {
-      position: relative;
-      width: min(920px, 100%);
-      max-height: 92vh;
-      overflow: auto;
-      border-radius: 28px;
-      background: #ffffff;
-      color: #0f172a;
-      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
-      padding: 28px;
-      z-index: 2;
-      animation: successModalIn .35s ease;
-    }
-
-    @keyframes successModalIn {
-      from { opacity: 0; transform: translateY(18px) scale(.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    body.dark .booking-success-dialog {
-      background: #0f172a;
-      color: #e5e7eb;
-    }
-
-    .success-close-btn {
-      position: absolute;
-      top: 16px;
-      inset-inline-end: 16px;
-      width: 42px;
-      height: 42px;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(148, 163, 184, 0.15);
-      cursor: pointer;
-      color: inherit;
-      z-index: 5;
-    }
-
-    .success-modal-top {
-      text-align: center;
-      padding: 8px 12px 20px;
-    }
-
-    .success-icon-wrap {
-      position: relative;
-      width: 86px;
-      height: 86px;
-      margin: 0 auto 14px;
-    }
-
-    .success-icon-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: radial-gradient(circle at center, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.04));
-      animation: pulseRing 1.8s infinite;
-    }
-
-    .success-icon-core {
-      position: absolute;
-      inset: 12px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: #fff;
-      font-size: 2rem;
-      box-shadow: 0 16px 30px rgba(16, 185, 129, 0.35);
-    }
-
-    @keyframes pulseRing {
-      0% { transform: scale(.92); opacity: .65; }
-      70% { transform: scale(1.08); opacity: .2; }
-      100% { transform: scale(.92); opacity: .65; }
-    }
-
-    .success-kicker {
-      display: inline-block;
-      margin-bottom: 8px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, 0.12);
-      color: #059669;
-      font-weight: 700;
-      font-size: .85rem;
-    }
-
-    .success-subtitle {
-      max-width: 640px;
-      margin: 10px auto 0;
-      color: #64748b;
-      line-height: 1.7;
-    }
-
-    body.dark .success-subtitle {
-      color: #cbd5e1;
-    }
-
-    .success-receipt-card {
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      border-radius: 24px;
-      padding: 22px;
-      background: linear-gradient(180deg, rgba(248,250,252,.96), rgba(255,255,255,1));
-    }
-
-    body.dark .success-receipt-card {
-      background: linear-gradient(180deg, rgba(15,23,42,.98), rgba(17,24,39,1));
-      border-color: rgba(148, 163, 184, 0.16);
-    }
-
-    .receipt-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: start;
-      padding-bottom: 16px;
-      border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
-    }
-
-    .receipt-head h3 {
-      margin: 0 0 4px;
-      font-size: 1.35rem;
-    }
-
-    .receipt-head p {
-      margin: 0;
-      color: #64748b;
-    }
-
-    .receipt-ref-box {
-      text-align: end;
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: rgba(15, 23, 42, 0.05);
-    }
-
-    body.dark .receipt-ref-box {
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .receipt-ref-box span {
-      display: block;
-      font-size: .8rem;
-      color: #64748b;
-    }
-
-    .receipt-ref-box strong {
-      display: block;
-      margin-top: 4px;
-      font-size: 1.1rem;
-      letter-spacing: .08em;
-    }
-
-    .receipt-status-row {
-      padding: 18px 0 6px;
-    }
-
-    .success-pay-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-weight: 700;
-    }
-
-    .success-pay-badge.cash {
-      background: rgba(59, 130, 246, 0.12);
-      color: #1d4ed8;
-    }
-
-    .success-pay-badge.transfer {
-      background: rgba(245, 158, 11, 0.14);
-      color: #b45309;
-    }
-
-    .receipt-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 16px;
-    }
-
-    .receipt-item {
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(148, 163, 184, 0.08);
-    }
-
-    .receipt-item span {
-      display: block;
-      font-size: .82rem;
-      color: #64748b;
-      margin-bottom: 6px;
-    }
-
-    .receipt-item strong {
-      display: block;
-      font-size: .98rem;
-      line-height: 1.5;
-      word-break: break-word;
-    }
-
-    .receipt-price-box {
-      margin-top: 18px;
-      border-radius: 18px;
-      padding: 14px 16px;
-      background: rgba(15, 23, 42, 0.04);
-    }
-
-    body.dark .receipt-price-box {
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .receipt-price-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 10px 0;
-      border-bottom: 1px dashed rgba(148, 163, 184, 0.26);
-    }
-
-    .receipt-price-row:last-child {
-      border-bottom: 0;
-    }
-
-    .receipt-price-row.total {
-      font-size: 1.08rem;
-      font-weight: 800;
-    }
-
-    .receipt-notes-box {
-      margin-top: 18px;
-      padding: 16px;
-      border-radius: 16px;
-      background: rgba(148, 163, 184, 0.08);
-    }
-
-    .receipt-notes-box span {
-      display: block;
-      font-size: .82rem;
-      color: #64748b;
-      margin-bottom: 8px;
-    }
-
-    .receipt-notes-box p {
-      margin: 0;
-      white-space: pre-wrap;
-      line-height: 1.7;
-    }
-
-    .receipt-foot {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      margin-top: 18px;
-      padding-top: 14px;
-      border-top: 1px dashed rgba(148, 163, 184, 0.35);
-      font-size: .9rem;
-      color: #64748b;
-    }
-
-    .success-modal-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-      margin-top: 20px;
-    }
-
-    @media print {
-      body * {
-        visibility: hidden !important;
-      }
-
-      #booking-print-area,
-      #booking-print-area * {
-        visibility: visible !important;
-      }
-
-      #booking-print-area {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        border-radius: 0;
-        background: #fff !important;
-        color: #000 !important;
-        box-shadow: none !important;
-      }
-
-      .receipt-item,
-      .receipt-price-box,
-      .receipt-notes-box,
-      .receipt-ref-box {
-        background: #fff !important;
-        border: 1px solid #ddd !important;
-      }
-    }
-
+    /* =========================================
+       RESPONSIVE CSS FIXES
+       ========================================= */
     @media (max-width: 992px) {
-      .booking-wrapper {
-        grid-template-columns: 1fr;
-      }
-
-      .booking-summary-sidebar {
-        position: static;
-        order: -1;
-      }
+      .booking-wrapper { grid-template-columns: 1fr; }
+      .booking-summary-sidebar { position: static; order: -1; margin-bottom: 24px; }
     }
 
     @media (max-width: 768px) {
-      .booking-page {
-        padding: 80px 14px 40px;
-      }
-
-      .inner-nav {
-        padding: 0 14px;
-        height: 64px;
-      }
-
-      body {
-        padding-bottom: 70px;
-      }
-
-      .booking-steps-header {
-        padding: 14px 16px;
-        margin-bottom: 16px;
-      }
-
-      .step-label {
-        display: none;
-      }
-
-      .step-num {
-        width: 32px;
-        height: 32px;
-        font-size: 0.82rem;
-      }
-
-      .step-connector {
-        margin: 0 6px;
-        margin-bottom: 0;
-      }
-
-      .booking-main-card {
-        padding: 20px 16px;
-        border-radius: var(--radius);
-      }
-
-      .step-title {
-        font-size: 1.15rem;
-      }
-
-      .step-header {
-        margin-bottom: 20px;
-        padding-bottom: 16px;
-        gap: 12px;
-      }
-
-      .step-header-icon {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        font-size: 1.4rem;
-        border-radius: 12px;
-      }
-
-      .form-row,
-      .payment-grid,
-      .transfer-info-grid,
-      .receipt-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .step-actions {
-        flex-direction: column-reverse;
-        gap: 10px;
-      }
-
-      .step-actions-between {
-        flex-direction: row;
-      }
-
-      .primary-btn,
-      .ghost-btn {
-        justify-content: center;
-      }
-
-      .step-actions:not(.step-actions-between) .primary-btn,
-      .step-actions:not(.step-actions-between) .ghost-btn {
-        width: 100%;
-      }
-
-      .booking-summary-sidebar {
-        padding: 16px;
-        border-radius: var(--radius);
-      }
-
-      .prop-mini-img {
-        width: 72px;
-        min-width: 72px;
-        height: 58px;
-      }
-
-      #nav-back-txt {
-        display: none;
-      }
-
-      .back-btn {
-        padding: 0 12px;
-      }
-
-      .receipt-head,
-      .receipt-foot,
-      .success-modal-actions {
-        flex-direction: column;
-      }
-
-      .receipt-ref-box {
-        text-align: start;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .booking-page {
-        padding-left: 10px;
-        padding-right: 10px;
-      }
-
-      .booking-steps-header {
-        display: none;
-      }
-
-      .date-summary {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-      }
-
-      .date-summary-divider {
-        display: none;
-      }
+      .booking-page { padding: 80px 14px 40px; }
+      .booking-steps-header { padding: 16px; }
+      .step-connector { margin: 0 4px; margin-bottom: 28px; }
+      .step-label { font-size: 0.75rem; }
+      .booking-main-card { padding: 24px 20px; }
+      .form-row, .payment-grid, .transfer-info-grid, .receipt-grid, .review-grid { grid-template-columns: 1fr; }
+      .step-header { flex-direction: column; text-align: center; }
+      .step-actions { flex-direction: column-reverse; }
+      .step-actions .ghost-btn, .step-actions .primary-btn { width: 100%; justify-content: center; }
+      .review-data.full-width { flex-direction: column; align-items: flex-start; }
+      .policy-agreement { padding: 16px; }
     }
   </style>
 </head>
-
 <body>
 
-  <nav class="navbar inner-nav" role="navigation" aria-label="Booking navigation">
-    <button id="back-btn" class="back-btn font-medium" type="button" aria-label="Back to property">
-      <i class="ph ph-arrow-left"></i>
-      <span id="nav-back-txt">Back to Property</span>
-    </button>
-
-    <a href="index.html" class="logo" aria-label="OreBooking Home">
-      <img
-        src="logos/orebooking.png"
-        id="main-logo"
-        alt="OreBooking"
-        class="logo-img"
-        width="140" height="46"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-      >
-      <div style="display:none; font-size:1.3rem; font-weight:800; color:var(--primary); align-items:center; gap:8px;">
-        <i class="ph-fill ph-buildings"></i> OreBooking
-      </div>
+  <!-- Navigation -->
+  <nav class="inner-nav">
+    <a href="index.html" class="back-btn">
+      <i class="ph ph-arrow-left"></i> <span>Back</span>
     </a>
-
+    <a href="index.html" class="logo">
+      <i class="ph ph-buildings" style="font-size: 2rem;"></i> OreBooking
+    </a>
     <div class="nav-actions">
-      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
-        <i class="ph ph-moon"></i>
-      </button>
-      <button id="lang-toggle" class="lang-btn font-medium" type="button" aria-label="Switch language">
-        <i class="ph ph-translate"></i>
-        <span id="lang-label">العربية</span>
-      </button>
+      <button class="lang-btn"><i class="ph ph-globe"></i> <span>EN</span></button>
+      <button class="icon-btn"><i class="ph ph-moon"></i></button>
     </div>
   </nav>
 
-  <main class="booking-page" id="booking-page" role="main">
-
-    <div class="booking-steps-header" id="steps-header" role="tablist" aria-label="Booking steps">
-      <div class="step-indicator active" data-step="1" role="tab" aria-selected="true" tabindex="0">
+  <div class="booking-page">
+    <!-- Steps Header -->
+    <div class="booking-steps-header">
+      <div class="step-indicator completed">
         <div class="step-num">1</div>
-        <div class="step-label" id="lbl-step1">Dates &amp; Rooms</div>
+        <span class="step-label">Details</span>
       </div>
-      <div class="step-connector" id="connector-1-2"></div>
-
-      <div class="step-indicator" data-step="2" role="tab" aria-selected="false" tabindex="-1">
+      <div class="step-connector completed"></div>
+      <div class="step-indicator completed">
         <div class="step-num">2</div>
-        <div class="step-label" id="lbl-step2">Add-ons &amp; Pay</div>
+        <span class="step-label">Payment</span>
       </div>
-      <div class="step-connector" id="connector-2-3"></div>
-
-      <div class="step-indicator" data-step="3" role="tab" aria-selected="false" tabindex="-1">
+      <div class="step-connector completed"></div>
+      <div class="step-indicator active">
         <div class="step-num">3</div>
-        <div class="step-label" id="lbl-step3">Guest Details</div>
-      </div>
-      <div class="step-connector" id="connector-3-4"></div>
-
-      <div class="step-indicator" data-step="4" role="tab" aria-selected="false" tabindex="-1">
-        <div class="step-num">4</div>
-        <div class="step-label" id="lbl-step4">Confirmation</div>
+        <span class="step-label">Review</span>
       </div>
     </div>
 
     <div class="booking-wrapper">
-
-      <div class="booking-main-card" id="booking-main-card">
-
-        <div id="booking-global-alert" class="booking-alert d-none" role="alert" aria-live="assertive"></div>
-
-        <div class="booking-step active" id="step-1" role="tabpanel" aria-labelledby="lbl-step1">
+      <!-- Main Content -->
+      <div class="booking-main-card">
+        
+        <!-- Step 3: Review Section -->
+        <div class="booking-step active" id="step-3">
           <div class="step-header">
-            <div class="step-header-icon">
-              <i class="ph ph-calendar-check"></i>
-            </div>
+            <div class="step-header-icon"><i class="ph ph-check-square-offset"></i></div>
             <div>
-              <h2 class="step-title" id="st-title-1">When are you traveling?</h2>
-              <p class="step-subtitle" id="st-sub-1">Select your check-in dates and room preferences.</p>
+              <h2 class="step-title">Review & Confirm</h2>
+              <p class="step-subtitle">Please review your booking details before final confirmation.</p>
             </div>
           </div>
 
-          <div class="calendar-section">
-            <div class="calendar-nav">
-              <button class="icon-btn" id="cal-prev" type="button" aria-label="Previous month">
-                <i class="ph ph-caret-left"></i>
-              </button>
-              <span id="calendar-month-label" class="font-bold"></span>
-              <button class="icon-btn" id="cal-next" type="button" aria-label="Next month">
-                <i class="ph ph-caret-right"></i>
-              </button>
-            </div>
+          <div id="reviews-section">
+            <div class="review-grid">
+              
+              <!-- Personal Info Card -->
+              <div class="review-card">
+                <div class="review-card-header">
+                  <h3><i class="ph ph-user"></i> Personal Information</h3>
+                  <button class="edit-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                </div>
+                <div class="review-card-body">
+                  <div class="review-data">
+                    <span class="rd-label">Full Name</span>
+                    <span class="rd-value">John Doe</span>
+                  </div>
+                  <div class="review-data">
+                    <span class="rd-label">Email Address</span>
+                    <span class="rd-value">john.doe@example.com</span>
+                  </div>
+                  <div class="review-data">
+                    <span class="rd-label">Phone Number</span>
+                    <span class="rd-value">+213 555 123 456</span>
+                  </div>
+                </div>
+              </div>
 
-            <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Date picker">
-              <div style="text-align:center; padding:48px 0; color:var(--text-muted);">
-                <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;"></i>
+              <!-- Booking Details Card -->
+              <div class="review-card">
+                <div class="review-card-header">
+                  <h3><i class="ph ph-calendar-blank"></i> Booking Details</h3>
+                  <button class="edit-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                </div>
+                <div class="review-card-body">
+                  <div class="review-data">
+                    <span class="rd-label">Check-in</span>
+                    <span class="rd-value">May 15, 2026</span>
+                  </div>
+                  <div class="review-data">
+                    <span class="rd-label">Check-out</span>
+                    <span class="rd-value">May 18, 2026</span>
+                  </div>
+                  <div class="review-data">
+                    <span class="rd-label">Guests</span>
+                    <span class="rd-value">2 Adults, 0 Children</span>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div class="date-summary" aria-live="polite">
-              <div class="date-summary-item">
-                <span class="date-summary-label" id="lbl-chk-in">Check-in</span>
-                <span class="date-summary-value" id="disp-checkin">Add date</span>
-              </div>
-              <div class="date-summary-divider"></div>
-              <div class="date-summary-item">
-                <span class="date-summary-label" id="lbl-nights">Nights</span>
-                <span id="disp-nights" class="font-bold">—</span>
-              </div>
-              <div class="date-summary-divider"></div>
-              <div class="date-summary-item">
-                <span class="date-summary-label" id="lbl-chk-out">Check-out</span>
-                <span class="date-summary-value" id="disp-checkout">Add date</span>
-              </div>
-            </div>
-
-            <div id="min-nights-warning" class="booking-warning d-none" role="alert">
-              <i class="ph ph-warning-circle"></i>
-              <span id="min-nights-msg"></span>
-            </div>
-          </div>
-
-          <div class="occupancy-section">
-            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-              <i class="ph-fill ph-users" style="color:var(--primary);"></i>
-              <span id="lbl-who-coming">Occupancy &amp; Rooms</span>
-            </h3>
-
-            <div class="occupancy-row">
-              <div>
-                <div class="occ-label-title" id="lbl-rooms-title">Rooms</div>
-                <div class="occ-label-sub" id="lbl-rooms-sub">Max 5</div>
-              </div>
-              <div class="occupancy-controls">
-                <button class="icon-btn" id="btn-minus-room" type="button" aria-label="Decrease rooms" disabled>
-                  <i class="ph ph-minus"></i>
-                </button>
-                <span class="occ-count" id="rooms-count" aria-live="polite">1</span>
-                <button class="icon-btn" id="btn-plus-room" type="button" aria-label="Increase rooms">
-                  <i class="ph ph-plus"></i>
-                </button>
-              </div>
-            </div>
-
-            <div class="occupancy-row">
-              <div>
-                <div class="occ-label-title" id="lbl-adults-title">Adults</div>
-                <div class="occ-label-sub" id="lbl-adults-sub">Ages 13 or above</div>
-              </div>
-              <div class="occupancy-controls">
-                <button class="icon-btn" id="btn-minus-adult" type="button" aria-label="Decrease adults">
-                  <i class="ph ph-minus"></i>
-                </button>
-                <span class="occ-count" id="adults-count" aria-live="polite">2</span>
-                <button class="icon-btn" id="btn-plus-adult" type="button" aria-label="Increase adults">
-                  <i class="ph ph-plus"></i>
-                </button>
+              
+              <!-- Payment Method Card -->
+              <div class="review-card full-width">
+                <div class="review-card-header">
+                  <h3><i class="ph ph-credit-card"></i> Payment Method</h3>
+                  <button class="edit-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                </div>
+                <div class="review-card-body">
+                  <div class="review-data full-width">
+                    <span class="rd-label">Selected Method</span>
+                    <span class="rd-value"><i class="ph ph-bank" style="color:var(--primary); margin-right:4px;"></i> Bank Transfer (CCP)</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="occupancy-row">
-              <div>
-                <div class="occ-label-title" id="lbl-children-title">Children</div>
-                <div class="occ-label-sub" id="lbl-children-sub">Under 13</div>
-              </div>
-              <div class="occupancy-controls">
-                <button class="icon-btn" id="btn-minus-child" type="button" aria-label="Decrease children" disabled>
-                  <i class="ph ph-minus"></i>
-                </button>
-                <span class="occ-count" id="children-count" aria-live="polite">0</span>
-                <button class="icon-btn" id="btn-plus-child" type="button" aria-label="Increase children">
-                  <i class="ph ph-plus"></i>
-                </button>
+            <!-- Rewards Points -->
+            <div class="points-box">
+              <div class="points-icon"><i class="ph ph-star"></i></div>
+              <div class="points-text">
+                <span class="points-title">Earn OreBooking Points!</span>
+                <p>You will earn <strong>450 points</strong> after completing this stay. Points can be used for future discounts and free upgrades.</p>
               </div>
             </div>
-
-            <div id="child-ages-box" class="d-none"></div>
-
-            <div class="bed-select-wrapper">
-              <label for="bed-config-select">
-                <i class="ph ph-bed" style="color:var(--primary);"></i>
-                <span id="lbl-bed-config">Bed Configuration</span>
+            
+            <!-- Policy Agreement -->
+            <div class="policy-agreement">
+              <label class="checkbox-container">
+                <input type="checkbox" id="agree-policy" required>
+                <span class="checkmark"></span>
+                <span class="agree-text">I have read and agree to the <a href="#">Terms of Service</a>, <a href="#">Privacy Policy</a>, and the property's specific cancellation rules.</span>
               </label>
-              <select id="bed-config-select">
-                <option value="double">Double Bed</option>
-                <option value="twin">Twin Beds</option>
-                <option value="king">King Bed</option>
-                <option value="single">Single Bed</option>
-              </select>
-            </div>
-
-            <div class="occupancy-badge-wrap">
-              <span id="occupancy-summary-badge">1 room · 2 adults</span>
-            </div>
-          </div>
-
-          <div class="step-actions">
-            <button class="primary-btn" id="btn-next-1" type="button" disabled aria-disabled="true">
-              <span id="btn-next-1-txt">Next Step</span>
-              <i class="ph ph-arrow-right"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="booking-step" id="step-2" role="tabpanel" aria-labelledby="lbl-step2">
-          <div class="step-header">
-            <div class="step-header-icon">
-              <i class="ph ph-sparkle"></i>
-            </div>
-            <div>
-              <h2 class="step-title" id="st-title-2">Enhance your stay</h2>
-              <p class="step-subtitle" id="st-sub-2">Select extras and choose your payment method.</p>
-            </div>
-          </div>
-
-          <div id="addons-panel"></div>
-
-          <div class="payment-section" style="margin-top:36px;">
-            <div class="section-label" id="lbl-pay-method">Payment Method</div>
-
-            <div class="payment-grid" role="radiogroup" aria-label="Payment method">
-              <label class="payment-method-label selected" id="pay-label-cash" for="pay-cash">
-                <input type="radio" name="payment_method" id="pay-cash" value="cash" checked style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <i class="ph ph-money" style="font-size:1.7rem; color:var(--success);"></i>
-                  <div class="radio-circle"></div>
-                </div>
-                <div>
-                  <div class="font-bold" id="pay-cash-title">Pay at Property</div>
-                  <div style="font-size:0.8rem; color:var(--text-muted);" id="pay-cash-sub">Pay with cash upon arrival</div>
-                </div>
-              </label>
-
-              <label class="payment-method-label" id="pay-label-transfer" for="pay-transfer">
-                <input type="radio" name="payment_method" id="pay-transfer" value="transfer" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <i class="ph ph-bank" style="font-size:1.7rem; color:var(--primary);"></i>
-                  <div class="radio-circle"></div>
-                </div>
-                <div>
-                  <div class="font-bold" id="pay-transfer-title">Bank Transfer</div>
-                  <div style="font-size:0.8rem; color:var(--text-muted);" id="pay-transfer-sub">Transfer to our account</div>
-                </div>
-              </label>
-            </div>
-
-            <div id="transfer-details" class="d-none">
-              <h4 style="font-size:0.88rem; font-weight:700; margin-bottom:16px; color:var(--primary); display:flex; align-items:center; gap:7px;">
-                <i class="ph ph-bank"></i> <span id="lbl-bank-info">Bank Account Details</span>
-              </h4>
-
-              <div class="transfer-info-grid">
-                <div class="transfer-info-item">
-                  <div class="ti-label" id="lbl-bank-name">Bank</div>
-                  <div class="ti-value">CPA Bank Algeria</div>
-                </div>
-                <div class="transfer-info-item">
-                  <div class="ti-label" id="lbl-account-name">Account Name</div>
-                  <div class="ti-value">OreBooking SARL</div>
-                </div>
-                <div class="transfer-info-item">
-                  <div class="ti-label" id="lbl-rib">RIB / IBAN</div>
-                  <div class="ti-value" style="font-family:monospace; letter-spacing:1px; font-size:0.82rem;">00799999 12345678 90</div>
-                </div>
-                <div class="transfer-info-item">
-                  <div class="ti-label" id="lbl-ref-note">Reference Note</div>
-                  <div class="ti-value" id="lbl-ref-note-val">Your Booking Ref</div>
-                </div>
-              </div>
-
-              <p style="font-size:0.85rem; font-weight:600; margin-bottom:10px;" id="lbl-upload-receipt">
-                <i class="ph ph-paperclip" style="color:var(--primary);"></i>
-                Upload Transfer Receipt <span class="req-star">*</span>
-              </p>
-
-              <div class="file-upload-wrapper" id="file-drop-zone">
-                <label for="receipt-file">
-                  <div class="file-upload-icon"><i class="ph ph-cloud-arrow-up"></i></div>
-                  <p class="file-upload-txt" id="lbl-drop-file">Click or drag & drop your receipt here</p>
-                  <p class="file-upload-sub">PNG, JPG, PDF — Max 5MB</p>
-                  <input type="file" id="receipt-file" name="receipt" accept="image/*,.pdf">
-                </label>
-              </div>
-
-              <div id="receipt-preview" class="d-none">
-                <i class="ph-fill ph-file-image" style="color:var(--primary); font-size:1.3rem;"></i>
-                <span id="receipt-file-name">file.jpg</span>
-                <button id="btn-remove-receipt" type="button" aria-label="Remove file">
-                  <i class="ph ph-x-circle"></i>
-                </button>
-              </div>
             </div>
           </div>
 
           <div class="step-actions step-actions-between">
-            <button class="ghost-btn" id="btn-prev-2" type="button">
-              <i class="ph ph-arrow-left"></i>
-              <span id="btn-back-2">Back</span>
-            </button>
-            <button class="primary-btn" id="btn-next-2" type="button">
-              <span id="btn-next-2-txt">Next Step</span>
-              <i class="ph ph-arrow-right"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="booking-step" id="step-3" role="tabpanel" aria-labelledby="lbl-step3">
-          <div class="step-header">
-            <div class="step-header-icon">
-              <i class="ph ph-user-circle"></i>
-            </div>
-            <div>
-              <h2 class="step-title" id="st-title-3">Who is booking?</h2>
-              <p class="step-subtitle" id="st-sub-3">Enter your contact details so we can confirm your reservation.</p>
-            </div>
-          </div>
-
-          <div id="auth-prompt" class="auth-prompt-banner d-none">
-            <i class="ph ph-info"></i>
-            <span id="lbl-auth-prompt">
-              <a href="#" id="link-login-booking">Log in</a>
-              to speed up your booking and earn loyalty points.
-            </span>
-          </div>
-
-          <form id="guest-form" novalidate autocomplete="on">
-            <div class="form-group">
-              <label for="g-name" id="lbl-fname">
-                <i class="ph ph-identification-card" style="color:var(--primary);"></i>
-                Full Name <span class="req-star">*</span>
-              </label>
-              <div class="input-with-icon">
-                <i class="ph ph-identification-card input-icon"></i>
-                <input type="text" id="g-name" name="name" required placeholder="Mohammed Amine" autocomplete="name" aria-required="true">
-              </div>
-              <span class="field-error" id="err-name"></span>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="g-email" id="lbl-email">
-                  <i class="ph ph-envelope-simple" style="color:var(--primary);"></i>
-                  Email <span class="req-star">*</span>
-                </label>
-                <div class="input-with-icon">
-                  <i class="ph ph-envelope-simple input-icon"></i>
-                  <input type="email" id="g-email" name="email" required placeholder="you@example.com" autocomplete="email" aria-required="true">
-                </div>
-                <span class="field-error" id="err-email"></span>
-              </div>
-
-              <div class="form-group">
-                <label for="g-phone" id="lbl-phone">
-                  <i class="ph ph-phone" style="color:var(--primary);"></i>
-                  Phone <span class="req-star">*</span>
-                </label>
-                <div class="input-with-icon">
-                  <i class="ph ph-phone input-icon"></i>
-                  <input type="tel" id="g-phone" name="phone" required placeholder="+213 555 000 000" dir="ltr" autocomplete="tel" aria-required="true">
-                </div>
-                <span class="field-error" id="err-phone"></span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="g-nationality" id="lbl-nationality">
-                  <i class="ph ph-globe" style="color:var(--primary);"></i>
-                  <span id="lbl-nationality-txt">Nationality</span>
-                </label>
-                <div class="input-with-icon">
-                  <i class="ph ph-globe input-icon"></i>
-                  <input type="text" id="g-nationality" name="nationality" placeholder="Algerian" autocomplete="country-name">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="g-arrival-time" id="lbl-arrival">
-                  <i class="ph ph-clock" style="color:var(--primary);"></i>
-                  <span id="lbl-arrival-txt">Estimated Arrival Time</span>
-                </label>
-                <div class="input-with-icon">
-                  <i class="ph ph-clock input-icon"></i>
-                  <input type="time" id="g-arrival-time" name="arrivalTime">
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label id="lbl-purpose-txt">
-                <i class="ph ph-suitcase" style="color:var(--primary);"></i>
-                <span id="lbl-purpose">Purpose of Visit</span>
-              </label>
-              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
-                <button type="button" class="purpose-chip active" data-val="leisure"><i class="ph ph-sun"></i> Leisure</button>
-                <button type="button" class="purpose-chip" data-val="business"><i class="ph ph-briefcase"></i> Business</button>
-                <button type="button" class="purpose-chip" data-val="family"><i class="ph ph-house"></i> Family</button>
-                <button type="button" class="purpose-chip" data-val="event"><i class="ph ph-confetti"></i> Event</button>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="g-notes" id="lbl-notes">
-                <i class="ph ph-chat-text" style="color:var(--primary);"></i>
-                Special Requests <span style="color:var(--text-muted); font-weight:400;">(Optional)</span>
-              </label>
-              <div class="textarea-wrapper">
-                <i class="ph ph-chat-text textarea-icon"></i>
-                <textarea id="g-notes" name="notes" rows="3" placeholder="Any special requests or questions…"></textarea>
-              </div>
-              <div class="char-counter"><span id="g-notes-counter">0</span>/500</div>
-            </div>
-
-            <div class="form-group" style="display:flex; align-items:flex-start; gap:12px;">
-              <input type="checkbox" id="agree-policy" style="margin-top:3px; accent-color:var(--primary); width:16px; height:16px; flex-shrink:0;">
-              <label for="agree-policy" style="cursor:pointer; font-size:0.86rem; color:var(--text-muted); font-weight:400;">
-                <span id="lbl-agree">I agree to the </span>
-                <a href="#" style="color:var(--primary); font-weight:600;" id="lbl-house-rules">house rules</a>
-                <span> and </span>
-                <a href="#" style="color:var(--primary); font-weight:600;" id="lbl-privacy">privacy policy</a>.
-              </label>
-            </div>
-          </form>
-
-          <div class="step-actions step-actions-between">
-            <button class="ghost-btn" id="btn-prev-3" type="button">
-              <i class="ph ph-arrow-left"></i>
-              <span id="btn-back-3">Back</span>
-            </button>
-            <button class="primary-btn" id="btn-next-3" type="button">
-              <span id="btn-next-3-txt">Review Details</span>
-              <i class="ph ph-check-circle"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="booking-step" id="step-4" role="tabpanel" aria-labelledby="lbl-step4">
-          <div class="step-header">
-            <div class="step-header-icon" style="background:rgba(16,185,129,0.1); color:var(--success);">
-              <i class="ph ph-shield-check"></i>
-            </div>
-            <div>
-              <h2 class="step-title" id="st-title-4">Review &amp; Confirm</h2>
-              <p class="step-subtitle" id="st-sub-4">Please review your booking details before final confirmation.</p>
-            </div>
-          </div>
-
-          <div class="final-summary-block">
-            <h3>
-              <i class="ph ph-file-text" style="color:var(--primary);"></i>
-              <span id="lbl-final-summary">Final Summary</span>
-            </h3>
-
-            <div class="final-row">
-              <span id="lbl-final-name">Guest Name:</span>
-              <span class="font-bold" id="final-name">—</span>
-            </div>
-            <div class="final-row">
-              <span id="lbl-final-dates">Dates:</span>
-              <span class="font-bold" id="final-dates">—</span>
-            </div>
-            <div class="final-row">
-              <span id="lbl-final-payment">Payment Method:</span>
-              <span class="font-bold" id="final-payment">—</span>
-            </div>
-
-            <hr style="border:none; border-top:1px dashed var(--border); margin:14px 0;">
-
-            <div class="final-total-row">
-              <span class="font-bold" id="lbl-total-amount">Total Amount</span>
-              <span class="font-bold" id="final-total">— DZD</span>
-            </div>
-          </div>
-
-          <div class="points-box">
-            <div class="points-icon">
-              <i class="ph ph-gift"></i>
-            </div>
-            <div class="points-text">
-              <span class="points-title" id="lbl-loyalty">Loyalty Points</span>
-              <p id="lbl-loyalty-sub">
-                Complete this booking to earn
-                <strong id="earned-points-preview">—</strong>
-                loyalty points!
-              </p>
-            </div>
-          </div>
-
-          <div class="step-actions step-actions-between" style="margin-top:28px;">
-            <button class="ghost-btn" id="btn-prev-4" type="button">
-              <i class="ph ph-arrow-left"></i>
-              <span id="btn-back-4">Back</span>
-            </button>
-            <button class="primary-btn green-btn" id="btn-confirm-booking" type="button" aria-label="Confirm and submit booking">
-              <i class="ph ph-check"></i>
-              <span id="btn-confirm-txt">Confirm Booking</span>
-            </button>
+            <button class="ghost-btn"><i class="ph ph-arrow-left"></i> Back to Payment</button>
+            <button class="primary-btn green-btn" id="confirm-booking-btn">Confirm & Book <i class="ph ph-check-circle"></i></button>
           </div>
         </div>
 
       </div>
-
-      <aside class="booking-summary-sidebar" aria-label="Booking summary">
-        <div class="sidebar-title">
-          <i class="ph-fill ph-receipt"></i>
-          <span id="lbl-sidebar-title">Booking Summary</span>
-        </div>
-
+      
+      <!-- Sidebar Summary -->
+      <div class="booking-summary-sidebar">
+        <h3 class="sidebar-title"><i class="ph ph-receipt"></i> Booking Summary</h3>
+        
         <div class="prop-mini-card">
-          <img
-            src="images/placeholder.jpg"
-            id="prop-mini-img"
-            class="prop-mini-img"
-            alt="Property"
-            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2272%22><rect width=%2290%22 height=%2272%22 fill=%22%23e2e8f0%22/><text x=%2245%22 y=%2242%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-size=%2224%22>🏨</text></svg>'"
-          >
+          <img src="https://images.unsplash.com/photo-1510798831971-661eb04b3739" alt="Property" class="prop-mini-img">
           <div class="prop-mini-details">
-            <h4 id="prop-mini-title">
-              <span class="skeleton skeleton-text" style="width:80%;display:inline-block;height:0.9em;"></span>
-            </h4>
-            <p>
-              <i class="ph-fill ph-map-pin"></i>
-              <span id="prop-mini-loc">
-                <span class="skeleton skeleton-text" style="width:60%;display:inline-block;height:0.8em;"></span>
-              </span>
-            </p>
-            <div class="prop-type-badge" id="prop-mini-type">Hotel</div>
+            <h4>Modern Forest Cabin</h4>
+            <p><i class="ph ph-map-pin"></i> Aspen, Colorado</p>
+            <div class="prop-type-badge">Resort</div>
           </div>
         </div>
 
-        <div class="sidebar-rating">
-          <span class="stars">★★★★★</span>
-          <span id="sum-rating">—</span>
-          <span id="sum-reviews-count"></span>
-        </div>
-
-        <div id="price-breakdown" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
+        <div class="summary-details">
           <div class="summary-row">
-            <span><span id="sb-nights-count">0</span> nights × <span id="sb-night-price">0 DZD</span></span>
-            <span class="font-bold"><span id="sb-base-total">0</span> DZD</span>
+            <span>Price per night</span>
+            <span>$150.00</span>
           </div>
           <div class="summary-row">
-            <span id="lbl-taxes">Taxes &amp; Fees</span>
-            <span id="lbl-taxes-val" style="color:var(--success); font-weight:600;">Included</span>
+            <span>Nights</span>
+            <span>3</span>
+          </div>
+          <div class="summary-row">
+            <span>Service Fee</span>
+            <span>$25.00</span>
           </div>
           <div class="summary-row total">
-            <span id="lbl-total">Total</span>
-            <span><span id="sb-final-total">0</span> DZD</span>
+            <span>Total (USD)</span>
+            <span>$475.00</span>
           </div>
-        </div>
-      </aside>
-
-    </div>
-
-    <div id="reviews-section" style="margin-top:48px;"></div>
-  </main>
-
-  <div id="copy-toast" class="d-none" role="status" aria-live="polite">
-    <i class="ph-fill ph-check-circle"></i>
-    <span id="copy-toast-txt">Copied!</span>
-  </div>
-
-  <!-- Success Modal -->
-  <div id="booking-success-modal" class="booking-success-modal d-none" aria-hidden="true">
-    <div class="booking-success-backdrop" data-close-success-modal data-action="close-success"></div>
-
-    <div class="booking-success-dialog" role="dialog" aria-modal="true" aria-labelledby="success-modal-title">
-      <button
-        type="button"
-        class="success-close-btn"
-        id="btn-close-success"
-        data-action="close-success"
-        aria-label="Close"
-      >
-        <i class="ph ph-x"></i>
-      </button>
-
-      <div class="success-modal-top">
-        <div class="success-icon-wrap">
-          <div class="success-icon-ring"></div>
-          <div class="success-icon-core">
-            <i class="ph-fill ph-check"></i>
-          </div>
-        </div>
-
-        <span class="success-kicker">Reservation Confirmed</span>
-        <h2 id="success-modal-title">Your booking has been received successfully</h2>
-        <p class="success-subtitle">
-          Your reservation request is now registered. Please save your booking reference and print your receipt.
-        </p>
-      </div>
-
-      <div id="booking-print-area" class="success-receipt-card">
-        <div class="receipt-head">
-          <div>
-            <h3>OreBooking</h3>
-            <p>Official Reservation Receipt</p>
-          </div>
-          <div class="receipt-ref-box">
-            <span>Booking Ref</span>
-            <strong id="succ-ref">BK-XXXXXX</strong>
-          </div>
-        </div>
-
-        <div class="receipt-status-row">
-          <div id="succ-pay-badge" class="success-pay-badge cash">
-            <i class="ph-fill ph-money"></i>
-            Pay at property
-          </div>
-        </div>
-
-        <div class="receipt-grid">
-          <div class="receipt-item">
-            <span>Guest Name</span>
-            <strong id="succ-name">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Email</span>
-            <strong id="succ-email">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Phone</span>
-            <strong id="succ-phone">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Nationality</span>
-            <strong id="succ-nationality">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Dates</span>
-            <strong id="succ-dates">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Guests</span>
-            <strong id="succ-guests">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Rooms</span>
-            <strong id="succ-rooms">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Arrival Time</span>
-            <strong id="succ-arrival">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Property</span>
-            <strong id="succ-property">—</strong>
-          </div>
-          <div class="receipt-item">
-            <span>Payment</span>
-            <strong id="succ-payment-method">—</strong>
-          </div>
-        </div>
-
-        <div class="receipt-price-box">
-          <div class="receipt-price-row">
-            <span>Base Price</span>
-            <strong id="succ-base">—</strong>
-          </div>
-          <div class="receipt-price-row">
-            <span>Add-ons</span>
-            <strong id="succ-addons">—</strong>
-          </div>
-          <div class="receipt-price-row">
-            <span>Service Fee</span>
-            <strong id="succ-fee">—</strong>
-          </div>
-          <div class="receipt-price-row total">
-            <span>Total</span>
-            <strong id="succ-total">—</strong>
-          </div>
-        </div>
-
-        <div class="receipt-notes-box">
-          <span>Special Requests</span>
-          <p id="succ-notes">—</p>
-        </div>
-
-        <div class="receipt-foot">
-          <span id="succ-created-at">—</span>
-          <span>Thank you for choosing OreBooking</span>
         </div>
       </div>
 
-      <div class="success-modal-actions">
-        <button
-          type="button"
-          class="ghost-btn"
-          id="btn-copy-ref"
-          data-action="copy-ref"
-        >
-          <i class="ph ph-copy"></i>
-          Copy Reference
-        </button>
-
-        <button
-          type="button"
-          class="ghost-btn"
-          id="btn-print-receipt"
-          data-action="print-receipt"
-        >
-          <i class="ph ph-printer"></i>
-          Print Receipt
-        </button>
-
-        <button
-          type="button"
-          class="primary-btn"
-          id="btn-done"
-          data-action="done"
-        >
-          <i class="ph ph-check-circle"></i>
-          Done
-        </button>
-      </div>
     </div>
   </div>
 
-  <script src="booking.js"></script>
 </body>
 </html>
