@@ -1,7 +1,7 @@
 /* ============================================================
    OreBooking — style.css
    Version: 2.2 (Fully Complete & Animated)
-   
+
    Fixes & Enhancements:
    - Includes ALL original classes (Property Details, Modals, Forms).
    - Complete CSS Variables for OKLCH color support & theming.
@@ -17,10 +17,10 @@
   --primary: #435abf;
   --primary-hover: #34459c;
   --accent: #657be0;
-  
+
   --bg-color: #f8fafc;
   --surface-color: #ffffff;
-  
+
   --text-main: #0f172a;
   --text-muted: #64748b;
   --text-muted-color: #64748b;
@@ -35,7 +35,7 @@
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
   --radius-full: 9999px;
-  
+
   --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1424,14 +1424,14 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   .logo-img { height: 28px; }
   body { padding-bottom: 64px; }
   #mobile-bottom-nav { display: block; }
-  
+
   .hero { padding: 50px 16px 20px; }
   .card-img-wrapper { height: 200px; }
   .input-group input { padding: 12px 14px; }
   .auth-card { border-radius: 20px; }
   .auth-content { padding: 24px 20px; }
   .features-list { grid-template-columns: 1fr; }
-  
+
   /* Prevent zoom on iOS forms */
   input[type="text"], input[type="email"], input[type="password"], textarea, select {
     font-size: 16px !important;
