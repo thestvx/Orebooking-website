@@ -261,11 +261,28 @@
       .hero { padding-top: 60px; }
       .hero h1 { font-size: 2.2rem; }
       .navbar { padding: 12px 16px; }
-      .rewards-badge { display: none; }
+      .rewards-badge { display: none; } /* Hide on small mobile to save space */
     }
     
     #mobile-bottom-nav { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(0,0,0,0.05); }
     .dark #mobile-bottom-nav { background: rgba(15,23,42,0.9); border-top-color: rgba(255,255,255,0.05); }
+
+    /* Fix for section header alignment */
+    .section-header-wrapper {
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 24px;
+      flex-wrap: wrap; 
+      gap: 16px;
+    }
+    .section-header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
   </style>
 </head>
 <body>
@@ -315,6 +332,7 @@
             <button class="dropdown-item" id="my-bookings-btn" role="menuitem"><i class="ph ph-list-checks"></i> <span data-i18n="my_bookings">My Bookings</span></button>
             <button class="dropdown-item" id="my-favorites-btn" role="menuitem"><i class="ph ph-heart"></i> <span data-i18n="my_favorites">My Favorites</span></button>
             <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
+            <!-- Fixed Logout Button Structure -->
             <button class="dropdown-item text-danger" id="fixed-logout-btn" role="menuitem">
               <i class="ph ph-sign-out"></i> <span data-i18n="logout">Log Out</span>
             </button>
@@ -369,10 +387,11 @@
   <!-- ═══ Listings ═════════════════════════════ -->
   <main class="container" id="main-content" role="main" style="padding-top: 20px;">
 
-    <div class="section-header animate-up delay-4" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+    <!-- FIXED: Ensure the header controls stay aligned left and right perfectly without jumping -->
+    <div class="section-header-wrapper animate-up delay-4">
       <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">Trending Destinations</h2>
 
-      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <div class="section-header-controls">
         <select id="sort-select" aria-label="Sort listings" style="padding:12px 20px; border-radius:var(--radius-full); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-main); font-size:0.95rem; font-weight: 600; cursor:pointer; outline:none; transition: var(--transition-smooth); box-shadow: var(--shadow-sm); font-family: inherit;">
           <option value="default" data-i18n="sort_default">Sort: Default</option>
           <option value="price_asc" data-i18n="sort_price_asc">Price ↑</option>
@@ -380,10 +399,7 @@
           <option value="rating" data-i18n="sort_rating">Top Rated</option>
         </select>
 
-        <!-- Hidden clear search button as requested -->
-        <button id="clear-search-btn" style="display:none !important;" aria-label="Clear search">
-          <i class="ph ph-x"></i> <span data-i18n="clear_search">Clear Search</span>
-        </button>
+        <!-- Removed the clear search button entirely from DOM to prevent layout shifts -->
       </div>
     </div>
 
@@ -548,7 +564,7 @@
     }
     
     // Auth Modal open/close logic fallback
-    const _authModalEl = document.getElementById('auth-modal'); // Renamed variable to avoid redeclaration error
+    const _authModalEl = document.getElementById('auth-modal');
     document.getElementById('open-auth-btn')?.addEventListener('click', () => {
       _authModalEl.style.opacity = '1';
       _authModalEl.style.pointerEvents = 'auto';
