@@ -1,7 +1,7 @@
 // =========================================
 //   Advanced Booking Logic — booking.js
 //   OreBooking © 2025 | Hotel Edition
-//   Enhanced Version v5.2 — Property Data Resolve Fix
+//   Enhanced Version v6.0 — Critical Fixes (Cache & ID Match)
 // =========================================
 
 // ─── Safe Storage Helpers ───────────────────
@@ -239,10 +239,11 @@ function formatDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// 🔧 FIX 1: إنشاء التاريخ ليكون الساعة 12 ظهراً لتفادي تراجع التاريخ بسبب المنطقة الزمنية (Timezone Shift)
 function parseLocalDate(str) {
   if (!str) return null;
   const [y, m, d] = str.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  return new Date(y, m - 1, d, 12, 0, 0, 0);
 }
 
 function formatDisplayDate(str) {
@@ -762,11 +763,16 @@ async function loadPropertyDetails() {
     }
 
     let docRef = db.collection("properties").doc(String(bookingState.propertyId));
-    let doc = await docRef.get();
+    let doc;
+    
+    // 🔧 FIX 2: إجبار جلب أحدث البيانات من السيرفر (تجاهل الكاش القديم) مع fallback
+    try { doc = await docRef.get({ source: 'server' }); } 
+    catch (e) { doc = await docRef.get(); }
 
     if (!doc.exists && Number.isFinite(Number(bookingState.propertyId))) {
       docRef = db.collection("properties").doc(Number(bookingState.propertyId).toString());
-      doc = await docRef.get();
+      try { doc = await docRef.get({ source: 'server' }); } 
+      catch (e) { doc = await docRef.get(); }
     }
 
     if (!doc.exists) throw new Error("not-found");
@@ -774,13 +780,13 @@ async function loadPropertyDetails() {
     const raw = doc.data() || {};
     const p = {
       ...raw,
-      id: raw.id || doc.id,
-      docId: doc.id
+      id: doc.id,   // 🔧 FIX 3: الاعتماد كلياً على الـ Document ID
+      docId: doc.id // 🔧 FIX 3
     };
 
     bookingState.property = p;
-    bookingState.propertyId = p.id || p.docId || bookingState.propertyId;
-    persistPropertyId(bookingState.propertyId);
+    bookingState.propertyId = doc.id; // 🔧 FIX 3
+    persistPropertyId(doc.id);
 
     bookingState.basePrice = Number(p.price || p.basePrice || p.pricePerNight || 0);
     bookingState.minNights = Number(p.minNights || 1);
@@ -841,7 +847,7 @@ async function loadBookedDates() {
     const snap = await db.collection("bookings")
       .where("propertyId", "==", String(bookingState.propertyId))
       .where("status", "in", ["pending", "confirmed"])
-      .get();
+      .get({ source: 'server' }); // 🔧 FIX 2: إجبار جلب الحجوزات من السيرفر مباشرة لتفادي الكاش
 
     bookingState.bookedDates = [];
     snap.forEach(docSnap => {
@@ -852,7 +858,9 @@ async function loadBookedDates() {
       const end = b.checkOutDate ? b.checkOutDate.toDate() : (b.checkOut?.toDate ? b.checkOut.toDate() : parseLocalDate(b.checkOut));
       if (!curr || !end) return;
 
-      curr.setHours(0, 0, 0, 0);
+      curr.setHours(12, 0, 0, 0); // 🔧 FIX 1: منتصف اليوم لتفادي Timezone shift
+      end.setHours(12, 0, 0, 0);
+
       while (curr < end) {
         bookingState.bookedDates.push(formatDateStr(curr));
         curr = new Date(curr);
@@ -938,7 +946,7 @@ function renderCalendar() {
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const cellDate = new Date(y, m, d);
+    const cellDate = new Date(y, m, d, 12, 0, 0, 0); // 🔧 FIX 1
     const dateStr = formatDateStr(cellDate);
     const isPast = cellDate < now;
     const isBooked = isDateBooked(dateStr);
@@ -1388,8 +1396,15 @@ async function handleSubmit(e) {
       .filter(([k, v]) => v === true)
       .map(([k]) => k);
 
+    // 🔧 FIX 3: تأكيد حفظ الـ propertyId بمختلف المسميات ليتمكن Dashboard من إيجاده
+    const exactDocId = String(bookingState.propertyId);
+
     const bookingDoc = {
-      propertyId: String(bookingState.propertyId),
+      propertyId: exactDocId,
+      propId: exactDocId,
+      propertyDocId: exactDocId,
+      property_id: exactDocId,
+      
       propertyTitle: propTitle,
       checkIn: firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)),
       checkOut: firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)),
