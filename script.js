@@ -1109,7 +1109,7 @@ function showFavToast(message) {
 }
 
 // ==========================================
-// 17. MY BOOKINGS
+// 17. MY BOOKINGS (COMPLETED)
 // ==========================================
 function initBookingsModal() {
   const modal = document.getElementById("bookings-modal");
@@ -1183,411 +1183,112 @@ async function showMyBookings() {
           const title = isAr ? (b.title_ar || b.propertyTitle || b.propertyTitleAr || "") : (b.title_en || b.propertyTitle || b.propertyTitleEn || "");
           return `
             <div class="booking-card" style="padding:16px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
-              <strong style="display:block;margin-bottom:8px;">${escapeHtml(title)}</strong>
-              <span class="text-muted" style="display:block;font-size:0.85rem;margin-bottom:8px;">${escapeHtml(b.checkIn || "")} &rarr; ${escapeHtml(b.checkOut || "")}</span>
-              <span class="status-badge" style="display:inline-block;padding:4px 10px;background:rgba(108,99,255,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:500;">
-                ${escapeHtml(b.status || "pending")}
-              </span>
+              <strong style="display:block;margin-bottom:8px;font-size:1.1rem;color:var(--text-main);">${escapeHtml(title)}</strong>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="text-muted" style="font-size:0.9rem;">
+                  <i class="ph ph-calendar-blank"></i> ${escapeHtml(b.checkIn || "")} &rarr; ${escapeHtml(b.checkOut || "")}
+                </span>
+                <span class="status-badge" style="padding:4px 10px;background:rgba(108,99,255,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:500;">
+                  ${escapeHtml(b.status || "pending")}
+                </span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
+                <span style="color:var(--text-muted);"><i class="ph ph-users"></i> ${b.guests || 1} ${translations[state.lang].guests}</span>
+                <span style="font-weight:700; color:var(--text-main);">DZD ${Number(b.totalPrice || 0).toLocaleString()}</span>
+              </div>
             </div>
           `;
         })
         .join("");
     }
-  } catch (err) {
-    console.error("Bookings fetch error:", err);
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
     if (body) {
-      body.innerHTML = `<p class="text-center text-muted" style="padding:24px;">${
-        state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات." : "Error loading bookings."
-      }</p>`;
-    }
-  }
-}
-
-// ==========================================
-// 18. RENDER LISTINGS
-// ==========================================
-function renderCategories() {
-  const container = document.getElementById("categories-container");
-  if (!container) return;
-
-  container.innerHTML = categories.map((cat, index) => `
-    <button class="category-item ${index === 0 && !state.activeCategory ? 'active' : ''}" 
-            onclick="selectCategory(this, '${cat.label_en}')">
-      <i class="ph ${cat.icon}"></i>
-      <span class="font-medium">${state.lang === "en" ? cat.label_en : cat.label_ar}</span>
-    </button>
-  `).join("");
-}
-
-window.selectCategory = function(el, categoryLabel) {
-  document.querySelectorAll(".category-item").forEach(c => c.classList.remove("active"));
-  el.classList.add("active");
-  state.activeCategory = categoryLabel;
-  renderListings();
-};
-
-window.sortListings = function(sortType) {
-  state.sortBy = sortType;
-  renderListings();
-};
-
-function renderListings(customArray = null) {
-  const container = document.getElementById("listings-grid");
-  if (!container) return;
-
-  const dict = translations[state.lang];
-  const currency = state.lang === "en" ? " DZD" : " د.ج";
-  
-  let itemsToShow = customArray !== null ? customArray : state.liveProperties;
-
-  if (state.activeCategory && !customArray && state.currentView !== "favorites") {
-    itemsToShow = itemsToShow.filter(p => propertyMatchesCategory(p, state.activeCategory));
-  }
-
-  if (state.currentView === "favorites") {
-    itemsToShow = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
-  }
-  
-  if (state.sortBy && state.sortBy !== "default") {
-    itemsToShow = [...itemsToShow].sort((a, b) => {
-      if (state.sortBy === "price_asc") return a.price - b.price;
-      if (state.sortBy === "price_desc") return b.price - a.price;
-      if (state.sortBy === "rating") return b.rating - a.rating;
-      return 0;
-    });
-  }
-
-  if (state.currentView === "favorites" && itemsToShow.length === 0) {
-    container.innerHTML = `
-      <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
-        <i class="ph ph-heart-break" style="font-size:3.5rem; color:var(--text-muted); margin-bottom:16px; display:block; opacity:0.5;"></i>
-        <p style="font-size:1.1rem; color:var(--text-muted);">${dict.no_favorites}</p>
-      </div>
-    `;
-    return;
-  }
-
-  if (itemsToShow.length === 0) {
-    container.innerHTML = `
-      <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
-        <i class="ph ph-magnifying-glass" style="font-size:3.5rem; display:block; margin-bottom:16px; opacity:0.5;"></i>
-        <h3 style="margin-bottom:8px; color:var(--text-main);" class="font-bold">${customArray !== null ? dict.no_results : dict.no_props}</h3>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = itemsToShow.map(prop => {
-    const isFav = state.favorites.includes(String(prop.id));
-    const title = state.lang === "en" ? prop.title_en : prop.title_ar;
-    const location = state.lang === "en" ? prop.location_en : prop.location_ar;
-    
-    let urgencyHtml = "";
-    if (prop.urgency) {
-      const urgencyText = prop.urgency === "few" ? dict.urgency_few : dict.urgency_hot;
-      urgencyHtml = `
-        <div class="urgency-label">
-          <i class="ph-fill ph-fire"></i>
-          <span>${urgencyText}</span>
+      body.innerHTML = `
+        <div style="text-align:center;padding:40px;color:var(--error);">
+          <i class="ph ph-warning-circle" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
+          <p>${state.lang === "ar" ? "حدث خطأ أثناء جلب الحجوزات" : "Failed to load bookings"}</p>
         </div>
       `;
     }
-
-    return `
-      <div class="card" onclick="goToProperty('${prop.id}')">
-        <div class="card-img-wrapper">
-          <img src="${escapeAttr(prop.image)}" alt="${escapeAttr(title)}" class="card-img" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-          ${urgencyHtml}
-          <button class="fav-btn ${isFav ? "active" : ""}" onclick="toggleFavorite(event, '${prop.id}')" aria-label="Favorite">
-            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
-          </button>
-        </div>
-        <div class="card-content">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title font-bold">${escapeHtml(title)}</h3>
-              <p class="card-location">${escapeHtml(location)}</p>
-            </div>
-            <div class="card-rating">
-              <i class="ph-fill ph-star"></i>
-              <span>${prop.rating}</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <div class="card-price">
-              ${Number(prop.price).toLocaleString()} ${currency} <span>/ ${dict.night}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
+  }
 }
 
 // ==========================================
-// 19. PROPERTY DETAILS PAGE
+// 18. AUTH UI, RENDER LISTINGS & APP BOOT
 // ==========================================
-function renderPropertyDetails() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const propId = urlParams.get("id");
-  if (!propId) return;
-
-  let prop = properties.find(p => String(p.id) === String(propId));
-
-  if (!prop) {
-    db.collection("properties").doc(propId).get()
-      .then(doc => {
-        if (!doc.exists) return;
-        const d = doc.data();
-        fillPropertyPage({
-          id: String(doc.id),
-          title_en: d.titleEn || d.title_en || "",
-          title_ar: d.titleAr || d.title_ar || "",
-          location_en: d.locationEn || d.location_en || "",
-          location_ar: d.locationAr || d.location_ar || "",
-          price: Number(d.price || 0),
-          rating: Number(d.rating || 4.8),
-          image: d.imageUrl || d.image || "",
-          images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ""],
-          urgency: d.urgency || null,
-          desc_en: d.descEn || d.desc_en || "",
-          desc_ar: d.descAr || d.desc_ar || "",
-          features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
-          features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
-          lat: d.lat || null,
-          lng: d.lng || null
-        });
-      })
-      .catch(err => {
-        console.error("Property fetch error:", err);
-      });
+function handleAuthButtonClick() {
+  if (state.user) {
+    if (profileDropdown) profileDropdown.classList.toggle("active");
   } else {
-    fillPropertyPage(prop);
+    openModal();
   }
 }
 
-function fillPropertyPage(prop) {
-  const dict = translations[state.lang];
-  const currency = state.lang === "en" ? " DZD" : " د.ج";
-  
-  const titleEl = document.getElementById("prop-title");
-  const ratingEl = document.getElementById("prop-rating");
-  const locationEl = document.getElementById("prop-location");
-  const descEl = document.getElementById("prop-desc");
-  const featuresEl = document.getElementById("prop-features");
-  const priceEl = document.getElementById("prop-price");
-  const trackEl = document.getElementById("slider-track");
-  const dotsEl = document.getElementById("slider-dots");
-
-  if (titleEl) titleEl.textContent = state.lang === "en" ? prop.title_en : prop.title_ar;
-  if (ratingEl) ratingEl.textContent = prop.rating;
-  if (locationEl) locationEl.textContent = state.lang === "en" ? prop.location_en : prop.location_ar;
-  if (descEl) descEl.textContent = state.lang === "en" ? prop.desc_en : prop.desc_ar;
-  if (priceEl) priceEl.textContent = Number(prop.price).toLocaleString() + currency;
-
-  if (featuresEl) {
-    const features = state.lang === "en" ? prop.features_en : prop.features_ar;
-    if (Array.isArray(features) && features.length > 0) {
-      featuresEl.innerHTML = features.map(f => `<li><i class="ph-fill ph-check-circle"></i> ${escapeHtml(f)}</li>`).join("");
-    }
+function openModal() {
+  if (authModal) {
+    authModal.classList.add("active");
+    document.body.classList.add("modal-open");
+    switchForm("login");
   }
-
-  if (trackEl && Array.isArray(prop.images)) {
-    currentPropImages = prop.images;
-    state.currentImageIndex = 0;
-    trackEl.innerHTML = currentPropImages.map(img => `<img src="${escapeAttr(img)}" alt="Property Image" onclick="openLightbox()" loading="lazy" onerror="this.src='images/placeholder.jpg'">`).join("");
-    
-    if (dotsEl) {
-      dotsEl.innerHTML = currentPropImages.map((_, i) => `<button class="slider-dot ${i === 0 ? "active" : ""}" onclick="goToSlide(event, ${i})"></button>`).join("");
-    }
-  }
-
-  const prevBtns = document.querySelectorAll(".slider-btn.prev-btn");
-  const nextBtns = document.querySelectorAll(".slider-btn.next-btn");
-  const badge = document.getElementById("slider-count-badge");
-  const fullscBtn = document.querySelector(".slider-fullscreen-btn");
-
-  if (currentPropImages.length <= 1) {
-    prevBtns.forEach(b => b.style.display = "none");
-    nextBtns.forEach(b => b.style.display = "none");
-    if (dotsEl) dotsEl.style.display = "none";
-    if (badge) badge.style.display = "none";
-  } else {
-    prevBtns.forEach(b => b.style.display = "flex");
-    nextBtns.forEach(b => b.style.display = "flex");
-    if (dotsEl) dotsEl.style.display = "flex";
-    if (badge) badge.style.display = "flex";
-    if (fullscBtn) fullscBtn.style.display = "flex";
-  }
-
-  if (typeof window.updateImageBadge === "function") {
-    window.updateImageBadge(0, currentPropImages.length);
-  }
-
-  updateSlider();
-
-  document.title = (state.lang === "en" ? prop.title_en : prop.title_ar) + " | OreBooking";
-
-  const bookNowLink = document.getElementById("book-now-link");
-  if (bookNowLink && prop.id) {
-    bookNowLink.href = `booking.html?id=${prop.id}`;
-  }
-
-  if (typeof window.initPropertyMap === "function") {
-    const locationName = state.lang === "en" ? prop.location_en : prop.location_ar;
-    setTimeout(() => window.initPropertyMap(prop.lat, prop.lng, locationName, state.lang), 200);
-  }
-
-  if (typeof window.showPropertyContent === "function") {
-    window.showPropertyContent();
-  }
-  
-  _updatePropertyPageTexts();
 }
 
-window.prevSlide = function(e) {
-  if (e) e.stopPropagation();
-  if (!currentPropImages.length) return;
-  state.currentImageIndex = state.currentImageIndex === 0 ? currentPropImages.length - 1 : state.currentImageIndex - 1;
-  updateSlider();
-};
-
-window.nextSlide = function(e) {
-  if (e) e.stopPropagation();
-  if (!currentPropImages.length) return;
-  state.currentImageIndex = state.currentImageIndex === currentPropImages.length - 1 ? 0 : state.currentImageIndex + 1;
-  updateSlider();
-};
-
-window.goToSlide = function(e, index) {
-  if (e) e.stopPropagation();
-  if (!currentPropImages.length || index < 0 || index >= currentPropImages.length) return;
-  state.currentImageIndex = index;
-  updateSlider();
-};
-
-function updateSlider() {
-  const trackEl = document.getElementById("slider-track");
-  if (trackEl) {
-    const offset = state.currentImageIndex * 100;
-    trackEl.style.transform = state.lang === "ar" ? `translateX(${offset}%)` : `translateX(-${offset}%)`;
+function closeModal() {
+  if (authModal) {
+    authModal.classList.remove("active");
+    document.body.classList.remove("modal-open");
+    if (loginForm) loginForm.reset();
+    if (registerForm) registerForm.reset();
+    if (forgotForm) forgotForm.reset();
+    if (authMessage) {
+      authMessage.textContent = "";
+      authMessage.className = "auth-message";
+    }
   }
+}
 
-  const lb = document.getElementById("lightbox");
-  const lbImg = document.getElementById("lightbox-img");
-  if (lbImg && lb?.classList.contains("active") && currentPropImages[state.currentImageIndex]) {
-    lbImg.src = currentPropImages[state.currentImageIndex];
-    lbImg.classList.remove("zoomed");
-  }
-
-  document.querySelectorAll(".slider-dot").forEach((dot, i) => {
-    dot.classList.toggle("active", i === state.currentImageIndex);
+function switchForm(type) {
+  const forms = ["login-form", "register-form", "forgot-form"];
+  forms.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("active");
   });
 
-  if (typeof window.updateImageBadge === "function") {
-    window.updateImageBadge(state.currentImageIndex, currentPropImages.length);
+  const target = document.getElementById(`${type}-form`);
+  if (target) target.classList.add("active");
+
+  if (authMessage) {
+    authMessage.textContent = "";
+    authMessage.className = "auth-message";
   }
 }
 
-function initSliderTouch() {
-  let touchStartX = 0;
-  let touchEndX = 0;
-
-  document.addEventListener("touchstart", e => {
-    if (!e.target.closest(".slider-container")) return;
-    touchStartX = e.changedTouches[0].screenX;
-  }, { passive: true });
-
-  document.addEventListener("touchend", e => {
-    if (!e.target.closest(".slider-container")) return;
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
-  }, { passive: true });
-
-  function handleSwipe() {
-    const diff = touchStartX - touchEndX;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        state.lang === "ar" ? window.prevSlide(null) : window.nextSlide(null);
-      } else {
-        state.lang === "ar" ? window.nextSlide(null) : window.prevSlide(null);
-      }
-    }
-  }
-}
-
-window.openLightbox = function() {
-  const lb = document.getElementById("lightbox");
-  const lbImg = document.getElementById("lightbox-img");
-  if (lb && lbImg && currentPropImages.length > 0) {
-    lbImg.src = currentPropImages[state.currentImageIndex];
-    lb.classList.add("active");
-    document.body.style.overflow = "hidden";
-  }
-};
-
-window.closeLightbox = function() {
-  const lb = document.getElementById("lightbox");
-  const lbImg = document.getElementById("lightbox-img");
-  if (lb) {
-    lb.classList.remove("active");
-    document.body.style.overflow = "";
-    if (lbImg) lbImg.classList.remove("zoomed");
-  }
-};
-
-window.toggleZoom = function(e) {
-  e.stopPropagation();
-  const img = document.getElementById("lightbox-img");
-  if (img) img.classList.toggle("zoomed");
-};
-
-// ==========================================
-// 20. FIREBASE AUTH
-// ==========================================
-function showMessage(msg, type = "error") {
+function showMessage(msg, type) {
   if (!authMessage) return;
   authMessage.textContent = msg;
   authMessage.className = `auth-message ${type}`;
-  authMessage.style.display = "block";
-  
-  const modalContent = authModal?.querySelector(".modal-content");
-  if (modalContent) modalContent.scrollTo({ top: 0, behavior: "smooth" });
-
-  setTimeout(() => {
-    if (authMessage) authMessage.style.display = "none";
-  }, 5000);
 }
 
 async function handleLogin(e) {
   e.preventDefault();
-  const email = document.getElementById("login-email")?.value.trim();
-  const password = document.getElementById("login-password")?.value;
-  const btn = loginForm.querySelector('button[type="submit"]');
-  const isAr = state.lang === "ar";
-
-  if (btn) {
-    btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
-    btn.disabled = true;
-  }
+  const email = loginForm.querySelector('input[type="email"]').value;
+  const pass = loginForm.querySelector('input[type="password"]').value;
 
   try {
-    await auth.signInWithEmailAndPassword(email, password);
+    const btn = loginForm.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="ph ph-spinner spin"></i>`;
+    btn.disabled = true;
+
+    await auth.signInWithEmailAndPassword(email, pass);
     closeModal();
-    loginForm.reset();
+    showToast(state.lang === "ar" ? "تم تسجيل الدخول بنجاح" : "Logged in successfully", "success");
   } catch (error) {
-    const msgs = {
-      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد الإلكتروني" : "No account found with this email",
-      "auth/wrong-password": isAr ? "كلمة المرور غير صحيحة" : "Incorrect password",
-      "auth/invalid-email": isAr ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format",
-      "auth/too-many-requests": isAr ? "تم تعطيل الحساب مؤقتًا بسبب كثرة المحاولات" : "Account temporarily disabled due to many failed attempts",
-      "auth/network-request-failed": isAr ? "تحقق من اتصالك بالإنترنت" : "Check your internet connection",
-      "auth/invalid-credential": isAr ? "البريد الإلكتروني أو كلمة المرور غير صحيحة" : "Invalid email or password"
-    };
-    showMessage(msgs[error.code] || (isAr ? "حدث خطأ أثناء تسجيل الدخول" : "Error signing in"), "error");
+    showMessage(error.message, "error");
   } finally {
+    const btn = loginForm.querySelector('button[type="submit"]');
     if (btn) {
-      btn.innerHTML = `<span>${isAr ? "تسجيل الدخول" : "Sign In"}</span>`;
+      btn.innerHTML = originalText;
       btn.disabled = false;
     }
   }
@@ -1595,42 +1296,27 @@ async function handleLogin(e) {
 
 async function handleRegister(e) {
   e.preventDefault();
-  const name = document.getElementById("reg-name")?.value.trim();
-  const email = document.getElementById("reg-email")?.value.trim();
-  const password = document.getElementById("reg-password")?.value;
-  const btn = registerForm.querySelector('button[type="submit"]');
-  const isAr = state.lang === "ar";
-
-  if (name.length < 2) {
-    showMessage(isAr ? "الاسم يجب أن يكون حرفين على الأقل" : "Name must be at least 2 characters", "error");
-    return;
-  }
-
-  if (btn) {
-    btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
-    btn.disabled = true;
-  }
+  const name = document.getElementById("reg-name").value;
+  const email = document.getElementById("reg-email").value;
+  const pass = document.getElementById("reg-password").value;
 
   try {
-    const cred = await auth.createUserWithEmailAndPassword(email, password);
-    await cred.user.updateProfile({ displayName: name });
-    await cred.user.reload();
-    state.user = auth.currentUser;
+    const btn = registerForm.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="ph ph-spinner spin"></i>`;
+    btn.disabled = true;
+
+    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+    await userCred.user.updateProfile({ displayName: name });
+
     closeModal();
-    registerForm.reset();
-    updateUserUI();
-    showToast(isAr ? `أهلاً بك ${name}! تم إنشاء حسابك.` : `Welcome ${name}! Your account was created.`, "success");
+    showToast(state.lang === "ar" ? "تم إنشاء الحساب بنجاح" : "Account created successfully", "success");
   } catch (error) {
-    const msgs = {
-      "auth/email-already-in-use": isAr ? "هذا البريد الإلكتروني مستخدم بالفعل" : "Email is already in use",
-      "auth/weak-password": isAr ? "كلمة المرور ضعيفة (6 أحرف على الأقل)" : "Password too weak (min 6 characters)",
-      "auth/invalid-email": isAr ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format",
-      "auth/network-request-failed": isAr ? "تحقق من اتصالك بالإنترنت" : "Check your internet connection"
-    };
-    showMessage(msgs[error.code] || error.message, "error");
+    showMessage(error.message, "error");
   } finally {
+    const btn = registerForm.querySelector('button[type="submit"]');
     if (btn) {
-      btn.innerHTML = `<span>${isAr ? "إنشاء الحساب" : "Create Account"}</span>`;
+      btn.innerHTML = originalText;
       btn.disabled = false;
     }
   }
@@ -1641,105 +1327,49 @@ async function handleGoogleLogin() {
   try {
     await auth.signInWithPopup(provider);
     closeModal();
+    showToast(state.lang === "ar" ? "تم تسجيل الدخول بواسطة جوجل" : "Logged in with Google", "success");
   } catch (error) {
-    if (error.code === "auth/popup-closed-by-user") return;
-    console.error("Google Auth Error:", error);
-    showMessage(state.lang === "ar" ? "خطأ أثناء تسجيل الدخول بواسطة قوقل" : "Error signing in with Google", "error");
+    showMessage(error.message, "error");
   }
 }
 
-function handleLogout() {
-  auth.signOut().then(() => {
+async function handleLogout() {
+  try {
+    await auth.signOut();
     if (profileDropdown) profileDropdown.classList.remove("active");
-    state.currentView = "home";
-    state.activeSearch = "";
-    state.favorites = [];
-    
-    if (document.getElementById("listings-grid")) {
-      const heroEl = document.getElementById("hero-section");
-      const catsEl = document.getElementById("categories-container");
-      if (heroEl) heroEl.style.display = "block";
-      if (catsEl) catsEl.style.display = "flex";
-
-      const searchInput = document.getElementById("search-location");
-      if (searchInput) searchInput.value = "";
-      hideClearSearchBtn();
-
-      const sectionTitle = document.getElementById("section-main-title");
-      if (sectionTitle) {
-        sectionTitle.setAttribute("data-i18n", "trending");
-        sectionTitle.textContent = translations[state.lang].trending;
-      }
-      
-      renderListings();
+    if (state.currentView === "favorites" || window.location.pathname.includes("property.html") || window.location.pathname.includes("booking.html")) {
+      window.location.href = "index.html";
     }
-    
-    showToast(state.lang === "ar" ? "تم تسجيل الخروج بنجاح" : "Logged out successfully", "info");
-  });
-}
-
-function handleAuthButtonClick() {
-  if (state.user) {
-    if (profileDropdown) profileDropdown.classList.toggle("active");
-  } else {
-    openModal();
+    showToast(state.lang === "ar" ? "تم تسجيل الخروج" : "Logged out successfully", "info");
+  } catch (error) {
+    console.error("Logout error", error);
   }
 }
 
 function updateUserUI() {
-  if (!openAuthBtn) return;
+  if (openAuthBtn) {
+    if (state.user) {
+      openAuthBtn.innerHTML = `
+        <div class="user-avatar-small">${state.user.displayName ? state.user.displayName.charAt(0).toUpperCase() : '<i class="ph ph-user"></i>'}</div>
+        <span class="user-name-hide">${escapeHtml(state.user.displayName || "User")}</span>
+      `;
+      openAuthBtn.classList.add("logged-in");
+    } else {
+      openAuthBtn.innerHTML = `
+        <i class="ph ph-user"></i>
+        <span>${state.lang === "en" ? "Sign In" : "تسجيل الدخول"}</span>
+      `;
+      openAuthBtn.classList.remove("logged-in");
+    }
+  }
 
-  if (state.user) {
-    const name = state.user.displayName || state.user.email || "U";
-    const initial = name.charAt(0).toUpperCase();
-    openAuthBtn.innerHTML = `<span class="font-bold">${initial}</span>`;
-    openAuthBtn.classList.add("auth-btn-logged");
-    openAuthBtn.classList.remove("auth-btn-guest");
-
-    const nameEl = document.getElementById("dropdown-user-name");
-    const emailEl = document.getElementById("dropdown-user-email");
-
-    if (nameEl) nameEl.textContent = state.user.displayName || (state.lang === "ar" ? "مستخدم" : "User");
-    if (emailEl) emailEl.textContent = state.user.email;
-  } else {
-    openAuthBtn.innerHTML = '<i class="ph ph-user"></i>';
-    openAuthBtn.classList.add("auth-btn-guest");
-    openAuthBtn.classList.remove("auth-btn-logged");
-    if (profileDropdown) profileDropdown.classList.remove("active");
+  const mobAuthText = document.getElementById("mob-auth-text");
+  if (mobAuthText) {
+    mobAuthText.textContent = state.user
+      ? (state.user.displayName ? state.user.displayName.split(" ")[0] : "Profile")
+      : (state.lang === "en" ? "Profile" : "حسابي");
   }
 }
 
-function openModal() {
-  if (!authModal) return;
-  switchForm("login");
-  authModal.classList.add("active");
-  document.body.classList.add("modal-open");
-}
-
-function closeModal() {
-  if (!authModal) return;
-  authModal.classList.remove("active");
-  document.body.classList.remove("modal-open");
-  if (authMessage) authMessage.style.display = "none";
-  setTimeout(() => switchForm("login"), 350);
-}
-
-function switchForm(type) {
-  if (!loginForm || !registerForm || !forgotForm) return;
-
-  loginForm.classList.remove("active");
-  registerForm.classList.remove("active");
-  forgotForm.classList.remove("active");
-
-  if (type === "register") {
-    registerForm.classList.add("active");
-  } else if (type === "forgot") {
-    forgotForm.classList.add("active");
-  } else {
-    loginForm.classList.add("active");
-  }
-
-  if (authMessage) authMessage.style.display = "none";
-}
-
+// Ensure the code runs when DOM is fully ready
 document.addEventListener("DOMContentLoaded", init);
