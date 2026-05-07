@@ -41,31 +41,6 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const storage = firebase.storage();
 
-// ─── Static Reviews Data ───────────────────
-const STATIC_REVIEWS = [
-  {
-    name: "Karim B.", avatar: "KB", rating: 5, date: "2025-03-15",
-    stay: "3 nights · March 2025",
-    text_en: "Exceptional stay. The room was spotless, the staff incredibly welcoming. The restaurant breakfast was outstanding — fresh juices, variety of pastries. Will definitely return.",
-    text_ar: "إقامة استثنائية. الغرفة كانت نظيفة جداً والطاقم رائع في الاستقبال. إفطار المطعم كان رائعاً — عصائر طازجة وتشكيلة متنوعة من المعجنات. سأعود بالتأكيد.",
-    country: "Algeria", flag: "🇩🇿", type: "positive"
-  },
-  {
-    name: "Siham M.", avatar: "SM", rating: 4, date: "2025-02-20",
-    stay: "2 nights · February 2025",
-    text_en: "Very comfortable rooms and the WiFi was fast and stable throughout our stay. The only downside was that the pool area could use more loungers during peak hours.",
-    text_ar: "غرف مريحة جداً والواي فاي كان سريعاً ومستقراً طوال إقامتنا. السلبية الوحيدة أن منطقة المسبح تحتاج مزيداً من الكراسي في أوقات الذروة.",
-    country: "Tunisia", flag: "🇹🇳", type: "constructive"
-  },
-  {
-    name: "Youcef A.", avatar: "YA", rating: 3, date: "2025-01-08",
-    stay: "4 nights · January 2025",
-    text_en: "The hotel has great potential. Location is perfect and the events team organised a lovely evening. However, room service was slow.",
-    text_ar: "الفندق لديه إمكانات كبيرة. الموقع ممتاز وفريق الفعاليات نظّم أمسية جميلة. لكن خدمة الغرف كانت بطيئة.",
-    country: "Algeria", flag: "🇩🇿", type: "mixed"
-  }
-];
-
 // ─── Booking State ─────────────────────────
 let currentUser = null;
 
@@ -101,7 +76,7 @@ const bookingState = {
     events: false
   },
   lang: safeGet("ore_lang", "en") || "en",
-  paymentMethod: "transfer",
+  paymentMethod: "ccp", // Defaulting to the HTML default
   receiptUrl: null
 };
 
@@ -148,8 +123,8 @@ const els = {
   monthLabel: document.getElementById("calendar-month-label"),
 
   payRadios: document.getElementsByName("payment_method"),
-  receiptFile: document.getElementById("receipt-file"),
-  transferBox: document.getElementById("transfer-details"),
+  receiptFile: document.getElementById("receipt-upload"),
+  transferBox: document.getElementById("ccp-details"),
 
   globalAlert: document.getElementById("booking-global-alert"),
 
@@ -178,9 +153,11 @@ const els = {
   sbFinalTotal: document.getElementById("sb-final-total"),
 
   // Guest inputs
-  gName: document.getElementById("g-name"),
-  gEmail: document.getElementById("g-email"),
-  gPhone: document.getElementById("g-phone")
+  gName: document.getElementById("guest-name"),
+  gEmail: document.getElementById("guest-email"),
+  gPhone: document.getElementById("guest-phone"),
+  gArrivalTime: document.getElementById("arrival-time"),
+  gSpecialReq: document.getElementById("special-requests")
 };
 
 // ─── Calendar State ────────────────────────
@@ -307,7 +284,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("back-btn")?.addEventListener("click", () => {
     if (document.referrer.includes(window.location.hostname)) history.back();
-    else window.location.href = `index.html#prop-${bookingState.propertyId}`;
+    else window.location.href = `property.html?id=${bookingState.propertyId}`;
   });
 
   setupNavigation();
@@ -320,7 +297,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderChildAges();
   renderAddonsPanel();
   renderCalendar();
-  renderReviews();
   updateBookingSummary();
 });
 
@@ -649,12 +625,15 @@ function updateBookingSummary() {
   const isAr = bookingState.lang === "ar";
   const curr = isAr ? "د.ج" : "DZD";
 
-  bookingState.roomPrice = bookingState.basePrice * bookingState.nights * bookingState.rooms;
+  // Force at least 1 night for calculation if user hasn't selected dates, but only for display purpose
+  const displayNights = bookingState.nights > 0 ? bookingState.nights : 1; 
+
+  bookingState.roomPrice = bookingState.basePrice * displayNights * bookingState.rooms;
   calcAddonsTotal();
   bookingState.fee = bookingState.roomPrice * 0.05; // 5% fee
   bookingState.totalPrice = bookingState.roomPrice + bookingState.fee + bookingState.addonsTotal;
 
-  if (els.sbNightsCount) els.sbNightsCount.textContent = bookingState.nights;
+  if (els.sbNightsCount) els.sbNightsCount.textContent = bookingState.nights > 0 ? bookingState.nights : "—";
 
   if (els.sbFeeAmount && els.sbFeeRow) {
     if (bookingState.fee > 0) {
@@ -679,12 +658,6 @@ function updateBookingSummary() {
   }
 }
 
-// ─── Render Reviews ─────────────────────────
-function renderReviews() {
-  const container = document.getElementById("reviews-section");
-  if (!container || !document.querySelector(".reviews-list")) return;
-}
-
 // ─── Setup Navigation ───────────────────────
 function setupNavigation() {
   const navigateToStep = (stepNum) => {
@@ -705,32 +678,49 @@ function setupNavigation() {
   };
 
   els.btnNext1?.addEventListener("click", () => {
-    if (!bookingState.checkIn || !bookingState.checkOut) {
-      showGlobalAlert(t("Please select check-in and check-out dates.", "يرجى تحديد تواريخ الوصول والمغادرة."));
+    if (els.gName && !els.gName.value.trim()) {
+      showGlobalAlert(t("Please enter your Full Name.", "يرجى إدخال اسمك الكامل."));
       return;
     }
+    if (els.gEmail && !els.gEmail.value.trim()) {
+      showGlobalAlert(t("Please enter your Email Address.", "يرجى إدخال بريدك الإلكتروني."));
+      return;
+    }
+    if (els.gPhone && !els.gPhone.value.trim()) {
+      showGlobalAlert(t("Please enter your Phone Number.", "يرجى إدخال رقم هاتفك."));
+      return;
+    }
+
+    // If calendar exists in step 1, validate dates here. If not, bypass date validation.
+    // Right now booking.html does not have a calendar in step 1, it assumes dates are handled elsewhere 
+    // or passed via URL. Assuming standard flow:
+    
     navigateToStep(2);
   });
 
   els.btnNext2?.addEventListener("click", () => {
-    if (els.gName && !els.gName.value.trim()) {
-      showGlobalAlert(t("Please enter your name.", "يرجى إدخال اسمك."));
+    bookingState.paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || "ccp";
+
+    if (bookingState.paymentMethod === "ccp" && !bookingState.receiptUrl && els.receiptFile?.files.length === 0) {
+      showGlobalAlert(t("Please upload your transfer receipt to proceed.", "يرجى إرفاق وصل التحويل للمتابعة."));
       return;
     }
-
-    bookingState.paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || "transfer";
 
     // Populate Review Step
     if (els.revName) els.revName.textContent = els.gName?.value || "—";
     if (els.revEmail) els.revEmail.textContent = els.gEmail?.value || "—";
     if (els.revPhone) els.revPhone.textContent = els.gPhone?.value || "—";
-    if (els.revCheckin) els.revCheckin.textContent = formatDisplayDate(bookingState.checkIn);
-    if (els.revCheckout) els.revCheckout.textContent = formatDisplayDate(bookingState.checkOut);
+    
+    // In our new flow, dates might not be selected in step 1 if the calendar was removed from the HTML.
+    // Provide a fallback for dates:
+    if (els.revCheckin) els.revCheckin.textContent = bookingState.checkIn ? formatDisplayDate(bookingState.checkIn) : t("Not Selected", "غير محدد");
+    if (els.revCheckout) els.revCheckout.textContent = bookingState.checkOut ? formatDisplayDate(bookingState.checkOut) : t("Not Selected", "غير محدد");
+    
     if (els.revGuests) els.revGuests.textContent = `${bookingState.adults} ${t("Adults", "بالغين")}, ${bookingState.children} ${t("Children", "أطفال")}`;
     if (els.revPaymentMethod) {
-      els.revPaymentMethod.innerHTML = bookingState.paymentMethod === "transfer" 
-        ? `<i class="ph ph-bank"></i> ${t("Bank Transfer", "تحويل بنكي")}`
-        : `<i class="ph ph-money"></i> ${t("Pay at Property", "الدفع في الفندق")}`;
+      els.revPaymentMethod.innerHTML = bookingState.paymentMethod === "ccp" 
+        ? `<i class="ph ph-bank" style="color:var(--primary); margin-right:4px;"></i> ${t("Bank Transfer", "تحويل بنكي")}`
+        : `<i class="ph ph-money" style="color:var(--primary); margin-right:4px;"></i> ${t("Pay at Property", "الدفع في الفندق")}`;
     }
 
     const earnedPoints = Math.floor(bookingState.totalPrice / 100);
@@ -742,14 +732,10 @@ function setupNavigation() {
   els.btnPrev2?.addEventListener("click", () => navigateToStep(1));
   els.btnPrev3?.addEventListener("click", () => navigateToStep(2));
 
-  // Payment Radio Listeners
-  els.payRadios?.forEach(radio => {
-    radio.addEventListener("change", (e) => {
-      if (els.transferBox) {
-        els.transferBox.style.display = e.target.value === "transfer" ? "block" : "none";
-      }
-    });
-  });
+  // Edit Buttons logic from Review Step
+  document.getElementById("btn-edit-guest")?.addEventListener("click", () => navigateToStep(1));
+  document.getElementById("btn-edit-dates")?.addEventListener("click", () => navigateToStep(1)); // or wherever the calendar is
+  document.getElementById("btn-edit-payment")?.addEventListener("click", () => navigateToStep(2));
 
   // Receipt File Upload Handler
   els.receiptFile?.addEventListener("change", async (e) => {
@@ -757,6 +743,7 @@ function setupNavigation() {
     if (!file) return;
 
     try {
+      showGlobalAlert(t("Uploading receipt...", "جاري رفع الإيصال..."), "info");
       const storageRef = storage.ref(`receipts/booking_${Date.now()}_${file.name}`);
       const snapshot = await storageRef.put(file);
       bookingState.receiptUrl = await snapshot.ref.getDownloadURL();
@@ -784,15 +771,15 @@ function setupNavigation() {
         guestName: els.gName?.value || "Guest",
         guestEmail: els.gEmail?.value || "",
         guestPhone: els.gPhone?.value || "",
-        checkIn: bookingState.checkIn,
-        checkOut: bookingState.checkOut,
-        nights: bookingState.nights,
-        rooms: bookingState.rooms,
-        adults: bookingState.adults,
-        children: bookingState.children,
-        totalPrice: bookingState.totalPrice,
+        checkIn: bookingState.checkIn || null,
+        checkOut: bookingState.checkOut || null,
+        nights: bookingState.nights || 0,
+        rooms: bookingState.rooms || 1,
+        adults: bookingState.adults || 1,
+        children: bookingState.children || 0,
+        totalPrice: bookingState.totalPrice || 0,
         paymentMethod: bookingState.paymentMethod,
-        receiptUrl: bookingState.receiptUrl,
+        receiptUrl: bookingState.receiptUrl || null,
         status: "pending",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
