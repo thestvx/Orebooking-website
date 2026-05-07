@@ -251,6 +251,14 @@
     .summary-row.total span { color: var(--primary); }
 
     /* =========================================
+       GLOBAL ALERTS & WARNINGS
+       ========================================= */
+    .booking-alert { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 500; font-size: 0.95rem; }
+    .booking-alert.error { background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); }
+    .booking-alert.error i { color: var(--error); font-size: 1.2rem; }
+    .d-none { display: none !important; }
+
+    /* =========================================
        RESPONSIVE CSS FIXES
        ========================================= */
     @media (max-width: 992px) {
@@ -277,19 +285,23 @@
 
   <!-- Navigation -->
   <nav class="inner-nav">
-    <a href="index.html" class="back-btn">
+    <button id="back-btn" class="back-btn">
       <i class="ph ph-arrow-left"></i> <span>Back</span>
-    </a>
+    </button>
     <a href="index.html" class="logo">
       <i class="ph ph-buildings" style="font-size: 2rem;"></i> OreBooking
     </a>
     <div class="nav-actions">
-      <button class="lang-btn"><i class="ph ph-globe"></i> <span>EN</span></button>
-      <button class="icon-btn"><i class="ph ph-moon"></i></button>
+      <button class="lang-btn" id="lang-toggle"><i class="ph ph-globe"></i> <span>EN</span></button>
+      <button class="icon-btn" id="theme-toggle"><i class="ph ph-moon"></i></button>
     </div>
   </nav>
 
   <div class="booking-page">
+
+    <!-- Global Alert Area -->
+    <div id="booking-global-alert" class="booking-alert d-none"></div>
+
     <!-- Steps Header -->
     <div class="booking-steps-header">
       <div class="step-indicator completed">
@@ -329,20 +341,20 @@
               <div class="review-card">
                 <div class="review-card-header">
                   <h3><i class="ph ph-user"></i> Personal Information</h3>
-                  <button class="edit-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                  <button class="edit-btn" id="btn-edit-guest"><i class="ph ph-pencil-simple"></i> Edit</button>
                 </div>
                 <div class="review-card-body">
                   <div class="review-data">
                     <span class="rd-label">Full Name</span>
-                    <span class="rd-value">John Doe</span>
+                    <span class="rd-value" id="rev-name">—</span>
                   </div>
                   <div class="review-data">
                     <span class="rd-label">Email Address</span>
-                    <span class="rd-value">john.doe@example.com</span>
+                    <span class="rd-value" id="rev-email">—</span>
                   </div>
                   <div class="review-data">
                     <span class="rd-label">Phone Number</span>
-                    <span class="rd-value">+213 555 123 456</span>
+                    <span class="rd-value" id="rev-phone">—</span>
                   </div>
                 </div>
               </div>
@@ -351,20 +363,20 @@
               <div class="review-card">
                 <div class="review-card-header">
                   <h3><i class="ph ph-calendar-blank"></i> Booking Details</h3>
-                  <button class="edit-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                  <button class="edit-btn" id="btn-edit-dates"><i class="ph ph-pencil-simple"></i> Edit</button>
                 </div>
                 <div class="review-card-body">
                   <div class="review-data">
                     <span class="rd-label">Check-in</span>
-                    <span class="rd-value">May 15, 2026</span>
+                    <span class="rd-value" id="rev-checkin">—</span>
                   </div>
                   <div class="review-data">
                     <span class="rd-label">Check-out</span>
-                    <span class="rd-value">May 18, 2026</span>
+                    <span class="rd-value" id="rev-checkout">—</span>
                   </div>
                   <div class="review-data">
                     <span class="rd-label">Guests</span>
-                    <span class="rd-value">2 Adults, 0 Children</span>
+                    <span class="rd-value" id="rev-guests">—</span>
                   </div>
                 </div>
               </div>
@@ -373,12 +385,12 @@
               <div class="review-card full-width">
                 <div class="review-card-header">
                   <h3><i class="ph ph-credit-card"></i> Payment Method</h3>
-                  <button class="edit-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                  <button class="edit-btn" id="btn-edit-payment"><i class="ph ph-pencil-simple"></i> Edit</button>
                 </div>
                 <div class="review-card-body">
                   <div class="review-data full-width">
                     <span class="rd-label">Selected Method</span>
-                    <span class="rd-value"><i class="ph ph-bank" style="color:var(--primary); margin-right:4px;"></i> Bank Transfer (CCP)</span>
+                    <span class="rd-value" id="rev-payment-method"><i class="ph ph-bank" style="color:var(--primary); margin-right:4px;"></i> —</span>
                   </div>
                 </div>
               </div>
@@ -389,7 +401,7 @@
               <div class="points-icon"><i class="ph ph-star"></i></div>
               <div class="points-text">
                 <span class="points-title">Earn OreBooking Points!</span>
-                <p>You will earn <strong>450 points</strong> after completing this stay. Points can be used for future discounts and free upgrades.</p>
+                <p>You will earn <strong id="rev-points">0</strong> points after completing this stay. Points can be used for future discounts and free upgrades.</p>
               </div>
             </div>
             
@@ -398,14 +410,14 @@
               <label class="checkbox-container">
                 <input type="checkbox" id="agree-policy" required>
                 <span class="checkmark"></span>
-                <span class="agree-text">I have read and agree to the <a href="#">Terms of Service</a>, <a href="#">Privacy Policy</a>, and the property's specific cancellation rules.</span>
+                <span class="agree-text">I have read and agree to the <a href="#" target="_blank" rel="noopener noreferrer">Terms of Service</a>, <a href="#" target="_blank" rel="noopener noreferrer">Privacy Policy</a>, and the property's specific cancellation rules.</span>
               </label>
             </div>
           </div>
 
           <div class="step-actions step-actions-between">
-            <button class="ghost-btn"><i class="ph ph-arrow-left"></i> Back to Payment</button>
-            <button class="primary-btn green-btn" id="confirm-booking-btn">Confirm & Book <i class="ph ph-check-circle"></i></button>
+            <button class="ghost-btn" id="btn-prev-3"><i class="ph ph-arrow-left"></i> Back to Payment</button>
+            <button class="primary-btn green-btn" id="btn-confirm-booking">Confirm & Book <i class="ph ph-check-circle"></i></button>
           </div>
         </div>
 
@@ -416,36 +428,43 @@
         <h3 class="sidebar-title"><i class="ph ph-receipt"></i> Booking Summary</h3>
         
         <div class="prop-mini-card">
-          <img src="https://images.unsplash.com/photo-1510798831971-661eb04b3739" alt="Property" class="prop-mini-img">
+          <img src="" id="prop-mini-img" alt="Property" class="prop-mini-img skeleton">
           <div class="prop-mini-details">
-            <h4>Modern Forest Cabin</h4>
-            <p><i class="ph ph-map-pin"></i> Aspen, Colorado</p>
-            <div class="prop-type-badge">Resort</div>
+            <h4 id="prop-mini-title">Loading...</h4>
+            <p><i class="ph ph-map-pin"></i> <span id="prop-mini-loc">—</span></p>
+            <div class="prop-type-badge" id="prop-mini-type" style="font-size: 0.75rem; background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 12px; display: inline-block; margin-top: 6px;">—</div>
           </div>
         </div>
 
         <div class="summary-details">
           <div class="summary-row">
             <span>Price per night</span>
-            <span>$150.00</span>
+            <span id="sb-night-price">—</span>
           </div>
           <div class="summary-row">
             <span>Nights</span>
-            <span>3</span>
+            <span id="sb-nights-count">—</span>
           </div>
-          <div class="summary-row">
+          <div class="summary-row" id="sb-fee-row" style="display: none;">
             <span>Service Fee</span>
-            <span>$25.00</span>
+            <span id="sb-fee-amount">—</span>
+          </div>
+          <div class="summary-row" id="sb-addons-row" style="display: none;">
+            <span>Add-ons</span>
+            <span id="sb-addons-amount">—</span>
           </div>
           <div class="summary-row total">
-            <span>Total (USD)</span>
-            <span>$475.00</span>
+            <span>Total</span>
+            <span id="sb-final-total">—</span>
           </div>
         </div>
       </div>
 
     </div>
   </div>
+
+  <!-- Link the JS file -->
+  <script src="booking.js"></script>
 
 </body>
 </html>
