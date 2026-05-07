@@ -8,10 +8,10 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
   <!-- Icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web" defer></script>
 
   <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -20,27 +20,69 @@
 
   <!-- 🗺️ Leaflet.js -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
   <style>
     /* =============================================
-       PROPERTY PAGE — CUSTOM STYLES
+       GLOBAL TOKENS & BASE
     ============================================= */
+    :root {
+      --primary: #435abf;
+      --primary-dark: #34459c;
+      --primary-hover: #3a4ca6;
+      --accent: #8b5cf6;
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --radius-full: 9999px;
+      --radius-2xl: 24px;
+      --radius-xl: 16px;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.05);
+      --shadow-soft: 0 10px 25px -5px rgba(0,0,0,0.08);
+      --shadow-hover: 0 25px 50px -12px rgba(67,90,191,0.2);
+      --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-    /* ── Skeleton Loading ── */
+    body {
+      background-color: var(--bg-color);
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html[dir="rtl"] body {
+      font-family: 'Tajawal', sans-serif;
+    }
+
+    body.dark {
+      --bg-color: #020617;
+      --surface-color: #0f172a;
+      --border-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; }
+    body.modal-open { overflow: hidden; }
+
+    /* =============================================
+       SKELETON LOADING
+    ============================================= */
     @keyframes shimmer {
       0%   { background-position: -800px 0; }
       100% { background-position:  800px 0; }
     }
 
     .skeleton {
-      background: linear-gradient(90deg,
-        var(--bg-color) 25%,
-        var(--border-color) 50%,
-        var(--bg-color) 75%
-      );
+      background: linear-gradient(90deg, var(--bg-color) 25%, var(--border-color) 50%, var(--bg-color) 75%);
       background-size: 800px 100%;
       animation: shimmer 1.4s infinite linear;
       border-radius: var(--radius-lg);
@@ -52,17 +94,26 @@
     .skeleton-text   { height: 14px; width: 100%; margin-bottom: 8px; }
     .skeleton-text:last-child { width: 70%; }
 
-    /* ── Navbar ── */
+    /* =============================================
+       NAVBAR
+    ============================================= */
     .inner-nav {
       position: sticky;
       top: 0;
       z-index: 900;
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-      background: rgba(var(--bg-rgb, 255,255,255), 0.85);
+      background: rgba(255,255,255, 0.85);
       border-bottom: 1px solid var(--border-color);
       box-shadow: 0 1px 20px rgba(0,0,0,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      height: 70px;
     }
+    
+    body.dark .inner-nav { background: rgba(15,23,42, 0.85); }
 
     .back-btn {
       display: inline-flex;
@@ -71,661 +122,255 @@
       color: var(--text-main);
       text-decoration: none;
       font-size: 0.9rem;
-      padding: 8px 14px;
+      font-weight: 600;
+      padding: 8px 16px;
       border-radius: var(--radius-full);
       border: 1px solid var(--border-color);
       transition: var(--transition);
-      white-space: nowrap;
+      background: var(--surface-color);
     }
 
     .back-btn:hover {
-      background: var(--primary);
-      color: #fff;
       border-color: var(--primary);
-      transform: translateX(-2px);
+      color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    html[dir="rtl"] .back-btn i { transform: scaleX(-1); }
+
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+    .icon-btn, .lang-btn, .profile-menu {
+      height: 40px; border-radius: 20px; border: 1px solid var(--border-color);
+      background: var(--surface-color); color: var(--text-main); display: flex;
+      align-items: center; justify-content: center; cursor: pointer; transition: var(--transition);
+      font-family: inherit; font-weight: 600;
+    }
+    .icon-btn { width: 40px; border-radius: 50%; }
+    .lang-btn { padding: 0 14px; gap: 6px; font-size: 0.875rem; }
+    .profile-menu { padding: 0 16px; gap: 8px; border-radius: 20px; }
+    .icon-btn:hover, .lang-btn:hover, .profile-menu:hover {
+      border-color: var(--primary); color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm);
     }
 
-    [dir="rtl"] .back-btn:hover { transform: translateX(2px); }
-    [dir="rtl"] .back-btn i { transform: scaleX(-1); }
-
-    /* ── Page Layout ── */
-    .property-container {
-      max-width: 1160px;
-      margin: 0 auto;
-      padding: 40px 24px 80px;
-    }
-
-    /* ── Property Header ── */
-    .prop-header {
-      margin-bottom: 28px;
-    }
-
+    /* =============================================
+       PAGE LAYOUT & PROPERTY HEADER
+    ============================================= */
+    .property-container { max-width: 1160px; margin: 0 auto; padding: 40px 24px 80px; }
+    .prop-header { margin-bottom: 28px; }
+    
     .prop-title {
-      font-size: clamp(1.5rem, 3vw, 2.2rem);
-      line-height: 1.25;
-      color: var(--text-main);
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
+      font-size: clamp(1.5rem, 3vw, 2.2rem); line-height: 1.25; color: var(--text-main);
+      margin-bottom: 12px; letter-spacing: -0.02em; font-weight: 700;
     }
 
-    .prop-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 18px;
-    }
-
+    .prop-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+    
     .prop-rating {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: linear-gradient(135deg, #fff7e6, #fff3d6);
-      border: 1px solid #f5c842;
-      color: #b8860b;
-      padding: 5px 14px;
-      border-radius: var(--radius-full);
-      font-weight: 700;
-      font-size: 0.9rem;
+      display: inline-flex; align-items: center; gap: 5px;
+      background: linear-gradient(135deg, #fff7e6, #fff3d6); border: 1px solid #f5c842;
+      color: #b8860b; padding: 5px 14px; border-radius: var(--radius-full);
+      font-weight: 700; font-size: 0.9rem;
     }
-
-    .dark .prop-rating {
-      background: linear-gradient(135deg, #2a2000, #1e1800);
-      border-color: #8a6800;
-      color: #f5c842;
-    }
-
+    body.dark .prop-rating { background: linear-gradient(135deg, #2a2000, #1e1800); border-color: #8a6800; color: #f5c842; }
     .prop-rating i { color: #f5b800; font-size: 1rem; }
 
     .prop-location {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-muted);
-      font-size: 0.92rem;
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-muted); font-size: 0.92rem;
     }
-
     .prop-location i { color: var(--primary); font-size: 1.1rem; }
 
-    /* ── Image Gallery ── */
+    /* =============================================
+       IMAGE GALLERY SLIDER
+    ============================================= */
     .prop-image-gallery {
-      border-radius: var(--radius-2xl);
-      overflow: hidden;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
-      margin-bottom: 40px;
-      position: relative;
+      border-radius: var(--radius-2xl); overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12); margin-bottom: 40px; position: relative;
     }
 
-    .slider-container {
-      position: relative;
-      overflow: hidden;
-      aspect-ratio: 16/9;
-      background: var(--bg-color);
-      cursor: grab;
-    }
-
+    .slider-container { position: relative; overflow: hidden; aspect-ratio: 16/9; background: var(--bg-color); cursor: grab; }
     .slider-container:active { cursor: grabbing; }
 
     .slider-track {
-      display: flex;
-      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      height: 100%;
-      will-change: transform;
+      display: flex; transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      height: 100%; will-change: transform;
     }
+    .slider-track img { min-width: 100%; width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; user-select: none; -webkit-user-drag: none; }
 
-    .slider-track img {
-      min-width: 100%;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      flex-shrink: 0;
-      user-select: none;
-      -webkit-user-drag: none;
-    }
-
-    /* Image count badge */
     .slider-count-badge {
-      position: absolute;
-      top: 16px;
-      inset-inline-end: 16px;
-      background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(8px);
-      color: #fff;
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 5px 12px;
-      border-radius: var(--radius-full);
-      z-index: 5;
-      pointer-events: none;
-      letter-spacing: 0.03em;
+      position: absolute; top: 16px; inset-inline-end: 16px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); color: #fff;
+      font-size: 0.8rem; font-weight: 600; padding: 5px 12px;
+      border-radius: var(--radius-full); z-index: 5; pointer-events: none;
     }
 
-    /* Fullscreen button */
     .slider-fullscreen-btn {
-      position: absolute;
-      top: 16px;
-      inset-inline-start: 16px;
-      width: 38px;
-      height: 38px;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(8px);
-      border: none;
-      border-radius: 50%;
-      color: #fff;
-      font-size: 1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 5;
-      transition: var(--transition);
+      position: absolute; top: 16px; inset-inline-start: 16px;
+      width: 38px; height: 38px; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+      border: none; border-radius: 50%; color: #fff; font-size: 1rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      z-index: 5; transition: var(--transition);
     }
-
-    .slider-fullscreen-btn:hover {
-      background: var(--primary);
-      transform: scale(1.08);
-    }
+    .slider-fullscreen-btn:hover { background: var(--primary); transform: scale(1.08); }
 
     .slider-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(6px);
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      color: var(--text-main);
-      z-index: 10;
-      transition: var(--transition);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(6px); border: none; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; font-size: 1.2rem; color: var(--text-main);
+      z-index: 10; transition: var(--transition); box-shadow: 0 2px 12px rgba(0,0,0,0.18);
     }
-
-    .dark .slider-btn {
-      background: rgba(30,30,30,0.88);
-      color: #fff;
-    }
-
-    .slider-btn:hover {
-      background: var(--primary);
-      color: #fff;
-      transform: translateY(-50%) scale(1.1);
-    }
-
+    body.dark .slider-btn { background: rgba(30,30,30,0.88); color: #fff; }
+    .slider-btn:hover { background: var(--primary); color: #fff; transform: translateY(-50%) scale(1.1); }
     .slider-btn.prev-btn { inset-inline-start: 14px; }
-    .slider-btn.next-btn { inset-inline-end:   14px; }
+    .slider-btn.next-btn { inset-inline-end: 14px; }
 
     .slider-dots-container {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 7px;
-      z-index: 5;
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 7px; z-index: 5;
     }
-
     .slider-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.5);
-      border: none;
-      cursor: pointer;
-      transition: all 0.25s;
-      padding: 0;
+      width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5);
+      border: none; cursor: pointer; transition: all 0.25s; padding: 0;
     }
+    .slider-dot.active { background: #fff; width: 22px; border-radius: 4px; }
 
-    .slider-dot.active {
-      background: #fff;
-      width: 22px;
-      border-radius: 4px;
-    }
+    /* =============================================
+       CONTENT GRID & INFO COLUMN
+    ============================================= */
+    .prop-content-grid { display: grid; grid-template-columns: 1fr 360px; gap: 40px; align-items: start; }
+    @media (max-width: 900px) { .prop-content-grid { grid-template-columns: 1fr; } }
 
-    /* ── Content Grid ── */
-    .prop-content-grid {
-      display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 40px;
-      align-items: start;
-    }
-
-    @media (max-width: 900px) {
-      .prop-content-grid { grid-template-columns: 1fr; }
-    }
-
-    /* ── Info Column ── */
-    .prop-details h2 {
-      font-size: 1.35rem;
-      margin-bottom: 14px;
-      color: var(--text-main);
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--primary);
-      display: inline-block;
-    }
-
-    .prop-description {
-      color: var(--text-muted);
-      line-height: 1.85;
-      font-size: 0.97rem;
-      margin-bottom: 36px;
-    }
+    .prop-details h2 { font-size: 1.35rem; margin-bottom: 14px; color: var(--text-main); padding-bottom: 12px; border-bottom: 2px solid var(--primary); display: inline-block; font-weight: 700; }
+    .prop-description { color: var(--text-muted); line-height: 1.85; font-size: 0.97rem; margin-bottom: 36px; text-wrap: pretty; }
 
     /* Features */
-    .prop-features {
-      margin-bottom: 40px;
-    }
-
-    .prop-features h3 {
-      font-size: 1.1rem;
-      margin-bottom: 18px;
-      color: var(--text-main);
-    }
-
-    .features-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-      gap: 12px;
-    }
-
+    .prop-features { margin-bottom: 40px; }
+    .prop-features h3 { font-size: 1.1rem; margin-bottom: 18px; color: var(--text-main); font-weight: 700; }
+    .features-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
     .features-list li {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      padding: 12px 16px;
-      border-radius: var(--radius-xl);
-      font-size: 0.9rem;
-      color: var(--text-main);
-      transition: var(--transition);
+      display: flex; align-items: center; gap: 10px; background: var(--surface-color);
+      border: 1px solid var(--border-color); padding: 12px 16px; border-radius: var(--radius-xl);
+      font-size: 0.9rem; color: var(--text-main); transition: var(--transition);
     }
-
-    .features-list li:hover {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 67,90,191), 0.08);
-      transform: translateY(-1px);
-    }
-
-    .features-list li i {
-      color: var(--primary);
-      font-size: 1.15rem;
-      flex-shrink: 0;
-    }
+    .features-list li:hover { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67,90,191,0.08); transform: translateY(-1px); }
+    .features-list li i { color: var(--primary); font-size: 1.15rem; flex-shrink: 0; }
 
     /* Host card */
     .host-card {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 20px;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-2xl);
-      margin-bottom: 36px;
+      display: flex; align-items: center; gap: 16px; padding: 20px;
+      background: var(--surface-color); border: 1px solid var(--border-color);
+      border-radius: var(--radius-2xl); margin-bottom: 36px;
     }
-
     .host-avatar {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), #6c7fd8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 1.4rem;
-      flex-shrink: 0;
+      width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #6c7fd8);
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.4rem; flex-shrink: 0;
     }
-
     .host-info { flex: 1; }
-
-    .host-info strong {
-      display: block;
-      font-size: 0.97rem;
-      color: var(--text-main);
-      margin-bottom: 3px;
-    }
-
-    .host-info span {
-      font-size: 0.83rem;
-      color: var(--text-muted);
-    }
-
+    .host-info strong { display: block; font-size: 0.97rem; color: var(--text-main); margin-bottom: 3px; }
+    .host-info span { font-size: 0.83rem; color: var(--text-muted); }
     .host-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: #e8f4fd;
-      color: #1a6fa8;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: var(--radius-full);
-      margin-top: 5px;
+      display: inline-flex; align-items: center; gap: 4px; background: #e8f4fd;
+      color: #1a6fa8; font-size: 0.75rem; font-weight: 600; padding: 3px 10px;
+      border-radius: var(--radius-full); margin-top: 5px;
     }
+    body.dark .host-badge { background: #0d2b3e; color: #60b4f0; }
 
-    .dark .host-badge {
-      background: #0d2b3e;
-      color: #60b4f0;
-    }
+    /* =============================================
+       MAP SECTION
+    ============================================= */
+    .map-section { margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--border-color); }
+    .map-section h3 { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .map-section h3 i { color: var(--primary); font-size: 1.3rem; }
 
-    /* ── Map Section ── */
-    .map-section {
-      margin-top: 40px;
-      padding-top: 32px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .map-section h3 {
-      font-size: 1.1rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .map-section h3 i {
-      color: var(--primary);
-      font-size: 1.3rem;
-    }
-
-    #property-map {
-      width: 100%;
-      height: 360px;
-      border-radius: var(--radius-2xl);
-      border: 1px solid var(--border-color);
-      z-index: 1;
-      box-shadow: var(--shadow-soft);
-      overflow: hidden;
-    }
-
+    #property-map { width: 100%; height: 360px; border-radius: var(--radius-2xl); border: 1px solid var(--border-color); z-index: 1; box-shadow: var(--shadow-soft); overflow: hidden; }
     .map-open-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      padding: 10px 20px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-full);
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 20px;
+      background: var(--primary); color: #fff; border: none; border-radius: var(--radius-full);
+      font-family: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: var(--transition);
     }
-
-    .map-open-btn:hover {
-      background: var(--primary-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(var(--primary-rgb, 67,90,191), 0.35);
-    }
-
+    .map-open-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(67,90,191,0.35); }
     .map-no-location {
-      width: 100%;
-      height: 180px;
-      border-radius: var(--radius-2xl);
-      background: var(--bg-color);
-      border: 1.5px dashed var(--border-color);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: var(--text-muted);
-      font-size: 0.9rem;
+      width: 100%; height: 180px; border-radius: var(--radius-2xl); background: var(--bg-color); border: 1.5px dashed var(--border-color);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-muted); font-size: 0.9rem;
     }
+    .map-no-location i { font-size: 2.2rem; opacity: 0.35; }
+    
+    body.dark .leaflet-tile { filter: brightness(0.82) saturate(0.85) contrast(1.05); }
+    body.dark .leaflet-popup-content-wrapper, body.dark .leaflet-popup-tip { background: var(--surface-color); color: var(--text-main); box-shadow: var(--shadow-soft); }
 
-    .map-no-location i {
-      font-size: 2.2rem;
-      opacity: 0.35;
-    }
-
-    /* Leaflet dark mode */
-    .dark .leaflet-tile {
-      filter: brightness(0.82) saturate(0.85) contrast(1.05);
-    }
-
-    .dark .leaflet-popup-content-wrapper,
-    .dark .leaflet-popup-tip {
-      background: var(--surface-color);
-      color: var(--text-main);
-      box-shadow: var(--shadow-soft);
-    }
-
-    /* ── Booking Card ── */
+    /* =============================================
+       BOOKING CARD
+    ============================================= */
     .prop-booking-card {
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-2xl);
-      padding: 28px;
-      position: sticky;
-      top: 88px;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.09);
-      transition: box-shadow 0.3s;
+      background: var(--surface-color); border: 1px solid var(--border-color);
+      border-radius: var(--radius-2xl); padding: 28px; position: sticky; top: 88px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.09); transition: box-shadow 0.3s;
     }
+    .prop-booking-card:hover { box-shadow: 0 12px 50px rgba(0,0,0,0.13); }
 
-    .prop-booking-card:hover {
-      box-shadow: 0 12px 50px rgba(0,0,0,0.13);
-    }
+    .booking-price { display: flex; align-items: baseline; gap: 8px; margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+    .price-val { font-size: 1.9rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em; line-height: 1; }
 
-    .booking-price {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      margin-bottom: 22px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border-color);
-    }
+    .booking-perks { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+    .booking-perk { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--text-muted); }
+    .booking-perk i { color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }
 
-    .price-val {
-      font-size: 1.9rem;
-      font-weight: 800;
-      color: var(--text-main);
-      letter-spacing: -0.02em;
-      line-height: 1;
-    }
+    .booking-info-box { display: flex; gap: 10px; padding: 14px; background: var(--bg-color); border-radius: var(--radius-xl); margin-bottom: 20px; border: 1px solid var(--border-color); }
+    .booking-info-box i { color: var(--primary); font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+    .booking-info-box p { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; margin: 0; }
 
-    /* Price highlights */
-    .booking-perks {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 22px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .booking-perk {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.88rem;
-      color: var(--text-muted);
-    }
-
-    .booking-perk i {
-      color: var(--primary);
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-
-    /* Booking info box */
-    .booking-info-box {
-      display: flex;
-      gap: 10px;
-      padding: 14px;
-      background: var(--bg-color);
-      border-radius: var(--radius-xl);
-      margin-bottom: 20px;
-      border: 1px solid var(--border-color);
-    }
-
-    .booking-info-box i {
-      color: var(--primary);
-      font-size: 1.2rem;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .booking-info-box p {
-      font-size: 0.84rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      margin: 0;
-    }
-
-    /* CTA Button */
     .book-cta-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      padding: 15px 24px;
-      background: linear-gradient(135deg, var(--primary), #6c7fd8);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-xl);
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 700;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 20px rgba(var(--primary-rgb, 67,90,191), 0.35);
-      letter-spacing: 0.01em;
+      display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+      padding: 15px 24px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff; border: none; border-radius: var(--radius-xl); font-family: inherit;
+      font-size: 1rem; font-weight: 700; text-decoration: none; cursor: pointer;
+      transition: var(--transition); box-shadow: 0 4px 20px rgba(67,90,191,0.3);
     }
-
-    .book-cta-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(var(--primary-rgb, 67,90,191), 0.5);
-      filter: brightness(1.07);
-    }
-
-    .book-cta-btn:active { transform: translateY(0); }
-
+    .book-cta-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); filter: brightness(1.05); }
     .book-cta-btn i { font-size: 1.2rem; }
 
-    .no-charge-text {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      margin-top: 12px;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-
-    .no-charge-text i { font-size: 0.95rem; }
-
-    /* ── Share button ── */
-    .prop-share-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
+    .no-charge-text { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 12px; font-size: 0.82rem; color: var(--text-muted); }
+    
+    .prop-share-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .share-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 16px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-full);
-      background: transparent;
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-full); background: transparent; color: var(--text-muted); font-family: inherit; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
     }
+    .share-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(67,90,191,0.06); }
 
-    .share-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: rgba(var(--primary-rgb, 67,90,191), 0.06);
+    /* =============================================
+       LIGHTBOX & TOASTS
+    ============================================= */
+    .lightbox-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999;
+      align-items: center; justify-content: center; backdrop-filter: blur(10px);
     }
+    .lightbox-overlay.active { display: flex; }
+    .lightbox-img-wrapper { max-width: 90vw; max-height: 90vh; position: relative; }
+    .lightbox-img { max-width: 100%; max-height: 90vh; object-fit: contain; transition: transform 0.3s ease; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+    .lightbox-img.zoomed { transform: scale(1.5); cursor: zoom-out; }
+    .close-lightbox { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: white; font-size: 2rem; cursor: pointer; z-index: 10; }
+    .lightbox-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: none; color: white; font-size: 2rem; padding: 10px; cursor: pointer; border-radius: 50%; transition: background 0.3s; z-index: 10; }
+    .lightbox-btn:hover { background: rgba(255,255,255,0.3); }
+    .lightbox-btn.prev-btn { left: 20px; }
+    .lightbox-btn.next-btn { right: 20px; }
 
-    /* ── Divider ── */
-    .section-divider {
-      height: 1px;
-      background: var(--border-color);
-      margin: 36px 0;
-    }
-
-    /* ── Auth Modal ── */
-    .auth-modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .auth-modal-overlay.active { display: flex; }
-
-    /* ── Toast Notification ── */
-    #toast-container {
-      position: fixed;
-      bottom: 24px;
-      inset-inline-end: 24px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      pointer-events: none;
-    }
-
+    #toast-container { position: fixed; bottom: 24px; inset-inline-end: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .toast {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-      font-size: 0.88rem;
-      color: var(--text-main);
-      pointer-events: auto;
-      animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
-      max-width: 320px;
+      display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: var(--surface-color);
+      border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      font-size: 0.88rem; color: var(--text-main); pointer-events: auto; animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1); max-width: 320px; font-weight: 500;
     }
-
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(20px) scale(0.95); }
-      to   { opacity: 1; transform: translateY(0)    scale(1);    }
-    }
-
-    .toast.fade-out {
-      animation: toastOut 0.3s ease forwards;
-    }
-
-    @keyframes toastOut {
-      to { opacity: 0; transform: translateY(10px); }
-    }
-
+    @keyframes toastIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .toast.fade-out { animation: toastOut 0.3s ease forwards; }
+    @keyframes toastOut { to { opacity: 0; transform: translateY(10px); } }
     .toast i { font-size: 1.2rem; }
-    .toast.success i { color: #22c55e; }
-    .toast.info    i { color: var(--primary); }
+    .toast.success i { color: var(--success); }
+    .toast.error i { color: var(--error); }
+    .toast.info i { color: var(--primary); }
 
-    /* ── Responsive ── */
     @media (max-width: 640px) {
       .property-container { padding: 20px 16px 60px; }
       .prop-title { font-size: 1.4rem; }
@@ -739,54 +384,34 @@
 </head>
 <body>
 
-  <!-- ── Toast Container ── -->
   <div id="toast-container"></div>
 
   <!-- ======== Navbar ======== -->
   <nav class="navbar inner-nav">
-    <a href="index.html" class="back-btn font-medium">
+    <a href="index.html" class="back-btn">
       <i class="ph ph-arrow-left"></i>
       <span data-i18n="back_home">Back to Home</span>
     </a>
 
-    <a href="index.html" class="logo" id="home-logo-btn">
-      <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
+    <a href="index.html" class="logo" id="home-logo-btn" style="text-decoration:none; display:flex; align-items:center; gap:8px; font-weight:800; font-size:1.4rem; color:var(--primary);">
+      <i class="ph ph-buildings" style="font-size: 2rem;"></i> OreBooking
     </a>
 
-    <div class="nav-actions" style="margin-inline-start: auto;">
-      <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
-        <i class="ph ph-moon"></i>
-      </button>
-      <button id="lang-toggle" class="lang-btn font-medium">العربية</button>
-
+    <div class="nav-actions">
+      <button id="lang-toggle" class="lang-btn"><i class="ph ph-globe"></i> <span>EN</span></button>
+      <button id="theme-toggle" class="icon-btn"><i class="ph ph-moon"></i></button>
       <div class="profile-container">
         <button id="open-auth-btn" class="profile-menu">
           <i class="ph ph-user"></i>
         </button>
-        <div id="profile-dropdown" class="profile-dropdown">
-          <div class="dropdown-header">
-            <span class="font-bold" id="dropdown-user-name">User Name</span>
-            <span class="text-muted text-sm" id="dropdown-user-email">user@email.com</span>
-          </div>
-          <div class="dropdown-body">
-            <a href="index.html" class="dropdown-item" style="text-decoration:none;" id="my-favorites-btn">
-              <i class="ph ph-heart"></i>
-              <span data-i18n="my_favorites">My Favorites</span>
-            </a>
-            <button class="dropdown-item text-danger" id="logout-btn">
-              <i class="ph ph-sign-out"></i>
-              <span data-i18n="logout">Log Out</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </nav>
 
   <!-- ======== Main Content ======== -->
-  <main class="container property-container">
+  <main class="property-container">
 
-    <!-- ── Skeleton (يظهر ريثما تتحمل البيانات) ── -->
+    <!-- Skeleton Loading -->
     <div id="prop-skeleton">
       <div class="skeleton skeleton-title"></div>
       <div class="skeleton skeleton-meta" style="width:30%; margin-bottom:28px;"></div>
@@ -798,13 +423,12 @@
       </div>
     </div>
 
-    <!-- ── Real Content (مخفي حتى تتحمل البيانات) ── -->
+    <!-- Real Content (Hidden initially) -->
     <div id="prop-real-content" style="display:none;">
 
-      <!-- Property Header -->
       <div class="prop-header">
         <div class="prop-share-row">
-          <h1 class="prop-title font-bold" id="prop-title" style="flex:1; margin:0;"></h1>
+          <h1 class="prop-title" id="prop-title" style="flex:1; margin:0;"></h1>
           <button class="share-btn" id="share-btn" onclick="handleShare()">
             <i class="ph ph-share-network"></i>
             <span id="share-text">Share</span>
@@ -822,21 +446,19 @@
         </div>
       </div>
 
-      <!-- 🖼️ Image Gallery Slider -->
+      <!-- Image Gallery Slider -->
       <div class="prop-image-gallery" id="gallery-container">
         <div class="slider-container" id="slider-container">
-          <button class="slider-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous image">
+          <button class="slider-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous">
             <i class="ph ph-caret-left"></i>
           </button>
           <div class="slider-track" id="slider-track"></div>
-          <button class="slider-btn next-btn" onclick="nextSlide(event)" aria-label="Next image">
+          <button class="slider-btn next-btn" onclick="nextSlide(event)" aria-label="Next">
             <i class="ph ph-caret-right"></i>
           </button>
           <div class="slider-dots-container" id="slider-dots"></div>
-          <!-- Badge عدد الصور -->
           <div class="slider-count-badge" id="slider-count-badge">1 / 1</div>
-          <!-- زر Fullscreen -->
-          <button class="slider-fullscreen-btn" onclick="openLightbox()" aria-label="View fullscreen">
+          <button class="slider-fullscreen-btn" onclick="openLightbox()" aria-label="Fullscreen">
             <i class="ph ph-arrows-out"></i>
           </button>
         </div>
@@ -845,14 +467,11 @@
       <!-- Content Grid -->
       <div class="prop-content-grid">
 
-        <!-- ======== Info Column ======== -->
+        <!-- Info Column -->
         <div class="prop-details">
-
-          <!-- About -->
-          <h2 class="font-bold" data-i18n="about_prop">About this space</h2>
+          <h2 data-i18n="about_prop">About this space</h2>
           <p class="prop-description" id="prop-desc"></p>
 
-          <!-- Host Card -->
           <div class="host-card" id="host-card">
             <div class="host-avatar">
               <i class="ph ph-user-circle"></i>
@@ -867,64 +486,43 @@
             </div>
           </div>
 
-          <!-- Features List -->
           <div class="prop-features">
-            <h3 class="font-bold" data-i18n="what_offers">What this place offers</h3>
+            <h3 data-i18n="what_offers">What this place offers</h3>
             <ul class="features-list" id="prop-features"></ul>
           </div>
 
-          <!-- 🗺️ Map Section -->
+          <!-- Map Section -->
           <div class="map-section" id="prop-map-section">
-            <h3 class="font-bold">
+            <h3>
               <i class="ph ph-map-trifold"></i>
               <span id="map-title">Where you'll be</span>
             </h3>
             <div id="property-map"></div>
-            <a id="map-open-link"
-               class="map-open-btn"
-               href="#"
-               target="_blank"
-               rel="noopener noreferrer"
-               style="display:none;">
+            <a id="map-open-link" class="map-open-btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
               <i class="ph ph-arrow-square-out"></i>
               <span id="open-maps-text">Open in Google Maps</span>
             </a>
           </div>
+        </div>
 
-        </div><!-- /prop-details -->
-
-        <!-- ======== Booking Card ======== -->
+        <!-- Booking Card -->
         <div class="prop-booking-card">
-
-          <!-- السعر -->
           <div class="booking-price">
             <span class="price-val" id="prop-price">0 DZD</span>
             <span class="text-muted text-sm">/ <span data-i18n="night">night</span></span>
           </div>
 
-          <!-- مزايا سريعة -->
           <div class="booking-perks">
-            <div class="booking-perk">
-              <i class="ph-fill ph-shield-check"></i>
-              <span id="perk-1">Free cancellation within 24h</span>
-            </div>
-            <div class="booking-perk">
-              <i class="ph-fill ph-clock-countdown"></i>
-              <span id="perk-2">Instant confirmation</span>
-            </div>
-            <div class="booking-perk">
-              <i class="ph-fill ph-headset"></i>
-              <span id="perk-3">24/7 support</span>
-            </div>
+            <div class="booking-perk"><i class="ph-fill ph-shield-check"></i> <span id="perk-1">Free cancellation within 24h</span></div>
+            <div class="booking-perk"><i class="ph-fill ph-clock-countdown"></i> <span id="perk-2">Instant confirmation</span></div>
+            <div class="booking-perk"><i class="ph-fill ph-headset"></i> <span id="perk-3">24/7 support</span></div>
           </div>
 
-          <!-- معلومة صغيرة -->
           <div class="booking-info-box">
             <i class="ph ph-info"></i>
             <p id="booking-info-text">Choose your dates and number of guests on the next page to see the final price.</p>
           </div>
 
-          <!-- زر الحجز -->
           <a href="#" class="book-cta-btn" id="book-now-link">
             <i class="ph ph-calendar-check"></i>
             <span data-i18n="book_now">Reserve Now</span>
@@ -934,139 +532,34 @@
             <i class="ph ph-lock-simple"></i>
             <span data-i18n="wont_charged">You won't be charged yet</span>
           </div>
+        </div>
 
-        </div><!-- /prop-booking-card -->
-
-      </div><!-- /prop-content-grid -->
-    </div><!-- /prop-real-content -->
-
+      </div>
+    </div>
   </main>
 
-  <!-- ======== 🔍 Lightbox ======== -->
+  <!-- Lightbox -->
   <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
-    <button class="close-lightbox" onclick="closeLightbox()" aria-label="Close">
-      <i class="ph ph-x"></i>
-    </button>
-    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous">
-      <i class="ph ph-caret-left"></i>
-    </button>
+    <button class="close-lightbox" onclick="closeLightbox()" aria-label="Close"><i class="ph ph-x"></i></button>
+    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous"><i class="ph ph-caret-left"></i></button>
     <div class="lightbox-img-wrapper">
-      <img src=""
-           id="lightbox-img"
-           class="lightbox-img"
-           onclick="toggleZoom(event)"
-           title="Click to Zoom"
-           alt="Property Image">
+      <img src="" id="lightbox-img" class="lightbox-img" onclick="toggleZoom(event)" title="Click to Zoom" alt="Property Image">
     </div>
-    <button class="lightbox-btn next-btn" onclick="nextSlide(event)" aria-label="Next">
-      <i class="ph ph-caret-right"></i>
-    </button>
+    <button class="lightbox-btn next-btn" onclick="nextSlide(event)" aria-label="Next"><i class="ph ph-caret-right"></i></button>
   </div>
 
-  <!-- ======== Auth Modal ======== -->
-  <div id="auth-modal" class="auth-modal-overlay">
-    <div class="auth-modal">
-      <button id="close-auth-btn" class="modal-close-btn">
-        <i class="ph ph-x"></i>
-      </button>
-
-      <div class="modal-logo-wrapper">
-        <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking" class="modal-logo">
-      </div>
-
-      <div id="auth-message" class="auth-message" style="display:none;"></div>
-
-      <!-- Login Form -->
-      <form id="login-form" class="auth-form active">
-        <h2 class="font-bold" data-i18n="welcome_back">Welcome back</h2>
-        <p class="text-muted text-sm" data-i18n="login_desc">Enter your details to access your account.</p>
-
-        <div class="form-group">
-          <label data-i18n="email">Email Address</label>
-          <input type="email" id="login-email" required
-                 data-i18n-placeholder="email" placeholder="Email Address">
-        </div>
-        <div class="form-group">
-          <label data-i18n="password">Password</label>
-          <input type="password" id="login-password" required
-                 data-i18n-placeholder="password" placeholder="Password">
-        </div>
-        <div class="form-row-between">
-          <label class="checkbox-label">
-            <input type="checkbox" id="remember-me">
-            <span data-i18n="remember_me">Remember me</span>
-          </label>
-          <a href="#" class="link-small" data-i18n="forgot_pass">Forgot password?</a>
-        </div>
-
-        <button type="submit" class="primary-btn font-bold">
-          <span data-i18n="sign_in">Sign In</span>
-        </button>
-
-        <div class="divider"><span data-i18n="or_continue">or continue with</span></div>
-
-        <button type="button" id="google-login-btn" class="google-btn">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-               alt="Google" width="20" height="20">
-          Google
-        </button>
-
-        <p class="text-center text-sm mt-3">
-          <span data-i18n="no_account">Don't have an account?</span>
-          <a href="#" id="go-to-register" class="link-small" data-i18n="sign_up">Sign up</a>
-        </p>
-      </form>
-
-      <!-- Register Form -->
-      <form id="register-form" class="auth-form">
-        <h2 class="font-bold" data-i18n="create_account">Create an account</h2>
-        <p class="text-muted text-sm" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
-
-        <div class="form-group">
-          <label data-i18n="full_name">Full Name</label>
-          <input type="text" id="reg-name" required
-                 data-i18n-placeholder="full_name" placeholder="Full Name">
-        </div>
-        <div class="form-group">
-          <label data-i18n="email">Email Address</label>
-          <input type="email" id="reg-email" required
-                 data-i18n-placeholder="email" placeholder="Email Address">
-        </div>
-        <div class="form-group">
-          <label data-i18n="password">Password</label>
-          <input type="password" id="reg-password" required
-                 data-i18n-placeholder="password" placeholder="Password">
-        </div>
-
-        <button type="submit" class="primary-btn font-bold">
-          <span data-i18n="sign_up_btn">Create Account</span>
-        </button>
-
-        <p class="text-center text-sm mt-3">
-          <span data-i18n="has_account">Already have an account?</span>
-          <a href="#" id="go-to-login" class="link-small" data-i18n="sign_in">Sign In</a>
-        </p>
-      </form>
-
-    </div>
-  </div>
-
-  <!-- ======== Scripts ======== -->
   <script src="script.js"></script>
 
   <script>
-  // =======================================================
-  //  🗺️ initPropertyMap
-  // =======================================================
   window.initPropertyMap = function(lat, lng, locationName, lang) {
-    const mapEl   = document.getElementById('property-map');
+    const mapEl = document.getElementById('property-map');
     const mapLink = document.getElementById('map-open-link');
-    const mapTitle= document.getElementById('map-title');
-    const mapsText= document.getElementById('open-maps-text');
+    const mapTitle = document.getElementById('map-title');
+    const mapsText = document.getElementById('open-maps-text');
     if (!mapEl) return;
 
     const isAr = lang === 'ar';
-    if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار'        : "Where you'll be";
+    if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار' : "Where you'll be";
     if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
 
     if (!lat || !lng) {
@@ -1086,108 +579,62 @@
 
     if (mapEl._leaflet_id) {
       mapEl._leaflet_id = null;
-      mapEl.innerHTML   = '';
+      mapEl.innerHTML = '';
     }
 
-    const map = L.map('property-map', {
-      center: [lat, lng],
-      zoom: 15,
-      scrollWheelZoom: false,
-      zoomControl: true
-    });
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
-      maxZoom: 19
-    }).addTo(map);
+    const map = L.map('property-map', { center: [lat, lng], zoom: 15, scrollWheelZoom: false, zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
     const customIcon = L.divIcon({
       className: '',
-      html: `<div style="
-        width:38px; height:38px;
-        background:var(--primary,#435abf);
-        border:3px solid white;
-        border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);
-        box-shadow:0 4px 14px rgba(0,0,0,0.3);
-      "></div>`,
-      iconSize:    [38, 38],
-      iconAnchor:  [19, 38],
-      popupAnchor: [0, -42]
+      html: `<div style="width:38px; height:38px; background:var(--primary); border:3px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 14px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -42]
     });
 
-    L.marker([lat, lng], { icon: customIcon })
-      .addTo(map)
-      .bindPopup(`<strong style="font-family:inherit; font-size:0.95rem;">${locationName || ''}</strong>`)
-      .openPopup();
-
+    L.marker([lat, lng], { icon: customIcon }).addTo(map).bindPopup(`<strong>${locationName || ''}</strong>`).openPopup();
     setTimeout(() => map.invalidateSize(), 300);
 
     if (mapLink) {
-      mapLink.href          = `https://www.google.com/maps?q=${lat},${lng}`;
+      mapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
       mapLink.style.display = 'inline-flex';
     }
   };
 
-  // =======================================================
-  //  🎛️ Page Init
-  // =======================================================
   document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const propId    = urlParams.get('id');
-    const lang      = localStorage.getItem('ore_lang') || 'en';
-    const isAr      = lang === 'ar';
+    const propId = urlParams.get('id');
+    const lang = localStorage.getItem('ore_lang') || 'en';
+    const isAr = lang === 'ar';
 
-    // رابط زر الحجز
     const bookNowLink = document.getElementById('book-now-link');
-    if (bookNowLink && propId) {
-      bookNowLink.href = `booking.html?id=${propId}`;
-    }
+    if (bookNowLink && propId) bookNowLink.href = `booking.html?id=${propId}`;
 
-    // ترجمة النصوص الثابتة
     const infoText = document.getElementById('booking-info-text');
-    if (infoText) {
-      infoText.textContent = isAr
-        ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.'
-        : 'Choose your dates and number of guests on the next page to see the final price.';
-    }
+    if (infoText) infoText.textContent = isAr ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.' : 'Choose your dates and number of guests on the next page to see the final price.';
 
-    // ترجمة مزايا بطاقة الحجز
     const perk1 = document.getElementById('perk-1');
     const perk2 = document.getElementById('perk-2');
     const perk3 = document.getElementById('perk-3');
-    if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة'  : 'Free cancellation within 24h';
-    if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز'           : 'Instant confirmation';
-    if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة'        : '24/7 support';
+    if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
+    if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز' : 'Instant confirmation';
+    if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة' : '24/7 support';
 
-    // ترجمة زر المشاركة
     const shareText = document.getElementById('share-text');
     if (shareText) shareText.textContent = isAr ? 'مشاركة' : 'Share';
 
-    // ترجمة Host Card
-    const hostSince     = document.getElementById('host-since');
+    const hostSince = document.getElementById('host-since');
     const hostBadgeText = document.getElementById('host-badge-text');
-    if (hostSince)     hostSince.textContent     = isAr ? 'مضيف منذ 2024'  : 'Hosting since 2024';
-    if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق'     : 'Verified Host';
-
-    // إظهار المحتوى الحقيقي وإخفاء الـ Skeleton بعد تحميل العقار
-    // (يتم استدعاؤه من _fillPropertyPage في script.js)
+    if (hostSince) hostSince.textContent = isAr ? 'مضيف منذ 2024' : 'Hosting since 2024';
+    if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق' : 'Verified Host';
   });
 
-  // =======================================================
-  //  ✅ إظهار المحتوى بعد تحميل البيانات
-  //  — يُستدعى من _fillPropertyPage في script.js
-  // =======================================================
   window.showPropertyContent = function() {
     const skeleton = document.getElementById('prop-skeleton');
-    const content  = document.getElementById('prop-real-content');
+    const content = document.getElementById('prop-real-content');
     if (skeleton) skeleton.style.display = 'none';
-    if (content)  content.style.display  = 'block';
+    if (content) content.style.display = 'block';
   };
 
-  // =======================================================
-  //  📢 Toast Notification
-  // =======================================================
   window.showToast = function(msg, type = 'info', duration = 3000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -1195,7 +642,7 @@
     const icons = { success: 'ph-check-circle', info: 'ph-info', error: 'ph-warning' };
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `<i class="ph-fill ${icons[type] || 'ph-info'}"></i> ${msg}`;
+    toast.innerHTML = `<i class="ph-fill ${icons[type] || 'ph-info'}"></i> <span>${msg}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -1204,33 +651,23 @@
     }, duration);
   };
 
-  // =======================================================
-  //  📊 Image Counter Badge
-  // =======================================================
   window.updateImageBadge = function(current, total) {
     const badge = document.getElementById('slider-count-badge');
     if (badge) badge.textContent = `${current + 1} / ${total}`;
   };
 
-  // =======================================================
-  //  🔗 Share Button
-  // =======================================================
   window.handleShare = function() {
-    const lang  = localStorage.getItem('ore_lang') || 'en';
-    const isAr  = lang === 'ar';
+    const lang = localStorage.getItem('ore_lang') || 'en';
     const title = document.getElementById('prop-title')?.textContent || 'OreBooking Property';
-    const url   = window.location.href;
+    const url = window.location.href;
 
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url).then(() => {
-        showToast(
-          isAr ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!',
-          'success'
-        );
+        showToast(lang === 'ar' ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!', 'success');
       }).catch(() => {
-        showToast(isAr ? 'تعذّر نسخ الرابط' : 'Could not copy link', 'error');
+        showToast(lang === 'ar' ? 'تعذّر نسخ الرابط' : 'Could not copy link', 'error');
       });
     }
   };
