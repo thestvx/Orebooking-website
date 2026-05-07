@@ -138,11 +138,17 @@
       padding: 8px 8px 8px 24px; box-shadow: 0 12px 32px rgba(0,0,0,0.08);
       border: 1px solid var(--border-color); max-width: 850px; width: 100%;
       transition: var(--transition-smooth);
+      position: relative; /* Added relative positioning */
+      z-index: 50; /* Base z-index */
     }
     html[dir="rtl"] .search-bar { padding: 8px 24px 8px 8px; }
     .search-bar:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
     
-    .search-field { flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: 8px 16px; border-radius: var(--radius-full); transition: background var(--transition-fast); }
+    .search-field { 
+      flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start; 
+      padding: 8px 16px; border-radius: var(--radius-full); transition: background var(--transition-fast); 
+      z-index: 60; /* Added z-index */
+    }
     .search-field:hover { background: rgba(0,0,0,0.03); }
     .dark .search-field:hover { background: rgba(255,255,255,0.05); }
     
@@ -157,6 +163,7 @@
       padding: 16px 32px; font-size: 1rem; font-weight: 600; cursor: pointer;
       display: flex; align-items: center; gap: 8px; transition: var(--transition-smooth);
       box-shadow: 0 4px 14px rgba(67,90,191,0.3);
+      z-index: 60; /* Added z-index */
     }
     .search-btn:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(67,90,191,0.4); }
 
@@ -166,6 +173,7 @@
     .categories {
       display: flex; align-items: center; justify-content: center; gap: 14px;
       flex-wrap: wrap; padding: 10px 20px 30px;
+      position: relative; z-index: 10; /* Lower z-index than search-bar */
     }
     .category-btn {
       display: flex; align-items: center; gap: 8px; padding: 12px 24px;
@@ -234,7 +242,8 @@
     .search-dropdown {
       position: absolute; top: calc(100% + 12px); left: 0; right: 0; min-width: 250px;
       background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-xl);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 200; display: none; padding: 12px 0;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 1000; /* Increased Z-Index greatly */
+      display: none; padding: 12px 0;
     }
     .search-dropdown.active { display: block; animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .search-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: var(--transition-fast); }
@@ -255,7 +264,7 @@
        ========================================= */
     @media (max-width: 992px) {
       .search-bar { flex-direction: column; background: transparent; box-shadow: none; border: none; padding: 0; gap: 12px; }
-      .search-field { background: var(--surface-color); width: 100%; border: 1px solid var(--border-color); padding: 12px 20px; box-shadow: var(--shadow-sm); }
+      .search-field { background: var(--surface-color); width: 100%; border: 1px solid var(--border-color); padding: 12px 20px; box-shadow: var(--shadow-sm); z-index: 60;}
       .search-divider { display: none; }
       .search-btn { width: 100%; justify-content: center; padding: 16px; }
       .hero { padding-top: 60px; }
@@ -315,7 +324,10 @@
             <button class="dropdown-item" id="my-bookings-btn" role="menuitem"><i class="ph ph-list-checks"></i> <span data-i18n="my_bookings">My Bookings</span></button>
             <button class="dropdown-item" id="my-favorites-btn" role="menuitem"><i class="ph ph-heart"></i> <span data-i18n="my_favorites">My Favorites</span></button>
             <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
-            <button class="dropdown-item text-danger" id="logout-btn" role="menuitem"><i class="ph ph-sign-out"></i> <span data-i18n="logout">Log Out</span></button>
+            <!-- Fixed Logout Button Structure with ID properly placed -->
+            <button class="dropdown-item text-danger" id="fixed-logout-btn" role="menuitem">
+              <i class="ph ph-sign-out"></i> <span data-i18n="logout">Log Out</span>
+            </button>
           </div>
         </div>
       </div>
@@ -378,7 +390,8 @@
           <option value="rating" data-i18n="sort_rating">Top Rated</option>
         </select>
 
-        <button id="clear-search-btn" style="display:none; padding:12px 20px; border-radius:var(--radius-full); background: transparent; border: 1.5px solid var(--text-muted); color: var(--text-muted); font-size:0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.3s;" aria-label="Clear search">
+        <!-- Hidden clear search button as requested -->
+        <button id="clear-search-btn" style="display:none !important;" aria-label="Clear search">
           <i class="ph ph-x"></i> <span data-i18n="clear_search">Clear Search</span>
         </button>
       </div>
@@ -576,6 +589,24 @@
     var _mobBtns = document.querySelectorAll('.mob-nav-btn');
     function _setMobActive(id) { _mobBtns.forEach(b => b.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
     document.getElementById('mob-nav-home')?.addEventListener('click', () => { _setMobActive('mob-nav-home'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+    // ── FIXED LOGOUT LOGIC ────────────────────────
+    document.getElementById('fixed-logout-btn')?.addEventListener('click', () => {
+      if (firebase && firebase.auth) {
+        firebase.auth().signOut().then(() => {
+          // إخفاء القائمة المنسدلة
+          const profileDropdown = document.getElementById('profile-dropdown');
+          if (profileDropdown) profileDropdown.classList.remove('active');
+          
+          // تحديث الصفحة فور تسجيل الخروج للتأكد من زوال حالة تسجيل الدخول
+          window.location.reload();
+        }).catch((error) => {
+          console.error("Logout Error:", error);
+          alert("حدث خطأ أثناء تسجيل الخروج. يرجى المحاولة مرة أخرى.");
+        });
+      }
+    });
+
   </script>
 
 </body>
