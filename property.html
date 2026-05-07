@@ -390,7 +390,7 @@
   <nav class="navbar inner-nav">
     <a href="index.html" class="back-btn">
       <i class="ph ph-arrow-left"></i>
-      <span data-i18n="back_home">Back to Home</span>
+      <span data-i18n="back_home">Back</span>
     </a>
 
     <a href="index.html" class="logo" id="home-logo-btn" style="text-decoration:none; display:flex; align-items:center; gap:8px; font-weight:800; font-size:1.4rem; color:var(--primary);">
@@ -400,11 +400,6 @@
     <div class="nav-actions">
       <button id="lang-toggle" class="lang-btn"><i class="ph ph-globe"></i> <span>EN</span></button>
       <button id="theme-toggle" class="icon-btn"><i class="ph ph-moon"></i></button>
-      <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu">
-          <i class="ph ph-user"></i>
-        </button>
-      </div>
     </div>
   </nav>
 
@@ -508,7 +503,7 @@
         <!-- Booking Card -->
         <div class="prop-booking-card">
           <div class="booking-price">
-            <span class="price-val" id="prop-price">0 DZD</span>
+            <span class="price-val" id="prop-price"></span>
             <span class="text-muted text-sm">/ <span data-i18n="night">night</span></span>
           </div>
 
@@ -548,6 +543,7 @@
     <button class="lightbox-btn next-btn" onclick="nextSlide(event)" aria-label="Next"><i class="ph ph-caret-right"></i></button>
   </div>
 
+  <!-- We should ideally use external scripts, but since we rely on existing logic, we keep the initialization -->
   <script src="script.js"></script>
 
   <script>
@@ -608,9 +604,9 @@
         const data = doc.data();
 
         // 3. Inject Data into UI
-        document.getElementById("prop-title").textContent = data.titleEn || data.titleAr || "Unnamed Property";
-        document.getElementById("prop-location").textContent = data.locationEn || data.locationAr || "Unknown Location";
-        document.getElementById("prop-desc").textContent = data.descEn || data.descAr || "No description available.";
+        document.getElementById("prop-title").textContent = (isAr ? data.titleAr : data.titleEn) || data.titleEn || data.titleAr || "Unnamed Property";
+        document.getElementById("prop-location").textContent = (isAr ? data.locationAr : data.locationEn) || data.locationEn || data.locationAr || "Unknown Location";
+        document.getElementById("prop-desc").textContent = (isAr ? data.descAr : data.descEn) || data.descEn || data.descAr || "No description available.";
         
         const price = Number(data.price || 0).toLocaleString();
         document.getElementById("prop-price").textContent = `${price} DZD`;
@@ -641,14 +637,15 @@
 
         features.forEach(f => {
           const li = document.createElement('li');
-          const icon = iconMap[f.toLowerCase()] || 'ph-check-circle';
+          const featureName = f.toLowerCase();
+          const icon = iconMap[featureName] || 'ph-check-circle';
           li.innerHTML = `<i class="ph ${icon}"></i> <span>${f}</span>`;
           featContainer.appendChild(li);
         });
 
         // Initialize Map
         if (data.locationLat && data.locationLng) {
-          initPropertyMap(data.locationLat, data.locationLng, data.locationEn, lang);
+          initPropertyMap(data.locationLat, data.locationLng, (isAr ? data.locationAr : data.locationEn), lang);
         } else {
           // Hide map if no coordinates
           initPropertyMap(null, null, null, lang);
