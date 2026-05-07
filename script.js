@@ -382,6 +382,51 @@ function init() {
 // Ensure init is called
 document.addEventListener("DOMContentLoaded", init);
 
+
+// ==========================================
+// 4.1 AUTH MODAL FUNCTIONS (ADDED FIX HERE)
+// ==========================================
+function openModal() {
+  const modal = document.getElementById("auth-modal");
+  if (modal) {
+    modal.classList.add("active");
+    document.body.classList.add("modal-open");
+  }
+}
+
+function closeModal() {
+  const modal = document.getElementById("auth-modal");
+  if (modal) {
+    modal.classList.remove("active");
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function switchForm(formType) {
+  const loginForm = document.getElementById("login-form");
+  const registerForm = document.getElementById("register-form");
+  const forgotForm = document.getElementById("forgot-form");
+  
+  if (loginForm) loginForm.style.display = formType === 'login' ? 'flex' : 'none';
+  if (registerForm) registerForm.style.display = formType === 'register' ? 'flex' : 'none';
+  if (forgotForm) forgotForm.style.display = formType === 'forgot' ? 'flex' : 'none';
+}
+
+function handleAuthButtonClick(e) {
+  if (e) e.preventDefault();
+  
+  if (state.user) {
+    const dropdown = document.getElementById("profile-dropdown");
+    if (dropdown) {
+      dropdown.classList.toggle("active");
+    }
+  } else {
+    switchForm('login');
+    openModal();
+  }
+}
+
+
 // ==========================================
 // 4.5. MISSING CATEGORY RENDER FUNCTION
 // ==========================================
@@ -436,7 +481,6 @@ window.selectCategory = function(catName) {
     }
   }
 };
-
 
 // ==========================================
 // 5. GENERAL HELPERS
