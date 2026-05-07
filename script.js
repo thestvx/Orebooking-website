@@ -307,7 +307,7 @@ function init() {
       renderListings();
     });
   }
-
+  
   if (myBookingsBtn) {
     myBookingsBtn.addEventListener("click", () => {
       if (profileDropdown) profileDropdown.classList.remove("active");
@@ -381,6 +381,62 @@ function init() {
 
 // Ensure init is called
 document.addEventListener("DOMContentLoaded", init);
+
+// ==========================================
+// 4.5. MISSING CATEGORY RENDER FUNCTION
+// ==========================================
+function renderCategories() {
+  const container = document.getElementById("categories-container");
+  if (!container) return;
+
+  container.innerHTML = categories.map((cat, idx) => {
+    const isAr = state.lang === "ar";
+    const label = isAr ? cat.label_ar : cat.label_en;
+    const isActive = state.activeCategory === cat.label_en;
+    const activeClass = isActive ? "active" : "";
+
+    return `
+      <button class="category-btn ${activeClass}" onclick="selectCategory('${cat.label_en}')" data-idx="${idx}">
+        <i class="ph ${cat.icon}"></i>
+        <span>${escapeHtml(label)}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+window.selectCategory = function(catName) {
+  if (state.activeCategory === catName) {
+    state.activeCategory = null; 
+  } else {
+    state.activeCategory = catName;
+  }
+  
+  if (typeof renderCategories === 'function') renderCategories();
+
+  if (state.activeCategory) {
+    showClearSearchBtn();
+    const sectionTitle = document.getElementById("section-main-title");
+    const isAr = state.lang === "ar";
+    const matchedCat = categories.find(c => c.label_en === state.activeCategory);
+    
+    if (sectionTitle && matchedCat) {
+      sectionTitle.removeAttribute("data-i18n");
+      sectionTitle.textContent = isAr ? `نتائج: ${matchedCat.label_ar}` : `Category: ${matchedCat.label_en}`;
+    }
+
+    const filtered = state.liveProperties.filter(p => propertyMatchesCategory(p, state.activeCategory));
+    if (typeof renderListings === 'function') renderListings(filtered);
+    document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    if (!state.activeSearch) {
+      resetToHome();
+    } else {
+      const searchBtn = document.getElementById("main-search-btn");
+      if (searchBtn) searchBtn.click();
+    }
+  }
+};
+
 
 // ==========================================
 // 5. GENERAL HELPERS
@@ -816,7 +872,7 @@ async function loadPropertiesFromFirestore() {
 
   try {
     const snapshot = await db.collection("properties").where("visible", "==", true).get();
-
+    
     if (!snapshot.empty) {
       state.liveProperties = snapshot.docs.map(doc => {
         const d = doc.data();
@@ -1044,7 +1100,7 @@ window.goToProperty = function(id) {
 // ==========================================
 function showToast(message, type = "info", duration = 3000) {
   let container = document.getElementById("toast-container");
-
+  
   if (!container) {
     container = document.createElement("div");
     container.id = "toast-container";
