@@ -488,7 +488,7 @@
 
           <div class="prop-features">
             <h3 data-i18n="what_offers">What this place offers</h3>
-            <ul class="features-list" id="prop-features"></ul>
+            <ul class="features-list" id="prop-features-list"></ul>
           </div>
 
           <!-- Map Section -->
@@ -551,126 +551,290 @@
   <script src="script.js"></script>
 
   <script>
-  window.initPropertyMap = function(lat, lng, locationName, lang) {
-    const mapEl = document.getElementById('property-map');
-    const mapLink = document.getElementById('map-open-link');
-    const mapTitle = document.getElementById('map-title');
-    const mapsText = document.getElementById('open-maps-text');
-    if (!mapEl) return;
+    // --- Firebase Init ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+      authDomain: "orebooking-website.firebaseapp.com",
+      projectId: "orebooking-website",
+      storageBucket: "orebooking-website.firebasestorage.app"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const isAr = lang === 'ar';
-    if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار' : "Where you'll be";
-    if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
+    let currentImages = [];
+    let currentSlide = 0;
 
-    if (!lat || !lng) {
-      mapEl.style.display = 'none';
-      const existing = document.querySelector('.map-no-location');
-      if (!existing) {
-        const noLoc = document.createElement('div');
-        noLoc.className = 'map-no-location';
-        noLoc.innerHTML = `
-          <i class="ph ph-map-pin-slash"></i>
-          <p>${isAr ? 'لم يتم تحديد موقع لهذا العقار' : 'No location set for this property'}</p>
-        `;
-        mapEl.parentNode.insertBefore(noLoc, mapEl.nextSibling);
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const propId = urlParams.get('id');
+      const lang = localStorage.getItem('ore_lang') || 'en';
+      const isAr = lang === 'ar';
+
+      // 1. Initial UI Setup (Language dependent strings)
+      const bookNowLink = document.getElementById('book-now-link');
+      if (bookNowLink && propId) bookNowLink.href = `booking.html?id=${propId}`;
+
+      const infoText = document.getElementById('booking-info-text');
+      if (infoText) infoText.textContent = isAr ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.' : 'Choose your dates and number of guests on the next page to see the final price.';
+
+      const perk1 = document.getElementById('perk-1');
+      const perk2 = document.getElementById('perk-2');
+      const perk3 = document.getElementById('perk-3');
+      if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
+      if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز' : 'Instant confirmation';
+      if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة' : '24/7 support';
+
+      const shareText = document.getElementById('share-text');
+      if (shareText) shareText.textContent = isAr ? 'مشاركة' : 'Share';
+
+      const hostSince = document.getElementById('host-since');
+      const hostBadgeText = document.getElementById('host-badge-text');
+      if (hostSince) hostSince.textContent = isAr ? 'مضيف منذ 2024' : 'Hosting since 2024';
+      if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق' : 'Verified Host';
+
+      if (!propId) {
+        showToast("No property ID found.", "error");
+        return;
       }
-      return;
-    }
 
-    if (mapEl._leaflet_id) {
-      mapEl._leaflet_id = null;
-      mapEl.innerHTML = '';
-    }
+      // 2. Fetch Data from Firebase
+      try {
+        const doc = await db.collection("properties").doc(propId).get();
+        if (!doc.exists) {
+          showToast("Property not found.", "error");
+          return;
+        }
 
-    const map = L.map('property-map', { center: [lat, lng], zoom: 15, scrollWheelZoom: false, zoomControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        const data = doc.data();
 
-    const customIcon = L.divIcon({
-      className: '',
-      html: `<div style="width:38px; height:38px; background:var(--primary); border:3px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 14px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -42]
+        // 3. Inject Data into UI
+        document.getElementById("prop-title").textContent = data.titleEn || data.titleAr || "Unnamed Property";
+        document.getElementById("prop-location").textContent = data.locationEn || data.locationAr || "Unknown Location";
+        document.getElementById("prop-desc").textContent = data.descEn || data.descAr || "No description available.";
+        
+        const price = Number(data.price || 0).toLocaleString();
+        document.getElementById("prop-price").textContent = `${price} DZD`;
+        
+        // Rating Fallback
+        document.getElementById("prop-rating").textContent = data.rating || "4.8";
+
+        // Setup Images for Slider
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          currentImages = data.images;
+        } else if (data.imageUrl) {
+          currentImages = [data.imageUrl];
+        } else {
+          currentImages = ["images/placeholder.jpg"];
+        }
+        setupSlider(currentImages);
+
+        // Setup Amenities/Features
+        const featContainer = document.getElementById("prop-features-list");
+        featContainer.innerHTML = ""; 
+        const features = data.features || ['wifi', 'parking']; // Fallback
+        
+        const iconMap = {
+          'wifi': 'ph-wifi-high', 'pool': 'ph-swimming-pool', 'parking': 'ph-car',
+          'gym': 'ph-barbell', 'restaurant': 'ph-fork-knife', 'spa': 'ph-flower-lotus',
+          'kitchen': 'ph-cooking-pot', 'ac': 'ph-snowflake'
+        };
+
+        features.forEach(f => {
+          const li = document.createElement('li');
+          const icon = iconMap[f.toLowerCase()] || 'ph-check-circle';
+          li.innerHTML = `<i class="ph ${icon}"></i> <span>${f}</span>`;
+          featContainer.appendChild(li);
+        });
+
+        // Initialize Map
+        if (data.locationLat && data.locationLng) {
+          initPropertyMap(data.locationLat, data.locationLng, data.locationEn, lang);
+        } else {
+          // Hide map if no coordinates
+          initPropertyMap(null, null, null, lang);
+        }
+
+        // Show Content
+        showPropertyContent();
+
+      } catch (err) {
+        console.error("Error fetching property:", err);
+        showToast("Error loading property details.", "error");
+      }
     });
 
-    L.marker([lat, lng], { icon: customIcon }).addTo(map).bindPopup(`<strong>${locationName || ''}</strong>`).openPopup();
-    setTimeout(() => map.invalidateSize(), 300);
+    // --- Slider Logic ---
+    function setupSlider(images) {
+      const track = document.getElementById('slider-track');
+      const dotsContainer = document.getElementById('slider-dots');
+      track.innerHTML = '';
+      dotsContainer.innerHTML = '';
 
-    if (mapLink) {
-      mapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
-      mapLink.style.display = 'inline-flex';
-    }
-  };
+      images.forEach((src, idx) => {
+        // Image
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = `Property Image ${idx + 1}`;
+        track.appendChild(img);
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const propId = urlParams.get('id');
-    const lang = localStorage.getItem('ore_lang') || 'en';
-    const isAr = lang === 'ar';
-
-    const bookNowLink = document.getElementById('book-now-link');
-    if (bookNowLink && propId) bookNowLink.href = `booking.html?id=${propId}`;
-
-    const infoText = document.getElementById('booking-info-text');
-    if (infoText) infoText.textContent = isAr ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.' : 'Choose your dates and number of guests on the next page to see the final price.';
-
-    const perk1 = document.getElementById('perk-1');
-    const perk2 = document.getElementById('perk-2');
-    const perk3 = document.getElementById('perk-3');
-    if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
-    if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز' : 'Instant confirmation';
-    if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة' : '24/7 support';
-
-    const shareText = document.getElementById('share-text');
-    if (shareText) shareText.textContent = isAr ? 'مشاركة' : 'Share';
-
-    const hostSince = document.getElementById('host-since');
-    const hostBadgeText = document.getElementById('host-badge-text');
-    if (hostSince) hostSince.textContent = isAr ? 'مضيف منذ 2024' : 'Hosting since 2024';
-    if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق' : 'Verified Host';
-  });
-
-  window.showPropertyContent = function() {
-    const skeleton = document.getElementById('prop-skeleton');
-    const content = document.getElementById('prop-real-content');
-    if (skeleton) skeleton.style.display = 'none';
-    if (content) content.style.display = 'block';
-  };
-
-  window.showToast = function(msg, type = 'info', duration = 3000) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const icons = { success: 'ph-check-circle', info: 'ph-info', error: 'ph-warning' };
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<i class="ph-fill ${icons[type] || 'ph-info'}"></i> <span>${msg}</span>`;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add('fade-out');
-      toast.addEventListener('animationend', () => toast.remove());
-    }, duration);
-  };
-
-  window.updateImageBadge = function(current, total) {
-    const badge = document.getElementById('slider-count-badge');
-    if (badge) badge.textContent = `${current + 1} / ${total}`;
-  };
-
-  window.handleShare = function() {
-    const lang = localStorage.getItem('ore_lang') || 'en';
-    const title = document.getElementById('prop-title')?.textContent || 'OreBooking Property';
-    const url = window.location.href;
-
-    if (navigator.share) {
-      navigator.share({ title, url }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(url).then(() => {
-        showToast(lang === 'ar' ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!', 'success');
-      }).catch(() => {
-        showToast(lang === 'ar' ? 'تعذّر نسخ الرابط' : 'Could not copy link', 'error');
+        // Dot
+        const dot = document.createElement('button');
+        dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
+        dot.onclick = () => goToSlide(idx);
+        dotsContainer.appendChild(dot);
       });
+
+      updateImageBadge(0, images.length);
     }
-  };
+
+    window.goToSlide = function(index) {
+      if (currentImages.length === 0) return;
+      currentSlide = index;
+      const track = document.getElementById('slider-track');
+      track.style.transform = `translateX(-${currentSlide * 100}%)`;
+      
+      // Update Dots
+      document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
+        dot.className = `slider-dot ${idx === currentSlide ? 'active' : ''}`;
+      });
+
+      updateImageBadge(currentSlide, currentImages.length);
+    };
+
+    window.nextSlide = function(e) {
+      if(e) e.stopPropagation();
+      if (currentSlide < currentImages.length - 1) {
+        goToSlide(currentSlide + 1);
+      } else {
+        goToSlide(0); // loop
+      }
+    };
+
+    window.prevSlide = function(e) {
+      if(e) e.stopPropagation();
+      if (currentSlide > 0) {
+        goToSlide(currentSlide - 1);
+      } else {
+        goToSlide(currentImages.length - 1); // loop
+      }
+    };
+
+    // --- Lightbox Logic ---
+    window.openLightbox = function() {
+      if(currentImages.length === 0) return;
+      const lb = document.getElementById('lightbox');
+      const lbImg = document.getElementById('lightbox-img');
+      lbImg.src = currentImages[currentSlide];
+      lbImg.classList.remove('zoomed');
+      lb.classList.add('active');
+      document.body.classList.add('modal-open');
+    };
+
+    window.closeLightbox = function() {
+      const lb = document.getElementById('lightbox');
+      lb.classList.remove('active');
+      document.body.classList.remove('modal-open');
+    };
+
+    window.toggleZoom = function(e) {
+      e.stopPropagation();
+      e.target.classList.toggle('zoomed');
+    };
+
+    // --- Map Initialization ---
+    window.initPropertyMap = function(lat, lng, locationName, lang) {
+      const mapEl = document.getElementById('property-map');
+      const mapLink = document.getElementById('map-open-link');
+      const mapTitle = document.getElementById('map-title');
+      const mapsText = document.getElementById('open-maps-text');
+      if (!mapEl) return;
+
+      const isAr = lang === 'ar';
+      if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار' : "Where you'll be";
+      if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
+
+      if (!lat || !lng) {
+        mapEl.style.display = 'none';
+        const existing = document.querySelector('.map-no-location');
+        if (!existing) {
+          const noLoc = document.createElement('div');
+          noLoc.className = 'map-no-location';
+          noLoc.innerHTML = `
+            <i class="ph ph-map-pin-slash"></i>
+            <p>${isAr ? 'لم يتم تحديد موقع لهذا العقار' : 'No location set for this property'}</p>
+          `;
+          mapEl.parentNode.insertBefore(noLoc, mapEl.nextSibling);
+        }
+        return;
+      }
+
+      if (mapEl._leaflet_id) {
+        mapEl._leaflet_id = null;
+        mapEl.innerHTML = '';
+      }
+
+      const map = L.map('property-map', { center: [lat, lng], zoom: 15, scrollWheelZoom: false, zoomControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+      const customIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:38px; height:38px; background:var(--primary); border:3px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 14px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -42]
+      });
+
+      L.marker([lat, lng], { icon: customIcon }).addTo(map).bindPopup(`<strong>${locationName || ''}</strong>`).openPopup();
+      setTimeout(() => map.invalidateSize(), 300);
+
+      if (mapLink) {
+        mapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
+        mapLink.style.display = 'inline-flex';
+      }
+    };
+
+    // --- UI Helpers ---
+    window.showPropertyContent = function() {
+      const skeleton = document.getElementById('prop-skeleton');
+      const content = document.getElementById('prop-real-content');
+      if (skeleton) skeleton.style.display = 'none';
+      if (content) content.style.display = 'block';
+    };
+
+    window.showToast = function(msg, type = 'info', duration = 3000) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const icons = { success: 'ph-check-circle', info: 'ph-info', error: 'ph-warning' };
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<i class="ph-fill ${icons[type] || 'ph-info'}"></i> <span>${msg}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('fade-out');
+        toast.addEventListener('animationend', () => toast.remove());
+      }, duration);
+    };
+
+    window.updateImageBadge = function(current, total) {
+      const badge = document.getElementById('slider-count-badge');
+      if (badge) badge.textContent = `${current + 1} / ${total}`;
+    };
+
+    window.handleShare = function() {
+      const lang = localStorage.getItem('ore_lang') || 'en';
+      const title = document.getElementById('prop-title')?.textContent || 'OreBooking Property';
+      const url = window.location.href;
+
+      if (navigator.share) {
+        navigator.share({ title, url }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast(lang === 'ar' ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!', 'success');
+        }).catch(() => {
+          showToast(lang === 'ar' ? 'تعذّر نسخ الرابط' : 'Could not copy link', 'error');
+        });
+      }
+    };
   </script>
 
 </body>
