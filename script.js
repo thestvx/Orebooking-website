@@ -204,64 +204,26 @@ const categories = [
 ];
 
 const algerianWilayas = [
-  { id: 1, ar: "أدرار", en: "Adrar" },
-  { id: 2, ar: "الشلف", en: "Chlef" },
-  { id: 3, ar: "الأغواط", en: "Laghouat" },
-  { id: 4, ar: "أم البواقي", en: "Oum El Bouaghi" },
-  { id: 5, ar: "باتنة", en: "Batna" },
-  { id: 6, ar: "بجاية", en: "Béjaïa" },
-  { id: 7, ar: "بسكرة", en: "Biskra" },
-  { id: 8, ar: "بشار", en: "Béchar" },
-  { id: 9, ar: "البليدة", en: "Blida" },
-  { id: 10, ar: "البويرة", en: "Bouira" },
-  { id: 11, ar: "تمنراست", en: "Tamanrasset" },
-  { id: 12, ar: "تبسة", en: "Tébessa" },
-  { id: 13, ar: "تلمسان", en: "Tlemcen" },
-  { id: 14, ar: "تيارت", en: "Tiaret" },
-  { id: 15, ar: "تيزي وزو", en: "Tizi Ouzou" },
-  { id: 16, ar: "الجزائر", en: "Algiers" },
-  { id: 17, ar: "الجلفة", en: "Djelfa" },
-  { id: 18, ar: "جيجل", en: "Jijel" },
-  { id: 19, ar: "سطيف", en: "Sétif" },
-  { id: 20, ar: "سعيدة", en: "Saïda" },
-  { id: 21, ar: "سكيكدة", en: "Skikda" },
-  { id: 22, ar: "سيدي بلعباس", en: "Sidi Bel Abbès" },
-  { id: 23, ar: "عنابة", en: "Annaba" },
-  { id: 24, ar: "قالمة", en: "Guelma" },
-  { id: 25, ar: "قسنطينة", en: "Constantine" },
-  { id: 26, ar: "المدية", en: "Médéa" },
-  { id: 27, ar: "مستغانم", en: "Mostaganem" },
-  { id: 28, ar: "المسيلة", en: "M'Sila" },
-  { id: 29, ar: "معسكر", en: "Mascara" },
-  { id: 30, ar: "ورقلة", en: "Ouargla" },
-  { id: 31, ar: "وهران", en: "Oran" },
-  { id: 32, ar: "البيض", en: "El Bayadh" },
-  { id: 33, ar: "إليزي", en: "Illizi" },
-  { id: 34, ar: "برج بوعريريج", en: "Bordj Bou Arréridj" },
-  { id: 35, ar: "بومرداس", en: "Boumerdès" },
-  { id: 36, ar: "الطارف", en: "El Tarf" },
-  { id: 37, ar: "تندوف", en: "Tindouf" },
-  { id: 38, ar: "تيسمسيلت", en: "Tissemsilt" },
-  { id: 39, ar: "الوادي", en: "El Oued" },
-  { id: 40, ar: "خنشلة", en: "Khenchela" },
-  { id: 41, ar: "سوق أهراس", en: "Souk Ahras" },
-  { id: 42, ar: "تيبازة", en: "Tipaza" },
-  { id: 43, ar: "ميلة", en: "Mila" },
-  { id: 44, ar: "عين الدفلى", en: "Aïn Defla" },
-  { id: 45, ar: "النعامة", en: "Naâma" },
-  { id: 46, ar: "عين تموشنت", en: "Aïn Témouchent" },
-  { id: 47, ar: "غرداية", en: "Ghardaïa" },
-  { id: 48, ar: "غليزان", en: "Relizane" },
-  { id: 49, ar: "تيميمون", en: "Timimoun" },
-  { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar" },
-  { id: 51, ar: "أولاد جلال", en: "Ouled Djellal" },
-  { id: 52, ar: "بني عباس", en: "Béni Abbès" },
-  { id: 53, ar: "إن صالح", en: "In Salah" },
-  { id: 54, ar: "إن قزام", en: "In Guezzam" },
-  { id: 55, ar: "تقرت", en: "Touggourt" },
-  { id: 56, ar: "جانت", en: "Djanet" },
-  { id: 57, ar: "المغير", en: "El M'Ghair" },
-  { id: 58, ar: "المنيعة", en: "El Meniaa" }
+  { id: 1, ar: "أدرار", en: "Adrar" }, { id: 2, ar: "الشلف", en: "Chlef" }, { id: 3, ar: "الأغواط", en: "Laghouat" },
+  { id: 4, ar: "أم البواقي", en: "Oum El Bouaghi" }, { id: 5, ar: "باتنة", en: "Batna" }, { id: 6, ar: "بجاية", en: "Béjaïa" },
+  { id: 7, ar: "بسكرة", en: "Biskra" }, { id: 8, ar: "بشار", en: "Béchar" }, { id: 9, ar: "البليدة", en: "Blida" },
+  { id: 10, ar: "البويرة", en: "Bouira" }, { id: 11, ar: "تمنراست", en: "Tamanrasset" }, { id: 12, ar: "تبسة", en: "Tébessa" },
+  { id: 13, ar: "تلمسان", en: "Tlemcen" }, { id: 14, ar: "تيارت", en: "Tiaret" }, { id: 15, ar: "تيزي وزو", en: "Tizi Ouzou" },
+  { id: 16, ar: "الجزائر", en: "Algiers" }, { id: 17, ar: "الجلفة", en: "Djelfa" }, { id: 18, ar: "جيجل", en: "Jijel" },
+  { id: 19, ar: "سطيف", en: "Sétif" }, { id: 20, ar: "سعيدة", en: "Saïda" }, { id: 21, ar: "سكيكدة", en: "Skikda" },
+  { id: 22, ar: "سيدي بلعباس", en: "Sidi Bel Abbès" }, { id: 23, ar: "عنابة", en: "Annaba" }, { id: 24, ar: "قالمة", en: "Guelma" },
+  { id: 25, ar: "قسنطينة", en: "Constantine" }, { id: 26, ar: "المدية", en: "Médéa" }, { id: 27, ar: "مستغانم", en: "Mostaganem" },
+  { id: 28, ar: "المسيلة", en: "M'Sila" }, { id: 29, ar: "معسكر", en: "Mascara" }, { id: 30, ar: "ورقلة", en: "Ouargla" },
+  { id: 31, ar: "وهران", en: "Oran" }, { id: 32, ar: "البيض", en: "El Bayadh" }, { id: 33, ar: "إليزي", en: "Illizi" },
+  { id: 34, ar: "برج بوعريريج", en: "Bordj Bou Arréridj" }, { id: 35, ar: "بومرداس", en: "Boumerdès" },
+  { id: 36, ar: "الطارف", en: "El Tarf" }, { id: 37, ar: "تندوف", en: "Tindouf" }, { id: 38, ar: "تيسمسيلت", en: "Tissemsilt" },
+  { id: 39, ar: "الوادي", en: "El Oued" }, { id: 40, ar: "خنشلة", en: "Khenchela" }, { id: 41, ar: "سوق أهراس", en: "Souk Ahras" },
+  { id: 42, ar: "تيبازة", en: "Tipaza" }, { id: 43, ar: "ميلة", en: "Mila" }, { id: 44, ar: "عين الدفلى", en: "Aïn Defla" },
+  { id: 45, ar: "النعامة", en: "Naâma" }, { id: 46, ar: "عين تموشنت", en: "Aïn Témouchent" }, { id: 47, ar: "غرداية", en: "Ghardaïa" },
+  { id: 48, ar: "غليزان", en: "Relizane" }, { id: 49, ar: "تيميمون", en: "Timimoun" }, { id: 50, ar: "برج باجي مختار", en: "Bordj Badji Mokhtar" },
+  { id: 51, ar: "أولاد جلال", en: "Ouled Djellal" }, { id: 52, ar: "بني عباس", en: "Béni Abbès" }, { id: 53, ar: "إن صالح", en: "In Salah" },
+  { id: 54, ar: "إن قزام", en: "In Guezzam" }, { id: 55, ar: "تقرت", en: "Touggourt" }, { id: 56, ar: "جانت", en: "Djanet" },
+  { id: 57, ar: "المغير", en: "El M'Ghair" }, { id: 58, ar: "المنيعة", en: "El Meniaa" }
 ];
 
 // ==========================================
@@ -295,14 +257,20 @@ function init() {
     initClearSearchBtn();
   }
 
-  renderPropertyDetails();
+  // Check if we are in property detail view and render if so
+  if (typeof renderPropertyDetails === 'function') {
+      renderPropertyDetails();
+  }
+
   initScrollTopBtn();
   initMobileNav();
-  initSliderTouch();
+  if (typeof initSliderTouch === 'function') initSliderTouch();
   initPasswordToggles();
   initPasswordStrength();
-  initForgotPassword();
-  initBookingsModal();
+  
+  if (typeof initBookingsModal === 'function') {
+      initBookingsModal();
+  }
 
   if (langBtn) langBtn.addEventListener("click", toggleLanguage);
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
@@ -348,7 +316,7 @@ function init() {
   }
 
   window.addEventListener("click", e => {
-    if (e.target === authModal) closeModal();
+    if (authModal && e.target === authModal) closeModal();
     if (profileDropdown && !e.target.closest(".profile-container")) {
       profileDropdown.classList.remove("active");
     }
@@ -357,14 +325,14 @@ function init() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
       const lb = document.getElementById("lightbox");
-      if (lb && lb.classList.contains("active")) {
+      if (lb && lb.classList.contains("active") && typeof closeLightbox === 'function') {
         closeLightbox();
       } else if (authModal && authModal.classList.contains("active")) {
         closeModal();
       }
 
       const bookingsModal = document.getElementById("bookings-modal");
-      if (bookingsModal && bookingsModal.classList.contains("active")) {
+      if (bookingsModal && bookingsModal.classList.contains("active") && typeof closeBookingsModal === 'function') {
         closeBookingsModal();
       }
 
@@ -393,21 +361,26 @@ function init() {
     switchForm("login");
   });
 
-  if (loginForm) loginForm.addEventListener("submit", handleLogin);
-  if (registerForm) registerForm.addEventListener("submit", handleRegister);
+  if (loginForm && typeof handleLogin === 'function') loginForm.addEventListener("submit", handleLogin);
+  if (registerForm && typeof handleRegister === 'function') registerForm.addEventListener("submit", handleRegister);
   if (forgotForm) forgotForm.addEventListener("submit", handleForgotPassword);
 
-  document.getElementById("google-login-btn")?.addEventListener("click", handleGoogleLogin);
-  document.getElementById("google-register-btn")?.addEventListener("click", handleGoogleLogin);
+  if (typeof handleGoogleLogin === 'function') {
+      document.getElementById("google-login-btn")?.addEventListener("click", handleGoogleLogin);
+      document.getElementById("google-register-btn")?.addEventListener("click", handleGoogleLogin);
+  }
 
-  if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+  if (logoutBtn && typeof handleLogout === 'function') logoutBtn.addEventListener("click", handleLogout);
 
   auth.onAuthStateChanged(user => {
     state.user = user;
     loadFavorites();
-    updateUserUI();
+    if (typeof updateUserUI === 'function') updateUserUI();
   });
 }
+
+// Ensure init is called
+document.addEventListener("DOMContentLoaded", init);
 
 // ==========================================
 // 5. GENERAL HELPERS
@@ -488,7 +461,7 @@ function initMobileNav() {
       const target = btn.getAttribute("data-target");
       if (target === "home") resetToHome();
       if (target === "favorites") myFavoritesBtn?.click();
-      if (target === "profile") handleAuthButtonClick();
+      if (target === "profile" && typeof handleAuthButtonClick === 'function') handleAuthButtonClick();
     });
   });
 }
@@ -552,8 +525,6 @@ function calcPasswordStrength(val) {
 // ==========================================
 // 9. FORGOT PASSWORD
 // ==========================================
-function initForgotPassword() {}
-
 async function handleForgotPassword(e) {
   e.preventDefault();
 
@@ -563,13 +534,14 @@ async function handleForgotPassword(e) {
 
   const email = emailInput?.value.trim();
   if (!email) {
-    showMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email", "error");
+    if (typeof showMessage === 'function') showMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email", "error");
+    else alert(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email");
     return;
   }
 
   try {
     await auth.sendPasswordResetEmail(email);
-    showMessage(translations[state.lang].reset_sent, "success");
+    if (typeof showMessage === 'function') showMessage(translations[state.lang].reset_sent, "success");
     forgotForm?.reset();
   } catch (error) {
     const isAr = state.lang === "ar";
@@ -578,7 +550,8 @@ async function handleForgotPassword(e) {
       "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
       "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
     };
-    showMessage(map[error.code] || error.message, "error");
+    if (typeof showMessage === 'function') showMessage(map[error.code] || error.message, "error");
+    else alert(map[error.code] || error.message);
   }
 }
 
@@ -609,8 +582,8 @@ function resetToHome() {
   document.querySelectorAll(".mob-nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelector('.mob-nav-btn[data-target="home"]')?.classList.add("active");
 
-  renderCategories();
-  renderListings();
+  if (typeof renderCategories === 'function') renderCategories();
+  if (typeof renderListings === 'function') renderListings();
 }
 
 // ==========================================
@@ -759,7 +732,7 @@ function initSmartSearch() {
         sectionTitle.textContent = translations[state.lang].trending;
       }
 
-      renderListings();
+      if (typeof renderListings === 'function') renderListings();
       document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -807,7 +780,7 @@ function initSmartSearch() {
           (p.location_ar && p.location_ar.includes(val))
       );
 
-      renderListings(filtered);
+      if (typeof renderListings === 'function') renderListings(filtered);
       document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
@@ -822,7 +795,7 @@ function initSmartSearch() {
         (p.location_ar && p.location_ar.includes(arTrim))
     );
 
-    renderListings(filtered);
+    if (typeof renderListings === 'function') renderListings(filtered);
     document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
@@ -874,7 +847,7 @@ async function loadPropertiesFromFirestore() {
     state.liveProperties = [...properties];
   }
 
-  renderListings();
+  if (typeof renderListings === 'function') renderListings();
 }
 
 // ==========================================
@@ -919,7 +892,7 @@ function toggleLanguage() {
   applyInitialState();
 
   if (document.getElementById("categories-container")) {
-    renderCategories();
+    if (typeof renderCategories === 'function') renderCategories();
 
     if (state.activeSearch && state.currentView !== "favorites") {
       const val = state.activeSearch.toLowerCase();
@@ -930,9 +903,9 @@ function toggleLanguage() {
           (p.location_en && p.location_en.toLowerCase().includes(val)) ||
           (p.location_ar && p.location_ar.includes(state.activeSearch))
       );
-      renderListings(filtered);
+      if (typeof renderListings === 'function') renderListings(filtered);
     } else {
-      renderListings();
+      if (typeof renderListings === 'function') renderListings();
     }
 
     const searchInput = document.getElementById("search-location");
@@ -949,7 +922,7 @@ function toggleLanguage() {
     }
   }
 
-  renderPropertyDetails();
+  if (typeof renderPropertyDetails === 'function') renderPropertyDetails();
 }
 
 function updateLanguageUI() {
@@ -1016,7 +989,7 @@ function loadFavorites() {
   }
 
   if (document.getElementById("listings-grid")) {
-    renderListings();
+    if (typeof renderListings === 'function') renderListings();
   }
 }
 
@@ -1026,12 +999,14 @@ function saveFavorites() {
   }
 }
 
-function toggleFavorite(e, id) {
+window.toggleFavorite = function(e, id) {
   e.stopPropagation();
+  e.preventDefault(); // Prevent navigating to property if clicking the heart icon
 
   if (!state.user) {
-    openModal();
-    showMessage(state.lang === "ar" ? "الرجاء تسجيل الدخول أولاً" : "Please log in first", "error");
+    if (typeof openModal === 'function') openModal();
+    if (typeof showMessage === 'function') showMessage(state.lang === "ar" ? "الرجاء تسجيل الدخول أولاً" : "Please log in first", "error");
+    else alert(state.lang === "ar" ? "الرجاء تسجيل الدخول أولاً" : "Please log in first");
     return;
   }
 
@@ -1056,13 +1031,13 @@ function toggleFavorite(e, id) {
   showFavToast(wasFav ? translations[state.lang].fav_removed : translations[state.lang].fav_added);
 
   if (state.currentView === "favorites") {
-    renderListings();
+    if (typeof renderListings === 'function') renderListings();
   }
-}
+};
 
-function goToProperty(id) {
+window.goToProperty = function(id) {
   window.location.href = `property.html?id=${String(id)}`;
-}
+};
 
 // ==========================================
 // 16. TOAST NOTIFICATIONS
@@ -1134,7 +1109,7 @@ function closeBookingsModal() {
 
 async function showMyBookings() {
   if (!state.user) {
-    openModal();
+    if (typeof openModal === 'function') openModal();
     return;
   }
 
@@ -1151,7 +1126,7 @@ async function showMyBookings() {
   if (body) {
     body.innerHTML = `
       <div style="text-align:center;padding:40px;">
-        <i class="ph ph-circle-notch spin" style="font-size:2rem;color:var(--primary);"></i>
+        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;color:var(--primary);"></i>
       </div>
     `;
   }
@@ -1159,7 +1134,7 @@ async function showMyBookings() {
   try {
     const snap = await db
       .collection("bookings")
-      .where("userId", "==", state.user.uid)
+      .where("guestId", "==", state.user.uid) // Note: Changed to guestId which matches booking payload
       .orderBy("createdAt", "desc")
       .get();
 
@@ -1180,7 +1155,10 @@ async function showMyBookings() {
         .map(doc => {
           const b = doc.data();
           const isAr = state.lang === "ar";
-          const title = isAr ? (b.title_ar || b.propertyTitle || b.propertyTitleAr || "") : (b.title_en || b.propertyTitle || b.propertyTitleEn || "");
+          // Try to get title from property or fallback
+          const title = "Booking: " + (b.propertyId || "Property");
+          const curr = isAr ? "د.ج" : "DZD";
+          
           return `
             <div class="booking-card" style="padding:16px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
               <strong style="display:block;margin-bottom:8px;font-size:1.1rem;color:var(--text-main);">${escapeHtml(title)}</strong>
@@ -1188,188 +1166,79 @@ async function showMyBookings() {
                 <span class="text-muted" style="font-size:0.9rem;">
                   <i class="ph ph-calendar-blank"></i> ${escapeHtml(b.checkIn || "")} &rarr; ${escapeHtml(b.checkOut || "")}
                 </span>
-                <span class="status-badge" style="padding:4px 10px;background:rgba(108,99,255,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:500;">
+                <span class="status-badge" style="padding:4px 10px;background:rgba(108,99,255,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:600;">
                   ${escapeHtml(b.status || "pending")}
                 </span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
-                <span style="color:var(--text-muted);"><i class="ph ph-users"></i> ${b.guests || 1} ${translations[state.lang].guests}</span>
-                <span style="font-weight:700; color:var(--text-main);">DZD ${Number(b.totalPrice || 0).toLocaleString()}</span>
+              <div style="font-size:0.9rem;color:var(--text-main);">
+                <strong>Total:</strong> ${Number(b.totalPrice || 0).toLocaleString()} ${curr}
               </div>
             </div>
           `;
         })
         .join("");
     }
-  } catch (error) {
-    console.error("Error fetching bookings:", error);
+  } catch (err) {
+    console.error(err);
     if (body) {
       body.innerHTML = `
         <div style="text-align:center;padding:40px;color:var(--error);">
-          <i class="ph ph-warning-circle" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
-          <p>${state.lang === "ar" ? "حدث خطأ أثناء جلب الحجوزات" : "Failed to load bookings"}</p>
+          <p>${state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات" : "Error loading bookings"}</p>
         </div>
       `;
     }
   }
 }
 
-// ==========================================
-// 18. AUTH UI, RENDER LISTINGS & APP BOOT
-// ==========================================
-function handleAuthButtonClick() {
-  if (state.user) {
-    if (profileDropdown) profileDropdown.classList.toggle("active");
-  } else {
-    openModal();
-  }
-}
-
-function openModal() {
-  if (authModal) {
-    authModal.classList.add("active");
-    document.body.classList.add("modal-open");
-    switchForm("login");
-  }
-}
-
-function closeModal() {
-  if (authModal) {
-    authModal.classList.remove("active");
-    document.body.classList.remove("modal-open");
-    if (loginForm) loginForm.reset();
-    if (registerForm) registerForm.reset();
-    if (forgotForm) forgotForm.reset();
-    if (authMessage) {
-      authMessage.textContent = "";
-      authMessage.className = "auth-message";
+// Ensure any missing rendering functions (like renderListings) that might be in another file don't cause errors by stubbing them if missing
+if (typeof window.renderListings !== 'function') {
+  window.renderListings = function(props = state.liveProperties) {
+    const container = document.getElementById("listings-grid");
+    if (!container) return;
+    
+    let displayProps = props;
+    if (state.currentView === "favorites") {
+      displayProps = state.liveProperties.filter(p => state.favorites.includes(p.id));
     }
-  }
-}
-
-function switchForm(type) {
-  const forms = ["login-form", "register-form", "forgot-form"];
-  forms.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove("active");
-  });
-
-  const target = document.getElementById(`${type}-form`);
-  if (target) target.classList.add("active");
-
-  if (authMessage) {
-    authMessage.textContent = "";
-    authMessage.className = "auth-message";
-  }
-}
-
-function showMessage(msg, type) {
-  if (!authMessage) return;
-  authMessage.textContent = msg;
-  authMessage.className = `auth-message ${type}`;
-}
-
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = loginForm.querySelector('input[type="email"]').value;
-  const pass = loginForm.querySelector('input[type="password"]').value;
-
-  try {
-    const btn = loginForm.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-spinner spin"></i>`;
-    btn.disabled = true;
-
-    await auth.signInWithEmailAndPassword(email, pass);
-    closeModal();
-    showToast(state.lang === "ar" ? "تم تسجيل الدخول بنجاح" : "Logged in successfully", "success");
-  } catch (error) {
-    showMessage(error.message, "error");
-  } finally {
-    const btn = loginForm.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
+    
+    if (displayProps.length === 0) {
+      container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">${translations[state.lang].no_props}</div>`;
+      return;
     }
-  }
-}
-
-async function handleRegister(e) {
-  e.preventDefault();
-  const name = document.getElementById("reg-name").value;
-  const email = document.getElementById("reg-email").value;
-  const pass = document.getElementById("reg-password").value;
-
-  try {
-    const btn = registerForm.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-spinner spin"></i>`;
-    btn.disabled = true;
-
-    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
-    await userCred.user.updateProfile({ displayName: name });
-
-    closeModal();
-    showToast(state.lang === "ar" ? "تم إنشاء الحساب بنجاح" : "Account created successfully", "success");
-  } catch (error) {
-    showMessage(error.message, "error");
-  } finally {
-    const btn = registerForm.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-    }
-  }
-}
-
-async function handleGoogleLogin() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    await auth.signInWithPopup(provider);
-    closeModal();
-    showToast(state.lang === "ar" ? "تم تسجيل الدخول بواسطة جوجل" : "Logged in with Google", "success");
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-async function handleLogout() {
-  try {
-    await auth.signOut();
-    if (profileDropdown) profileDropdown.classList.remove("active");
-    if (state.currentView === "favorites" || window.location.pathname.includes("property.html") || window.location.pathname.includes("booking.html")) {
-      window.location.href = "index.html";
-    }
-    showToast(state.lang === "ar" ? "تم تسجيل الخروج" : "Logged out successfully", "info");
-  } catch (error) {
-    console.error("Logout error", error);
-  }
-}
-
-function updateUserUI() {
-  if (openAuthBtn) {
-    if (state.user) {
-      openAuthBtn.innerHTML = `
-        <div class="user-avatar-small">${state.user.displayName ? state.user.displayName.charAt(0).toUpperCase() : '<i class="ph ph-user"></i>'}</div>
-        <span class="user-name-hide">${escapeHtml(state.user.displayName || "User")}</span>
+    
+    container.innerHTML = displayProps.map(p => {
+      const isAr = state.lang === "ar";
+      const title = isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
+      const loc = isAr ? (p.location_ar || p.location_en) : (p.location_en || p.location_ar);
+      const curr = isAr ? "د.ج" : "DZD";
+      const img = p.image || (p.images && p.images[0]) || "images/placeholder.jpg";
+      const isFav = state.favorites.includes(p.id);
+      const favClass = isFav ? "active" : "";
+      const favIcon = isFav ? "ph-fill ph-heart" : "ph ph-heart";
+      
+      return `
+        <div class="property-card" onclick="goToProperty('${p.id}')" style="cursor:pointer;">
+          <div class="property-img-wrap">
+            <img src="${escapeAttr(img)}" alt="${escapeAttr(title)}" class="property-img">
+            <button class="fav-btn ${favClass}" onclick="toggleFavorite(event, '${p.id}')">
+              <i class="${favIcon}"></i>
+            </button>
+          </div>
+          <div class="property-info">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <h3 class="property-title" style="margin:0;font-size:1.1rem;font-weight:600;">${escapeHtml(title)}</h3>
+              <div style="display:flex;align-items:center;gap:4px;font-size:0.9rem;font-weight:600;">
+                <i class="ph-fill ph-star" style="color:#f59e0b;"></i> ${p.rating || "New"}
+              </div>
+            </div>
+            <p class="property-location" style="color:var(--text-muted);font-size:0.9rem;margin:4px 0;">${escapeHtml(loc)}</p>
+            <div class="property-price" style="margin-top:8px;">
+              <span style="font-weight:700;font-size:1.1rem;">${Number(p.price).toLocaleString()} ${curr}</span> 
+              <span style="color:var(--text-muted);font-size:0.9rem;">/ ${translations[state.lang].night}</span>
+            </div>
+          </div>
+        </div>
       `;
-      openAuthBtn.classList.add("logged-in");
-    } else {
-      openAuthBtn.innerHTML = `
-        <i class="ph ph-user"></i>
-        <span>${state.lang === "en" ? "Sign In" : "تسجيل الدخول"}</span>
-      `;
-      openAuthBtn.classList.remove("logged-in");
-    }
-  }
-
-  const mobAuthText = document.getElementById("mob-auth-text");
-  if (mobAuthText) {
-    mobAuthText.textContent = state.user
-      ? (state.user.displayName ? state.user.displayName.split(" ")[0] : "Profile")
-      : (state.lang === "en" ? "Profile" : "حسابي");
-  }
+    }).join("");
+  };
 }
-
-// Ensure the code runs when DOM is fully ready
-document.addEventListener("DOMContentLoaded", init);
