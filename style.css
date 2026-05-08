@@ -1,16 +1,3 @@
-/* ============================================================
-   OreBooking — style.css
-   Version: 2.3 (Fully Complete, Animated, Fixed Search & Cards)
-
-   Fixes & Enhancements:
-   - Fixed Search Bar flex compression & layout issues.
-   - Fully Redesigned Cards with smooth hover/lift animations.
-   - Refined Glassmorphism & Alpha blended shadows.
-   - Complete CSS Variables for OKLCH color support & theming.
-   - Polished Typography & Fluid Type Scale.
-   - Mobile-First Responsive fixes (Navbar, Bottom Nav, Grids).
-============================================================ */
-
 /* --- Variables & Design System --- */
 :root {
   --primary: #435abf;
@@ -30,8 +17,8 @@
   --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
   
   /* New Card Shadows */
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 20px 40px rgba(67, 90, 191, 0.12), 0 8px 16px rgba(0,0,0,0.04);
+  --shadow-card: 0 4px 15px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 20px 40px rgba(67, 90, 191, 0.1), 0 8px 16px rgba(0,0,0,0.03);
 
   --radius-sm: 0.5rem;
   --radius-lg: 1rem;
@@ -54,7 +41,7 @@
   --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.4);
   --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.25);
   
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 4px 15px rgba(0, 0, 0, 0.2);
   --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(67, 90, 191, 0.3);
 }
 
@@ -607,12 +594,14 @@ html[dir="rtl"] .search-bar {
   font-size: clamp(1.4rem, 2vw + 0.4rem, 2rem);
 }
 
-/* --- Listings Grid --- */
+/* ============================================================
+   --- 🌟 PREMIUM PROPERTY CARDS (Redesigned) --- 
+   ============================================================ */
 .listings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(300px,100%),1fr));
-  gap: 28px; /* Slightly more gap for elegant cards */
-  padding-bottom: 60px;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 32px;
+  padding-bottom: 80px;
   position: relative;
   z-index: 5;
 }
@@ -641,32 +630,38 @@ html[dir="rtl"] .search-bar {
   border: 1px solid var(--border-color);
 }
 
-/* --- ✅ REDESIGNED CARDS --- */
 .card {
   background-color: var(--surface-color);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
   cursor: pointer;
-  transition: var(--transition-card);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   position: relative;
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   height: 100%;
-  transform: translateZ(0); /* Hardware acceleration */
+  will-change: transform, box-shadow;
 }
 
-/* Smooth lift and glow effect */
 .card:hover {
-  transform: translateY(-8px) scale(1.01);
-  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-8px) scale(1.005);
+  box-shadow: 0 20px 40px rgba(67, 90, 191, 0.1), 0 8px 16px rgba(0,0,0,0.03);
+  border-color: rgba(67, 90, 191, 0.15);
+}
+
+.dark .card {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.dark .card:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(67, 90, 191, 0.3);
   border-color: transparent;
 }
 
 .card-img-wrapper {
   position: relative;
-  height: 240px; /* Slightly taller images */
+  height: 250px;
   width: 100%;
   overflow: hidden;
 }
@@ -675,33 +670,31 @@ html[dir="rtl"] .search-bar {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background-color: var(--border-color);
 }
 
-/* Image zooms slightly inside its container on hover */
 .card:hover .card-img {
-  transform: scale(1.06);
+  transform: scale(1.05);
 }
 
-/* Gradient overlay for better text contrast if we overlay things */
-.card-img-wrapper::after {
+.card-img-wrapper::before {
   content: '';
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 40%;
-  background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.3s;
+  top: 0; left: 0; right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%);
+  z-index: 1;
   pointer-events: none;
 }
-.card:hover .card-img-wrapper::after { opacity: 1; }
 
 .urgency-label {
   position: absolute;
-  top: 14px;
-  inset-inline-start: 14px;
+  top: 16px;
+  inset-inline-start: 16px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: 0.75rem;
@@ -709,44 +702,48 @@ html[dir="rtl"] .search-bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--error);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  color: var(--text-main);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   z-index: 2;
+  transition: transform 0.3s;
 }
-.dark .urgency-label { background: rgba(15, 23, 42, 0.95); }
+.urgency-label i { color: #e11d48; font-size: 0.9rem; }
+.card:hover .urgency-label { transform: translateY(-2px); }
 
-/* Favorite Button Polish */
+.dark .urgency-label { background: rgba(30, 41, 59, 0.95); color: #fff; }
+
 .fav-btn {
   position: absolute;
-  top: 14px;
-  inset-inline-end: 14px;
-  background: rgba(255, 255, 255, 0.85);
+  top: 16px;
+  inset-inline-end: 16px;
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: none;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--text-muted);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Springy bounce */
-  font-size: 1.15rem;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-size: 1.2rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   z-index: 2;
 }
+
 .fav-btn:hover { 
   background: #ffffff; 
   transform: scale(1.15); 
-  color: var(--error); 
+  color: #e11d48; 
 }
-.fav-btn.active { color: var(--error); }
+.fav-btn.active { color: #e11d48; }
 
-.dark .fav-btn { background: rgba(15,23,42,0.85); color: #fff; }
-.dark .fav-btn:hover { background: var(--surface-color); color: var(--error); }
+.dark .fav-btn { background: rgba(30, 41, 59, 0.9); color: #fff; }
+.dark .fav-btn:hover { background: var(--surface-color); color: #e11d48; }
 
-/* Card Body Content */
 .card-content {
   padding: 20px;
   display: flex;
@@ -764,55 +761,70 @@ html[dir="rtl"] .search-bar {
   margin-bottom: 8px;
 }
 
+.card-title-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
 .card-title {
   font-size: 1.15rem;
   color: var(--text-main);
   margin-bottom: 4px;
-  line-height: 1.35;
+  line-height: 1.4;
   font-weight: 700;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-location {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.card-location i { color: var(--primary); font-size: 1rem; opacity: 0.8; }
+.card-location i { color: var(--primary); font-size: 1rem; opacity: 0.9; }
 
 .card-rating {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-main);
   flex-shrink: 0;
   background: var(--bg-color);
   padding: 4px 8px;
   border-radius: 8px;
+  transition: background 0.3s;
 }
 .card-rating i { color: #fbbf24; font-size: 1rem; }
+.card:hover .card-rating { background: rgba(251, 191, 36, 0.1); } 
 
 .card-footer {
-  margin-top: auto;
-  padding-top: 16px;
+  margin-top: auto; 
+  padding-top: 18px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
+  border-top: 1px solid rgba(0,0,0,0.03); 
 }
+.dark .card-footer { border-top-color: rgba(255,255,255,0.03); }
 
 .card-price {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--text-main);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
+
 .card-price span {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -820,10 +832,9 @@ html[dir="rtl"] .search-bar {
   letter-spacing: 0;
 }
 
-/* Optional: Add a subtle arrow that appears on hover */
-.card-arrow {
-  width: 32px;
-  height: 32px;
+.card-action-arrow {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--primary);
   color: white;
@@ -831,12 +842,17 @@ html[dir="rtl"] .search-bar {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transform: translateX(-10px);
-  transition: all 0.3s ease;
+  transform: translateX(-15px);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-size: 1.1rem;
 }
-html[dir="rtl"] .card-arrow { transform: translateX(10px); }
-html[dir="rtl"] .card-arrow i { transform: rotate(180deg); }
-.card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+html[dir="rtl"] .card-action-arrow { transform: translateX(15px); }
+html[dir="rtl"] .card-action-arrow i { transform: rotate(180deg); }
+
+.card:hover .card-action-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
 
 /* --- Toast Notifications --- */
 #toast-container {
