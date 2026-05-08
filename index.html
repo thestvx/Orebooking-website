@@ -137,14 +137,27 @@
       background: var(--surface-color); border-radius: var(--radius-full);
       padding: 8px 8px 8px 24px; box-shadow: 0 12px 32px rgba(0,0,0,0.08);
       border: 1px solid var(--border-color); max-width: 850px; width: 100%;
-      transition: var(--transition-smooth);
-      position: relative; /* Added relative positioning */
-      z-index: 50; /* Base z-index */
+      transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth), background-color var(--transition-smooth);
+      position: relative;
+      z-index: 50;
+      transform: none;
+      will-change: auto;
     }
     html[dir="rtl"] .search-bar { padding: 8px 24px 8px 8px; }
-    .search-bar:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+
+    /* FIX: keep search bar fixed with no movement */
+    .search-bar:hover,
+    .search-bar:focus-within {
+      box-shadow: var(--shadow-hover);
+      border-color: var(--primary);
+      transform: none;
+    }
     
-    .search-field { flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: 8px 16px; border-radius: var(--radius-full); transition: background var(--transition-fast); z-index: 60; }
+    .search-field {
+      flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start;
+      padding: 8px 16px; border-radius: var(--radius-full); transition: background var(--transition-fast);
+      z-index: 60;
+    }
     .search-field:hover { background: rgba(0,0,0,0.03); }
     .dark .search-field:hover { background: rgba(255,255,255,0.05); }
     
@@ -157,11 +170,22 @@
       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
       color: white; border: none; border-radius: var(--radius-full);
       padding: 16px 32px; font-size: 1rem; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; gap: 8px; transition: var(--transition-smooth);
+      display: flex; align-items: center; gap: 8px;
+      transition: box-shadow var(--transition-smooth), filter var(--transition-smooth), background var(--transition-smooth);
       box-shadow: 0 4px 14px rgba(67,90,191,0.3);
       z-index: 60;
+      transform: none;
+      flex-shrink: 0;
     }
-    .search-btn:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(67,90,191,0.4); }
+
+    /* FIX: keep search button fixed with no scale/move */
+    .search-btn:hover,
+    .search-btn:focus-visible,
+    .search-btn:active {
+      transform: none;
+      box-shadow: 0 6px 20px rgba(67,90,191,0.4);
+      filter: brightness(1.03);
+    }
 
     /* =========================================
        ✨ CATEGORIES (Fixed & Styled)
@@ -255,8 +279,31 @@
        ✨ MOBILE RESPONSIVENESS
        ========================================= */
     @media (max-width: 992px) {
-      .search-bar { flex-direction: column; background: transparent; box-shadow: none; border: none; padding: 0; gap: 12px; }
-      .search-field { background: var(--surface-color); width: 100%; border: 1px solid var(--border-color); padding: 12px 20px; box-shadow: var(--shadow-sm); z-index: 60;}
+      .search-bar {
+        flex-direction: column;
+        background: transparent;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        gap: 12px;
+      }
+
+      .search-bar:hover,
+      .search-bar:focus-within {
+        box-shadow: none;
+        border-color: transparent;
+        transform: none;
+      }
+
+      .search-field {
+        background: var(--surface-color);
+        width: 100%;
+        border: 1px solid var(--border-color);
+        padding: 12px 20px;
+        box-shadow: var(--shadow-sm);
+        z-index: 60;
+      }
+
       .search-divider { display: none; }
       .search-btn { width: 100%; justify-content: center; padding: 16px; }
       .hero { padding-top: 60px; }
@@ -282,7 +329,7 @@
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-      position: relative; /* لضمان عدم تأثر العناصر المخفية */
+      position: relative;
     }
   </style>
 </head>
@@ -304,7 +351,6 @@
     </a>
 
     <div class="nav-actions">
-      <!-- Rewards Badge -->
       <div class="rewards-badge" role="status" aria-label="Reward points">
         <i class="ph-fill ph-star" style="animation: float 3s ease-in-out infinite;"></i>
         <span id="user-points">1,250</span>
@@ -333,7 +379,6 @@
             <button class="dropdown-item" id="my-bookings-btn" role="menuitem"><i class="ph ph-list-checks"></i> <span data-i18n="my_bookings">My Bookings</span></button>
             <button class="dropdown-item" id="my-favorites-btn" role="menuitem"><i class="ph ph-heart"></i> <span data-i18n="my_favorites">My Favorites</span></button>
             <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
-            <!-- Fixed Logout Button -->
             <button class="dropdown-item text-danger" id="logout-btn" role="menuitem">
               <i class="ph ph-sign-out"></i> <span data-i18n="logout">Log Out</span>
             </button>
@@ -351,7 +396,6 @@
     </p>
 
     <div class="search-bar animate-up delay-2" role="search">
-      <!-- Location -->
       <div class="search-field" id="search-location-wrapper">
         <label for="search-location" data-i18n="location">Location</label>
         <input type="text" id="search-location" placeholder="Where are you going?" data-i18n-placeholder="location_placeholder" autocomplete="off">
@@ -360,7 +404,6 @@
 
       <div class="search-divider" aria-hidden="true"></div>
 
-      <!-- Dates -->
       <div class="search-field">
         <label for="search-dates" data-i18n="dates">Dates</label>
         <input type="text" id="search-dates" placeholder="Add dates" data-i18n-placeholder="dates_placeholder" readonly style="cursor:pointer;">
@@ -368,7 +411,6 @@
 
       <div class="search-divider" aria-hidden="true"></div>
 
-      <!-- Guests -->
       <div class="search-field">
         <label for="search-guests" data-i18n="guests">Guests</label>
         <input type="text" id="search-guests" placeholder="Add guests" data-i18n-placeholder="guests_placeholder" readonly style="cursor:pointer;">
@@ -382,13 +424,11 @@
 
   <!-- ═══ Categories ════════════════════════════ -->
   <section class="categories animate-up delay-3" id="categories-container" aria-label="Browse categories">
-    <!-- Rendered via JS -->
   </section>
 
   <!-- ═══ Listings ═════════════════════════════ -->
   <main class="container" id="main-content" role="main" style="padding-top: 20px;">
 
-    <!-- FIXED: Ensure the header controls stay aligned perfectly -->
     <div class="section-header-wrapper animate-up delay-4">
       <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">Trending Destinations</h2>
 
@@ -400,17 +440,14 @@
           <option value="rating" data-i18n="sort_rating">Top Rated</option>
         </select>
 
-        <!-- زر مخفي تماماً ومسحوب من الـ Layout لمنع تعطل ملف السكربت ومنع إزاحة التخطيط -->
         <button id="clear-search-btn" style="display: none !important; position: absolute; pointer-events: none; opacity: 0; width: 0; height: 0; padding: 0; margin: 0; border: none;" aria-hidden="true"></button>
       </div>
     </div>
 
-    <!-- Search Spinner -->
     <div id="search-spinner" style="display:none; text-align:center; padding:60px; color:var(--primary); font-size:2.5rem;">
       <i class="ph ph-circle-notch ph-spin"></i>
     </div>
 
-    <!-- No Results -->
     <div id="search-no-results" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
       <div style="width: 80px; height: 80px; background: rgba(67,90,191,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--primary);">
         <i class="ph ph-magnifying-glass" style="font-size:2.5rem;"></i>
@@ -419,12 +456,8 @@
       <p data-i18n="no_results_sub">Try a different city or hotel name.</p>
     </div>
 
-    <!-- Listings Grid -->
-    <div class="listings-grid" id="listings-grid" role="list">
-      <!-- Cards rendered via JS -->
-    </div>
+    <div class="listings-grid" id="listings-grid" role="list"></div>
 
-    <!-- Load More -->
     <div style="text-align:center; margin-top:48px;">
       <button id="load-more-btn" style="display:none; border-radius: var(--radius-full); padding: 14px 32px; background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; border: none; font-weight: 600; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(67,90,191,0.3); transition: 0.3s;" aria-label="Load more">
         <i class="ph ph-arrows-clockwise"></i> <span data-i18n="load_more">Load More</span>
@@ -496,10 +529,8 @@
   <script src="script.js"></script>
   <script src="search.js"></script>
 
-  <!-- 💫 Observer & Modals Logic 💫 -->
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      // 1. مراقبة وإظهار العقارات بنعومة
       const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
       const listingObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach((entry, index) => {
@@ -525,7 +556,6 @@
         mutationObserver.observe(grid, { childList: true });
       }
 
-      // 2. تصغير الشريط العلوي عند النزول
       const navbar = document.querySelector('.navbar');
       window.addEventListener('scroll', () => {
         if(window.scrollY > 50) {
@@ -538,7 +568,6 @@
       });
     });
 
-    // ── Scroll-to-Top ──────────────────────────
     const _scrollBtn = document.getElementById('scroll-top-btn');
     window.addEventListener('scroll', function() {
       _scrollBtn && _scrollBtn.classList.toggle('visible', window.scrollY > 400);
@@ -547,7 +576,6 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // ── Show/Hide Password & Form Switching ──
     document.querySelectorAll('.toggle-pass-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         var input = document.getElementById(btn.dataset.target);
@@ -565,11 +593,8 @@
       });
     }
     
-    // Auth Modal open/close logic fallback
     const _authModalEl = document.getElementById('auth-modal');
     document.getElementById('open-auth-btn')?.addEventListener('click', () => {
-      // فقط في حالة كان المستخدم غير مسجل دخول
-      // (script.js يتولى إظهار القائمة المنسدلة للمستخدمين المسجلين)
       if (!firebase || !firebase.auth || !firebase.auth().currentUser) {
         if (_authModalEl) {
           _authModalEl.style.opacity = '1';
@@ -602,12 +627,10 @@
       });
     });
     
-    // Mobile Bottom Nav logic
     var _mobBtns = document.querySelectorAll('.mob-nav-btn');
     function _setMobActive(id) { _mobBtns.forEach(b => b.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
     document.getElementById('mob-nav-home')?.addEventListener('click', () => { _setMobActive('mob-nav-home'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-    // ── FIXED LOGOUT LOGIC ────────────────────────
     document.getElementById('logout-btn')?.addEventListener('click', () => {
       if (firebase && firebase.auth) {
         firebase.auth().signOut().then(() => {
@@ -620,7 +643,6 @@
         });
       }
     });
-
   </script>
 
 </body>
