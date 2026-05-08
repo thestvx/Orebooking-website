@@ -4,7 +4,7 @@
 //   - inputmode="none" + readonly لمنع كيبورد الجوال
 //   - حذف "الجزائر" من search-item-sub
 //   - دعم اللغتين (ar/en) في عرض النتائج
-//   - clearSearchBtn يستدعي resetToHome() من script.js
+//   - clearSearchBtn يستدعي resetToHome() من script.js بشكل مباشر
 //   - تكامل كامل مع state وtranslations
 // =========================================
 
@@ -139,9 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (matches.length === 0) {
       dropdown.innerHTML = `
-        <div class="no-results">
-          <i class="ph ph-magnifying-glass"></i>
-          <span>${isAr ? `لم يتم العثور على نتائج لـ "${query}"` : `No results for "${query}"`}</span>
+        <div class="no-results" style="padding: 16px; text-align: center; color: var(--text-muted);">
+          <i class="ph ph-magnifying-glass" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+          <span style="display: block;">${isAr ? `لم يتم العثور على نتائج لـ "${query}"` : `No results for "${query}"`}</span>
         </div>
       `;
       dropdown.classList.add('active');
@@ -164,19 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── قسم المواقع ───
     if (locations.length > 0) {
       html += `
-        <div class="search-dropdown-section-title">
+        <div class="search-dropdown-section-title" style="padding: 8px 20px; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
           ${isAr ? 'مواقع وولايات' : 'Locations'}
         </div>
       `;
       locations.forEach(loc => {
         // ✅ FIX: لا sub-text "الجزائر" هنا
         html += `
-          <div class="search-item" data-type="location" data-val="${escAttr(loc)}">
-            <div class="search-icon-box">
+          <div class="search-item" data-type="location" data-val="${escAttr(loc)}" style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s;">
+            <div class="search-icon-box" style="width: 32px; height: 32px; border-radius: 8px; background: rgba(67,90,191,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center;">
               <i class="ph ph-map-pin"></i>
             </div>
             <div class="search-item-info">
-              <span class="search-item-title">${loc}</span>
+              <span class="search-item-title" style="font-weight: 600; display: block; color: var(--text-main);">${loc}</span>
             </div>
           </div>
         `;
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── قسم العقارات ───
     if (hotels.length > 0) {
       html += `
-        <div class="search-dropdown-section-title">
+        <div class="search-dropdown-section-title" style="padding: 8px 20px; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 8px;">
           ${isAr ? 'عقارات وفنادق' : 'Properties'}
         </div>
       `;
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgSrc   = h.imageUrl || h.image || 'images/placeholder.jpg';
 
         html += `
-          <div class="search-item" data-type="hotel" data-id="${escAttr(h.id)}" data-val="${escAttr(title)}">
+          <div class="search-item" data-type="hotel" data-id="${escAttr(h.id)}" data-val="${escAttr(title)}" style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s;">
             <img
               src="${escAttr(imgSrc)}"
               style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;"
@@ -209,8 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
               alt="${escAttr(title)}"
             >
             <div class="search-item-info">
-              <span class="search-item-title">${title}</span>
-              <span class="search-item-sub">
+              <span class="search-item-title" style="font-weight: 600; display: block; color: var(--text-main);">${title}</span>
+              <span class="search-item-sub" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 2px;">
                 ${loc}${loc && h.price ? ' · ' : ''}${h.price ? Number(h.price).toLocaleString() + ' ' + currency : ''}
               </span>
             </div>
@@ -274,7 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `نتائج البحث عن: <span style="color:var(--primary)">${val}</span>`
         : `Results for: <span style="color:var(--primary)">${val}</span>`;
     }
-    if (clearSearchBtn) clearSearchBtn.style.display = 'inline-flex';
+    
+    // Always hide the clearSearchBtn in layout to prevent breaking design 
+    // It's already hidden in CSS with !important, but just enforcing state
+    if (clearSearchBtn) clearSearchBtn.style.setProperty('display', 'none', 'important');
 
     // تأكد من تحميل العقارات
     if (!isPropertiesLoaded) await fetchAllProperties();
@@ -342,30 +345,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ─────────────────────────────────────────
   // 6. زر إلغاء البحث
-  //    ✅ يستدعي resetToHome() من script.js إن وُجد
+  //    ✅ يستدعي resetToHome() أو fallback
   // ─────────────────────────────────────────
   function handleClear() {
-    if (typeof window.resetToHome === 'function') {
+    // Try to trigger global reset if exists
+    if (typeof resetToHome === 'function') {
+      resetToHome();
+    } else if (typeof window.resetToHome === 'function') {
       window.resetToHome();
-      return;
-    }
-    // fallback
-    searchInput.value = '';
-    if (clearSearchBtn) clearSearchBtn.style.display = 'none';
-    if (noResults)      noResults.style.display      = 'none';
-    if (listingsGrid)   listingsGrid.style.display   = 'grid';
-    if (spinner)        spinner.style.display        = 'none';
+    } else {
+      // fallback
+      searchInput.value = '';
+      if (clearSearchBtn) clearSearchBtn.style.setProperty('display', 'none', 'important');
+      if (noResults)      noResults.style.display      = 'none';
+      if (listingsGrid)   listingsGrid.style.display   = 'grid';
+      if (spinner)        spinner.style.display        = 'none';
 
-    if (sectionTitle) {
-      sectionTitle.setAttribute('data-i18n', 'trending');
-      sectionTitle.textContent = getLang() === 'ar' ? 'الوجهات الشائعة' : 'Trending Destinations';
-    }
+      if (sectionTitle) {
+        sectionTitle.setAttribute('data-i18n', 'trending');
+        sectionTitle.textContent = getLang() === 'ar' ? 'الوجهات الشائعة' : 'Trending Destinations';
+      }
 
-    if (typeof window.renderListings === 'function') {
-      const src = (typeof state !== 'undefined' && state.liveProperties?.length)
-        ? state.liveProperties
-        : allProperties;
-      window.renderListings(src);
+      if (typeof window.renderListings === 'function') {
+        const src = (typeof state !== 'undefined' && state.liveProperties?.length)
+          ? state.liveProperties
+          : allProperties;
+        window.renderListings(src);
+      }
     }
   }
 
