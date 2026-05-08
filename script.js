@@ -88,7 +88,12 @@ const translations = {
     back_to_login: "Back to login",
     reset_sent: "Reset link sent! Check your inbox.",
     my_bookings: "My Bookings",
-    no_bookings: "You have no bookings yet."
+    no_bookings: "You have no bookings yet.",
+    auth_required: "Please log in first",
+    login_success: "Login successful",
+    register_success: "Account created successfully",
+    logout_success: "Logged out successfully",
+    invalid_credentials: "Invalid email or password"
   },
   ar: {
     hero_title: "اكتشف إقامتك المثالية القادمة",
@@ -145,7 +150,12 @@ const translations = {
     back_to_login: "العودة لتسجيل الدخول",
     reset_sent: "تم الإرسال! تحقق من بريدك الإلكتروني.",
     my_bookings: "حجوزاتي",
-    no_bookings: "ليس لديك أي حجوزات بعد."
+    no_bookings: "ليس لديك أي حجوزات بعد.",
+    auth_required: "يرجى تسجيل الدخول أولاً",
+    login_success: "تم تسجيل الدخول بنجاح",
+    register_success: "تم إنشاء الحساب بنجاح",
+    logout_success: "تم تسجيل الخروج بنجاح",
+    invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة"
   }
 };
 
@@ -257,20 +267,16 @@ function init() {
     initClearSearchBtn();
   }
 
-  // Check if we are in property detail view and render if so
-  if (typeof renderPropertyDetails === 'function') {
-      renderPropertyDetails();
+  if (typeof renderPropertyDetails === "function") {
+    renderPropertyDetails();
   }
 
   initScrollTopBtn();
   initMobileNav();
-  if (typeof initSliderTouch === 'function') initSliderTouch();
+  if (typeof initSliderTouch === "function") initSliderTouch();
   initPasswordToggles();
   initPasswordStrength();
-  
-  if (typeof initBookingsModal === 'function') {
-      initBookingsModal();
-  }
+  initBookingsModal();
 
   if (langBtn) langBtn.addEventListener("click", toggleLanguage);
   if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
@@ -307,7 +313,7 @@ function init() {
       renderListings();
     });
   }
-  
+
   if (myBookingsBtn) {
     myBookingsBtn.addEventListener("click", () => {
       if (profileDropdown) profileDropdown.classList.remove("active");
@@ -325,18 +331,17 @@ function init() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
       const lb = document.getElementById("lightbox");
-      if (lb && lb.classList.contains("active") && typeof closeLightbox === 'function') {
+      const bookingsModal = document.getElementById("bookings-modal");
+      const sd = document.getElementById("search-dropdown");
+
+      if (lb && lb.classList.contains("active") && typeof closeLightbox === "function") {
         closeLightbox();
+      } else if (bookingsModal && bookingsModal.classList.contains("active")) {
+        closeBookingsModal();
       } else if (authModal && authModal.classList.contains("active")) {
         closeModal();
       }
 
-      const bookingsModal = document.getElementById("bookings-modal");
-      if (bookingsModal && bookingsModal.classList.contains("active") && typeof closeBookingsModal === 'function') {
-        closeBookingsModal();
-      }
-
-      const sd = document.getElementById("search-dropdown");
       if (sd) sd.classList.remove("active");
     }
   });
@@ -361,74 +366,207 @@ function init() {
     switchForm("login");
   });
 
-  if (loginForm && typeof handleLogin === 'function') loginForm.addEventListener("submit", handleLogin);
-  if (registerForm && typeof handleRegister === 'function') registerForm.addEventListener("submit", handleRegister);
+  if (loginForm) loginForm.addEventListener("submit", handleLogin);
+  if (registerForm) registerForm.addEventListener("submit", handleRegister);
   if (forgotForm) forgotForm.addEventListener("submit", handleForgotPassword);
 
-  if (typeof handleGoogleLogin === 'function') {
-      document.getElementById("google-login-btn")?.addEventListener("click", handleGoogleLogin);
-      document.getElementById("google-register-btn")?.addEventListener("click", handleGoogleLogin);
-  }
+  document.getElementById("google-login-btn")?.addEventListener("click", handleGoogleLogin);
+  document.getElementById("google-register-btn")?.addEventListener("click", handleGoogleLogin);
 
-  if (logoutBtn && typeof handleLogout === 'function') logoutBtn.addEventListener("click", handleLogout);
+  if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
 
   auth.onAuthStateChanged(user => {
     state.user = user;
     loadFavorites();
-    if (typeof updateUserUI === 'function') updateUserUI();
+    updateUserUI();
   });
 }
 
-// Ensure init is called
 document.addEventListener("DOMContentLoaded", init);
 
-
 // ==========================================
-// 4.1 AUTH MODAL FUNCTIONS (ADDED FIX HERE)
+// 4.1 AUTH MODAL
 // ==========================================
 function openModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) {
-    modal.classList.add("active");
+  if (authModal) {
+    authModal.classList.add("active");
     document.body.classList.add("modal-open");
+    showMessage("", "");
   }
 }
 
 function closeModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) {
-    modal.classList.remove("active");
+  if (authModal) {
+    authModal.classList.remove("active");
     document.body.classList.remove("modal-open");
   }
 }
 
 function switchForm(formType) {
-  const loginForm = document.getElementById("login-form");
-  const registerForm = document.getElementById("register-form");
-  const forgotForm = document.getElementById("forgot-form");
-  
-  if (loginForm) loginForm.style.display = formType === 'login' ? 'flex' : 'none';
-  if (registerForm) registerForm.style.display = formType === 'register' ? 'flex' : 'none';
-  if (forgotForm) forgotForm.style.display = formType === 'forgot' ? 'flex' : 'none';
+  const login = document.getElementById("login-form");
+  const register = document.getElementById("register-form");
+  const forgot = document.getElementById("forgot-form");
+
+  if (login) login.style.display = formType === "login" ? "block" : "none";
+  if (register) register.style.display = formType === "register" ? "block" : "none";
+  if (forgot) forgot.style.display = formType === "forgot" ? "block" : "none";
 }
 
 function handleAuthButtonClick(e) {
   if (e) e.preventDefault();
-  
+
   if (state.user) {
-    const dropdown = document.getElementById("profile-dropdown");
-    if (dropdown) {
-      dropdown.classList.toggle("active");
-    }
+    if (profileDropdown) profileDropdown.classList.toggle("active");
   } else {
-    switchForm('login');
+    switchForm("login");
     openModal();
   }
 }
 
+function showMessage(message, type = "error") {
+  if (!authMessage) return;
+
+  if (!message) {
+    authMessage.style.display = "none";
+    authMessage.textContent = "";
+    authMessage.className = "auth-message";
+    return;
+  }
+
+  authMessage.textContent = message;
+  authMessage.className = `auth-message ${type}`;
+  authMessage.style.display = "block";
+}
+
+function updateUserUI() {
+  const dropdownUserName = document.getElementById("dropdown-user-name");
+  const dropdownUserEmail = document.getElementById("dropdown-user-email");
+  const icon = openAuthBtn?.querySelector("i");
+
+  if (state.user) {
+    if (openAuthBtn) {
+      openAuthBtn.classList.remove("auth-btn-guest");
+      openAuthBtn.classList.add("auth-btn-logged");
+    }
+    if (icon) icon.className = "ph-fill ph-user-circle";
+
+    if (dropdownUserName) dropdownUserName.textContent = state.user.displayName || "User";
+    if (dropdownUserEmail) dropdownUserEmail.textContent = state.user.email || "";
+
+    closeModal();
+  } else {
+    if (openAuthBtn) {
+      openAuthBtn.classList.remove("auth-btn-logged");
+      openAuthBtn.classList.add("auth-btn-guest");
+    }
+    if (icon) icon.className = "ph ph-user";
+    if (profileDropdown) profileDropdown.classList.remove("active");
+
+    if (dropdownUserName) dropdownUserName.textContent = "Guest";
+    if (dropdownUserEmail) dropdownUserEmail.textContent = "";
+  }
+}
 
 // ==========================================
-// 4.5. MISSING CATEGORY RENDER FUNCTION
+// 4.2 AUTH HANDLERS
+// ==========================================
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const email = document.getElementById("login-email")?.value.trim();
+  const password = document.getElementById("login-password")?.value;
+
+  if (!email || !password) {
+    showMessage(translations[state.lang].invalid_credentials, "error");
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    showToast(translations[state.lang].login_success, "success");
+    showMessage("", "");
+    closeModal();
+    loginForm?.reset();
+  } catch (error) {
+    console.error("Login error:", error);
+    showMessage(translations[state.lang].invalid_credentials, "error");
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+
+  const name = document.getElementById("reg-name")?.value.trim();
+  const email = document.getElementById("reg-email")?.value.trim();
+  const password = document.getElementById("reg-password")?.value;
+
+  if (!name || !email || !password) {
+    showMessage(state.lang === "ar" ? "يرجى تعبئة جميع الحقول" : "Please fill all fields", "error");
+    return;
+  }
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await cred.user.updateProfile({ displayName: name });
+
+    await db.collection("users").doc(cred.user.uid).set({
+      name,
+      email,
+      points: 1250,
+      role: "guest",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    showToast(translations[state.lang].register_success, "success");
+    showMessage("", "");
+    registerForm?.reset();
+    closeModal();
+  } catch (error) {
+    console.error("Register error:", error);
+    showMessage(error.message, "error");
+  }
+}
+
+async function handleGoogleLogin() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await auth.signInWithPopup(provider);
+
+    if (result?.user) {
+      const ref = db.collection("users").doc(result.user.uid);
+      const snap = await ref.get();
+
+      if (!snap.exists) {
+        await ref.set({
+          name: result.user.displayName || "User",
+          email: result.user.email || "",
+          points: 1250,
+          role: "guest",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+
+    closeModal();
+    showToast(translations[state.lang].login_success, "success");
+  } catch (error) {
+    console.error("Google login error:", error);
+    showMessage(error.message, "error");
+  }
+}
+
+async function handleLogout() {
+  try {
+    await auth.signOut();
+    if (profileDropdown) profileDropdown.classList.remove("active");
+    showToast(translations[state.lang].logout_success, "success");
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+}
+
+// ==========================================
+// 4.5 CATEGORY RENDER
 // ==========================================
 function renderCategories() {
   const container = document.getElementById("categories-container");
@@ -438,61 +576,58 @@ function renderCategories() {
     const isAr = state.lang === "ar";
     const label = isAr ? cat.label_ar : cat.label_en;
     const isActive = state.activeCategory === cat.label_en;
-    const activeClass = isActive ? "active" : "";
 
     return `
-      <button class="category-btn ${activeClass}" onclick="selectCategory('${cat.label_en}')" data-idx="${idx}">
-        <i class="ph ${cat.icon}"></i>
+      <button class="category-item ${isActive ? "active" : ""}" onclick="selectCategory('${escapeAttr(cat.label_en)}')" data-idx="${idx}">
+        <i class="ph ${escapeAttr(cat.icon)}"></i>
         <span>${escapeHtml(label)}</span>
       </button>
     `;
   }).join("");
 }
 
-window.selectCategory = function(catName) {
+window.selectCategory = function (catName) {
   if (state.activeCategory === catName) {
-    state.activeCategory = null; 
+    state.activeCategory = null;
   } else {
     state.activeCategory = catName;
   }
-  
-  if (typeof renderCategories === 'function') renderCategories();
+
+  renderCategories();
 
   if (state.activeCategory) {
     showClearSearchBtn();
+
     const sectionTitle = document.getElementById("section-main-title");
     const isAr = state.lang === "ar";
     const matchedCat = categories.find(c => c.label_en === state.activeCategory);
-    
+
     if (sectionTitle && matchedCat) {
       sectionTitle.removeAttribute("data-i18n");
-      sectionTitle.textContent = isAr ? `نتائج: ${matchedCat.label_ar}` : `Category: ${matchedCat.label_en}`;
+      sectionTitle.textContent = isAr ? matchedCat.label_ar : matchedCat.label_en;
     }
 
     const filtered = state.liveProperties.filter(p => propertyMatchesCategory(p, state.activeCategory));
-    if (typeof renderListings === 'function') renderListings(filtered);
+    renderListings(filtered);
     document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (!state.activeSearch) {
+    resetToHome();
   } else {
-    if (!state.activeSearch) {
-      resetToHome();
-    } else {
-      const searchBtn = document.getElementById("main-search-btn");
-      if (searchBtn) searchBtn.click();
-    }
+    document.getElementById("main-search-btn")?.click();
   }
 };
 
 // ==========================================
-// 5. GENERAL HELPERS
+// 5. HELPERS
 // ==========================================
-function escapeHtml(str = "") {
+function escapeHtml(str) {
   const div = document.createElement("div");
-  div.textContent = String(str);
+  div.textContent = String(str ?? "");
   return div.innerHTML;
 }
 
-function escapeAttr(str = "") {
-  return String(str)
+function escapeAttr(str) {
+  return String(str ?? "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
@@ -502,44 +637,59 @@ function escapeAttr(str = "") {
 
 function propertyMatchesCategory(property, category) {
   const haystack = [
-    property.title_en,
-    property.title_ar,
-    property.desc_en,
-    property.desc_ar,
-    ...(property.features_en || []),
-    ...(property.features_ar || [])
-  ]
-    .join(" ")
-    .toLowerCase();
+    property.title_en, property.title_ar,
+    property.titleEn, property.titleAr,
+    property.desc_en, property.desc_ar,
+    property.descEn, property.descAr,
+    ...(property.features_en || property.featuresEn || []),
+    ...(property.features_ar || property.featuresAr || [])
+  ].join(" ").toLowerCase();
 
   switch (category) {
     case "Apartments":
-      return /apartment|شقة|شقق/.test(haystack);
+      return /apartment|شقة/.test(haystack);
     case "Villas":
-      return /villa|فلل|فيلا/.test(haystack);
+      return /villa|فيلا/.test(haystack);
     case "Resorts":
-      return /resort|camp|منتجع|كوخ/.test(haystack);
+      return /resort|camp|منتجع/.test(haystack);
     case "Pools":
-      return /pool|swimming|مسبح|مسابح/.test(haystack);
+      return /pool|swimming|مسبح/.test(haystack);
     default:
       return true;
   }
 }
 
+function normalizeProperty(p) {
+  return {
+    id: String(p.id || ""),
+    title_en: p.title_en || p.titleEn || "",
+    title_ar: p.title_ar || p.titleAr || "",
+    location_en: p.location_en || p.locationEn || "",
+    location_ar: p.location_ar || p.locationAr || "",
+    price: Number(p.price || 0),
+    rating: Number(p.rating || 4.8),
+    image: p.image || p.imageUrl || "images/placeholder.jpg",
+    images: Array.isArray(p.images) && p.images.length ? p.images : [p.image || p.imageUrl || "images/placeholder.jpg"],
+    urgency: p.urgency || null,
+    desc_en: p.desc_en || p.descEn || "",
+    desc_ar: p.desc_ar || p.descAr || "",
+    features_en: p.features_en || p.featuresEn || [],
+    features_ar: p.features_ar || p.featuresAr || [],
+    lat: p.lat ?? null,
+    lng: p.lng ?? null
+  };
+}
+
 // ==========================================
-// 6. SCROLL-TO-TOP BUTTON
+// 6. SCROLL TOP
 // ==========================================
 function initScrollTopBtn() {
   const btn = document.getElementById("scroll-top-btn");
   if (!btn) return;
 
-  window.addEventListener(
-    "scroll",
-    () => {
-      btn.classList.toggle("visible", window.scrollY > 400);
-    },
-    { passive: true }
-  );
+  window.addEventListener("scroll", () => {
+    btn.classList.toggle("visible", window.scrollY > 400);
+  }, { passive: true });
 
   btn.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -547,7 +697,7 @@ function initScrollTopBtn() {
 }
 
 // ==========================================
-// 7. MOBILE BOTTOM NAV
+// 7. MOBILE NAV
 // ==========================================
 function initMobileNav() {
   const nav = document.getElementById("mobile-bottom-nav");
@@ -561,7 +711,7 @@ function initMobileNav() {
       const target = btn.getAttribute("data-target");
       if (target === "home") resetToHome();
       if (target === "favorites") myFavoritesBtn?.click();
-      if (target === "profile" && typeof handleAuthButtonClick === 'function') handleAuthButtonClick();
+      if (target === "profile") handleAuthButtonClick();
     });
   });
 }
@@ -589,7 +739,8 @@ function initPasswordStrength() {
   const wrapper = document.getElementById("password-strength");
   const label = document.getElementById("strength-label");
   const barsEl = wrapper?.querySelectorAll(".str-bar");
-  if (!input || !wrapper || !barsEl) return;
+
+  if (!input || !wrapper || !barsEl?.length) return;
 
   input.addEventListener("input", () => {
     const val = input.value;
@@ -614,7 +765,6 @@ function initPasswordStrength() {
 function calcPasswordStrength(val) {
   if (!val) return 0;
   if (val.length < 6) return 1;
-
   let score = 1;
   if (val.length >= 8) score++;
   if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
@@ -628,35 +778,32 @@ function calcPasswordStrength(val) {
 async function handleForgotPassword(e) {
   e.preventDefault();
 
-  const emailInput =
-    document.getElementById("forgot-email") ||
-    forgotForm?.querySelector('input[type="email"]');
-
+  const emailInput = document.getElementById("forgot-email") || forgotForm?.querySelector('input[type="email"]');
   const email = emailInput?.value.trim();
+
   if (!email) {
-    if (typeof showMessage === 'function') showMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email", "error");
-    else alert(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email");
+    showMessage(state.lang === "ar" ? "يرجى إدخال بريدك الإلكتروني" : "Please enter your email", "error");
     return;
   }
 
   try {
     await auth.sendPasswordResetEmail(email);
-    if (typeof showMessage === 'function') showMessage(translations[state.lang].reset_sent, "success");
+    showMessage(translations[state.lang].reset_sent, "success");
     forgotForm?.reset();
   } catch (error) {
     const isAr = state.lang === "ar";
     const map = {
-      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد" : "No account found with this email",
-      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
+      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد الإلكتروني" : "No account found with this email",
+      "auth/invalid-email": isAr ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format",
       "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
     };
-    if (typeof showMessage === 'function') showMessage(map[error.code] || error.message, "error");
-    else alert(map[error.code] || error.message);
+
+    showMessage(map[error.code] || error.message, "error");
   }
 }
 
 // ==========================================
-// 10. RESET TO HOME
+// 10. RESET HOME
 // ==========================================
 function resetToHome() {
   state.currentView = "home";
@@ -682,17 +829,20 @@ function resetToHome() {
   document.querySelectorAll(".mob-nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelector('.mob-nav-btn[data-target="home"]')?.classList.add("active");
 
-  if (typeof renderCategories === 'function') renderCategories();
-  if (typeof renderListings === 'function') renderListings();
+  renderCategories();
+  renderListings();
 }
 
 // ==========================================
-// 11. CLEAR SEARCH BUTTON
+// 11. CLEAR SEARCH
 // ==========================================
 function initClearSearchBtn() {
   const clearBtn = document.getElementById("clear-search-btn");
   if (!clearBtn) return;
-  clearBtn.addEventListener("click", resetToHome);
+
+  clearBtn.addEventListener("click", () => {
+    resetToHome();
+  });
 }
 
 function showClearSearchBtn() {
@@ -706,49 +856,42 @@ function hideClearSearchBtn() {
 }
 
 // ==========================================
-// 12. SMART SEARCH WITH WILAYAS
+// 12. SMART SEARCH
 // ==========================================
 function initSmartSearch() {
   const searchInput = document.getElementById("search-location");
   const searchDropdown = document.getElementById("search-dropdown");
   const searchBtn = document.getElementById("main-search-btn");
-
   if (!searchInput || !searchDropdown) return;
 
-  const dict = () => translations[state.lang];
+  const dict = translations[state.lang];
 
   const renderWilayas = wilayas => {
     let html = `
-      <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom:1px solid var(--border-color);">
-        <div class="search-icon-box" style="color:var(--text-main);">
-          <i class="ph ph-globe-hemisphere-west"></i>
-        </div>
+      <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom:1px solid var(--border-color)">
+        <div class="search-icon-box"><i class="ph ph-globe-hemisphere-west"></i></div>
         <div class="search-item-info">
-          <span class="search-item-title">${dict().all_wilayas}</span>
-          <span class="search-item-sub">${dict().all_wilayas_sub}</span>
+          <span class="search-item-title">${escapeHtml(dict.all_wilayas)}</span>
+          <span class="search-item-sub">${escapeHtml(dict.all_wilayas_sub)}</span>
         </div>
       </div>
     `;
 
     if (wilayas.length > 0) {
-      html += wilayas
-        .map(
-          w => `
-        <div class="search-item" onclick="selectWilaya('${w.ar.replace(/'/g, "\\'")}', '${w.en.replace(/'/g, "\\'")}')">
+      html += wilayas.map(w => `
+        <div class="search-item" onclick="selectWilaya('${escapeAttr(w.ar)}', '${escapeAttr(w.en)}')">
           <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
           <div class="search-item-info">
-            <span class="search-item-title">${state.lang === "en" ? w.en : w.ar}</span>
-            <span class="search-item-sub">${state.lang === "en" ? "Algeria" : "الجزائر"} — ${w.id}</span>
+            <span class="search-item-title">${escapeHtml(state.lang === "en" ? w.en : w.ar)}</span>
+            <span class="search-item-sub">${escapeHtml(state.lang === "en" ? "Algeria" : `الجزائر • ${w.id}`)}</span>
           </div>
         </div>
-      `
-        )
-        .join("");
+      `).join("");
     } else {
       html += `
         <div class="no-results">
           <i class="ph ph-magnifying-glass"></i>
-          <span>${dict().no_results}</span>
+          <span>${escapeHtml(dict.no_results)}</span>
         </div>
       `;
     }
@@ -768,18 +911,17 @@ function initSmartSearch() {
       return;
     }
 
-    const filtered = algerianWilayas.filter(
-      w =>
-        (w.ar && w.ar.includes(e.target.value.trim())) ||
-        (w.en && w.en.toLowerCase().includes(val)) ||
-        String(w.id) === val
+    const filtered = algerianWilayas.filter(w =>
+      (w.ar && w.ar.includes(e.target.value.trim())) ||
+      (w.en && w.en.toLowerCase().includes(val)) ||
+      String(w.id) === val
     );
 
     renderWilayas(filtered);
   });
 
   document.addEventListener("click", e => {
-    if (!e.target.closest("#search-location-wrapper") && !e.target.closest(".search-bar")) {
+    if (!e.target.closest(".search-location-wrapper") && !e.target.closest(".search-bar")) {
       searchDropdown.classList.remove("active");
     }
   });
@@ -832,7 +974,7 @@ function initSmartSearch() {
         sectionTitle.textContent = translations[state.lang].trending;
       }
 
-      if (typeof renderListings === 'function') renderListings();
+      renderListings();
       document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -844,7 +986,7 @@ function initSmartSearch() {
     const sectionTitle = document.getElementById("section-main-title");
     if (sectionTitle) {
       sectionTitle.removeAttribute("data-i18n");
-      sectionTitle.textContent = state.lang === "en" ? `Results: ${enName}` : `نتائج: ${arName}`;
+      sectionTitle.textContent = state.lang === "en" ? `Results: ${enName}` : arName;
     }
 
     filterAndRender(enName, arName);
@@ -869,18 +1011,17 @@ function initSmartSearch() {
       const sectionTitle = document.getElementById("section-main-title");
       if (sectionTitle) {
         sectionTitle.removeAttribute("data-i18n");
-        sectionTitle.textContent = state.lang === "en" ? `Results: "${val}"` : `نتائج: "${val}"`;
+        sectionTitle.textContent = state.lang === "en" ? `Results: ${val}` : val;
       }
 
-      const filtered = state.liveProperties.filter(
-        p =>
-          (p.title_en && p.title_en.toLowerCase().includes(valLow)) ||
-          (p.title_ar && p.title_ar.includes(val)) ||
-          (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
-          (p.location_ar && p.location_ar.includes(val))
+      const filtered = state.liveProperties.filter(p =>
+        (p.title_en && p.title_en.toLowerCase().includes(valLow)) ||
+        (p.title_ar && p.title_ar.includes(val)) ||
+        (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
+        (p.location_ar && p.location_ar.includes(val))
       );
 
-      if (typeof renderListings === 'function') renderListings(filtered);
+      renderListings(filtered);
       document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
@@ -889,19 +1030,18 @@ function initSmartSearch() {
     const enLow = enName ? enName.toLowerCase() : "";
     const arTrim = arName || "";
 
-    const filtered = state.liveProperties.filter(
-      p =>
-        (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
-        (p.location_ar && p.location_ar.includes(arTrim))
+    const filtered = state.liveProperties.filter(p =>
+      (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
+      (p.location_ar && p.location_ar.includes(arTrim))
     );
 
-    if (typeof renderListings === 'function') renderListings(filtered);
+    renderListings(filtered);
     document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
 // ==========================================
-// 13. LOAD PROPERTIES FROM FIRESTORE
+// 13. LOAD PROPERTIES
 // ==========================================
 async function loadPropertiesFromFirestore() {
   const container = document.getElementById("listings-grid");
@@ -916,42 +1056,42 @@ async function loadPropertiesFromFirestore() {
 
   try {
     const snapshot = await db.collection("properties").where("visible", "==", true).get();
-    
+
     if (!snapshot.empty) {
       state.liveProperties = snapshot.docs.map(doc => {
         const d = doc.data();
-        return {
+        return normalizeProperty({
           id: String(doc.id),
-          title_en: d.titleEn || d.title_en || "",
-          title_ar: d.titleAr || d.title_ar || "",
-          location_en: d.locationEn || d.location_en || "",
-          location_ar: d.locationAr || d.location_ar || "",
+          titleEn: d.titleEn || d.titleen,
+          titleAr: d.titleAr || d.titlear,
+          locationEn: d.locationEn || d.locationen,
+          locationAr: d.locationAr || d.locationar,
           price: Number(d.price || 0),
           rating: Number(d.rating || 4.8),
-          image: d.imageUrl || d.image || "",
-          images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || ""],
+          imageUrl: d.imageUrl || d.image,
+          images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || "images/placeholder.jpg"],
           urgency: d.urgency || null,
-          desc_en: d.descEn || d.desc_en || "",
-          desc_ar: d.descAr || d.desc_ar || "",
-          features_en: Array.isArray(d.featuresEn || d.features_en) ? (d.featuresEn || d.features_en) : [],
-          features_ar: Array.isArray(d.featuresAr || d.features_ar) ? (d.featuresAr || d.features_ar) : [],
-          lat: d.lat || null,
-          lng: d.lng || null
-        };
+          descEn: d.descEn || d.descen,
+          descAr: d.descAr || d.descar,
+          featuresEn: Array.isArray(d.featuresEn) ? d.featuresEn : (Array.isArray(d.featuresen) ? d.featuresen : []),
+          featuresAr: Array.isArray(d.featuresAr) ? d.featuresAr : (Array.isArray(d.featuresar) ? d.featuresar : []),
+          lat: d.lat ?? null,
+          lng: d.lng ?? null
+        });
       });
     } else {
-      state.liveProperties = [...properties];
+      state.liveProperties = properties.map(normalizeProperty);
     }
   } catch (err) {
     console.error("Firestore error:", err);
-    state.liveProperties = [...properties];
+    state.liveProperties = properties.map(normalizeProperty);
   }
 
-  if (typeof renderListings === 'function') renderListings();
+  renderListings();
 }
 
 // ==========================================
-// 14. THEME, LOGO & LANGUAGE
+// 14. THEME / LANGUAGE
 // ==========================================
 function updateLogo() {
   const mainLogo = document.getElementById("main-logo");
@@ -972,10 +1112,15 @@ function applyInitialState() {
   }
 
   updateLogo();
+
   htmlEl.setAttribute("dir", state.lang === "en" ? "ltr" : "rtl");
   htmlEl.setAttribute("lang", state.lang);
 
-  if (langBtn) langBtn.textContent = state.lang === "en" ? "العربية" : "English";
+  if (langBtn) {
+    langBtn.innerHTML = state.lang === "en"
+      ? '<i class="ph ph-globe"></i><span>العربية</span>'
+      : '<i class="ph ph-globe"></i><span>English</span>';
+  }
 
   updateLanguageUI();
 }
@@ -992,20 +1137,19 @@ function toggleLanguage() {
   applyInitialState();
 
   if (document.getElementById("categories-container")) {
-    if (typeof renderCategories === 'function') renderCategories();
+    renderCategories();
 
     if (state.activeSearch && state.currentView !== "favorites") {
       const val = state.activeSearch.toLowerCase();
-      const filtered = state.liveProperties.filter(
-        p =>
-          (p.title_en && p.title_en.toLowerCase().includes(val)) ||
-          (p.title_ar && p.title_ar.includes(state.activeSearch)) ||
-          (p.location_en && p.location_en.toLowerCase().includes(val)) ||
-          (p.location_ar && p.location_ar.includes(state.activeSearch))
+      const filtered = state.liveProperties.filter(p =>
+        (p.title_en && p.title_en.toLowerCase().includes(val)) ||
+        (p.title_ar && p.title_ar.includes(state.activeSearch)) ||
+        (p.location_en && p.location_en.toLowerCase().includes(val)) ||
+        (p.location_ar && p.location_ar.includes(state.activeSearch))
       );
-      if (typeof renderListings === 'function') renderListings(filtered);
+      renderListings(filtered);
     } else {
-      if (typeof renderListings === 'function') renderListings();
+      renderListings();
     }
 
     const searchInput = document.getElementById("search-location");
@@ -1022,7 +1166,7 @@ function toggleLanguage() {
     }
   }
 
-  if (typeof renderPropertyDetails === 'function') renderPropertyDetails();
+  if (typeof renderPropertyDetails === "function") renderPropertyDetails();
 }
 
 function updateLanguageUI() {
@@ -1038,38 +1182,17 @@ function updateLanguageUI() {
     if (dict[key] !== undefined) el.placeholder = dict[key];
   });
 
-  _updatePropertyPageTexts();
+  updatePropertyPageTexts();
 }
 
-function _updatePropertyPageTexts() {
+function updatePropertyPageTexts() {
   const isAr = state.lang === "ar";
-
   const infoText = document.getElementById("booking-info-text");
   if (infoText) {
     infoText.textContent = isAr
-      ? "اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي."
+      ? "اختر التواريخ وعدد الضيوف في الصفحة التالية لرؤية السعر النهائي."
       : "Choose your dates and number of guests on the next page to see the final price.";
   }
-
-  const perk1 = document.getElementById("perk-1");
-  const perk2 = document.getElementById("perk-2");
-  const perk3 = document.getElementById("perk-3");
-  if (perk1) perk1.textContent = isAr ? "إلغاء مجاني خلال 24 ساعة" : "Free cancellation within 24h";
-  if (perk2) perk2.textContent = isAr ? "تأكيد فوري للحجز" : "Instant confirmation";
-  if (perk3) perk3.textContent = isAr ? "دعم على مدار الساعة" : "24/7 support";
-
-  const shareText = document.getElementById("share-text");
-  if (shareText) shareText.textContent = isAr ? "مشاركة" : "Share";
-
-  const hostSince = document.getElementById("host-since");
-  const hostBadgeText = document.getElementById("host-badge-text");
-  if (hostSince) hostSince.textContent = isAr ? "مضيف منذ 2024" : "Hosting since 2024";
-  if (hostBadgeText) hostBadgeText.textContent = isAr ? "مضيف موثوق" : "Verified Host";
-
-  const mapTitle = document.getElementById("map-title");
-  const mapsText = document.getElementById("open-maps-text");
-  if (mapTitle) mapTitle.textContent = isAr ? "موقع العقار" : "Where you'll be";
-  if (mapsText) mapsText.textContent = isAr ? "فتح في خرائط قوقل" : "Open in Google Maps";
 }
 
 // ==========================================
@@ -1089,7 +1212,7 @@ function loadFavorites() {
   }
 
   if (document.getElementById("listings-grid")) {
-    if (typeof renderListings === 'function') renderListings();
+    renderListings();
   }
 }
 
@@ -1099,14 +1222,13 @@ function saveFavorites() {
   }
 }
 
-window.toggleFavorite = function(e, id) {
+window.toggleFavorite = function (e, id) {
   e.stopPropagation();
-  e.preventDefault(); // Prevent navigating to property if clicking the heart icon
+  e.preventDefault();
 
   if (!state.user) {
-    if (typeof openModal === 'function') openModal();
-    if (typeof showMessage === 'function') showMessage(state.lang === "ar" ? "الرجاء تسجيل الدخول أولاً" : "Please log in first", "error");
-    else alert(state.lang === "ar" ? "الرجاء تسجيل الدخول أولاً" : "Please log in first");
+    openModal();
+    showMessage(translations[state.lang].auth_required, "error");
     return;
   }
 
@@ -1114,37 +1236,37 @@ window.toggleFavorite = function(e, id) {
   const index = state.favorites.indexOf(strId);
   const wasFav = index > -1;
 
-  if (wasFav) state.favorites.splice(index, 1);
-  else state.favorites.push(strId);
+  if (wasFav) {
+    state.favorites.splice(index, 1);
+  } else {
+    state.favorites.push(strId);
+  }
 
   saveFavorites();
 
   const btn = e.currentTarget;
-  if (wasFav) {
-    btn.classList.remove("active");
-    btn.innerHTML = `<i class="ph ph-heart"></i>`;
-  } else {
-    btn.classList.add("active");
-    btn.innerHTML = `<i class="ph-fill ph-heart"></i>`;
+  const icon = btn.querySelector("i");
+  if (icon) {
+    icon.className = wasFav ? "ph ph-heart" : "ph-fill ph-heart";
   }
+  btn.classList.toggle("active", !wasFav);
 
   showFavToast(wasFav ? translations[state.lang].fav_removed : translations[state.lang].fav_added);
 
   if (state.currentView === "favorites") {
-    if (typeof renderListings === 'function') renderListings();
+    renderListings();
   }
 };
 
-window.goToProperty = function(id) {
+window.goToProperty = function (id) {
   window.location.href = `property.html?id=${String(id)}`;
 };
 
 // ==========================================
-// 16. TOAST NOTIFICATIONS
+// 16. TOASTS
 // ==========================================
 function showToast(message, type = "info", duration = 3000) {
   let container = document.getElementById("toast-container");
-  
   if (!container) {
     container = document.createElement("div");
     container.id = "toast-container";
@@ -1159,7 +1281,7 @@ function showToast(message, type = "info", duration = 3000) {
 
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<i class="ph ${icons[type] || "ph-info"}"></i><span>${escapeHtml(message)}</span>`;
+  toast.innerHTML = `<i class="ph ${icons[type] || icons.info}"></i><span>${escapeHtml(message)}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -1170,7 +1292,6 @@ function showToast(message, type = "info", duration = 3000) {
 
 function showFavToast(message) {
   let el = document.getElementById("fav-toast");
-
   if (!el) {
     el = document.createElement("div");
     el.id = "fav-toast";
@@ -1179,12 +1300,12 @@ function showFavToast(message) {
 
   el.textContent = message;
   el.classList.add("show");
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove("show"), 2200);
+  clearTimeout(el.timer);
+  el.timer = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
 // ==========================================
-// 17. MY BOOKINGS (COMPLETED)
+// 17. BOOKINGS
 // ==========================================
 function initBookingsModal() {
   const modal = document.getElementById("bookings-modal");
@@ -1202,20 +1323,19 @@ function initBookingsModal() {
 function closeBookingsModal() {
   const modal = document.getElementById("bookings-modal");
   if (!modal) return;
-
   modal.classList.remove("active");
   document.body.classList.remove("modal-open");
 }
 
 async function showMyBookings() {
   if (!state.user) {
-    if (typeof openModal === 'function') openModal();
+    openModal();
     return;
   }
 
   const modal = document.getElementById("bookings-modal");
   if (!modal) {
-    showToast(state.lang === "ar" ? "جاري تحميل الحجوزات..." : "Loading bookings...", "info");
+    showToast(state.lang === "ar" ? "جارٍ تحميل الحجوزات..." : "Loading bookings...", "info");
     return;
   }
 
@@ -1225,8 +1345,8 @@ async function showMyBookings() {
   const body = document.getElementById("bookings-list") || modal.querySelector(".bookings-body") || modal.querySelector(".modal-content");
   if (body) {
     body.innerHTML = `
-      <div style="text-align:center;padding:40px;">
-        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;color:var(--primary);"></i>
+      <div style="text-align:center;padding:40px">
+        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;color:var(--primary)"></i>
       </div>
     `;
   }
@@ -1234,16 +1354,16 @@ async function showMyBookings() {
   try {
     const snap = await db
       .collection("bookings")
-      .where("guestId", "==", state.user.uid) // Note: Changed to guestId which matches booking payload
+      .where("guestId", "==", state.user.uid)
       .orderBy("createdAt", "desc")
       .get();
 
     if (snap.empty) {
       if (body) {
         body.innerHTML = `
-          <div style="text-align:center;padding:40px;color:var(--text-muted);">
-            <i class="ph ph-calendar-x" style="font-size:3rem;display:block;margin-bottom:12px;opacity:0.4;"></i>
-            <p>${translations[state.lang].no_bookings}</p>
+          <div style="text-align:center;padding:40px;color:var(--text-muted)">
+            <i class="ph ph-calendar-x" style="font-size:3rem;display:block;margin-bottom:12px;opacity:.4"></i>
+            <p>${escapeHtml(translations[state.lang].no_bookings)}</p>
           </div>
         `;
       }
@@ -1251,38 +1371,37 @@ async function showMyBookings() {
     }
 
     if (body) {
-      body.innerHTML = snap.docs
-        .map(doc => {
-          const b = doc.data();
-          const isAr = state.lang === "ar";
-          // Try to get title from property or fallback
-          const title = "Booking: " + (b.propertyId || "Property");
-          const curr = isAr ? "د.ج" : "DZD";
-          
-          return `
-            <div class="booking-card" style="padding:16px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
-              <strong style="display:block;margin-bottom:8px;font-size:1.1rem;color:var(--text-main);">${escapeHtml(title)}</strong>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span class="text-muted" style="font-size:0.9rem;">
-                  <i class="ph ph-calendar-blank"></i> ${escapeHtml(b.checkIn || "")} &rarr; ${escapeHtml(b.checkOut || "")}
-                </span>
-                <span class="status-badge" style="padding:4px 10px;background:rgba(108,99,255,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:600;">
-                  ${escapeHtml(b.status || "pending")}
-                </span>
-              </div>
-              <div style="font-size:0.9rem;color:var(--text-main);">
-                <strong>Total:</strong> ${Number(b.totalPrice || 0).toLocaleString()} ${curr}
-              </div>
+      body.innerHTML = snap.docs.map(doc => {
+        const b = doc.data();
+        const isAr = state.lang === "ar";
+        const title = b.propertyTitle || `Booking #${doc.id.slice(0, 6)}`;
+        const curr = isAr ? "د.ج" : "DZD";
+
+        return `
+          <div class="booking-card" style="padding:16px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px">
+            <strong style="display:block;margin-bottom:8px;font-size:1.1rem;color:var(--text-main)">${escapeHtml(title)}</strong>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap">
+              <span class="text-muted" style="font-size:0.9rem">
+                <i class="ph ph-calendar-blank"></i>
+                ${escapeHtml(b.checkIn || "-")} → ${escapeHtml(b.checkOut || "-")}
+              </span>
+              <span class="status-badge" style="padding:4px 10px;background:rgba(67,90,191,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:600">
+                ${escapeHtml(b.status || "pending")}
+              </span>
             </div>
-          `;
-        })
-        .join("");
+            <div style="font-size:0.9rem;color:var(--text-main)">
+              <strong>${isAr ? "الإجمالي:" : "Total:"}</strong>
+              ${Number(b.totalPrice || 0).toLocaleString()} ${curr}
+            </div>
+          </div>
+        `;
+      }).join("");
     }
   } catch (err) {
     console.error(err);
     if (body) {
       body.innerHTML = `
-        <div style="text-align:center;padding:40px;color:var(--error);">
+        <div style="text-align:center;padding:40px;color:var(--error)">
           <p>${state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات" : "Error loading bookings"}</p>
         </div>
       `;
@@ -1290,55 +1409,110 @@ async function showMyBookings() {
   }
 }
 
-// Ensure any missing rendering functions (like renderListings) that might be in another file don't cause errors by stubbing them if missing
-if (typeof window.renderListings !== 'function') {
-  window.renderListings = function(props = state.liveProperties) {
-    const container = document.getElementById("listings-grid");
-    if (!container) return;
-    
-    let displayProps = props;
-    if (state.currentView === "favorites") {
-      displayProps = state.liveProperties.filter(p => state.favorites.includes(p.id));
-    }
-    
-    if (displayProps.length === 0) {
-      container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">${translations[state.lang].no_props}</div>`;
-      return;
-    }
-    
-    container.innerHTML = displayProps.map(p => {
-      const isAr = state.lang === "ar";
-      const title = isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
-      const loc = isAr ? (p.location_ar || p.location_en) : (p.location_en || p.location_ar);
-      const curr = isAr ? "د.ج" : "DZD";
-      const img = p.image || (p.images && p.images[0]) || "images/placeholder.jpg";
-      const isFav = state.favorites.includes(p.id);
-      const favClass = isFav ? "active" : "";
-      const favIcon = isFav ? "ph-fill ph-heart" : "ph ph-heart";
-      
-      return `
-        <div class="property-card" onclick="goToProperty('${p.id}')" style="cursor:pointer;">
-          <div class="property-img-wrap">
-            <img src="${escapeAttr(img)}" alt="${escapeAttr(title)}" class="property-img">
-            <button class="fav-btn ${favClass}" onclick="toggleFavorite(event, '${p.id}')">
-              <i class="${favIcon}"></i>
-            </button>
-          </div>
-          <div class="property-info">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-              <h3 class="property-title" style="margin:0;font-size:1.1rem;font-weight:600;">${escapeHtml(title)}</h3>
-              <div style="display:flex;align-items:center;gap:4px;font-size:0.9rem;font-weight:600;">
-                <i class="ph-fill ph-star" style="color:#f59e0b;"></i> ${p.rating || "New"}
+// ==========================================
+// 18. RENDER LISTINGS - FIXED PROFESSIONAL CARDS
+// ==========================================
+window.renderListings = function (props = null) {
+  const container = document.getElementById("listings-grid");
+  if (!container) return;
+
+  let displayProps = Array.isArray(props) ? props : [...state.liveProperties];
+
+  if (state.currentView === "favorites") {
+    displayProps = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
+  }
+
+  if (!displayProps.length) {
+    const emptyText =
+      state.currentView === "favorites"
+        ? translations[state.lang].no_favorites
+        : (state.activeSearch || state.activeCategory)
+          ? translations[state.lang].no_results
+          : translations[state.lang].no_props;
+
+    container.innerHTML = `
+      <div class="listings-empty">
+        <i class="ph ph-house-line"></i>
+        <p>${escapeHtml(emptyText)}</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = displayProps.map(raw => {
+    const p = normalizeProperty(raw);
+    const isAr = state.lang === "ar";
+    const title = isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
+    const loc = isAr ? (p.location_ar || p.location_en) : (p.location_en || p.location_ar);
+    const curr = isAr ? "د.ج" : "DZD";
+    const img = p.image || (p.images && p.images[0]) || "images/placeholder.jpg";
+    const isFav = state.favorites.includes(String(p.id));
+    const urgencyText =
+      p.urgency === "few"
+        ? translations[state.lang].urgency_few
+        : p.urgency === "hot"
+          ? translations[state.lang].urgency_hot
+          : "";
+
+    return `
+      <article class="card" onclick="goToProperty('${escapeAttr(p.id)}')">
+        <div class="card-img-wrapper">
+          <img
+            src="${escapeAttr(img)}"
+            alt="${escapeAttr(title)}"
+            class="card-img"
+            loading="lazy"
+            onerror="this.src='images/placeholder.jpg'"
+          />
+
+          ${urgencyText ? `
+            <div class="urgency-label">
+              <i class="ph ph-fire"></i>
+              <span>${escapeHtml(urgencyText)}</span>
+            </div>
+          ` : ""}
+
+          <button class="fav-btn ${isFav ? "active" : ""}" onclick="toggleFavorite(event, '${escapeAttr(p.id)}')" aria-label="Favorite">
+            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
+          </button>
+        </div>
+
+        <div class="card-content">
+          <div class="card-header">
+            <div style="flex:1;min-width:0">
+              <h3 class="card-title">${escapeHtml(title)}</h3>
+              <div class="card-location">
+                <i class="ph ph-map-pin"></i>
+                <span>${escapeHtml(loc)}</span>
               </div>
             </div>
-            <p class="property-location" style="color:var(--text-muted);font-size:0.9rem;margin:4px 0;">${escapeHtml(loc)}</p>
-            <div class="property-price" style="margin-top:8px;">
-              <span style="font-weight:700;font-size:1.1rem;">${Number(p.price).toLocaleString()} ${curr}</span> 
-              <span style="color:var(--text-muted);font-size:0.9rem;">/ ${translations[state.lang].night}</span>
+
+            <div class="card-rating">
+              <i class="ph-fill ph-star"></i>
+              <span>${Number(p.rating || 4.8).toFixed(1)}</span>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <div class="card-price">
+              ${Number(p.price || 0).toLocaleString()} ${curr}
+              <span>/ ${escapeHtml(translations[state.lang].night)}</span>
+            </div>
+
+            <div class="card-arrow">
+              <i class="ph ph-arrow-right"></i>
             </div>
           </div>
         </div>
-      `;
-    }).join("");
-  };
+      </article>
+    `;
+  }).join("");
+};
+
+// ==========================================
+// 19. PROPERTY DETAILS STUB
+// ==========================================
+function renderPropertyDetails() {
+  const page = document.getElementById("property-page");
+  if (!page) return;
 }
