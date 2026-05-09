@@ -15,1353 +15,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
 
+  <link rel="stylesheet" href="booking.css" />
+
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
-
-  <style>
-    :root {
-      --primary: #435abf;
-      --primary-hover: #34459c;
-      --accent: #657be0;
-      --bg-color: #f8fafc;
-      --surface-color: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --border-color: #e2e8f0;
-      --success: #10b981;
-      --error: #ef4444;
-      --warning: #f59e0b;
-      --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
-      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.08);
-      --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
-      --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
-      --radius-sm: 0.75rem;
-      --radius-lg: 1rem;
-      --radius-xl: 1.5rem;
-      --radius-2xl: 2rem;
-      --radius-full: 9999px;
-      --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .dark {
-      --bg-color: #0f172a;
-      --surface-color: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
-      --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
-      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.4);
-      --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.25);
-      --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.28);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background:
-        radial-gradient(circle at top center, rgba(67,90,191,0.05) 0%, transparent 35%),
-        var(--bg-color);
-      color: var(--text-main);
-      transition: background-color 0.3s ease, color 0.3s ease;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    body.modal-open { overflow: hidden; }
-
-    html[dir="ltr"] body { font-family: 'Outfit', 'Poppins', sans-serif; }
-    html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
-
-    img { display: block; max-width: 100%; }
-    a { color: inherit; text-decoration: none; }
-
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 40px;
-      background-color: var(--surface-color);
-      border-bottom: 1px solid var(--border-color);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      transition: var(--transition);
-      gap: 12px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-
-    .logo-img {
-      height: 56px;
-      max-width: 200px;
-      object-fit: contain;
-      transition: transform 0.3s;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-      overflow: visible;
-      margin-inline-start: auto;
-    }
-
-    .rewards-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background-color: rgba(245,158,11,0.1);
-      color: #d97706;
-      padding: 7px 14px;
-      border-radius: var(--radius-full);
-      font-weight: 600;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .dark .rewards-badge { color: #fbbf24; }
-
-    .icon-btn, .lang-btn, .back-home-btn {
-      background: none;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-full);
-      padding: 10px;
-      cursor: pointer;
-      color: var(--text-main);
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 44px;
-      min-height: 44px;
-      font-family: inherit;
-      flex-shrink: 0;
-    }
-
-    .lang-btn {
-      padding: 8px 14px;
-      font-size: 0.875rem;
-      white-space: nowrap;
-      gap: 6px;
-    }
-
-    .back-home-btn {
-      padding: 0 16px;
-      gap: 8px;
-      font-size: 0.92rem;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .icon-btn:hover, .lang-btn:hover, .back-home-btn:hover {
-      background-color: var(--bg-color);
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-1px);
-    }
-
-    .icon-btn i, .back-home-btn i { font-size: 1.1rem; }
-
-    .profile-container { position: relative; }
-
-    .profile-menu {
-      width: 44px;
-      height: 44px;
-      border: none;
-      border-radius: var(--radius-full);
-      background-color: var(--primary);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition);
-      font-size: 1.2rem;
-      flex-shrink: 0;
-    }
-
-    .profile-menu:hover {
-      background-color: var(--primary-hover);
-      transform: scale(1.05);
-    }
-
-    .profile-dropdown {
-      position: absolute;
-      top: 120%;
-      inset-inline-end: 0;
-      width: 240px;
-      background-color: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-soft);
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-10px);
-      transition: var(--transition);
-      z-index: 1010;
-      overflow: hidden;
-    }
-
-    .profile-dropdown.active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-    }
-
-    .dropdown-header {
-      padding: 16px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      background-color: var(--bg-color);
-    }
-
-    .dropdown-header span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .dropdown-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: none;
-      border: none;
-      color: var(--text-main);
-      font-size: 0.95rem;
-      font-family: inherit;
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: start;
-      text-decoration: none;
-      min-height: 44px;
-    }
-
-    .dropdown-item:hover {
-      background-color: rgba(67,90,191,0.05);
-      color: var(--primary);
-      padding-inline-start: 22px;
-    }
-
-    .booking-page {
-      padding: 34px 0 64px;
-    }
-
-    .booking-hero {
-      margin-bottom: 26px;
-    }
-
-    .booking-hero-card {
-      background: linear-gradient(180deg, rgba(67,90,191,0.05), rgba(67,90,191,0.01));
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-2xl);
-      padding: 28px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .booking-hero-card h1 {
-      font-size: clamp(1.8rem, 3vw, 2.8rem);
-      line-height: 1.1;
-      margin-bottom: 10px;
-      letter-spacing: -0.02em;
-    }
-
-    .booking-hero-card p {
-      color: var(--text-muted);
-      max-width: 760px;
-      line-height: 1.7;
-      font-size: 1rem;
-    }
-
-    .booking-steps-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--surface-color);
-      padding: 24px 32px;
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-card);
-      border: 1px solid var(--border-color);
-      margin-bottom: 26px;
-    }
-
-    .step-indicator {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      opacity: 0.45;
-      transition: var(--transition);
-      flex-shrink: 0;
-    }
-
-    .step-indicator.active, .step-indicator.completed { opacity: 1; }
-
-    .step-num {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: var(--bg-color);
-      border: 2px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: var(--text-muted);
-      transition: var(--transition);
-      font-size: 0.95rem;
-      position: relative;
-    }
-
-    .step-indicator.active .step-num {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      border-color: transparent;
-      color: white;
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.18);
-    }
-
-    .step-indicator.completed .step-num {
-      background: var(--success);
-      border-color: transparent;
-      color: white;
-    }
-
-    .step-indicator.completed .step-num::after {
-      content: "✓";
-      position: absolute;
-    }
-
-    .step-label {
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: var(--text-main);
-      white-space: nowrap;
-    }
-
-    .step-connector {
-      flex: 1;
-      height: 2px;
-      background: var(--border-color);
-      margin: 0 10px;
-      align-self: center;
-      margin-bottom: 28px;
-      transition: background 0.4s;
-      border-radius: 2px;
-    }
-
-    .step-connector.completed { background: var(--success); }
-
-    .booking-wrapper {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: 28px;
-      align-items: start;
-    }
-
-    .booking-main-card,
-    .booking-summary-sidebar {
-      background: var(--surface-color);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-card);
-      border: 1px solid var(--border-color);
-    }
-
-    .booking-main-card {
-      padding: 34px 36px;
-      min-height: 500px;
-      position: relative;
-    }
-
-    .booking-step { display: none; }
-    .booking-step.active {
-      display: block;
-      animation: fadeStepIn 0.35s ease forwards;
-    }
-
-    @keyframes fadeStepIn {
-      from { opacity: 0; transform: translateX(14px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    .step-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 30px;
-      padding-bottom: 22px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .step-header-icon {
-      width: 54px;
-      height: 54px;
-      min-width: 54px;
-      border-radius: 16px;
-      background: rgba(67,90,191,0.1);
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.7rem;
-      flex-shrink: 0;
-    }
-
-    .dark .step-header-icon { background: rgba(67,90,191,0.18); }
-
-    .step-title {
-      font-size: 1.45rem;
-      font-weight: 800;
-      color: var(--text-main);
-      margin-bottom: 4px;
-      line-height: 1.2;
-    }
-
-    .step-subtitle {
-      font-size: 0.94rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-      margin: 0;
-    }
-
-    .section-block {
-      margin-bottom: 28px;
-      padding: 22px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      background: linear-gradient(180deg, rgba(67,90,191,0.02), transparent);
-    }
-
-    .section-block h3 {
-      font-size: 1.02rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-block h3 i {
-      color: var(--primary);
-      font-size: 1.15rem;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .form-group.full-width { grid-column: 1 / -1; }
-
-    .form-label {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .required-star {
-      color: var(--error);
-      margin-inline-start: 4px;
-    }
-
-    .form-control {
-      padding: 14px 16px;
-      border: 1.5px solid var(--border-color);
-      border-radius: 12px;
-      font-family: inherit;
-      font-size: 0.97rem;
-      color: var(--text-main);
-      background: var(--bg-color);
-      transition: var(--transition);
-      width: 100%;
-      min-height: 50px;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: var(--surface-color);
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
-    }
-
-    textarea.form-control {
-      resize: vertical;
-      min-height: 110px;
-      line-height: 1.7;
-    }
-
-    .hint-text {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: -2px;
-    }
-
-    .payment-methods-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .payment-method-card {
-      border: 1.5px solid var(--border-color);
-      border-radius: 14px;
-      padding: 20px;
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: center;
-      background: var(--surface-color);
-      position: relative;
-    }
-
-    .payment-method-card:hover {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.02);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .payment-method-card.selected {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.05);
-      box-shadow: 0 0 0 1.5px var(--primary);
-    }
-
-    .payment-method-icon {
-      font-size: 2rem;
-      color: var(--primary);
-      margin-bottom: 12px;
-    }
-
-    .payment-method-title {
-      font-weight: 800;
-      font-size: 1rem;
-      color: var(--text-main);
-      margin-bottom: 4px;
-    }
-
-    .payment-method-desc {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      margin: 0;
-      line-height: 1.5;
-    }
-
-    .payment-radio { display: none; }
-
-    .payment-details-box {
-      display: none;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 24px;
-      margin-top: 10px;
-      animation: fadeStepIn 0.3s ease;
-    }
-
-    .payment-details-box.active { display: block; }
-
-    .bank-box {
-      background: var(--surface-color);
-      padding: 16px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 16px;
-    }
-
-    .bank-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 10px 0;
-      border-bottom: 1px dashed var(--border-color);
-      font-size: 0.9rem;
-    }
-
-    .bank-row:last-child { border-bottom: none; }
-    .bank-row span:first-child { color: var(--text-muted); }
-
-    .file-upload-wrapper {
-      border: 2px dashed var(--border-color);
-      border-radius: 14px;
-      padding: 28px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: var(--transition);
-      background: var(--surface-color);
-      display: block;
-      margin-top: 18px;
-    }
-
-    .file-upload-wrapper:hover {
-      border-color: var(--primary);
-      background: rgba(67,90,191,0.02);
-    }
-
-    .file-upload-icon {
-      font-size: 2.4rem;
-      color: var(--accent);
-      margin-bottom: 10px;
-    }
-
-    .file-upload-text {
-      font-size: 0.96rem;
-      color: var(--text-main);
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .file-upload-hint {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .file-upload-input { display: none; }
-
-    .step-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 14px;
-      margin-top: 34px;
-      padding-top: 22px;
-      border-top: 1px solid var(--border-color);
-      flex-wrap: wrap;
-    }
-
-    .step-actions-between { justify-content: space-between; }
-
-    .primary-btn, .ghost-btn {
-      min-height: 50px;
-      padding: 0 28px;
-      border-radius: 14px;
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: var(--transition);
-      white-space: nowrap;
-      border: none;
-    }
-
-    .primary-btn {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: white;
-      box-shadow: 0 6px 16px rgba(67,90,191,0.3);
-    }
-
-    .primary-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .primary-btn.green-btn {
-      background: linear-gradient(135deg, var(--success), #059669);
-      box-shadow: 0 6px 16px rgba(16,185,129,0.28);
-    }
-
-    .ghost-btn {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1.5px solid var(--border-color);
-    }
-
-    .ghost-btn:hover {
-      background: var(--bg-color);
-      color: var(--text-main);
-      border-color: var(--text-muted);
-    }
-
-    #reviews-section { margin-top: 8px; }
-
-    .review-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 18px;
-      margin-bottom: 24px;
-    }
-
-    .review-card {
-      background: var(--bg-color);
-      border: 1.5px solid var(--border-color);
-      border-radius: 14px;
-      overflow: hidden;
-      transition: var(--transition);
-    }
-
-    .review-card:hover {
-      border-color: var(--primary);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .review-card.full-width { grid-column: 1 / -1; }
-
-    .review-card-header {
-      background: rgba(67,90,191,0.05);
-      border-bottom: 1.5px solid var(--border-color);
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .dark .review-card-header { background: rgba(255,255,255,0.03); }
-
-    .review-card-header h3 {
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-    }
-
-    .review-card-header h3 i {
-      color: var(--primary);
-      font-size: 1.15rem;
-    }
-
-    .edit-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      transition: var(--transition);
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-
-    .edit-btn:hover { background: rgba(67,90,191,0.1); }
-
-    .review-card-body {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .review-data {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .review-data.full-width {
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .rd-label {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 800;
-    }
-
-    .rd-value {
-      font-size: 0.98rem;
-      font-weight: 700;
-      color: var(--text-main);
-      line-height: 1.6;
-      word-break: break-word;
-    }
-
-    .points-box {
-      background: rgba(101,123,224,0.08);
-      border: 1px solid rgba(101,123,224,0.18);
-      border-radius: 14px;
-      padding: 16px 20px;
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      margin-bottom: 22px;
-    }
-
-    .points-icon {
-      background: var(--accent);
-      color: white;
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      flex-shrink: 0;
-    }
-
-    .points-title {
-      font-weight: 800;
-      color: var(--primary);
-      margin-bottom: 6px;
-      display: block;
-      font-size: 1rem;
-    }
-
-    .points-text p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      margin: 0;
-    }
-
-    .policy-agreement {
-      padding: 20px;
-      background: rgba(245,158,11,0.08);
-      border: 1.5px solid rgba(245,158,11,0.2);
-      border-radius: 14px;
-    }
-
-    .checkbox-container {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .checkbox-container input { display: none; }
-
-    .checkmark {
-      width: 22px;
-      height: 22px;
-      border: 2px solid var(--text-muted);
-      border-radius: 6px;
-      position: relative;
-      transition: var(--transition);
-      flex-shrink: 0;
-      margin-top: 2px;
-      background: var(--surface-color);
-    }
-
-    .checkbox-container input:checked ~ .checkmark {
-      background: var(--primary);
-      border-color: var(--primary);
-    }
-
-    .checkbox-container input:checked ~ .checkmark::after {
-      content: "";
-      position: absolute;
-      top: 3px;
-      left: 7px;
-      width: 5px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2.5px 2.5px 0;
-      transform: rotate(45deg);
-    }
-
-    .agree-text {
-      font-size: 0.95rem;
-      color: var(--text-main);
-      line-height: 1.6;
-    }
-
-    .agree-text a {
-      color: var(--primary);
-      font-weight: 800;
-    }
-
-    .booking-summary-sidebar {
-      padding: 24px;
-      position: sticky;
-      top: 92px;
-    }
-
-    .sidebar-title {
-      font-size: 1rem;
-      font-weight: 800;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-main);
-    }
-
-    .sidebar-title i { color: var(--primary); }
-
-    .prop-mini-card {
-      display: flex;
-      gap: 14px;
-      padding-bottom: 18px;
-      border-bottom: 1px dashed var(--border-color);
-      margin-bottom: 18px;
-    }
-
-    .prop-mini-img {
-      width: 92px;
-      min-width: 92px;
-      height: 76px;
-      border-radius: 12px;
-      object-fit: cover;
-      border: 1px solid var(--border-color);
-      flex-shrink: 0;
-      background: var(--bg-color);
-    }
-
-    .prop-mini-details h4 {
-      font-size: 0.96rem;
-      font-weight: 800;
-      color: var(--text-main);
-      margin-bottom: 4px;
-      line-height: 1.35;
-    }
-
-    .prop-mini-details p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-      line-height: 1.5;
-    }
-
-    .prop-type-badge {
-      font-size: 0.75rem;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      padding: 4px 8px;
-      border-radius: 12px;
-      display: inline-block;
-      margin-top: 8px;
-      font-weight: 700;
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      font-size: 0.9rem;
-      color: var(--text-main);
-      gap: 8px;
-    }
-
-    .summary-row span:first-child { color: var(--text-muted); }
-
-    .summary-row.total {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1.5px dashed var(--border-color);
-      font-size: 1.08rem;
-      font-weight: 800;
-      color: var(--primary);
-    }
-
-    .summary-row.total span { color: var(--primary); }
-
-    .booking-alert {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .booking-alert.error {
-      background: rgba(239,68,68,0.1);
-      color: var(--error);
-      border: 1px solid rgba(239,68,68,0.2);
-    }
-
-    .booking-alert.error i {
-      color: var(--error);
-      font-size: 1.2rem;
-    }
-
-    .d-none { display: none !important; }
-
-    .auth-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 3000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      opacity: 0;
-      pointer-events: none;
-      transition: 0.3s ease;
-    }
-
-    .auth-modal.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-content {
-      width: 100%;
-      max-width: 460px;
-      border-radius: var(--radius-xl);
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      box-shadow: 0 25px 60px rgba(0,0,0,0.2);
-      transform: translateY(20px) scale(0.96);
-      transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      overflow: hidden;
-    }
-
-    .auth-modal.active .modal-content {
-      transform: translateY(0) scale(1);
-    }
-
-    .auth-card { position: relative; }
-
-    .close-modal-btn {
-      position: absolute;
-      top: 16px;
-      inset-inline-end: 16px;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--text-main);
-      transition: var(--transition);
-      z-index: 10;
-    }
-
-    .close-modal-btn:hover { background: var(--border-color); }
-
-    .auth-header {
-      padding: 22px 24px 18px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: center;
-    }
-
-    .auth-header img {
-      height: 42px;
-      width: auto;
-      object-fit: contain;
-    }
-
-    .auth-content { padding: 28px 24px 28px; }
-
-    .auth-form { display: none; }
-    .auth-form.active {
-      display: flex;
-      flex-direction: column;
-      animation: fadeStepIn 0.3s ease;
-    }
-
-    .auth-title {
-      font-size: 1.5rem;
-      margin-bottom: 6px;
-      color: var(--text-main);
-      font-weight: 800;
-    }
-
-    .auth-subtitle {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-bottom: 22px;
-      line-height: 1.6;
-    }
-
-    .auth-message {
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 18px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-      display: none;
-    }
-
-    .auth-message.error {
-      display: block;
-      background: rgba(239,68,68,0.1);
-      color: var(--error);
-      border: 1px solid rgba(239,68,68,0.2);
-    }
-
-    .auth-message.success {
-      display: block;
-      background: rgba(16,185,129,0.1);
-      color: var(--success);
-      border: 1px solid rgba(16,185,129,0.2);
-    }
-
-    .input-group {
-      margin-bottom: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .input-group label {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--text-main);
-      font-weight: 700;
-    }
-
-    .input-group input {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: inherit;
-      font-size: 0.95rem;
-      transition: var(--transition);
-      outline: none;
-    }
-
-    .input-group input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(67,90,191,0.15);
-      background-color: var(--surface-color);
-    }
-
-    .auth-options {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-      font-size: 0.85rem;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .forgot-link {
-      color: var(--primary);
-      text-decoration: none;
-      white-space: nowrap;
-      font-weight: 700;
-    }
-
-    .forgot-link:hover { text-decoration: underline; }
-
-    .auth-check {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      color: var(--text-main);
-      font-size: 0.9rem;
-      user-select: none;
-    }
-
-    .auth-check input { display: none; }
-
-    .auth-checkmark {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--border-color);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: var(--transition);
-      background: var(--surface-color);
-      flex-shrink: 0;
-    }
-
-    .auth-check input:checked ~ .auth-checkmark {
-      background-color: var(--primary);
-      border-color: var(--primary);
-    }
-
-    .auth-check input:checked ~ .auth-checkmark::after {
-      content: '';
-      width: 5px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2px 2px 0;
-      transform: rotate(45deg) translateY(-1px);
-    }
-
-    .social-logins {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .social-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background-color: var(--bg-color);
-      border: 1px solid var(--border-color);
-      padding: 12px;
-      border-radius: 12px;
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text-main);
-      cursor: pointer;
-      transition: var(--transition);
-      min-height: 44px;
-    }
-
-    .social-btn:hover {
-      background-color: var(--surface-color);
-      border-color: var(--primary);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .switch-form-text {
-      text-align: center;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      margin-top: 8px;
-      line-height: 1.6;
-    }
-
-    .switch-form-text a {
-      color: var(--primary);
-      font-weight: 800;
-      text-decoration: none;
-      margin-inline-start: 4px;
-    }
-
-    .switch-form-text a:hover { text-decoration: underline; }
-
-    @media (max-width: 992px) {
-      .booking-wrapper { grid-template-columns: 1fr; }
-      .booking-summary-sidebar {
-        position: static;
-        order: -1;
-        margin-bottom: 24px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .container { padding: 0 16px; }
-      .navbar { padding: 10px 14px; gap: 8px; }
-      .rewards-badge { display: none !important; }
-      .nav-actions { gap: 4px; }
-      .icon-btn { width: 36px; height: 36px; font-size: 1.05rem; padding: 0; min-width: 36px; min-height: 36px; }
-      #lang-toggle {
-        display: flex !important;
-        align-items: center;
-        padding: 5px 10px;
-        font-size: 0.78rem;
-        white-space: nowrap;
-        border-radius: 8px;
-        min-width: fit-content;
-      }
-      .profile-menu { width: 36px; height: 36px; }
-      .logo-img { height: 28px; }
-      .back-home-btn {
-        padding: 0 12px;
-        min-height: 36px;
-        font-size: 0.84rem;
-      }
-
-      .booking-page { padding: 22px 0 40px; }
-      .booking-hero-card { padding: 20px; }
-      .booking-steps-header { padding: 16px; margin-bottom: 20px; }
-      .step-connector { margin: 0 4px; margin-bottom: 28px; }
-      .step-label { font-size: 0.72rem; }
-      .booking-main-card { padding: 22px 18px; }
-      .form-grid, .payment-methods-grid, .review-grid { grid-template-columns: 1fr; }
-      .step-header { flex-direction: column; text-align: center; }
-      .step-actions { flex-direction: column-reverse; }
-      .step-actions .ghost-btn, .step-actions .primary-btn {
-        width: 100%;
-        justify-content: center;
-      }
-      .review-data.full-width {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .points-box { flex-direction: column; }
-      .bank-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-      }
-
-      input[type="text"],
-      input[type="email"],
-      input[type="password"],
-      input[type="tel"],
-      input[type="date"],
-      textarea,
-      select {
-        font-size: 16px !important;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .nav-actions .lang-btn span { display: none; }
-      #lang-toggle {
-        font-size: 0.72rem;
-        padding: 4px 8px;
-        border-radius: var(--radius-full);
-      }
-      .icon-btn, .profile-menu {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        min-height: 32px;
-      }
-      .back-home-btn span { display: none; }
-      .back-home-btn {
-        min-width: 36px;
-        padding: 0;
-      }
-    }
-  </style>
 </head>
 <body>
 
@@ -1381,17 +42,17 @@
         <span><span id="user-points">1250</span> Pts</span>
       </div>
 
-      <button class="lang-btn" id="lang-toggle">
+      <button class="lang-btn" id="lang-toggle" type="button">
         <i class="ph ph-globe"></i>
         <span>EN</span>
       </button>
 
-      <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme" type="button">
         <i class="ph ph-moon"></i>
       </button>
 
       <div class="profile-container">
-        <button class="profile-menu auth-btn-guest" id="open-auth-btn" aria-label="Account">
+        <button class="profile-menu auth-btn-guest" id="open-auth-btn" aria-label="Account" type="button">
           <i class="ph ph-user"></i>
         </button>
 
@@ -1400,15 +61,15 @@
             <span id="dropdown-user-name">Guest User</span>
             <span id="dropdown-user-email">Sign in to continue</span>
           </div>
-          <button class="dropdown-item" id="my-bookings-btn">
+          <button class="dropdown-item" id="my-bookings-btn" type="button">
             <i class="ph ph-calendar-check"></i>
             <span>My Bookings</span>
           </button>
-          <button class="dropdown-item" id="my-favorites-btn">
+          <button class="dropdown-item" id="my-favorites-btn" type="button">
             <i class="ph ph-heart"></i>
             <span>My Favorites</span>
           </button>
-          <button class="dropdown-item" id="logout-btn">
+          <button class="dropdown-item" id="logout-btn" type="button">
             <i class="ph ph-sign-out"></i>
             <span>Log Out</span>
           </button>
@@ -1419,7 +80,7 @@
 
   <div class="auth-modal" id="auth-modal">
     <div class="modal-content auth-card">
-      <button class="close-modal-btn" id="close-auth-btn" aria-label="Close">
+      <button class="close-modal-btn" id="close-auth-btn" aria-label="Close" type="button">
         <i class="ph ph-x"></i>
       </button>
 
@@ -1527,7 +188,7 @@
         <div class="booking-hero-card">
           <h1>Complete your booking</h1>
           <p>
-            Fill in every important guest and reservation detail so the host can prepare your stay properly and your booking can be processed without missing information.
+            Fill in every important guest, stay, room, and hotel preference so the host can prepare your reservation accurately and give you the best stay experience.
           </p>
         </div>
       </section>
@@ -1562,7 +223,7 @@
               <div class="step-header-icon"><i class="ph ph-identification-card"></i></div>
               <div>
                 <h2 class="step-title">Guest & Reservation Details</h2>
-                <p class="step-subtitle">Please fill in all required booking, guest, contact, identity, and arrival information carefully.</p>
+                <p class="step-subtitle">Please fill in all required booking, guest, room, and arrival information carefully.</p>
               </div>
             </div>
 
@@ -1570,19 +231,19 @@
               <h3><i class="ph ph-user"></i> Primary guest information</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Full Name <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-name">Full Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-name" placeholder="Full legal name as in ID" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Father Name <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-father-name">Father Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-father-name" placeholder="Father name" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Family Name <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-family-name">Family Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-family-name" placeholder="Family / surname" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Gender <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-gender">Gender <span class="required-star">*</span></label>
                   <select class="form-control" id="guest-gender" required>
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
@@ -1590,19 +251,19 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Date of Birth <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-dob">Date of Birth <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="guest-dob" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Nationality <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-nationality">Nationality <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-nationality" placeholder="Nationality" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Occupation <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-occupation">Occupation <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-occupation" placeholder="Your occupation" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Marital Status <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-marital-status">Marital Status <span class="required-star">*</span></label>
                   <select class="form-control" id="guest-marital-status" required>
                     <option value="">Select marital status</option>
                     <option value="Single">Single</option>
@@ -1618,39 +279,39 @@
               <h3><i class="ph ph-phone"></i> Contact information</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Email Address <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-email">Email Address <span class="required-star">*</span></label>
                   <input type="email" class="form-control" id="guest-email" placeholder="name@example.com" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Primary Phone Number <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-phone">Primary Phone Number <span class="required-star">*</span></label>
                   <input type="tel" class="form-control" id="guest-phone" placeholder="+213 ..." required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">WhatsApp Number <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-whatsapp">WhatsApp Number <span class="required-star">*</span></label>
                   <input type="tel" class="form-control" id="guest-whatsapp" placeholder="+213 ..." required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Alternative Phone Number</label>
+                  <label class="form-label" for="guest-alt-phone">Alternative Phone Number</label>
                   <input type="tel" class="form-control" id="guest-alt-phone" placeholder="Optional backup number">
                 </div>
                 <div class="form-group full-width">
-                  <label class="form-label">Residential Address <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-address">Residential Address <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-address" placeholder="Street, district, city" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">City <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-city">City <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-city" placeholder="City" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">State / Wilaya <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-state">State / Wilaya <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-state" placeholder="State / Wilaya" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Postal Code</label>
+                  <label class="form-label" for="guest-postal">Postal Code</label>
                   <input type="text" class="form-control" id="guest-postal" placeholder="Postal code">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Country of Residence <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-country">Country of Residence <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-country" placeholder="Country" required>
                 </div>
               </div>
@@ -1660,7 +321,7 @@
               <h3><i class="ph ph-cardholder"></i> Identity & verification</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Document Type <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-id-type">Document Type <span class="required-star">*</span></label>
                   <select class="form-control" id="guest-id-type" required>
                     <option value="">Select document type</option>
                     <option value="National ID">National ID</option>
@@ -1670,24 +331,121 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Document Number <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-id-number">Document Number <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-id-number" placeholder="ID / Passport number" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Place of Issue <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-id-issue-place">Place of Issue <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="guest-id-issue-place" placeholder="Issuing authority / place" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Issue Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-id-issue-date">Issue Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="guest-id-issue-date" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Expiry Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-id-expiry">Expiry Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="guest-id-expiry" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">National ID / Passport Photo Upload</label>
+                  <label class="form-label" for="guest-id-upload">National ID / Passport Photo Upload</label>
                   <input type="file" class="form-control" id="guest-id-upload" accept="image/*,.pdf">
+                </div>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <h3><i class="ph ph-bed"></i> Room & accommodation preferences</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="room-type">Preferred Room Type <span class="required-star">*</span></label>
+                  <select class="form-control" id="room-type" required>
+                    <option value="">Select room type</option>
+                    <option value="Standard Room">Standard Room</option>
+                    <option value="Deluxe Room">Deluxe Room</option>
+                    <option value="Twin Room">Twin Room</option>
+                    <option value="Double Room">Double Room</option>
+                    <option value="Family Room">Family Room</option>
+                    <option value="Suite">Suite</option>
+                    <option value="Executive Suite">Executive Suite</option>
+                    <option value="Villa">Villa</option>
+                    <option value="Apartment">Apartment</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="bed-type">Preferred Bed Type</label>
+                  <select class="form-control" id="bed-type">
+                    <option value="">Select bed type</option>
+                    <option value="King Bed">King Bed</option>
+                    <option value="Queen Bed">Queen Bed</option>
+                    <option value="Twin Beds">Twin Beds</option>
+                    <option value="Triple Beds">Triple Beds</option>
+                    <option value="Extra Bed Needed">Extra Bed Needed</option>
+                    <option value="No Preference">No Preference</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="room-view">Preferred View</label>
+                  <select class="form-control" id="room-view">
+                    <option value="">Select preferred view</option>
+                    <option value="Sea View">Sea View</option>
+                    <option value="Pool View">Pool View</option>
+                    <option value="Garden View">Garden View</option>
+                    <option value="City View">City View</option>
+                    <option value="Mountain View">Mountain View</option>
+                    <option value="No Preference">No Preference</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="floor-preference">Floor Preference</label>
+                  <select class="form-control" id="floor-preference">
+                    <option value="">Select floor preference</option>
+                    <option value="Ground Floor">Ground Floor</option>
+                    <option value="Low Floor">Low Floor</option>
+                    <option value="High Floor">High Floor</option>
+                    <option value="Top Floor">Top Floor</option>
+                    <option value="No Preference">No Preference</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="smoking-preference">Smoking Preference <span class="required-star">*</span></label>
+                  <select class="form-control" id="smoking-preference" required>
+                    <option value="">Select preference</option>
+                    <option value="Non-Smoking">Non-Smoking</option>
+                    <option value="Smoking">Smoking</option>
+                    <option value="No Preference">No Preference</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="quiet-room">Need Quiet Room?</label>
+                  <select class="form-control" id="quiet-room">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="near-elevator">Near Elevator?</label>
+                  <select class="form-control" id="near-elevator">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="No Preference">No Preference</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="connected-rooms">Need Connected Rooms?</label>
+                  <select class="form-control" id="connected-rooms">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1696,19 +454,19 @@
               <h3><i class="ph ph-users-three"></i> Stay details</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Number of Adults <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-adults">Number of Adults <span class="required-star">*</span></label>
                   <input type="number" class="form-control" id="guest-adults" min="1" value="1" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Number of Children <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-children">Number of Children <span class="required-star">*</span></label>
                   <input type="number" class="form-control" id="guest-children" min="0" value="0" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Number of Infants</label>
+                  <label class="form-label" for="guest-infants">Number of Infants</label>
                   <input type="number" class="form-control" id="guest-infants" min="0" value="0">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Purpose of Stay <span class="required-star">*</span></label>
+                  <label class="form-label" for="stay-purpose">Purpose of Stay <span class="required-star">*</span></label>
                   <select class="form-control" id="stay-purpose" required>
                     <option value="">Select purpose</option>
                     <option value="Family stay">Family stay</option>
@@ -1716,19 +474,21 @@
                     <option value="Tourism">Tourism</option>
                     <option value="Medical">Medical</option>
                     <option value="Event">Event</option>
+                    <option value="Honeymoon">Honeymoon</option>
+                    <option value="Anniversary">Anniversary</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Arrival Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="arrival-date">Arrival Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="arrival-date" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Departure Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="departure-date">Departure Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="departure-date" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Expected Arrival Time <span class="required-star">*</span></label>
+                  <label class="form-label" for="arrival-time">Expected Arrival Time <span class="required-star">*</span></label>
                   <select class="form-control" id="arrival-time" required>
                     <option value="">Select arrival time</option>
                     <option value="08:00 - 10:00">08:00 - 10:00</option>
@@ -1738,31 +498,176 @@
                     <option value="16:00 - 18:00">16:00 - 18:00</option>
                     <option value="18:00 - 20:00">18:00 - 20:00</option>
                     <option value="After 20:00">After 20:00</option>
+                    <option value="After Midnight">After Midnight</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Arrival Method <span class="required-star">*</span></label>
+                  <label class="form-label" for="arrival-method">Arrival Method <span class="required-star">*</span></label>
                   <select class="form-control" id="arrival-method" required>
                     <option value="">Select arrival method</option>
                     <option value="Private car">Private car</option>
                     <option value="Taxi">Taxi</option>
                     <option value="Airport transfer">Airport transfer</option>
                     <option value="Bus">Bus</option>
+                    <option value="Train">Train</option>
+                    <option value="Walking">Walking</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Vehicle Plate Number</label>
+                  <label class="form-label" for="vehicle-plate">Vehicle Plate Number</label>
                   <input type="text" class="form-control" id="vehicle-plate" placeholder="If arriving by car">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Estimated Check-in Contact Person</label>
+                  <label class="form-label" for="checkin-contact-person">Estimated Check-in Contact Person</label>
                   <input type="text" class="form-control" id="checkin-contact-person" placeholder="Who will arrive first?">
                 </div>
                 <div class="form-group full-width">
-                  <label class="form-label">Names of Additional Guests <span class="required-star">*</span></label>
+                  <label class="form-label" for="additional-guests">Names of Additional Guests <span class="required-star">*</span></label>
                   <textarea class="form-control" id="additional-guests" placeholder="Write full names of all accompanying guests" required></textarea>
                   <div class="hint-text">Write one or all names as required by your hosting policy.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <h3><i class="ph ph-coffee"></i> Hotel services & add-ons</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="breakfast-option">Breakfast Included?</label>
+                  <select class="form-control" id="breakfast-option">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Only for adults">Only for adults</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="airport-transfer">Airport Transfer Needed?</label>
+                  <select class="form-control" id="airport-transfer">
+                    <option value="">Select option</option>
+                    <option value="Arrival only">Arrival only</option>
+                    <option value="Departure only">Departure only</option>
+                    <option value="Both">Both</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="parking-needed">Parking Needed?</label>
+                  <select class="form-control" id="parking-needed">
+                    <option value="">Select option</option>
+                    <option value="Yes - 1 car">Yes - 1 car</option>
+                    <option value="Yes - 2 cars">Yes - 2 cars</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="late-checkout">Request Late Check-out?</label>
+                  <select class="form-control" id="late-checkout">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="early-checkin">Request Early Check-in?</label>
+                  <select class="form-control" id="early-checkin">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="housekeeping-frequency">Housekeeping Preference</label>
+                  <select class="form-control" id="housekeeping-frequency">
+                    <option value="">Select preference</option>
+                    <option value="Daily">Daily</option>
+                    <option value="Every 2 days">Every 2 days</option>
+                    <option value="Only on request">Only on request</option>
+                    <option value="No housekeeping">No housekeeping</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="extra-pillows">Extra Pillows / Blankets?</label>
+                  <select class="form-control" id="extra-pillows">
+                    <option value="">Select option</option>
+                    <option value="Extra pillows">Extra pillows</option>
+                    <option value="Extra blankets">Extra blankets</option>
+                    <option value="Both">Both</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="celebration-setup">Need Celebration Setup?</label>
+                  <select class="form-control" id="celebration-setup">
+                    <option value="">Select option</option>
+                    <option value="Birthday">Birthday</option>
+                    <option value="Honeymoon">Honeymoon</option>
+                    <option value="Anniversary">Anniversary</option>
+                    <option value="Surprise setup">Surprise setup</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group full-width">
+                  <label class="form-label" for="addon-notes">Add-on / Service Notes</label>
+                  <textarea class="form-control" id="addon-notes" placeholder="Any details related to transport, breakfast, room setup, celebration arrangements, or other hotel services"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <h3><i class="ph ph-baby"></i> Family, children & accessibility</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="baby-crib">Need Baby Crib?</label>
+                  <select class="form-control" id="baby-crib">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="high-chair">Need High Chair?</label>
+                  <select class="form-control" id="high-chair">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="stroller-space">Need Stroller Space?</label>
+                  <select class="form-control" id="stroller-space">
+                    <option value="">Select option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="accessible-room">Need Accessible Room?</label>
+                  <select class="form-control" id="accessible-room">
+                    <option value="">Select option</option>
+                    <option value="Wheelchair Accessible">Wheelchair Accessible</option>
+                    <option value="Near Elevator">Near Elevator</option>
+                    <option value="Low Floor">Low Floor</option>
+                    <option value="Accessible Bathroom">Accessible Bathroom</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div class="form-group full-width">
+                  <label class="form-label" for="child-notes">Child / Accessibility Notes</label>
+                  <textarea class="form-control" id="child-notes" placeholder="Mention stroller, crib, baby feeding needs, wheelchair access, mobility support, or similar needs"></textarea>
                 </div>
               </div>
             </div>
@@ -1771,37 +676,60 @@
               <h3><i class="ph ph-first-aid-kit"></i> Safety, emergency & special requirements</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Emergency Contact Name <span class="required-star">*</span></label>
+                  <label class="form-label" for="emergency-name">Emergency Contact Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="emergency-name" placeholder="Emergency contact full name" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Emergency Contact Phone <span class="required-star">*</span></label>
+                  <label class="form-label" for="emergency-phone">Emergency Contact Phone <span class="required-star">*</span></label>
                   <input type="tel" class="form-control" id="emergency-phone" placeholder="+213 ..." required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Relationship to Guest <span class="required-star">*</span></label>
+                  <label class="form-label" for="emergency-relationship">Relationship to Guest <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="emergency-relationship" placeholder="Brother, father, friend..." required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Do you have health conditions?</label>
+                  <label class="form-label" for="medical-condition">Do you have health conditions?</label>
                   <select class="form-control" id="medical-condition">
                     <option value="No">No</option>
                     <option value="Yes">Yes</option>
                   </select>
                 </div>
+                <div class="form-group">
+                  <label class="form-label" for="food-allergy">Food Allergy / Dietary Restriction?</label>
+                  <select class="form-control" id="food-allergy">
+                    <option value="">Select option</option>
+                    <option value="No">No</option>
+                    <option value="Vegetarian">Vegetarian</option>
+                    <option value="Vegan">Vegan</option>
+                    <option value="Gluten Free">Gluten Free</option>
+                    <option value="Dairy Free">Dairy Free</option>
+                    <option value="Nut Allergy">Nut Allergy</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="pets-bringing">Will you bring pets?</label>
+                  <select class="form-control" id="pets-bringing">
+                    <option value="">Select option</option>
+                    <option value="No">No</option>
+                    <option value="Yes - Cat">Yes - Cat</option>
+                    <option value="Yes - Dog">Yes - Dog</option>
+                    <option value="Yes - Other">Yes - Other</option>
+                  </select>
+                </div>
                 <div class="form-group full-width">
-                  <label class="form-label">Medical Notes / Accessibility Needs</label>
+                  <label class="form-label" for="medical-notes">Medical Notes / Accessibility Needs</label>
                   <textarea class="form-control" id="medical-notes" placeholder="Any allergies, mobility needs, medication storage, accessibility arrangements..."></textarea>
                 </div>
                 <div class="form-group full-width">
-                  <label class="form-label">Special Requests</label>
-                  <textarea class="form-control" id="special-requests" placeholder="Late check-in, baby bed, extra mattress, high floor, nearby room, etc."></textarea>
+                  <label class="form-label" for="special-requests">Special Requests</label>
+                  <textarea class="form-control" id="special-requests" placeholder="Late check-in, baby bed, extra mattress, high floor, nearby room, decoration, flowers, cake, transport, or any custom request"></textarea>
                 </div>
               </div>
             </div>
 
             <div class="step-actions">
-              <button class="primary-btn" id="btn-next-1">
+              <button class="primary-btn" id="btn-next-1" type="button">
                 Continue to Payment
                 <i class="ph ph-arrow-right"></i>
               </button>
@@ -1837,27 +765,27 @@
               <h3><i class="ph ph-file-text"></i> Billing details</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Billing Name <span class="required-star">*</span></label>
+                  <label class="form-label" for="billing-name">Billing Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="billing-name" placeholder="Billing full name" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Billing Phone <span class="required-star">*</span></label>
+                  <label class="form-label" for="billing-phone">Billing Phone <span class="required-star">*</span></label>
                   <input type="tel" class="form-control" id="billing-phone" placeholder="+213 ..." required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Billing Email <span class="required-star">*</span></label>
+                  <label class="form-label" for="billing-email">Billing Email <span class="required-star">*</span></label>
                   <input type="email" class="form-control" id="billing-email" placeholder="billing@example.com" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Tax / NIF / Business ID</label>
+                  <label class="form-label" for="billing-tax-id">Tax / NIF / Business ID</label>
                   <input type="text" class="form-control" id="billing-tax-id" placeholder="Optional">
                 </div>
                 <div class="form-group full-width">
-                  <label class="form-label">Billing Address <span class="required-star">*</span></label>
+                  <label class="form-label" for="billing-address">Billing Address <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="billing-address" placeholder="Billing address" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Do you need an invoice? <span class="required-star">*</span></label>
+                  <label class="form-label" for="need-invoice">Do you need an invoice? <span class="required-star">*</span></label>
                   <select class="form-control" id="need-invoice" required>
                     <option value="">Select</option>
                     <option value="Yes">Yes</option>
@@ -1865,7 +793,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Payment Proof Reference</label>
+                  <label class="form-label" for="payment-reference">Payment Proof Reference</label>
                   <input type="text" class="form-control" id="payment-reference" placeholder="Transfer reference / receipt no.">
                 </div>
               </div>
@@ -1894,19 +822,19 @@
 
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Sender Full Name <span class="required-star">*</span></label>
+                  <label class="form-label" for="sender-name">Sender Full Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="sender-name" placeholder="Name used in transfer">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Transferred Amount <span class="required-star">*</span></label>
+                  <label class="form-label" for="transfer-amount">Transferred Amount <span class="required-star">*</span></label>
                   <input type="number" class="form-control" id="transfer-amount" placeholder="Amount paid">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Transfer Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="transfer-date">Transfer Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="transfer-date">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Transfer Time</label>
+                  <label class="form-label" for="transfer-time">Transfer Time</label>
                   <input type="time" class="form-control" id="transfer-time">
                 </div>
               </div>
@@ -1927,11 +855,11 @@
 
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label">Who will pay at check-in? <span class="required-star">*</span></label>
+                  <label class="form-label" for="cash-payer-name">Who will pay at check-in? <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="cash-payer-name" placeholder="Person responsible for payment">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Preferred Currency <span class="required-star">*</span></label>
+                  <label class="form-label" for="cash-currency">Preferred Currency <span class="required-star">*</span></label>
                   <select class="form-control" id="cash-currency">
                     <option value="">Select currency</option>
                     <option value="DZD">DZD</option>
@@ -1940,18 +868,18 @@
                   </select>
                 </div>
                 <div class="form-group full-width">
-                  <label class="form-label">Cash payment note</label>
+                  <label class="form-label" for="cash-payment-note">Cash payment note</label>
                   <textarea class="form-control" id="cash-payment-note" placeholder="Optional note for the host regarding cash payment"></textarea>
                 </div>
               </div>
             </div>
 
             <div class="step-actions step-actions-between">
-              <button class="ghost-btn" id="btn-prev-2">
+              <button class="ghost-btn" id="btn-prev-2" type="button">
                 <i class="ph ph-arrow-left"></i>
                 Back to Details
               </button>
-              <button class="primary-btn" id="btn-next-2">
+              <button class="primary-btn" id="btn-next-2" type="button">
                 Review Booking
                 <i class="ph ph-arrow-right"></i>
               </button>
@@ -1963,7 +891,7 @@
               <div class="step-header-icon"><i class="ph ph-check-square-offset"></i></div>
               <div>
                 <h2 class="step-title">Review & Confirm</h2>
-                <p class="step-subtitle">Review all guest, stay, identity, and payment details before final confirmation.</p>
+                <p class="step-subtitle">Review all guest, stay, identity, room, and payment details before final confirmation.</p>
               </div>
             </div>
 
@@ -1972,7 +900,7 @@
                 <div class="review-card">
                   <div class="review-card-header">
                     <h3><i class="ph ph-user"></i> Guest Information</h3>
-                    <button class="edit-btn" id="btn-edit-guest"><i class="ph ph-pencil-simple"></i> Edit</button>
+                    <button class="edit-btn" id="btn-edit-guest" type="button"><i class="ph ph-pencil-simple"></i> Edit</button>
                   </div>
                   <div class="review-card-body">
                     <div class="review-data">
@@ -1997,7 +925,7 @@
                 <div class="review-card">
                   <div class="review-card-header">
                     <h3><i class="ph ph-calendar-blank"></i> Stay Details</h3>
-                    <button class="edit-btn" id="btn-edit-dates"><i class="ph ph-pencil-simple"></i> Edit</button>
+                    <button class="edit-btn" id="btn-edit-dates" type="button"><i class="ph ph-pencil-simple"></i> Edit</button>
                   </div>
                   <div class="review-card-body">
                     <div class="review-data">
@@ -2021,8 +949,8 @@
 
                 <div class="review-card full-width">
                   <div class="review-card-header">
-                    <h3><i class="ph ph-cardholder"></i> Identity & Payment</h3>
-                    <button class="edit-btn" id="btn-edit-payment"><i class="ph ph-pencil-simple"></i> Edit</button>
+                    <h3><i class="ph ph-cardholder"></i> Identity, Room & Payment</h3>
+                    <button class="edit-btn" id="btn-edit-payment" type="button"><i class="ph ph-pencil-simple"></i> Edit</button>
                   </div>
                   <div class="review-card-body">
                     <div class="review-data">
@@ -2032,6 +960,10 @@
                     <div class="review-data">
                       <span class="rd-label">Billing</span>
                       <span class="rd-value" id="rev-billing">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Room Preference</span>
+                      <span class="rd-value" id="rev-room-preference">—</span>
                     </div>
                     <div class="review-data full-width">
                       <span class="rd-label">Selected Payment Method</span>
@@ -2061,11 +993,11 @@
             </div>
 
             <div class="step-actions step-actions-between">
-              <button class="ghost-btn" id="btn-prev-3">
+              <button class="ghost-btn" id="btn-prev-3" type="button">
                 <i class="ph ph-arrow-left"></i>
                 Back to Payment
               </button>
-              <button class="primary-btn green-btn" id="btn-confirm-booking">
+              <button class="primary-btn green-btn" id="btn-confirm-booking" type="button">
                 Confirm & Book
                 <i class="ph ph-check-circle"></i>
               </button>
@@ -2111,109 +1043,6 @@
       </div>
     </div>
   </main>
-
-  <script>
-    const paymentRadios = document.querySelectorAll('.payment-radio');
-    const ccpDetails = document.getElementById('ccp-details');
-    const cashDetails = document.getElementById('cash-details');
-    const receiptUpload = document.getElementById('receipt-upload');
-    const uploadText = document.getElementById('upload-text');
-
-    paymentRadios.forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        document.querySelectorAll('.payment-method-card').forEach(card => card.classList.remove('selected'));
-        e.target.closest('.payment-method-card').classList.add('selected');
-
-        if (e.target.value === 'ccp') {
-          ccpDetails.classList.add('active');
-          cashDetails.classList.remove('active');
-        } else {
-          ccpDetails.classList.remove('active');
-          cashDetails.classList.add('active');
-        }
-      });
-    });
-
-    if (receiptUpload) {
-      receiptUpload.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-          uploadText.textContent = this.files[0].name;
-          uploadText.style.color = 'var(--primary)';
-        } else {
-          uploadText.textContent = 'Click to upload receipt';
-          uploadText.style.color = 'var(--text-main)';
-        }
-      });
-    }
-
-    document.getElementById('btn-edit-guest')?.addEventListener('click', () => {
-      document.querySelectorAll('.booking-step').forEach(el => el.classList.remove('active'));
-      document.getElementById('step-1')?.classList.add('active');
-    });
-
-    document.getElementById('btn-edit-dates')?.addEventListener('click', () => {
-      document.querySelectorAll('.booking-step').forEach(el => el.classList.remove('active'));
-      document.getElementById('step-1')?.classList.add('active');
-    });
-
-    document.getElementById('btn-edit-payment')?.addEventListener('click', () => {
-      document.querySelectorAll('.booking-step').forEach(el => el.classList.remove('active'));
-      document.getElementById('step-2')?.classList.add('active');
-    });
-
-    function switchAuthForm(formType) {
-      const loginForm = document.getElementById('login-form');
-      const registerForm = document.getElementById('register-form');
-      const forgotForm = document.getElementById('forgot-form');
-
-      if (loginForm) loginForm.classList.toggle('active', formType === 'login');
-      if (registerForm) registerForm.classList.toggle('active', formType === 'register');
-      if (forgotForm) forgotForm.classList.toggle('active', formType === 'forgot');
-    }
-
-    document.getElementById('go-to-register')?.addEventListener('click', e => {
-      e.preventDefault();
-      switchAuthForm('register');
-    });
-
-    document.getElementById('go-to-login')?.addEventListener('click', e => {
-      e.preventDefault();
-      switchAuthForm('login');
-    });
-
-    document.getElementById('go-to-forgot')?.addEventListener('click', e => {
-      e.preventDefault();
-      switchAuthForm('forgot');
-    });
-
-    document.getElementById('back-to-login')?.addEventListener('click', e => {
-      e.preventDefault();
-      switchAuthForm('login');
-    });
-
-    document.getElementById('open-auth-btn')?.addEventListener('click', () => {
-      const modal = document.getElementById('auth-modal');
-      if (modal) {
-        modal.classList.add('active');
-        document.body.classList.add('modal-open');
-      }
-    });
-
-    document.getElementById('close-auth-btn')?.addEventListener('click', () => {
-      const modal = document.getElementById('auth-modal');
-      if (modal) {
-        modal.classList.remove('active');
-        document.body.classList.remove('modal-open');
-      }
-    });
-
-    document.getElementById('auth-modal')?.addEventListener('click', (e) => {
-      if (e.target.id === 'auth-modal') {
-        e.currentTarget.classList.remove('active');
-        document.body.classList.remove('modal-open');
-      }
-    });
-  </script>
 
   <script src="booking.js"></script>
 </body>
