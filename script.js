@@ -256,6 +256,7 @@ const myBookingsBtn = document.getElementById("my-bookings-btn");
 const homeLogoBtn = document.getElementById("home-logo-btn");
 
 let currentPropImages = [];
+let propertyMap = null;
 
 function init() {
   applyInitialState();
@@ -660,6 +661,9 @@ function propertyMatchesCategory(property, category) {
 }
 
 function normalizeProperty(p) {
+  const lat = p.lat ?? p.locationLat ?? p.latitude ?? p.coords?.lat ?? null;
+  const lng = p.lng ?? p.locationLng ?? p.longitude ?? p.coords?.lng ?? null;
+
   return {
     id: String(p.id || ""),
     title_en: p.title_en || p.titleEn || "",
@@ -675,8 +679,8 @@ function normalizeProperty(p) {
     desc_ar: p.desc_ar || p.descAr || "",
     features_en: p.features_en || p.featuresEn || [],
     features_ar: p.features_ar || p.featuresAr || [],
-    lat: p.lat ?? null,
-    lng: p.lng ?? null
+    lat: lat !== null ? Number(lat) : null,
+    lng: lng !== null ? Number(lng) : null
   };
 }
 
@@ -1075,8 +1079,8 @@ async function loadPropertiesFromFirestore() {
           descAr: d.descAr || d.descar,
           featuresEn: Array.isArray(d.featuresEn) ? d.featuresEn : (Array.isArray(d.featuresen) ? d.featuresen : []),
           featuresAr: Array.isArray(d.featuresAr) ? d.featuresAr : (Array.isArray(d.featuresar) ? d.featuresar : []),
-          lat: d.lat ?? null,
-          lng: d.lng ?? null
+          lat: d.lat ?? d.locationLat ?? d.latitude ?? null,
+          lng: d.lng ?? d.locationLng ?? d.longitude ?? null
         });
       });
     } else {
@@ -1410,7 +1414,7 @@ async function showMyBookings() {
 }
 
 // ==========================================
-// 18. RENDER LISTINGS - FIXED PROFESSIONAL CARDS
+// 18. RENDER LISTINGS
 // ==========================================
 window.renderListings = function (props = null) {
   const container = document.getElementById("listings-grid");
@@ -1510,9 +1514,201 @@ window.renderListings = function (props = null) {
 };
 
 // ==========================================
-// 19. PROPERTY DETAILS STUB
+// 19. PROPERTY DETAILS + MAP
 // ==========================================
-function renderPropertyDetails() {
+async function renderPropertyDetails() {
   const page = document.getElementById("property-page");
   if (!page) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const propertyId = params.get("id");
+
+  if (!propertyId) {
+    page.innerHTML = `
+      <div class="container property-container">
+        <p style="text-align:center;color:var(--text-muted);padding:40px;">
+          ${state.lang === "ar" ? "لم يتم تحديد العقار." : "No property selected."}
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  let prop = null;
+
+  try {
+    const doc = await db.collection("properties").doc(String(propertyId)).get();
+    if (doc.exists) {
+      prop = normalizeProperty({ id: doc.id, ...doc.data() });
+    }
+  } catch (err) {
+    console.error("Property fetch error:", err);
+  }
+
+  if (!prop) {
+    const localProp = (state.liveProperties || []).find(p => String(p.id) === String(propertyId))
+      || properties.find(p => String(p.id) === String(propertyId));
+
+    if (localProp) {
+      prop = normalizeProperty(localProp);
+    }
+  }
+
+  if (!prop) {
+    page.innerHTML = `
+      <div class="container property-container">
+        <p style="text-align:center;color:var(--text-muted);padding:40px;">
+          ${state.lang === "ar" ? "العقار غير موجود." : "Property not found."}
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  const isAr = state.lang === "ar";
+  const title = isAr ? (prop.title_ar || prop.title_en) : (prop.title_en || prop.title_ar);
+  const location = isAr ? (prop.location_ar || prop.location_en) : (prop.location_en || prop.location_ar);
+  const description = isAr ? (prop.desc_ar || prop.desc_en) : (prop.desc_en || prop.desc_ar);
+  const features = isAr ? (prop.features_ar || prop.features_en || []) : (prop.features_en || prop.features_ar || []);
+  const currency = isAr ? "د.ج" : "DZD";
+  const mainImage = (prop.images && prop.images[0]) || prop.image || "images/placeholder.jpg";
+
+  currentPropImages = Array.isArray(prop.images) ? prop.images : [mainImage];
+
+  page.innerHTML = `
+    <div class="container property-container">
+      <div class="prop-header">
+        <h1 class="prop-title">${escapeHtml(title)}</h1>
+        <div class="prop-meta">
+          <div class="prop-rating">
+            <i class="ph-fill ph-star"></i>
+            <span>${Number(prop.rating || 4.8).toFixed(1)}</span>
+          </div>
+          <div class="prop-location">
+            <i class="ph ph-map-pin"></i>
+            <span>${escapeHtml(location)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-content-grid">
+        <div class="prop-details">
+          <img
+            src="${escapeAttr(mainImage)}"
+            alt="${escapeAttr(title)}"
+            style="width:100%;border-radius:20px;max-height:420px;object-fit:cover;margin-bottom:24px;"
+            onerror="this.src='images/placeholder.jpg'"
+          />
+
+          <h2>${escapeHtml(translations[state.lang].about_prop)}</h2>
+          <p class="prop-description">${escapeHtml(description || "")}</p>
+
+          <div class="prop-features">
+            <h3>${escapeHtml(translations[state.lang].what_offers)}</h3>
+            <ul class="features-list">
+              ${features.map(item => `
+                <li>
+                  <i class="ph ph-check-circle"></i>
+                  <span>${escapeHtml(item)}</span>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+
+          <div class="prop-map-section">
+            <h3>${escapeHtml(translations[state.lang].location_on_map)}</h3>
+            <div id="property-map" style="height:340px;border-radius:20px;overflow:hidden;border:1px solid var(--border-color);"></div>
+          </div>
+        </div>
+
+        <aside class="booking-card-side" style="background:var(--surface-color);border:1px solid var(--border-color);border-radius:20px;padding:24px;box-shadow:var(--shadow-sm);position:sticky;top:100px;">
+          <div style="font-size:1.8rem;font-weight:800;margin-bottom:8px;">
+            ${Number(prop.price || 0).toLocaleString()} ${currency}
+            <span style="font-size:0.95rem;color:var(--text-muted);font-weight:500;">/ ${escapeHtml(translations[state.lang].night)}</span>
+          </div>
+          <p id="booking-info-text" style="color:var(--text-muted);line-height:1.7;">
+            ${isAr
+              ? "اختر التواريخ وعدد الضيوف في الصفحة التالية لرؤية السعر النهائي."
+              : "Choose your dates and number of guests on the next page to see the final price."}
+          </p>
+          <button class="primary-btn" style="margin-top:18px;">
+            <i class="ph ph-calendar-check"></i>
+            <span>${escapeHtml(translations[state.lang].book_now)}</span>
+          </button>
+        </aside>
+      </div>
+    </div>
+  `;
+
+  initPropertyMap(prop);
+}
+
+function initPropertyMap(prop) {
+  const mapEl = document.getElementById("property-map");
+  if (!mapEl) return;
+
+  const lat = Number(prop?.lat);
+  const lng = Number(prop?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    mapEl.innerHTML = `
+      <div style="
+        height:100%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        padding:24px;
+        color:var(--text-muted);
+        background:var(--bg-color);
+      ">
+        ${state.lang === "ar"
+          ? "لم يتم تحديد إحداثيات هذا العقار بعد."
+          : "This property does not have map coordinates yet."}
+      </div>
+    `;
+    return;
+  }
+
+  if (typeof L === "undefined") {
+    mapEl.innerHTML = `
+      <div style="
+        height:100%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        padding:24px;
+        color:var(--text-muted);
+        background:var(--bg-color);
+      ">
+        ${state.lang === "ar"
+          ? "مكتبة الخريطة غير محمّلة. تأكد من إضافة Leaflet داخل property.html."
+          : "Map library not loaded. Make sure Leaflet is included in property.html."}
+      </div>
+    `;
+    return;
+  }
+
+  if (propertyMap) {
+    propertyMap.remove();
+    propertyMap = null;
+  }
+
+  propertyMap = L.map("property-map", {
+    center: [lat, lng],
+    zoom: 14,
+    scrollWheelZoom: false
+  });
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }).addTo(propertyMap);
+
+  L.marker([lat, lng]).addTo(propertyMap);
+
+  setTimeout(() => {
+    propertyMap.invalidateSize();
+  }, 200);
 }
