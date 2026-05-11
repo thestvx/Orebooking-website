@@ -1,7 +1,6 @@
 // =========================================
 //   OreBooking Admin Panel Logic — Enhanced
-//   Updated version with validation, safer auth,
-//   richer booking parsing, and stronger UX.
+//   Updated with booking chat system for owners/admins
 // =========================================
 
 const firebaseConfig = {
@@ -40,6 +39,21 @@ const SESSION_KEYS = {
   loginAt: "adminLoginAt"
 };
 
+const CHAT_STATE = {
+  currentChatId: "",
+  currentBookingId: "",
+  currentGuestId: "",
+  currentGuestName: "",
+  currentPropertyId: "",
+  currentPropertyTitle: "",
+  currentPropertyImage: "",
+  currentBookingStatus: "",
+  messagesUnsub: null,
+  chatUnsub: null,
+  sending: false,
+  modalReady: false
+};
+
 function getIsSuperAdmin() {
   return !localStorage.getItem(SESSION_KEYS.ownerPropId);
 }
@@ -50,6 +64,18 @@ function getOwnerPropId() {
 
 function getOwnerPropName() {
   return (localStorage.getItem(SESSION_KEYS.ownerPropName) || "").trim();
+}
+
+function getSessionRole() {
+  return (localStorage.getItem(SESSION_KEYS.role) || "").trim() || (getIsSuperAdmin() ? "superadmin" : "owner");
+}
+
+function getAdminActorId() {
+  return getIsSuperAdmin() ? "superadmin" : getOwnerPropId();
+}
+
+function getAdminActorName() {
+  return getIsSuperAdmin() ? "إدارة OreBooking" : (getOwnerPropName() || "صاحب العقار");
 }
 
 function setAdminSession(role = "superadmin", ownerPropId = "", ownerPropName = "") {
@@ -117,6 +143,20 @@ function formatDateTime(value) {
   const d = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
   return `${d.toLocaleDateString("ar-DZ")} ${d.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function getRelativeTime(value) {
+  const ms = safeDateMs(value);
+  if (!ms) return "الآن";
+  const diff = Date.now() - ms;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "الآن";
+  if (min < 60) return `منذ ${min} د`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `منذ ${hr} س`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `منذ ${day} يوم`;
+  return formatDateTime(value);
 }
 
 function getPropertyTypeLabel(type) {
@@ -308,28 +348,13 @@ function normalizePropertyPayload(source = {}) {
 }
 
 function validatePropertyPayload(payload, { requireImage = false, requireMap = true } = {}) {
-  if (!payload.titleAr) {
-    return "يرجى إدخال اسم العقار بالعربية.";
-  }
-
-  if (!payload.locationAr) {
-    return "يرجى إدخال موقع العقار بالعربية.";
-  }
-
-  if (!payload.price || payload.price <= 0) {
-    return "يرجى إدخال سعر صحيح أكبر من 0.";
-  }
-
+  if (!payload.titleAr) return "يرجى إدخال اسم العقار بالعربية.";
+  if (!payload.locationAr) return "يرجى إدخال موقع العقار بالعربية.";
+  if (!payload.price || payload.price <= 0) return "يرجى إدخال سعر صحيح أكبر من 0.";
   if (requireMap) {
-    if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) {
-      return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
-    }
+    if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
   }
-
-  if (requireImage && !payload.imageUrl) {
-    return "الصورة الرئيسية للعقار مطلوبة.";
-  }
-
+  if (requireImage && !payload.imageUrl) return "الصورة الرئيسية للعقار مطلوبة.";
   return "";
 }
 
@@ -345,6 +370,12 @@ function getBookingField(data, candidates = [], fallback = "") {
 function getBookingPropertyId(data = {}) {
   return normalizeText(
     getBookingField(data, ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"], "")
+  );
+}
+
+function getBookingGuestId(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["guestId", "userId", "customerId", "clientId", "uid"], "")
   );
 }
 
@@ -438,7 +469,6 @@ function getBookingGuestsMeta(data = {}) {
   const infants = toNumber(getBookingField(data, ["infants", "guestInfants"], 0), 0);
   const rooms = toNumber(getBookingField(data, ["rooms", "roomCount"], 0), 0);
   const guests = toNumber(getBookingField(data, ["guests", "guestCount"], adults + children + infants || 1), 1);
-
   return { adults, children, infants, rooms, guests };
 }
 
@@ -457,6 +487,823 @@ function setNavVisibilityByRole() {
   } else {
     if (addTabBtn) addTabBtn.style.display = "";
     if (addTabPane) addTabPane.style.display = "";
+  }
+}
+
+function ensureAdminChatModal() {
+  if (CHAT_STATE.modalReady) return;
+
+  const existing = document.getElementById("admin-chat-overlay");
+  if (existing) {
+    CHAT_STATE.modalReady = true;
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = "admin-chat-inline-style";
+  style.textContent = `
+    .admin-chat-overlay{
+      position:fixed; inset:0; background:rgba(15,23,42,.45);
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      z-index:4500; display:none; align-items:center; justify-content:center; padding:18px;
+    }
+    .admin-chat-overlay.active{ display:flex; }
+    .admin-chat-shell{
+      width:min(980px,96vw); height:min(88vh,760px);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.98));
+      border:1px solid rgba(255,255,255,.72); border-radius:28px;
+      box-shadow:0 35px 80px rgba(15,23,42,.22); overflow:hidden;
+      display:grid; grid-template-rows:auto 1fr auto;
+    }
+    .dark .admin-chat-shell{
+      background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(11,18,32,.98));
+      border-color:rgba(51,65,85,.85);
+    }
+    .admin-chat-topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+      padding:18px 20px; border-bottom:1px solid rgba(226,232,240,.9);
+      background:linear-gradient(135deg, rgba(67,90,191,.08), rgba(101,123,224,.06));
+    }
+    .admin-chat-head{
+      display:flex; align-items:center; gap:14px; min-width:0;
+    }
+    .admin-chat-property-thumb{
+      width:58px; height:58px; border-radius:18px; object-fit:cover;
+      border:1px solid rgba(203,213,225,.9); background:#f1f5f9; flex-shrink:0;
+    }
+    .admin-chat-head-meta{
+      display:grid; gap:4px; min-width:0;
+    }
+    .admin-chat-head-meta strong{
+      font-size:1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .admin-chat-head-meta span{
+      color:var(--text-muted); font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .admin-verified-badge{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:22px; height:22px; border-radius:999px;
+      background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:.78rem;
+      box-shadow:0 8px 18px rgba(59,130,246,.28);
+    }
+    .admin-chat-top-actions{
+      display:flex; align-items:center; gap:10px; flex-shrink:0;
+    }
+    .admin-chat-status-chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:999px; font-size:.8rem; font-weight:800;
+      background:rgba(67,90,191,.08); color:var(--primary); border:1px solid rgba(67,90,191,.1);
+    }
+    .admin-chat-close{
+      width:44px; height:44px; border:none; border-radius:14px;
+      background:rgba(255,255,255,.85); color:var(--text-main); cursor:pointer;
+      display:grid; place-items:center; font-size:1.15rem; border:1px solid rgba(203,213,225,.95);
+    }
+    .admin-chat-body{
+      display:grid; grid-template-columns: minmax(0,1fr) 300px; min-height:0;
+      background:
+        radial-gradient(circle at top, rgba(67,90,191,.08), transparent 28%),
+        linear-gradient(180deg, rgba(248,250,252,.72), rgba(255,255,255,.92));
+    }
+    .dark .admin-chat-body{
+      background:
+        radial-gradient(circle at top, rgba(67,90,191,.10), transparent 28%),
+        linear-gradient(180deg, rgba(15,23,42,.76), rgba(2,6,23,.9));
+    }
+    .admin-chat-main{
+      min-width:0; min-height:0; display:grid; grid-template-rows: 1fr;
+      border-inline-end:1px solid rgba(226,232,240,.85);
+    }
+    .admin-chat-messages{
+      overflow:auto; padding:20px; display:flex; flex-direction:column; gap:12px;
+      scroll-behavior:smooth;
+    }
+    .admin-chat-empty{
+      margin:auto; max-width:420px; text-align:center; color:var(--text-muted);
+      line-height:1.8; font-weight:700;
+    }
+    .admin-chat-message{
+      max-width:min(78%, 620px); display:grid; gap:6px;
+    }
+    .admin-chat-message.mine{ align-self:flex-end; }
+    .admin-chat-message.theirs{ align-self:flex-start; }
+    .admin-chat-bubble{
+      padding:14px 16px; border-radius:22px; box-shadow:0 10px 28px rgba(15,23,42,.08);
+      line-height:1.8; word-break:break-word; font-size:.95rem;
+      border:1px solid rgba(226,232,240,.9); background:#fff; color:var(--text-main);
+    }
+    .admin-chat-message.mine .admin-chat-bubble{
+      background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; border-color:transparent;
+      box-shadow:0 18px 34px rgba(67,90,191,.22);
+      border-bottom-left-radius:22px; border-bottom-right-radius:8px;
+    }
+    .admin-chat-message.theirs .admin-chat-bubble{
+      border-bottom-right-radius:22px; border-bottom-left-radius:8px;
+      background:rgba(255,255,255,.95);
+    }
+    .dark .admin-chat-message.theirs .admin-chat-bubble{
+      background:rgba(15,23,42,.82); border-color:rgba(51,65,85,.9);
+    }
+    .admin-chat-meta{
+      font-size:.74rem; color:var(--text-muted); font-weight:700;
+      padding-inline:6px; display:flex; align-items:center; gap:6px;
+    }
+    .admin-chat-message.mine .admin-chat-meta{ justify-content:flex-end; }
+    .admin-chat-image{
+      width:min(280px, 100%); max-width:100%; border-radius:18px; display:block;
+      border:1px solid rgba(226,232,240,.9); cursor:zoom-in; background:#fff;
+    }
+    .admin-chat-side{
+      padding:18px; display:grid; gap:14px; align-content:start;
+      background:rgba(248,250,252,.7);
+    }
+    .dark .admin-chat-side{
+      background:rgba(2,6,23,.45);
+    }
+    .admin-chat-side-card{
+      padding:16px; border-radius:20px; border:1px solid var(--border-color);
+      background:rgba(255,255,255,.82); box-shadow:0 12px 28px rgba(15,23,42,.05);
+      display:grid; gap:10px;
+    }
+    .dark .admin-chat-side-card{
+      background:rgba(15,23,42,.72); border-color:rgba(51,65,85,.88);
+    }
+    .admin-chat-side-card label{
+      font-size:.74rem; color:var(--text-muted); font-weight:800;
+    }
+    .admin-chat-side-card strong,
+    .admin-chat-side-card span{
+      color:var(--text-main); line-height:1.7; word-break:break-word;
+    }
+    .admin-chat-composer{
+      border-top:1px solid rgba(226,232,240,.9); padding:16px 18px;
+      background:rgba(255,255,255,.9); display:grid; gap:12px;
+    }
+    .dark .admin-chat-composer{
+      background:rgba(15,23,42,.84); border-color:rgba(51,65,85,.88);
+    }
+    .admin-chat-preview{
+      display:none; align-items:center; justify-content:space-between; gap:14px;
+      padding:12px 14px; border-radius:16px; border:1px solid var(--border-color);
+      background:rgba(248,250,252,.86);
+    }
+    .admin-chat-preview.visible{ display:flex; }
+    .admin-chat-preview-main{
+      display:flex; align-items:center; gap:12px; min-width:0;
+    }
+    .admin-chat-preview img{
+      width:58px; height:46px; object-fit:cover; border-radius:12px;
+      border:1px solid rgba(203,213,225,.9); background:#fff; flex-shrink:0;
+    }
+    .admin-chat-preview-meta{
+      display:grid; gap:4px; min-width:0;
+    }
+    .admin-chat-preview-meta strong{
+      font-size:.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .admin-chat-preview-meta span{
+      font-size:.76rem; color:var(--text-muted);
+    }
+    .admin-chat-preview-remove{
+      width:36px; height:36px; border:none; border-radius:12px; cursor:pointer;
+      background:#fff; color:#e11d48; border:1px solid #fecdd3;
+    }
+    .admin-chat-input-row{
+      display:flex; align-items:flex-end; gap:12px;
+    }
+    .admin-chat-attach{
+      width:52px; height:52px; border-radius:16px; border:1px solid var(--border-color);
+      background:rgba(248,250,252,.92); color:var(--primary); cursor:pointer;
+      display:grid; place-items:center; font-size:1.3rem; flex-shrink:0;
+    }
+    .admin-chat-textarea{
+      flex:1; min-height:54px; max-height:160px; resize:none; padding:15px 16px;
+      border-radius:18px; border:1px solid var(--border-color); outline:none;
+      background:rgba(248,250,252,.92); color:var(--text-main); font-family:inherit; font-size:.95rem;
+      line-height:1.7;
+    }
+    .admin-chat-textarea:focus{
+      border-color:var(--primary); box-shadow:0 0 0 4px rgba(67,90,191,.1); background:#fff;
+    }
+    .admin-chat-send{
+      min-width:148px; height:54px; border:none; border-radius:18px;
+      background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff;
+      font-weight:800; font-family:inherit; cursor:pointer; display:inline-flex;
+      align-items:center; justify-content:center; gap:8px; box-shadow:0 16px 28px rgba(67,90,191,.2);
+    }
+    .admin-chat-send:disabled,
+    .admin-chat-attach:disabled,
+    .admin-chat-close:disabled{
+      opacity:.6; cursor:not-allowed;
+    }
+    .admin-chat-upload-hint{
+      font-size:.76rem; color:var(--text-muted); font-weight:700;
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    }
+    @media (max-width: 980px){
+      .admin-chat-shell{ width:min(100vw, 100vw); height:min(100vh,100vh); border-radius:0; }
+      .admin-chat-body{ grid-template-columns:1fr; }
+      .admin-chat-main{ border-inline-end:none; border-bottom:1px solid rgba(226,232,240,.85); }
+      .admin-chat-side{ grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width: 700px){
+      .admin-chat-topbar{ padding:14px; align-items:flex-start; flex-direction:column; }
+      .admin-chat-top-actions{ width:100%; justify-content:space-between; }
+      .admin-chat-side{ grid-template-columns:1fr; }
+      .admin-chat-input-row{ flex-wrap:wrap; }
+      .admin-chat-send{ width:100%; }
+      .admin-chat-textarea{ width:100%; }
+      .admin-chat-message{ max-width:92%; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const overlay = document.createElement("div");
+  overlay.className = "admin-chat-overlay";
+  overlay.id = "admin-chat-overlay";
+  overlay.innerHTML = `
+    <div class="admin-chat-shell">
+      <div class="admin-chat-topbar">
+        <div class="admin-chat-head">
+          <img id="admin-chat-property-image" class="admin-chat-property-thumb" src="images/placeholder.jpg" alt="Property">
+          <div class="admin-chat-head-meta">
+            <strong id="admin-chat-property-title">محادثة العقار <span class="admin-verified-badge"><i class="ph-fill ph-check"></i></span></strong>
+            <span id="admin-chat-guest-line">جاري تحميل بيانات العميل...</span>
+            <span id="admin-chat-booking-line">—</span>
+          </div>
+        </div>
+        <div class="admin-chat-top-actions">
+          <div id="admin-chat-status-chip" class="admin-chat-status-chip"><i class="ph ph-chat-circle-text"></i> محادثة مباشرة</div>
+          <button type="button" id="admin-chat-close-btn" class="admin-chat-close" aria-label="إغلاق">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-chat-body">
+        <div class="admin-chat-main">
+          <div id="admin-chat-messages" class="admin-chat-messages">
+            <div class="admin-chat-empty">
+              <i class="ph ph-chat-circle-dots" style="font-size:2.6rem;color:var(--primary);display:block;margin-bottom:10px;"></i>
+              هذه بداية المحادثة. أرسل أول رسالة للعميل من هنا.
+            </div>
+          </div>
+        </div>
+
+        <aside class="admin-chat-side">
+          <div class="admin-chat-side-card">
+            <label>اسم العميل</label>
+            <strong id="admin-chat-side-guest-name">—</strong>
+            <label>رقم الهاتف</label>
+            <span id="admin-chat-side-phone">—</span>
+            <label>البريد الإلكتروني</label>
+            <span id="admin-chat-side-email">—</span>
+          </div>
+          <div class="admin-chat-side-card">
+            <label>العقار</label>
+            <strong id="admin-chat-side-property">—</strong>
+            <label>الحجز</label>
+            <span id="admin-chat-side-booking-id">—</span>
+            <label>آخر تحديث</label>
+            <span id="admin-chat-side-updated">—</span>
+          </div>
+        </aside>
+      </div>
+
+      <div class="admin-chat-composer">
+        <div id="admin-chat-preview" class="admin-chat-preview">
+          <div class="admin-chat-preview-main">
+            <img id="admin-chat-preview-img" src="" alt="Preview">
+            <div class="admin-chat-preview-meta">
+              <strong id="admin-chat-preview-name">image.jpg</strong>
+              <span id="admin-chat-preview-size">0 KB</span>
+            </div>
+          </div>
+          <button type="button" id="admin-chat-preview-remove" class="admin-chat-preview-remove" aria-label="حذف الصورة">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <div class="admin-chat-input-row">
+          <input type="file" id="admin-chat-file-input" accept="image/*" hidden>
+          <button type="button" id="admin-chat-attach-btn" class="admin-chat-attach" title="إرفاق صورة">
+            <i class="ph ph-image"></i>
+          </button>
+          <textarea id="admin-chat-textarea" class="admin-chat-textarea" placeholder="اكتب رسالة احترافية للعميل..." rows="1"></textarea>
+          <button type="button" id="admin-chat-send-btn" class="admin-chat-send">
+            <i class="ph-fill ph-paper-plane-tilt"></i> إرسال
+          </button>
+        </div>
+
+        <div class="admin-chat-upload-hint">
+          <i class="ph ph-info"></i>
+          يمكنك إرسال نص أو صورة أو الاثنين معًا. الحد الأقصى للصورة 5MB.
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeAdminChatModal();
+  });
+
+  document.getElementById("admin-chat-close-btn")?.addEventListener("click", closeAdminChatModal);
+  document.getElementById("admin-chat-attach-btn")?.addEventListener("click", () => {
+    document.getElementById("admin-chat-file-input")?.click();
+  });
+  document.getElementById("admin-chat-file-input")?.addEventListener("change", handleAdminChatFileSelect);
+  document.getElementById("admin-chat-preview-remove")?.addEventListener("click", clearAdminChatFilePreview);
+  document.getElementById("admin-chat-send-btn")?.addEventListener("click", sendAdminChatMessage);
+
+  const textarea = document.getElementById("admin-chat-textarea");
+  if (textarea) {
+    textarea.addEventListener("input", autoResizeAdminChatTextarea);
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminChatMessage();
+      }
+    });
+  }
+
+  CHAT_STATE.modalReady = true;
+}
+
+function autoResizeAdminChatTextarea() {
+  const textarea = document.getElementById("admin-chat-textarea");
+  if (!textarea) return;
+  textarea.style.height = "54px";
+  textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+}
+
+function handleAdminChatFileSelect(e) {
+  const file = e.target?.files?.[0];
+  if (!file) {
+    clearAdminChatFilePreview();
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    showToast("يمكن رفع الصور فقط داخل المحادثة", "error");
+    e.target.value = "";
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("حجم الصورة يتجاوز 5MB", "error");
+    e.target.value = "";
+    return;
+  }
+
+  const preview = document.getElementById("admin-chat-preview");
+  const img = document.getElementById("admin-chat-preview-img");
+  const name = document.getElementById("admin-chat-preview-name");
+  const size = document.getElementById("admin-chat-preview-size");
+
+  if (name) name.textContent = file.name;
+  if (size) size.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if (img) img.src = ev.target?.result || "";
+    preview?.classList.add("visible");
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAdminChatFilePreview() {
+  const input = document.getElementById("admin-chat-file-input");
+  const preview = document.getElementById("admin-chat-preview");
+  const img = document.getElementById("admin-chat-preview-img");
+  const name = document.getElementById("admin-chat-preview-name");
+  const size = document.getElementById("admin-chat-preview-size");
+
+  if (input) input.value = "";
+  if (img) img.removeAttribute("src");
+  if (name) name.textContent = "";
+  if (size) size.textContent = "";
+  preview?.classList.remove("visible");
+}
+
+function resetAdminChatStateOnly() {
+  if (typeof CHAT_STATE.messagesUnsub === "function") {
+    try { CHAT_STATE.messagesUnsub(); } catch (_) {}
+  }
+  if (typeof CHAT_STATE.chatUnsub === "function") {
+    try { CHAT_STATE.chatUnsub(); } catch (_) {}
+  }
+
+  CHAT_STATE.currentChatId = "";
+  CHAT_STATE.currentBookingId = "";
+  CHAT_STATE.currentGuestId = "";
+  CHAT_STATE.currentGuestName = "";
+  CHAT_STATE.currentPropertyId = "";
+  CHAT_STATE.currentPropertyTitle = "";
+  CHAT_STATE.currentPropertyImage = "";
+  CHAT_STATE.currentBookingStatus = "";
+  CHAT_STATE.messagesUnsub = null;
+  CHAT_STATE.chatUnsub = null;
+  CHAT_STATE.sending = false;
+}
+
+function closeAdminChatModal() {
+  const overlay = document.getElementById("admin-chat-overlay");
+  overlay?.classList.remove("active");
+  document.body.classList.remove("modal-open");
+  resetAdminChatStateOnly();
+  clearAdminChatFilePreview();
+
+  const box = document.getElementById("admin-chat-messages");
+  if (box) {
+    box.innerHTML = `
+      <div class="admin-chat-empty">
+        <i class="ph ph-chat-circle-dots" style="font-size:2.6rem;color:var(--primary);display:block;margin-bottom:10px;"></i>
+        هذه بداية المحادثة. أرسل أول رسالة للعميل من هنا.
+      </div>
+    `;
+  }
+
+  const textarea = document.getElementById("admin-chat-textarea");
+  if (textarea) {
+    textarea.value = "";
+    textarea.style.height = "54px";
+  }
+}
+
+function buildChatId(bookingId, propertyId, guestId) {
+  const b = normalizeText(bookingId || "");
+  const p = normalizeText(propertyId || "");
+  const g = normalizeText(guestId || "");
+  if (b) return `booking_${b}`;
+  return `chat_${[p || "property", g || "guest", Date.now()].join("_")}`;
+}
+
+async function ensureChatForBooking({
+  bookingId,
+  bookingData,
+  propertyId,
+  propertyTitle,
+  propertyImage,
+  guestId,
+  guestName,
+  guestEmail,
+  guestPhone
+}) {
+  const chatId = buildChatId(bookingId, propertyId, guestId);
+  const chatRef = db.collection("chats").doc(chatId);
+  const existing = await chatRef.get();
+
+  const basePayload = {
+    chatId,
+    bookingId: normalizeText(bookingId),
+    propertyId: normalizeText(propertyId),
+    propertyTitle: normalizeText(propertyTitle || "العقار"),
+    propertyImage: normalizeText(propertyImage || ""),
+    guestId: normalizeText(guestId),
+    guestName: normalizeText(guestName || "العميل"),
+    guestEmail: normalizeText(guestEmail || ""),
+    guestPhone: normalizeText(guestPhone || ""),
+    ownerId: getAdminActorId(),
+    ownerName: getAdminActorName(),
+    ownerRole: getSessionRole(),
+    verified: true,
+    status: normalizeText(bookingData.status || "pending"),
+    lastMessage: existing.exists ? (existing.data()?.lastMessage || "") : "",
+    lastMessageType: existing.exists ? (existing.data()?.lastMessageType || "text") : "text",
+    lastSenderId: existing.exists ? (existing.data()?.lastSenderId || "") : "",
+    lastMessageAt: existing.exists ? (existing.data()?.lastMessageAt || null) : null,
+    unreadCountGuest: existing.exists ? toNumber(existing.data()?.unreadCountGuest, 0) : 0,
+    unreadCountOwner: 0,
+    bookingCreatedAt: bookingData.createdAt || null,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (!existing.exists) {
+    await chatRef.set({
+      ...basePayload,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } else {
+    await chatRef.set(basePayload, { merge: true });
+  }
+
+  return chatId;
+}
+
+function setAdminChatHeader(data = {}) {
+  const propertyTitle = normalizeText(data.propertyTitle || CHAT_STATE.currentPropertyTitle || "العقار");
+  const guestName = normalizeText(data.guestName || CHAT_STATE.currentGuestName || "العميل");
+  const bookingId = normalizeText(data.bookingId || CHAT_STATE.currentBookingId || "");
+  const propertyImage = normalizeText(data.propertyImage || CHAT_STATE.currentPropertyImage || "");
+  const phone = normalizeText(data.guestPhone || "—");
+  const email = normalizeText(data.guestEmail || "—");
+  const statusMeta = getStatusMeta(data.status || CHAT_STATE.currentBookingStatus || "pending");
+
+  const titleEl = document.getElementById("admin-chat-property-title");
+  const guestLineEl = document.getElementById("admin-chat-guest-line");
+  const bookingLineEl = document.getElementById("admin-chat-booking-line");
+  const imageEl = document.getElementById("admin-chat-property-image");
+  const statusChipEl = document.getElementById("admin-chat-status-chip");
+  const sideGuestName = document.getElementById("admin-chat-side-guest-name");
+  const sidePhone = document.getElementById("admin-chat-side-phone");
+  const sideEmail = document.getElementById("admin-chat-side-email");
+  const sideProperty = document.getElementById("admin-chat-side-property");
+  const sideBooking = document.getElementById("admin-chat-side-booking-id");
+
+  if (titleEl) {
+    titleEl.innerHTML = `${escapeHtml(propertyTitle)} <span class="admin-verified-badge"><i class="ph-fill ph-check"></i></span>`;
+  }
+  if (guestLineEl) guestLineEl.textContent = `محادثة مع: ${guestName}`;
+  if (bookingLineEl) bookingLineEl.textContent = bookingId ? `رقم الحجز: #${bookingId.slice(0, 8).toUpperCase()}` : "حجز مباشر";
+  if (imageEl) imageEl.src = propertyImage || "images/placeholder.jpg";
+  if (statusChipEl) statusChipEl.innerHTML = `<i class="ph ${statusMeta.icon}"></i> ${statusMeta.label}`;
+  if (sideGuestName) sideGuestName.textContent = guestName || "—";
+  if (sidePhone) sidePhone.textContent = phone || "—";
+  if (sideEmail) sideEmail.textContent = email || "—";
+  if (sideProperty) sideProperty.textContent = propertyTitle || "—";
+  if (sideBooking) sideBooking.textContent = bookingId ? `#${bookingId}` : "—";
+}
+
+function renderAdminChatMessages(docs = []) {
+  const box = document.getElementById("admin-chat-messages");
+  if (!box) return;
+
+  if (!docs.length) {
+    box.innerHTML = `
+      <div class="admin-chat-empty">
+        <i class="ph ph-chat-circle-dots" style="font-size:2.6rem;color:var(--primary);display:block;margin-bottom:10px;"></i>
+        لا توجد رسائل بعد. ابدأ أول تواصل مع العميل الآن.
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = docs.map(doc => {
+    const m = doc.data() || {};
+    const isMine = normalizeText(m.senderRole) !== "guest";
+    const cls = isMine ? "mine" : "theirs";
+    const senderName = normalizeText(m.senderName || (isMine ? getAdminActorName() : CHAT_STATE.currentGuestName) || "مستخدم");
+    const timeText = getRelativeTime(m.createdAt);
+    const text = normalizeText(m.text || "");
+    const imageUrl = normalizeText(m.imageUrl || "");
+    const type = normalizeText(m.type || (imageUrl ? "image" : "text"));
+    const hasText = !!text;
+    const hasImage = !!imageUrl;
+
+    return `
+      <div class="admin-chat-message ${cls}">
+        <div class="admin-chat-bubble">
+          ${hasText ? `<div>${escapeHtml(text).replace(/\n/g, "<br>")}</div>` : ""}
+          ${hasImage ? `
+            <div style="${hasText ? "margin-top:12px;" : ""}">
+              <a href="${escapeHtml(imageUrl)}" target="_blank" rel="noopener noreferrer">
+                <img class="admin-chat-image" src="${escapeHtml(imageUrl)}" alt="chat-image" onerror="this.style.display='none'">
+              </a>
+            </div>` : ""}
+          ${!hasText && type === "image" && !hasImage ? `<div>تم إرسال صورة</div>` : ""}
+        </div>
+        <div class="admin-chat-meta">
+          <span>${escapeHtml(senderName)}</span>
+          <span>•</span>
+          <span>${escapeHtml(timeText)}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  box.scrollTop = box.scrollHeight + 500;
+}
+
+async function markChatAsSeenByOwner(chatId) {
+  if (!chatId) return;
+  try {
+    await db.collection("chats").doc(chatId).set({
+      unreadCountOwner: 0,
+      ownerLastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.warn("markChatAsSeenByOwner:", err);
+  }
+}
+
+function bindAdminChatStreams(chatId) {
+  if (typeof CHAT_STATE.messagesUnsub === "function") {
+    try { CHAT_STATE.messagesUnsub(); } catch (_) {}
+  }
+  if (typeof CHAT_STATE.chatUnsub === "function") {
+    try { CHAT_STATE.chatUnsub(); } catch (_) {}
+  }
+
+  CHAT_STATE.chatUnsub = db.collection("chats").doc(chatId).onSnapshot((snap) => {
+    if (!snap.exists) return;
+    const data = snap.data() || {};
+    CHAT_STATE.currentBookingStatus = normalizeText(data.status || CHAT_STATE.currentBookingStatus);
+    CHAT_STATE.currentPropertyTitle = normalizeText(data.propertyTitle || CHAT_STATE.currentPropertyTitle);
+    CHAT_STATE.currentPropertyImage = normalizeText(data.propertyImage || CHAT_STATE.currentPropertyImage);
+    CHAT_STATE.currentGuestName = normalizeText(data.guestName || CHAT_STATE.currentGuestName);
+
+    setAdminChatHeader(data);
+
+    const sideUpdated = document.getElementById("admin-chat-side-updated");
+    if (sideUpdated) sideUpdated.textContent = data.lastMessageAt ? formatDateTime(data.lastMessageAt) : "—";
+
+    markChatAsSeenByOwner(chatId);
+  }, (err) => {
+    console.error("chat snapshot error:", err);
+  });
+
+  CHAT_STATE.messagesUnsub = db.collection("chats").doc(chatId)
+    .collection("messages")
+    .orderBy("createdAt", "asc")
+    .onSnapshot((snap) => {
+      renderAdminChatMessages(snap.docs);
+      markChatAsSeenByOwner(chatId);
+    }, (err) => {
+      console.error("messages snapshot error:", err);
+      showToast(`تعذر تحميل رسائل المحادثة: ${err.message}`, "error");
+    });
+}
+
+async function openBookingChat(bookingId) {
+  ensureAdminChatModal();
+
+  const overlay = document.getElementById("admin-chat-overlay");
+  if (overlay) {
+    overlay.classList.add("active");
+    document.body.classList.add("modal-open");
+  }
+
+  try {
+    const bookingSnap = await db.collection("bookings").doc(bookingId).get();
+    if (!bookingSnap.exists) throw new Error("الحجز غير موجود");
+
+    const bookingData = bookingSnap.data() || {};
+    const bookingPropId = getBookingPropertyId(bookingData);
+    if (!getIsSuperAdmin() && bookingPropId !== getOwnerPropId()) {
+      throw new Error("غير مسموح لك بفتح محادثة لهذا الحجز");
+    }
+
+    const guestId = getBookingGuestId(bookingData);
+    const guestName = getBookingGuestName(bookingData);
+    const guestEmail = getBookingEmail(bookingData);
+    const guestPhone = getBookingPhone(bookingData);
+    const propertyTitle = normalizeText(getBookingField(bookingData, ["propertyTitle", "propertyName", "listingTitle"], getOwnerPropName() || "العقار"));
+    let propertyImage = normalizeText(getBookingField(bookingData, ["propertyImage", "propertyImageUrl", "imageUrl", "image"], ""));
+
+    if (!propertyImage && bookingPropId) {
+      try {
+        const propSnap = await db.collection("properties").doc(bookingPropId).get();
+        if (propSnap.exists) {
+          const propData = propSnap.data() || {};
+          propertyImage = normalizeText(propData.imageUrl || propData.image || "");
+        }
+      } catch (_) {}
+    }
+
+    CHAT_STATE.currentBookingId = bookingId;
+    CHAT_STATE.currentGuestId = guestId;
+    CHAT_STATE.currentGuestName = guestName;
+    CHAT_STATE.currentPropertyId = bookingPropId;
+    CHAT_STATE.currentPropertyTitle = propertyTitle;
+    CHAT_STATE.currentPropertyImage = propertyImage;
+    CHAT_STATE.currentBookingStatus = normalizeText(bookingData.status || "pending");
+
+    setAdminChatHeader({
+      bookingId,
+      propertyTitle,
+      propertyImage,
+      guestName,
+      guestEmail,
+      guestPhone,
+      status: bookingData.status || "pending"
+    });
+
+    const chatId = await ensureChatForBooking({
+      bookingId,
+      bookingData,
+      propertyId: bookingPropId,
+      propertyTitle,
+      propertyImage,
+      guestId,
+      guestName,
+      guestEmail,
+      guestPhone
+    });
+
+    CHAT_STATE.currentChatId = chatId;
+    bindAdminChatStreams(chatId);
+
+    const textarea = document.getElementById("admin-chat-textarea");
+    if (textarea) {
+      textarea.value = "";
+      textarea.focus();
+      autoResizeAdminChatTextarea();
+    }
+    clearAdminChatFilePreview();
+  } catch (err) {
+    console.error("openBookingChat error:", err);
+    showToast(err.message || "تعذر فتح المحادثة", "error");
+    closeAdminChatModal();
+  }
+}
+
+async function sendAdminChatMessage() {
+  if (CHAT_STATE.sending) return;
+
+  const textarea = document.getElementById("admin-chat-textarea");
+  const fileInput = document.getElementById("admin-chat-file-input");
+  const sendBtn = document.getElementById("admin-chat-send-btn");
+  const attachBtn = document.getElementById("admin-chat-attach-btn");
+
+  const text = normalizeText(textarea?.value || "");
+  const file = fileInput?.files?.[0] || null;
+
+  if (!CHAT_STATE.currentChatId) {
+    showToast("لم يتم تحديد محادثة نشطة", "error");
+    return;
+  }
+
+  if (!text && !file) {
+    showToast("اكتب رسالة أو أرفق صورة أولاً", "error");
+    return;
+  }
+
+  CHAT_STATE.sending = true;
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `<i class="ph ph-circle-notch ph-spin"></i> جاري الإرسال...`;
+  }
+  if (attachBtn) attachBtn.disabled = true;
+
+  try {
+    let imageUrl = "";
+    let type = "text";
+
+    if (file) {
+      imageUrl = await uploadToCloudinary(file);
+      type = text ? "mixed" : "image";
+    }
+
+    const msgPayload = {
+      bookingId: CHAT_STATE.currentBookingId,
+      propertyId: CHAT_STATE.currentPropertyId,
+      senderId: getAdminActorId(),
+      senderName: getAdminActorName(),
+      senderRole: "owner",
+      text,
+      type,
+      imageUrl,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      seenByGuest: false,
+      seenByOwner: true
+    };
+
+    await db.collection("chats")
+      .doc(CHAT_STATE.currentChatId)
+      .collection("messages")
+      .add(msgPayload);
+
+    await db.collection("chats").doc(CHAT_STATE.currentChatId).set({
+      bookingId: CHAT_STATE.currentBookingId,
+      propertyId: CHAT_STATE.currentPropertyId,
+      propertyTitle: CHAT_STATE.currentPropertyTitle,
+      propertyImage: CHAT_STATE.currentPropertyImage,
+      guestId: CHAT_STATE.currentGuestId,
+      guestName: CHAT_STATE.currentGuestName,
+      ownerId: getAdminActorId(),
+      ownerName: getAdminActorName(),
+      ownerRole: getSessionRole(),
+      verified: true,
+      status: CHAT_STATE.currentBookingStatus || "pending",
+      lastMessage: text || "تم إرسال صورة",
+      lastMessageType: type,
+      lastSenderId: getAdminActorId(),
+      lastSenderRole: "owner",
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      unreadCountGuest: firebase.firestore.FieldValue.increment(1),
+      unreadCountOwner: 0,
+      ownerLastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    if (textarea) {
+      textarea.value = "";
+      autoResizeAdminChatTextarea();
+    }
+    clearAdminChatFilePreview();
+  } catch (err) {
+    console.error("sendAdminChatMessage error:", err);
+    showToast(`تعذر إرسال الرسالة: ${err.message}`, "error");
+  } finally {
+    CHAT_STATE.sending = false;
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = `<i class="ph-fill ph-paper-plane-tilt"></i> إرسال`;
+    }
+    if (attachBtn) attachBtn.disabled = false;
   }
 }
 
@@ -569,6 +1416,8 @@ if (loginForm) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  ensureAdminChatModal();
+
   const hasSession = !!localStorage.getItem(SESSION_KEYS.role) || !!localStorage.getItem(SESSION_KEYS.ownerPropId);
   if (hasSession) {
     showAdminLayout();
@@ -956,7 +1805,14 @@ if (editModalEl) {
 }
 
 document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape") closeEditModal();
+  if (e.key === "Escape") {
+    const overlay = document.getElementById("admin-chat-overlay");
+    if (overlay?.classList.contains("active")) {
+      closeAdminChatModal();
+      return;
+    }
+    closeEditModal();
+  }
 });
 
 if (editForm) {
@@ -1137,6 +1993,8 @@ async function loadBookings() {
       const guestName = getBookingGuestName(b);
       const phone = getBookingPhone(b);
       const email = getBookingEmail(b);
+      const guestId = getBookingGuestId(b);
+      const propertyId = getBookingPropertyId(b);
       const propertyTitle = normalizeText(getBookingField(b, ["propertyTitle", "propertyName", "listingTitle"], "—"));
       const totalPrice = toNumber(getBookingField(b, ["totalPrice", "finalTotal", "amount", "price"], 0), 0);
       const nights = toNumber(getBookingField(b, ["nights", "nightCount"], 0), 0);
@@ -1184,8 +2042,19 @@ async function loadBookings() {
           </div>`
         : "";
 
+      const canChat = !!propertyId;
+      const chatBtn = canChat
+        ? `
+          <button class="ghost-action" type="button" onclick="openBookingChat('${doc.id}')" style="min-height:46px;padding:0 16px;border-radius:14px;font-size:.88rem;background:rgba(67,90,191,.08);color:var(--primary);border:1px solid rgba(67,90,191,.12);font-weight:800;">
+            <i class="ph-fill ph-chat-circle-dots"></i> مراسلة العميل
+          </button>`
+        : `
+          <span class="pill-soft" style="background:#f8fafc;color:var(--text-muted);border:1px solid var(--border-color);">
+            <i class="ph ph-chat-circle-slash"></i> لا يمكن فتح المحادثة
+          </span>`;
+
       return `
-        <div class="booking-card" data-status="${escapeHtml(b.status || "pending")}" data-booking-id="${escapeHtml(doc.id)}">
+        <div class="booking-card" data-status="${escapeHtml(b.status || "pending")}" data-booking-id="${escapeHtml(doc.id)}" data-guest-id="${escapeHtml(guestId)}" data-property-id="${escapeHtml(propertyId)}">
           <div class="booking-head">
             <div class="booking-title">
               <strong>${escapeHtml(guestName)}</strong>
@@ -1227,6 +2096,12 @@ async function loadBookings() {
             <div style="text-align:end;">
               <div style="font-size:.73rem; color:var(--text-muted); font-weight:800;">الإجمالي</div>
               <div style="font-size:1.18rem; color:var(--primary); font-weight:800;">${formatCurrency(totalPrice)}</div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:4px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              ${chatBtn}
             </div>
           </div>
 
@@ -1302,6 +2177,17 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
+    const guestId = getBookingGuestId(bookingData);
+    const chatId = buildChatId(docId, bookingPropId, guestId);
+    const chatRef = db.collection("chats").doc(chatId);
+    const chatSnap = await chatRef.get().catch(() => null);
+    if (chatSnap?.exists) {
+      await chatRef.set({
+        status: newStatus,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
     showToast(`تم ${isConfirm ? "قبول" : "رفض"} الحجز بنجاح`, "success");
     await loadBookings();
   } catch (err) {
@@ -1324,3 +2210,4 @@ window.deleteProperty = deleteProperty;
 window.toggleVisibility = toggleVisibility;
 window.updateAdminQuickStats = updateQuickStats;
 window.adminLogout = clearAdminSession;
+window.openBookingChat = openBookingChat;
