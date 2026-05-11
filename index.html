@@ -7,29 +7,21 @@
   <meta name="theme-color" content="#435abf">
   <title>OreBooking - Premium Stays</title>
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="logos/orebooking.png">
 
-  <!-- Fonts: Outfit (EN) & Tajawal (AR) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
-  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css?v=2.2">
 
-  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* =========================================
-       ✨ GLOBAL ANIMATIONS & CORE
-       ========================================= */
     :root {
       --primary: #435abf;
       --primary-hover: #34459c;
@@ -41,21 +33,56 @@
       --radius-full: 9999px;
       --radius-xl: 24px;
       --radius-lg: 16px;
+      --radius-md: 12px;
       --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
       --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
       --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       --transition-fast: 0.2s ease-out;
     }
 
-    body { font-family: 'Outfit', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; }
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
     html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
-    
+
+    body.dark {
+      --surface-color: #0f172a;
+      --bg-color: #020617;
+      --border-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --shadow-sm: 0 6px 18px rgba(0,0,0,0.25);
+      --shadow-hover: 0 24px 48px rgba(0,0,0,0.28);
+    }
+
+    body.modal-open { overflow: hidden; }
+
     .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
 
-    /* Keyframes */
-    @keyframes slideUpFade { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-    @keyframes scaleIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes slideUpFade {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes scaleIn {
+      0% { opacity: 0; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1); }
+    }
 
     .animate-up { opacity: 0; animation: slideUpFade var(--transition-smooth) forwards; }
     .delay-1 { animation-delay: 0.1s; }
@@ -64,121 +91,257 @@
     .delay-4 { animation-delay: 0.4s; }
 
     [class^="ph-"], [class*=" ph-"], [class^="ph "], [class*=" ph "] {
-      display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-style: normal;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-style: normal;
     }
 
-    /* =========================================
-       ✨ NAVBAR (Header) - FIXED
-       ========================================= */
     .navbar {
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-color);
-      padding: 16px 24px; position: sticky; top: 0; z-index: 1000; transition: var(--transition-smooth);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      transition: var(--transition-smooth);
     }
+
     .dark .navbar { background: rgba(15,23,42,0.85); }
-    
+
     .logo { display: flex; align-items: center; text-decoration: none; }
     .logo-img { height: 38px; width: auto; object-fit: contain; }
-    
-    .nav-actions { display: flex; align-items: center; gap: 12px; }
-    
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .rewards-badge {
-      border-radius: var(--radius-full); background: rgba(139,92,246,0.1); color: #8b5cf6;
-      padding: 8px 16px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95rem;
+      border-radius: var(--radius-full);
+      background: rgba(139,92,246,0.1);
+      color: #8b5cf6;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 0.95rem;
     }
-    
+
     .icon-btn, .lang-btn, .profile-menu {
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-main);
-      height: 42px; cursor: pointer; transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      height: 42px;
+      cursor: pointer;
+      transition: var(--transition-fast);
     }
+
     .icon-btn { width: 42px; border-radius: 50%; font-size: 1.2rem; }
-    .lang-btn { padding: 0 18px; border-radius: var(--radius-full); font-weight: 600; font-size: 0.95rem; gap: 6px; font-family: inherit; }
+    .lang-btn {
+      padding: 0 18px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      font-size: 0.95rem;
+      gap: 6px;
+      font-family: inherit;
+    }
     .profile-menu { width: 42px; border-radius: 50%; font-size: 1.2rem; }
-    
+
     .icon-btn:hover, .lang-btn:hover, .profile-menu:hover {
-      border-color: var(--primary); color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-sm);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
     }
 
     .profile-container { position: relative; }
+
     #profile-dropdown {
-      position: absolute; top: calc(100% + 10px); inset-inline-end: 0; min-width: 220px;
-      background: var(--surface-color); border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg); box-shadow: var(--shadow-hover);
-      display: none; flex-direction: column; overflow: hidden; transform-origin: top right; z-index: 100;
+      position: absolute;
+      top: calc(100% + 10px);
+      inset-inline-end: 0;
+      min-width: 220px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-hover);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      transform-origin: top right;
+      z-index: 100;
     }
+
     html[dir="rtl"] #profile-dropdown { transform-origin: top left; }
     #profile-dropdown.active { display: flex; animation: scaleIn 0.2s forwards; }
-    
-    .dropdown-header { padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 4px; }
-    .dropdown-body { padding: 8px; }
-    .dropdown-item {
-      width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-      background: transparent; border: none; color: var(--text-main); font-size: 0.95rem;
-      font-weight: 500; cursor: pointer; border-radius: 8px; transition: var(--transition-fast); text-align: start;
-    }
-    .dropdown-item:hover { background: rgba(67,90,191,0.08); color: var(--primary); }
-    .dropdown-item.text-danger:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
 
-    /* =========================================
-       ✨ HERO & SEARCH BAR (Redesigned)
-       ========================================= */
-    .hero {
-      position: relative; padding: 100px 20px 60px; text-align: center;
-      background: radial-gradient(circle at top center, rgba(67,90,191,0.08) 0%, transparent 60%);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    .dropdown-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-    .hero h1 { font-size: clamp(2.5rem, 5vw, 3.5rem); letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2; font-weight: 800; color: var(--text-main); }
-    .hero p { font-size: 1.15rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 40px; }
+
+    .dropdown-body { padding: 8px; }
+
+    .dropdown-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: var(--transition-fast);
+      text-align: start;
+      font-family: inherit;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+    }
+
+    .dropdown-item.text-danger:hover {
+      background: rgba(239,68,68,0.1);
+      color: #ef4444;
+    }
+
+    .hero {
+      position: relative;
+      padding: 100px 20px 60px;
+      text-align: center;
+      background: radial-gradient(circle at top center, rgba(67,90,191,0.08) 0%, transparent 60%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 3.5rem);
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
 
     .search-bar {
-      display: flex; align-items: center; justify-content: space-between;
-      background: var(--surface-color); border-radius: var(--radius-full);
-      padding: 8px 8px 8px 24px; box-shadow: 0 12px 32px rgba(0,0,0,0.08);
-      border: 1px solid var(--border-color); max-width: 850px; width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface-color);
+      border-radius: var(--radius-full);
+      padding: 8px 8px 8px 24px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      border: 1px solid var(--border-color);
+      max-width: 850px;
+      width: 100%;
       transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth), background-color var(--transition-smooth);
       position: relative;
       z-index: 50;
       transform: none;
       will-change: auto;
     }
+
     html[dir="rtl"] .search-bar { padding: 8px 24px 8px 8px; }
 
-    /* FIX: keep search bar fixed with no movement */
     .search-bar:hover,
     .search-bar:focus-within {
       box-shadow: var(--shadow-hover);
       border-color: var(--primary);
       transform: none;
     }
-    
+
     .search-field {
-      flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start;
-      padding: 8px 16px; border-radius: var(--radius-full); transition: background var(--transition-fast);
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      transition: background var(--transition-fast);
       z-index: 60;
     }
+
     .search-field:hover { background: rgba(0,0,0,0.03); }
     .dark .search-field:hover { background: rgba(255,255,255,0.05); }
-    
-    .search-field label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; cursor: pointer; color: var(--text-main); }
-    .search-field input { border: none; background: transparent; outline: none; font-size: 1rem; font-weight: 500; color: var(--text-muted); width: 100%; font-family: inherit; }
-    
-    .search-divider { width: 1px; height: 32px; background: var(--border-color); margin: 0 8px; }
-    
+
+    .search-field label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+
+    .search-field input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      width: 100%;
+      font-family: inherit;
+    }
+
+    .search-divider {
+      width: 1px;
+      height: 32px;
+      background: var(--border-color);
+      margin: 0 8px;
+    }
+
     .search-btn {
       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: white; border: none; border-radius: var(--radius-full);
-      padding: 16px 32px; font-size: 1rem; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; gap: 8px;
+      color: white;
+      border: none;
+      border-radius: var(--radius-full);
+      padding: 16px 32px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       transition: box-shadow var(--transition-smooth), filter var(--transition-smooth), background var(--transition-smooth);
       box-shadow: 0 4px 14px rgba(67,90,191,0.3);
       z-index: 60;
       transform: none;
       flex-shrink: 0;
+      font-family: inherit;
     }
 
-    /* FIX: keep search button fixed with no scale/move */
     .search-btn:hover,
     .search-btn:focus-visible,
     .search-btn:active {
@@ -187,97 +350,709 @@
       filter: brightness(1.03);
     }
 
-    /* =========================================
-       ✨ CATEGORIES (Fixed & Styled)
-       ========================================= */
     .categories {
-      display: flex; align-items: center; justify-content: center; gap: 14px;
-      flex-wrap: wrap; padding: 10px 20px 30px;
-      position: relative; z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 10px 20px 30px;
+      position: relative;
+      z-index: 10;
     }
+
+    .category-item,
     .category-btn {
-      display: flex; align-items: center; gap: 8px; padding: 12px 24px;
-      background: var(--surface-color); border: 1.5px solid var(--border-color);
-      border-radius: var(--radius-full); font-size: 1rem; font-weight: 600;
-      color: var(--text-muted); cursor: pointer; transition: var(--transition-smooth);
-      font-family: inherit; box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: var(--surface-color);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-full);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      font-family: inherit;
+      box-shadow: var(--shadow-sm);
     }
+
+    .category-item i,
     .category-btn i { font-size: 1.3rem; }
+
+    .category-item:hover,
     .category-btn:hover {
-      border-color: var(--primary); color: var(--primary);
-      transform: translateY(-3px); box-shadow: var(--shadow-hover);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
     }
+
+    .category-item.active,
     .category-btn.active {
-      background: var(--text-main); color: var(--surface-color); border-color: var(--text-main); box-shadow: var(--shadow-hover);
+      background: var(--text-main);
+      color: var(--surface-color);
+      border-color: var(--text-main);
+      box-shadow: var(--shadow-hover);
     }
 
-    /* =========================================
-       ✨ LISTINGS GRID & CARDS
-       ========================================= */
     #listings-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 28px; padding: 20px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 28px;
+      padding: 20px 0;
     }
-    
-    #listings-grid > div {
-      background: var(--surface-color); border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl); overflow: hidden;
-      display: flex; flex-direction: column; position: relative;
+
+    .listing-card,
+    .card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
       transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
-      box-shadow: var(--shadow-sm); cursor: pointer;
-    }
-    #listings-grid > div:hover {
-      transform: translateY(-8px); box-shadow: var(--shadow-hover); border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
     }
 
-    #listings-grid > div .card-img-wrapper,
-    #listings-grid > div .img-wrapper {
-      position: relative; width: 100%; aspect-ratio: 4/3; overflow: hidden; background: #e2e8f0;
+    .listing-card:hover,
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--primary);
     }
-    #listings-grid > div img {
-      width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
-    }
-    #listings-grid > div:hover img { transform: scale(1.05); }
 
-    #listings-grid > div .card-info,
-    #listings-grid > div .card-content {
-      padding: 20px; display: flex; flex-direction: column; flex: 1; gap: 8px;
+    .listing-thumb-wrap,
+    .card-img-wrapper,
+    .img-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+      background: #e2e8f0;
     }
-    
-    #listings-grid h3 { font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0; line-height: 1.3; }
-    #listings-grid .location, #listings-grid .prop-location { color: var(--text-muted); font-size: 0.9rem; display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
-    #listings-grid .price, #listings-grid .prop-price { margin-top: auto; font-size: 1.2rem; font-weight: 800; color: var(--text-main); }
-    #listings-grid .price span { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); }
-    
-    .listing-card-animate { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
-    .listing-card-animate.is-visible { opacity: 1; transform: translateY(0); }
 
-    /* =========================================
-       ✨ DROPDOWNS & UI ELEMENTS
-       ========================================= */
+    .listing-thumb,
+    .card img,
+    .card-img-wrapper img,
+    .img-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+      display: block;
+    }
+
+    .listing-card:hover img,
+    .card:hover img { transform: scale(1.05); }
+
+    .listing-body,
+    .card-content,
+    .card-info {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 8px;
+    }
+
+    .listing-top,
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .listing-card h3,
+    .card-title,
+    #listings-grid h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .listing-location,
+    .location,
+    .prop-location {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .listing-price,
+    .price,
+    .prop-price,
+    .card-price {
+      margin-top: auto;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .listing-price span,
+    .price span,
+    .card-price span {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .listing-rating,
+    .card-rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .fav-btn {
+      position: absolute;
+      top: 14px;
+      inset-inline-end: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.65);
+      background: rgba(255,255,255,0.92);
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 3;
+      transition: .25s ease;
+      box-shadow: 0 6px 18px rgba(15,23,42,.12);
+    }
+
+    .fav-btn:hover { transform: scale(1.06); }
+    .fav-btn.active { color: #ef4444; }
+
+    .urgency-chip,
+    .urgency-label {
+      position: absolute;
+      top: 14px;
+      inset-inline-start: 14px;
+      padding: 8px 12px;
+      border-radius: var(--radius-full);
+      background: rgba(15,23,42,.78);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .listing-card-animate {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+
+    .listing-card-animate.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .search-dropdown {
-      position: absolute; top: calc(100% + 12px); left: 0; right: 0; min-width: 250px;
-      background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-xl);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 1000;
-      display: none; padding: 12px 0;
+      position: absolute;
+      top: calc(100% + 12px);
+      left: 0;
+      right: 0;
+      min-width: 250px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+      z-index: 1000;
+      display: none;
+      padding: 12px 0;
+      overflow: hidden;
     }
+
     .search-dropdown.active { display: block; animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .search-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: var(--transition-fast); }
-    .search-item:hover { background: rgba(67,90,191,0.06); padding-inline-start: 26px; color: var(--primary); }
 
-    /* Scroll-to-Top */
-    #scroll-top-btn {
-      position: fixed; bottom: 80px; inset-inline-end: 24px; width: 52px; height: 52px; border-radius: 50%;
-      background: var(--primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem; box-shadow: 0 8px 24px rgba(67,90,191,0.4); opacity: 0; transform: translateY(20px) scale(0.8);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 500; pointer-events: none;
+    .search-suggestion,
+    .search-item {
+      width: 100%;
+      padding: 12px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: var(--transition-fast);
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      text-align: start;
+      font-family: inherit;
     }
-    #scroll-top-btn.visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-    #scroll-top-btn:hover { transform: translateY(-4px) scale(1.1); background: var(--primary-hover); box-shadow: 0 12px 30px rgba(67,90,191,0.5); }
 
-    /* =========================================
-       ✨ MOBILE RESPONSIVENESS
-       ========================================= */
+    .search-suggestion:hover,
+    .search-item:hover {
+      background: rgba(67,90,191,0.06);
+      color: var(--primary);
+    }
+
+    .search-suggestion div,
+    .search-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .search-suggestion small,
+    .search-item-sub {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .empty-state,
+    .listings-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+    }
+
+    .empty-state i,
+    .listings-empty i {
+      font-size: 2.3rem;
+      display: block;
+      margin-bottom: 12px;
+      color: var(--primary);
+    }
+
+    #scroll-top-btn {
+      position: fixed;
+      bottom: 88px;
+      inset-inline-end: 24px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 8px 24px rgba(67,90,191,0.4);
+      opacity: 0;
+      transform: translateY(20px) scale(0.8);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 500;
+      pointer-events: none;
+    }
+
+    #scroll-top-btn.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    #scroll-top-btn:hover {
+      transform: translateY(-4px) scale(1.1);
+      background: var(--primary-hover);
+      box-shadow: 0 12px 30px rgba(67,90,191,0.5);
+    }
+
+    .section-header-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .section-header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.3s;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--surface-color);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      box-shadow: var(--shadow-hover);
+      border: 1px solid var(--border-color);
+    }
+
+    .auth-card { padding: 32px; }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 16px;
+      inset-inline-end: 16px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .auth-header { text-align: center; margin-bottom: 24px; }
+    .auth-header img { height: 40px; width: auto; }
+
+    .auth-message {
+      display: none;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .auth-message.error {
+      display: block;
+      background: rgba(239,68,68,0.1);
+      color: #b91c1c;
+      border: 1px solid rgba(239,68,68,0.18);
+    }
+
+    .auth-message.success {
+      display: block;
+      background: rgba(16,185,129,0.12);
+      color: #047857;
+      border: 1px solid rgba(16,185,129,0.18);
+    }
+
+    .auth-form {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .auth-title {
+      margin: 0;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+
+    .auth-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin: -4px 0 4px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-group label {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .input-group input {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      outline: none;
+      font-family: inherit;
+      color: var(--text-main);
+    }
+
+    .pass-wrapper { position: relative; }
+
+    .pass-wrapper input {
+      width: 100%;
+      padding-inline-end: 48px;
+    }
+
+    .toggle-pass-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      inset-inline-end: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .auth-options {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .primary-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 4px;
+      font-family: inherit;
+    }
+
+    .social-btn {
+      width: 100%;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      color: var(--text-main);
+    }
+
+    .switch-form-text {
+      text-align: center;
+      font-size: 0.92rem;
+      margin-top: 10px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .switch-form-text a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .text-muted { color: var(--text-muted); }
+    .text-sm { font-size: 0.875rem; }
+    .font-bold { font-weight: 700; }
+    .text-primary { color: var(--primary); }
+
+    #password-strength {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .strength-bars {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .str-bar {
+      height: 6px;
+      flex: 1;
+      border-radius: 999px;
+      background: var(--border-color);
+      transition: .2s ease;
+    }
+
+    #strength-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-width: 48px;
+      text-align: end;
+      color: var(--text-muted);
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      inset-inline-end: 20px;
+      z-index: 12000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(92vw, 360px);
+    }
+
+    .toast {
+      background: var(--surface-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow-hover);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-weight: 600;
+      animation: scaleIn .18s ease;
+    }
+
+    .toast-success i { color: #10b981; }
+    .toast-error i { color: #ef4444; }
+    .toast-info i { color: var(--primary); }
+    .toast-out { opacity: 0; transform: translateY(-8px); transition: .3s ease; }
+
+    #fav-toast {
+      position: fixed;
+      bottom: 150px;
+      inset-inline-start: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: rgba(15,23,42,.92);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      z-index: 12000;
+      opacity: 0;
+      pointer-events: none;
+      transition: .25s ease;
+      box-shadow: 0 16px 30px rgba(15,23,42,.24);
+      white-space: nowrap;
+    }
+
+    #fav-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .bookings-modal-content {
+      max-width: 820px;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .bookings-modal-header {
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .bookings-modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .bookings-body {
+      padding: 24px;
+      max-height: min(72vh, 700px);
+      overflow: auto;
+      background: var(--bg-color);
+    }
+
+    .booking-card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .booking-card:last-child { margin-bottom: 0; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .status-badge.pending {
+      background: rgba(245,158,11,.12);
+      color: #b45309;
+    }
+
+    .status-badge.confirmed {
+      background: rgba(16,185,129,.12);
+      color: #047857;
+    }
+
+    .status-badge.cancelled {
+      background: rgba(239,68,68,.12);
+      color: #b91c1c;
+    }
+
+    #mobile-bottom-nav {
+      position: sticky;
+      bottom: 0;
+      z-index: 999;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .dark #mobile-bottom-nav {
+      background: rgba(15,23,42,0.9);
+      border-top-color: rgba(255,255,255,0.05);
+    }
+
+    .mob-nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 6px 0;
+      flex: 1;
+    }
+
+    .mob-nav-btn.active {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
     @media (max-width: 992px) {
       .search-bar {
         flex-direction: column;
@@ -302,6 +1077,7 @@
         padding: 12px 20px;
         box-shadow: var(--shadow-sm);
         z-index: 60;
+        border-radius: var(--radius-xl);
       }
 
       .search-divider { display: none; }
@@ -309,42 +1085,27 @@
       .hero { padding-top: 60px; }
       .hero h1 { font-size: 2.2rem; }
       .navbar { padding: 12px 16px; }
-      .rewards-badge { display: none; } 
+      .rewards-badge { display: none; }
+      .container { padding: 0 16px; }
+      .auth-card { padding: 24px 18px; }
+      .bookings-modal-header,
+      .bookings-body { padding: 18px; }
     }
-    
-    #mobile-bottom-nav { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(0,0,0,0.05); }
-    .dark #mobile-bottom-nav { background: rgba(15,23,42,0.9); border-top-color: rgba(255,255,255,0.05); }
 
-    /* Fix for section header alignment */
-    .section-header-wrapper {
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      margin-bottom: 24px;
-      flex-wrap: wrap; 
-      gap: 16px;
-    }
-    .section-header-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      position: relative;
+    @media (max-width: 768px) {
+      #listings-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ═══ Scroll-to-Top ═══════════════════════ -->
   <button id="scroll-top-btn" aria-label="Scroll to top">
     <i class="ph ph-caret-up" aria-hidden="true"></i>
   </button>
 
-  <!-- ═══ Toast Container ══════════════════════ -->
   <div id="toast-container" aria-live="polite"></div>
   <div id="fav-toast" role="status" aria-live="polite"></div>
 
-  <!-- ═══ Navbar ═══════════════════════════════ -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">
     <a href="#" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
       <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
@@ -357,30 +1118,38 @@
         <span data-i18n="pts">Pts</span>
       </div>
 
-      <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme">
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" type="button">
         <i class="ph ph-moon"></i>
       </button>
 
-      <button id="lang-toggle" class="lang-btn" aria-label="Switch language">
-        العربية
+      <button id="lang-toggle" class="lang-btn" aria-label="Switch language" type="button">
+        <i class="ph ph-globe"></i>
+        <span>العربية</span>
       </button>
 
       <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu" aria-label="Profile menu" aria-haspopup="true">
+        <button id="open-auth-btn" class="profile-menu auth-btn-guest" aria-label="Profile menu" aria-haspopup="true" type="button">
           <i class="ph ph-user"></i>
         </button>
 
         <div id="profile-dropdown" class="profile-dropdown" role="menu">
           <div class="dropdown-header">
-            <span class="font-bold" id="dropdown-user-name">User Name</span>
-            <span class="text-muted text-sm" id="dropdown-user-email">user@email.com</span>
+            <span class="font-bold" id="dropdown-user-name">Guest</span>
+            <span class="text-muted text-sm" id="dropdown-user-email"></span>
           </div>
           <div class="dropdown-body">
-            <button class="dropdown-item" id="my-bookings-btn" role="menuitem"><i class="ph ph-list-checks"></i> <span data-i18n="my_bookings">My Bookings</span></button>
-            <button class="dropdown-item" id="my-favorites-btn" role="menuitem"><i class="ph ph-heart"></i> <span data-i18n="my_favorites">My Favorites</span></button>
+            <button class="dropdown-item" id="my-bookings-btn" role="menuitem" type="button">
+              <i class="ph ph-list-checks"></i>
+              <span data-i18n="my_bookings">My Bookings</span>
+            </button>
+            <button class="dropdown-item" id="my-favorites-btn" role="menuitem" type="button">
+              <i class="ph ph-heart"></i>
+              <span data-i18n="my_favorites">My Favorites</span>
+            </button>
             <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
-            <button class="dropdown-item text-danger" id="logout-btn" role="menuitem">
-              <i class="ph ph-sign-out"></i> <span data-i18n="logout">Log Out</span>
+            <button class="dropdown-item text-danger" id="logout-btn" role="menuitem" type="button">
+              <i class="ph ph-sign-out"></i>
+              <span data-i18n="logout">Log Out</span>
             </button>
           </div>
         </div>
@@ -388,7 +1157,6 @@
     </div>
   </nav>
 
-  <!-- ═══ Hero & Search ════════════════════════ -->
   <header class="hero" id="hero-section" role="banner">
     <h1 class="animate-up" data-i18n="hero_title">Find your next perfect stay</h1>
     <p class="animate-up delay-1" data-i18n="hero_subtitle">
@@ -417,30 +1185,31 @@
       </div>
 
       <button class="search-btn" id="main-search-btn" type="button">
-        <i class="ph ph-magnifying-glass"></i> <span data-i18n="search">Search</span>
+        <i class="ph ph-magnifying-glass"></i>
+        <span data-i18n="search">Search</span>
       </button>
     </div>
   </header>
 
-  <!-- ═══ Categories ════════════════════════════ -->
-  <section class="categories animate-up delay-3" id="categories-container" aria-label="Browse categories">
-  </section>
+  <section class="categories animate-up delay-3" id="categories-container" aria-label="Browse categories"></section>
 
-  <!-- ═══ Listings ═════════════════════════════ -->
   <main class="container" id="main-content" role="main" style="padding-top: 20px;">
-
     <div class="section-header-wrapper animate-up delay-4">
-      <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">Trending Destinations</h2>
+      <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">
+        Trending Destinations
+      </h2>
 
       <div class="section-header-controls">
-        <select id="sort-select" aria-label="Sort listings" style="padding:12px 20px; border-radius:var(--radius-full); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-main); font-size:0.95rem; font-weight: 600; cursor:pointer; outline:none; transition: var(--transition-smooth); box-shadow: var(--shadow-sm); font-family: inherit;">
-          <option value="default" data-i18n="sort_default">Sort: Default</option>
-          <option value="price_asc" data-i18n="sort_price_asc">Price ↑</option>
-          <option value="price_desc" data-i18n="sort_price_desc">Price ↓</option>
-          <option value="rating" data-i18n="sort_rating">Top Rated</option>
+        <select id="sort-select" aria-label="Sort listings" style="padding:12px 20px; border-radius:var(--radius-full); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-main); font-size:0.95rem; font-weight:600; cursor:pointer; outline:none; transition:var(--transition-smooth); box-shadow:var(--shadow-sm); font-family:inherit;">
+          <option value="default">Sort: Default</option>
+          <option value="price_asc">Price ↑</option>
+          <option value="price_desc">Price ↓</option>
+          <option value="rating">Top Rated</option>
         </select>
 
-        <button id="clear-search-btn" style="display: none !important; position: absolute; pointer-events: none; opacity: 0; width: 0; height: 0; padding: 0; margin: 0; border: none;" aria-hidden="true"></button>
+        <button id="clear-search-btn" type="button" style="display:none; padding:12px 18px; border-radius:var(--radius-full); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-main); font-weight:600; cursor:pointer; font-family:inherit;" data-i18n="clear_search">
+          Clear Search
+        </button>
       </div>
     </div>
 
@@ -452,21 +1221,20 @@
       <div style="width: 80px; height: 80px; background: rgba(67,90,191,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--primary);">
         <i class="ph ph-magnifying-glass" style="font-size:2.5rem;"></i>
       </div>
-      <h3 class="font-bold" style="margin-bottom:8px; color:var(--text-main); font-size: 1.5rem;" data-i18n="no_results_title">No results found</h3>
-      <p data-i18n="no_results_sub">Try a different city or hotel name.</p>
+      <h3 class="font-bold" style="margin-bottom:8px; color:var(--text-main); font-size: 1.5rem;">No results found</h3>
+      <p>Try a different city or hotel name.</p>
     </div>
 
     <div class="listings-grid" id="listings-grid" role="list"></div>
 
     <div style="text-align:center; margin-top:48px;">
-      <button id="load-more-btn" style="display:none; border-radius: var(--radius-full); padding: 14px 32px; background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; border: none; font-weight: 600; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(67,90,191,0.3); transition: 0.3s;" aria-label="Load more">
-        <i class="ph ph-arrows-clockwise"></i> <span data-i18n="load_more">Load More</span>
+      <button id="load-more-btn" type="button" style="display:none; border-radius: var(--radius-full); padding: 14px 32px; background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; border: none; font-weight: 600; font-size: 1rem; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(67,90,191,0.3); transition: 0.3s;" aria-label="Load more">
+        <i class="ph ph-arrows-clockwise"></i>
+        <span>Load More</span>
       </button>
     </div>
-
   </main>
 
-  <!-- ═══ Footer ════════════════════════════════ -->
   <footer class="footer" role="contentinfo" style="margin-top: 80px; padding: 40px 0; border-top: 1px solid var(--border-color); background: var(--surface-color);">
     <div class="container">
       <p class="developed-by" style="text-align:center; color: var(--text-muted); font-size: 0.95rem;">
@@ -478,60 +1246,179 @@
     </div>
   </footer>
 
-  <!-- ═══ Mobile Bottom Nav ════════════════════ -->
   <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
-    <div class="mobile-nav-inner" style="display: flex; justify-content: space-around; padding: 10px 0;">
-      <button class="mob-nav-btn active" id="mob-nav-home" style="display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer;"><i class="ph-fill ph-house" style="font-size: 1.5rem;"></i><span data-i18n="home">Home</span></button>
-      <button class="mob-nav-btn" id="mob-nav-search" style="display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer;"><i class="ph ph-magnifying-glass" style="font-size: 1.5rem;"></i><span data-i18n="search">Search</span></button>
-      <button class="mob-nav-btn" id="mob-nav-favorites" style="display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer;"><i class="ph ph-heart" style="font-size: 1.5rem;"></i><span data-i18n="saved">Saved</span></button>
-      <button class="mob-nav-btn" id="mob-nav-profile" style="display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer;"><i class="ph ph-user" style="font-size: 1.5rem;"></i><span data-i18n="profile">Profile</span></button>
+    <div class="mobile-nav-inner" style="display:flex; justify-content:space-around; padding:10px 0;">
+      <button class="mob-nav-btn active" id="mob-nav-home" data-target="home" type="button">
+        <i class="ph-fill ph-house" style="font-size:1.5rem;"></i>
+        <span data-i18n="home">Home</span>
+      </button>
+      <button class="mob-nav-btn" id="mob-nav-search" data-target="home" type="button">
+        <i class="ph ph-magnifying-glass" style="font-size:1.5rem;"></i>
+        <span data-i18n="search">Search</span>
+      </button>
+      <button class="mob-nav-btn" id="mob-nav-favorites" data-target="favorites" type="button">
+        <i class="ph ph-heart" style="font-size:1.5rem;"></i>
+        <span data-i18n="saved">Saved</span>
+      </button>
+      <button class="mob-nav-btn" id="mob-nav-profile" data-target="profile" type="button">
+        <i class="ph ph-user" style="font-size:1.5rem;"></i>
+        <span data-i18n="profile">Profile</span>
+      </button>
     </div>
   </nav>
 
-  <!-- ═══ Modal Overlays ════════════════════════ -->
-  <div id="auth-modal" class="modal-overlay" role="dialog" aria-modal="true" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.3s;">
-    <div class="modal-content auth-card" style="background: var(--surface-color); padding: 32px; border-radius: var(--radius-xl); width: 100%; max-width: 400px; position: relative;">
-      <button id="close-auth-btn" class="close-modal-btn" style="position: absolute; top: 16px; inset-inline-end: 16px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class="ph ph-x"></i></button>
-      <div class="auth-header" style="text-align: center; margin-bottom: 24px;"><img src="logos/orebooking.png" id="modal-logo" alt="Logo" style="height: 40px;"></div>
+  <div id="auth-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+    <div class="modal-content auth-card">
+      <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+
+      <div class="auth-header">
+        <img src="logos/orebooking.png" id="modal-logo" alt="Logo">
+      </div>
+
       <div class="auth-content">
-        <div id="auth-message" class="auth-message" style="display:none; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem;"></div>
-        
-        <form id="login-form" class="auth-form active" novalidate style="display: flex; flex-direction: column; gap: 16px;">
-          <h2 class="font-bold auth-title" data-i18n="welcome_back" style="margin: 0; text-align: center; font-size: 1.5rem;">Welcome back</h2>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="login-email" data-i18n="email" style="font-size: 0.9rem; font-weight: 600;">Email</label><input type="email" id="login-email" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="login-password" data-i18n="password" style="font-size: 0.9rem; font-weight: 600;">Password</label><div class="pass-wrapper" style="position: relative;"><input type="password" id="login-password" required style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"><button type="button" class="toggle-pass-btn" data-target="login-password" style="position: absolute; top: 50%; transform: translateY(-50%); inset-inline-end: 12px; background: none; border: none; color: var(--text-muted); cursor: pointer;"><i class="ph ph-eye"></i></button></div></div>
-          <div class="auth-options" style="display: flex; justify-content: space-between; font-size: 0.9rem;"><label class="checkbox-container" style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="remember-me" style="margin: 0;"><span data-i18n="remember_me">Remember me</span></label><a href="#" id="show-forgot-link" data-i18n="forgot_pass" style="color: var(--primary); font-weight: 600; text-decoration: none;">Forgot?</a></div>
-          <button type="submit" class="primary-btn" id="login-submit-btn" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 8px;"><span data-i18n="sign_in">Sign In</span></button>
-          <div class="social-logins" style="margin-top: 16px;"><button type="button" class="social-btn" id="google-login-btn" style="width: 100%; background: var(--surface-color); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="ph-fill ph-google-logo" style="color:#ea4335; font-size: 1.2rem;"></i> Google</button></div>
-          <p class="switch-form-text" style="text-align: center; font-size: 0.9rem; margin-top: 16px;"><span data-i18n="no_account">Don't have an account?</span> <a href="#" id="go-to-register" class="font-bold text-primary" data-i18n="sign_up" style="color: var(--primary); text-decoration: none;">Sign up</a></p>
+        <div id="auth-message" class="auth-message"></div>
+
+        <form id="login-form" class="auth-form" novalidate style="display:block;">
+          <h2 class="font-bold auth-title" id="auth-modal-title" data-i18n="welcome_back">Welcome back</h2>
+          <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
+
+          <div class="input-group">
+            <label for="login-email" data-i18n="email">Email</label>
+            <input type="email" id="login-email" required>
+          </div>
+
+          <div class="input-group">
+            <label for="login-password" data-i18n="password">Password</label>
+            <div class="pass-wrapper">
+              <input type="password" id="login-password" required>
+              <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-options">
+            <label class="checkbox-container" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input type="checkbox" id="remember-me" style="margin:0;">
+              <span data-i18n="remember_me">Remember me</span>
+            </label>
+            <a href="#" id="go-to-forgot" data-i18n="forgot_pass" style="color:var(--primary); font-weight:600; text-decoration:none;">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="primary-btn" id="login-submit-btn">
+            <span data-i18n="sign_in">Sign In</span>
+          </button>
+
+          <div class="social-logins" style="margin-top:16px;">
+            <button type="button" class="social-btn" id="google-login-btn">
+              <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
+              <span>Google</span>
+            </button>
+          </div>
+
+          <p class="switch-form-text">
+            <span data-i18n="no_account">Don't have an account?</span>
+            <a href="#" id="go-to-register" data-i18n="sign_up">Sign up</a>
+          </p>
         </form>
 
-        <form id="register-form" class="auth-form" novalidate style="display: none; flex-direction: column; gap: 16px;">
-          <h2 class="font-bold auth-title" data-i18n="create_account" style="margin: 0; text-align: center; font-size: 1.5rem;">Create Account</h2>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="reg-name" style="font-size: 0.9rem; font-weight: 600;">Name</label><input type="text" id="reg-name" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="reg-email" style="font-size: 0.9rem; font-weight: 600;">Email</label><input type="email" id="reg-email" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="reg-password" style="font-size: 0.9rem; font-weight: 600;">Password</label><div class="pass-wrapper" style="position: relative;"><input type="password" id="reg-password" required style="width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"><button type="button" class="toggle-pass-btn" data-target="reg-password" style="position: absolute; top: 50%; transform: translateY(-50%); inset-inline-end: 12px; background: none; border: none; color: var(--text-muted); cursor: pointer;"><i class="ph ph-eye"></i></button></div></div>
-          <button type="submit" class="primary-btn" id="register-submit-btn" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 8px;">Sign Up</button>
-          <p class="switch-form-text" style="text-align: center; font-size: 0.9rem; margin-top: 16px;"><a href="#" id="go-to-login" class="font-bold text-primary" style="color: var(--primary); text-decoration: none;">Sign in instead</a></p>
+        <form id="register-form" class="auth-form" novalidate style="display:none;">
+          <h2 class="font-bold auth-title" data-i18n="create_account">Create Account</h2>
+          <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
+
+          <div class="input-group">
+            <label for="reg-name" data-i18n="full_name">Full Name</label>
+            <input type="text" id="reg-name" required>
+          </div>
+
+          <div class="input-group">
+            <label for="reg-email" data-i18n="email">Email</label>
+            <input type="email" id="reg-email" required>
+          </div>
+
+          <div class="input-group">
+            <label for="reg-password" data-i18n="password">Password</label>
+            <div class="pass-wrapper">
+              <input type="password" id="reg-password" required>
+              <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
+
+            <div id="password-strength">
+              <div class="strength-bars">
+                <span class="str-bar"></span>
+                <span class="str-bar"></span>
+                <span class="str-bar"></span>
+                <span class="str-bar"></span>
+              </div>
+              <span id="strength-label"></span>
+            </div>
+          </div>
+
+          <button type="submit" class="primary-btn" id="register-submit-btn">
+            <span data-i18n="sign_up_btn">Create Account</span>
+          </button>
+
+          <div class="social-logins" style="margin-top:16px;">
+            <button type="button" class="social-btn" id="google-register-btn">
+              <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
+              <span>Google</span>
+            </button>
+          </div>
+
+          <p class="switch-form-text">
+            <span data-i18n="has_account">Already have an account?</span>
+            <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
+          </p>
         </form>
 
-        <form id="forgot-form" class="auth-form" novalidate style="display: none; flex-direction: column; gap: 16px;">
-          <h2 class="font-bold auth-title" style="margin: 0; text-align: center; font-size: 1.5rem;">Reset Password</h2>
-          <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;"><label for="forgot-email" style="font-size: 0.9rem; font-weight: 600;">Email</label><input type="email" id="forgot-email" required style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); outline: none; font-family: inherit;"></div>
-          <button type="submit" class="primary-btn" id="forgot-submit-btn" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 8px;">Send Reset Link</button>
-          <p class="switch-form-text" style="text-align: center; font-size: 0.9rem; margin-top: 16px;"><a href="#" id="back-to-login-link" class="font-bold text-primary" style="color: var(--primary); text-decoration: none;">Back to Login</a></p>
+        <form id="forgot-form" class="auth-form" novalidate style="display:none;">
+          <h2 class="font-bold auth-title" data-i18n="reset_pass_title">Reset Password</h2>
+          <p class="auth-subtitle" data-i18n="reset_pass_desc">Enter your email and we'll send you a reset link.</p>
+
+          <div class="input-group">
+            <label for="forgot-email" data-i18n="email">Email</label>
+            <input type="email" id="forgot-email" required>
+          </div>
+
+          <button type="submit" class="primary-btn" id="forgot-submit-btn">
+            <span data-i18n="send_link">Send Reset Link</span>
+          </button>
+
+          <p class="switch-form-text">
+            <a href="#" id="back-to-login" data-i18n="back_to_login">Back to login</a>
+          </p>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- ═══ Scripts ═══════════════════════════════ -->
+  <div id="bookings-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bookings-title">
+    <div class="modal-content bookings-modal-content">
+      <div class="bookings-modal-header">
+        <h3 id="bookings-title" data-i18n="my_bookings">My Bookings</h3>
+        <button type="button" class="close-modal-btn close-bookings-btn" data-close-bookings aria-label="Close">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <div class="bookings-body" id="bookings-list">
+        <div style="text-align:center; padding:40px; color:var(--text-muted);">
+          <i class="ph ph-circle-notch ph-spin" style="font-size:2rem; color:var(--primary);"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
   <script src="search.js"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
+
       const listingObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach((entry, index) => {
           if (entry.isIntersecting) {
@@ -546,7 +1433,7 @@
         const mutationObserver = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
             mutation.addedNodes.forEach(node => {
-              if (node.nodeType === 1) { 
+              if (node.nodeType === 1) {
                 node.classList.add('listing-card-animate');
                 listingObserver.observe(node);
               }
@@ -558,90 +1445,53 @@
 
       const navbar = document.querySelector('.navbar');
       window.addEventListener('scroll', () => {
-        if(window.scrollY > 50) {
+        if (!navbar) return;
+        if (window.scrollY > 50) {
           navbar.style.padding = '8px 24px';
           navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
         } else {
           navbar.style.padding = '16px 24px';
           navbar.style.boxShadow = 'none';
         }
-      });
-    });
+      }, { passive: true });
 
-    const _scrollBtn = document.getElementById('scroll-top-btn');
-    window.addEventListener('scroll', function() {
-      _scrollBtn && _scrollBtn.classList.toggle('visible', window.scrollY > 400);
-    }, { passive: true });
-    _scrollBtn && _scrollBtn.addEventListener('click', function() {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+      document.getElementById('sort-select')?.addEventListener('change', function() {
+        if (!window.state || !Array.isArray(window.state.liveProperties) || typeof window.renderListings !== 'function') return;
 
-    document.querySelectorAll('.toggle-pass-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        var input = document.getElementById(btn.dataset.target);
-        var icon = btn.querySelector('i');
-        var isPass = input.type === 'password';
-        input.type = isPass ? 'text' : 'password';
-        if(icon) icon.className = isPass ? 'ph ph-eye-slash' : 'ph ph-eye';
-      });
-    });
+        const mode = this.value;
+        let list = [...window.state.liveProperties];
 
-    function showAuthForm(id) {
-      ['login-form','register-form','forgot-form'].forEach(f => {
-        var el = document.getElementById(f);
-        if (el) el.style.display = (f === id) ? 'flex' : 'none';
-      });
-    }
-    
-    const _authModalEl = document.getElementById('auth-modal');
-    document.getElementById('open-auth-btn')?.addEventListener('click', () => {
-      if (!firebase || !firebase.auth || !firebase.auth().currentUser) {
-        if (_authModalEl) {
-          _authModalEl.style.opacity = '1';
-          _authModalEl.style.pointerEvents = 'auto';
-          _authModalEl.classList.add('active');
+        if (window.state.currentView === 'favorites') {
+          list = list.filter(p => (window.state.favorites || []).includes(String(p.id)));
+        } else if (window.state.activeSearch) {
+          const q = String(window.state.activeSearch).toLowerCase();
+          list = list.filter(p => {
+            const haystack = [
+              p.title_en, p.title_ar, p.titleEn, p.titleAr,
+              p.location_en, p.location_ar, p.locationEn, p.locationAr,
+              p.desc_en, p.desc_ar, p.descEn, p.descAr
+            ].join(' ').toLowerCase();
+            return haystack.includes(q);
+          });
         }
-      }
-    });
-    
-    document.getElementById('close-auth-btn')?.addEventListener('click', () => {
-      if (_authModalEl) {
-        _authModalEl.style.opacity = '0';
-        _authModalEl.style.pointerEvents = 'none';
-        _authModalEl.classList.remove('active');
-      }
-    });
 
-    document.getElementById('go-to-register')?.addEventListener('click', e => { e.preventDefault(); showAuthForm('register-form'); });
-    document.getElementById('go-to-login')?.addEventListener('click', e => { e.preventDefault(); showAuthForm('login-form'); });
-    document.getElementById('show-forgot-link')?.addEventListener('click', e => { e.preventDefault(); showAuthForm('forgot-form'); });
-    document.getElementById('back-to-login-link')?.addEventListener('click', e => { e.preventDefault(); showAuthForm('login-form'); });
-
-    document.querySelectorAll('.modal-overlay').forEach(ov => {
-      ov.addEventListener('click', e => { 
-        if (e.target === ov) {
-           ov.style.opacity = '0';
-           ov.style.pointerEvents = 'none';
-           ov.classList.remove('active');
+        if (window.state.activeCategory && typeof window.propertyMatchesCategory === 'function') {
+          list = list.filter(p => window.propertyMatchesCategory(p, window.state.activeCategory));
         }
-      });
-    });
-    
-    var _mobBtns = document.querySelectorAll('.mob-nav-btn');
-    function _setMobActive(id) { _mobBtns.forEach(b => b.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
-    document.getElementById('mob-nav-home')?.addEventListener('click', () => { _setMobActive('mob-nav-home'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      if (firebase && firebase.auth) {
-        firebase.auth().signOut().then(() => {
-          const profileDropdown = document.getElementById('profile-dropdown');
-          if (profileDropdown) profileDropdown.classList.remove('active');
-          window.location.reload();
-        }).catch((error) => {
-          console.error("Logout Error:", error);
-          alert("حدث خطأ أثناء تسجيل الخروج. يرجى المحاولة مرة أخرى.");
-        });
-      }
+        if (mode === 'price_asc') list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        if (mode === 'price_desc') list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+        if (mode === 'rating') list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+
+        window.renderListings(list);
+      });
+
+      document.getElementById('mob-nav-search')?.addEventListener('click', function() {
+        const hero = document.getElementById('hero-section');
+        const input = document.getElementById('search-location');
+        if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => input?.focus(), 250);
+      });
     });
   </script>
 
