@@ -196,6 +196,7 @@
       transition: var(--transition);
       text-align: start;
       min-height: 52px;
+      text-decoration: none;
     }
 
     .sidebar-nav .nav-item i {
@@ -436,6 +437,7 @@
       font-weight: 700;
       cursor: pointer;
       transition: var(--transition);
+      text-decoration: none;
     }
 
     .ghost-action:hover {
@@ -595,6 +597,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      text-decoration: none;
     }
 
     .table-actions button:hover,
@@ -1158,16 +1161,49 @@
     }
 
     .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
       z-index: 4000;
     }
 
+    .modal-overlay.active {
+      display: flex;
+    }
+
     .modal-content.admin-card {
-      max-width: 720px !important;
+      width: 100%;
+      max-width: 820px !important;
       padding: 26px;
       border-radius: 28px;
       background: rgba(255,255,255,0.94);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-main);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-size: 1.15rem;
     }
 
     .modal-topbar {
@@ -1353,7 +1389,7 @@
           <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور">
         </div>
         <button type="submit" class="primary-btn mt-4" style="height:52px;">
-          تسجيل الدخول <i class="ph ph-sign-in" style="font-size:1.2rem;"></i>
+          <i class="ph ph-sign-in" style="font-size:1.2rem;"></i> تسجيل الدخول
         </button>
       </form>
       <div class="login-help">
@@ -1384,9 +1420,9 @@
         <button class="nav-item" onclick="switchTab('bookings')">
           <i class="ph ph-calendar-check"></i> الحجوزات
         </button>
-        <a href="#" onclick="logoutAdmin()" class="nav-item logout-item">
+        <button type="button" id="admin-logout-btn" class="nav-item logout-item">
           <i class="ph ph-sign-out"></i> تسجيل الخروج
-        </a>
+        </button>
       </nav>
     </aside>
 
@@ -1681,17 +1717,22 @@
 
       <form id="edit-property-form" class="admin-form">
         <input type="hidden" id="edit-prop-id">
+
         <div class="form-grid">
           <div class="input-group">
             <label>الاسم (عربي)</label>
             <input type="text" id="edit-title-ar" required>
           </div>
           <div class="input-group">
+            <label>الاسم (إنجليزي)</label>
+            <input type="text" id="edit-title-en">
+          </div>
+
+          <div class="input-group">
             <label>السعر (DZD)</label>
             <input type="number" id="edit-price" required>
           </div>
-
-          <div class="input-group" style="grid-column: 1 / -1;">
+          <div class="input-group">
             <label>نوع العقار</label>
             <select id="edit-type" required>
               <option value="apartment">شقة (Apartment)</option>
@@ -1700,11 +1741,42 @@
               <option value="pool">مسبح (Pool)</option>
             </select>
           </div>
-        </div>
 
-        <div class="input-group" style="margin-top:16px;">
-          <label>الوصف (عربي)</label>
-          <textarea id="edit-desc-ar" rows="4" required></textarea>
+          <div class="input-group">
+            <label>العنوان (عربي)</label>
+            <input type="text" id="edit-loc-ar">
+          </div>
+          <div class="input-group">
+            <label>العنوان (إنجليزي)</label>
+            <input type="text" id="edit-loc-en">
+          </div>
+
+          <div class="input-group" style="grid-column:1/-1;">
+            <label>الوصف (عربي)</label>
+            <textarea id="edit-desc-ar" rows="4" required></textarea>
+          </div>
+
+          <div class="input-group" style="grid-column:1/-1;">
+            <label>الوصف (إنجليزي)</label>
+            <textarea id="edit-desc-en" rows="4"></textarea>
+          </div>
+
+          <div class="input-group" style="grid-column:1/-1;">
+            <label>تغيير الصورة الرئيسية</label>
+            <div class="upload-zone" style="padding:24px 16px;">
+              <i class="ph ph-image-square"></i>
+              <span class="upload-zone-text" id="edit-upload-zone-text">اختر صورة جديدة إن أردت استبدال الحالية</span>
+              <span class="upload-zone-sub">اختياري — PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
+              <input type="file" id="edit-image" accept="image/*">
+            </div>
+            <div class="upload-preview" id="edit-upload-preview-box">
+              <img id="edit-upload-preview-img" alt="Preview">
+              <div class="upload-preview-meta">
+                <strong id="edit-upload-preview-name">معاينة الصورة الجديدة</strong>
+                <span id="edit-upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="input-group" style="margin-top:20px;">
@@ -1738,88 +1810,67 @@
   </div>
 
   <script>
-    const OWNER_ACCOUNTS = {
-      palmadmin: { id: 'bo0f9aLoiKPj0H8FKi6l', name: 'مالك عقار: بالم جاردن' },
-      tedjaniadmin: { id: 'Mu1JanKGWSy8xyUmya2C', name: 'مالك عقار: فندق التجاني' }
-    };
-
     document.addEventListener("DOMContentLoaded", () => {
-      const loginForm = document.getElementById('admin-login-form');
-      const sidebar = document.getElementById('admin-sidebar');
-      const mobileToggle = document.getElementById('admin-mobile-toggle');
-      const addForm = document.getElementById('add-property-form');
-      const resetBtn = document.getElementById('reset-property-form-btn');
-      const fileInput = document.getElementById('prop-image');
-      const propertySearchInput = document.getElementById('property-search-input');
+      const sidebar = document.getElementById("admin-sidebar");
+      const mobileToggle = document.getElementById("admin-mobile-toggle");
+      const addForm = document.getElementById("add-property-form");
+      const resetBtn = document.getElementById("reset-property-form-btn");
+      const fileInput = document.getElementById("prop-image");
+      const editFileInput = document.getElementById("edit-image");
+      const propertySearchInput = document.getElementById("property-search-input");
 
-      mobileToggle?.addEventListener('click', () => {
-        sidebar?.classList.toggle('open');
+      mobileToggle?.addEventListener("click", () => {
+        sidebar?.classList.toggle("open");
       });
 
-      document.addEventListener('click', (e) => {
+      document.addEventListener("click", (e) => {
         if (window.innerWidth > 1100) return;
         if (!sidebar || !mobileToggle) return;
         if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
-        sidebar.classList.remove('open');
+        sidebar.classList.remove("open");
       });
 
-      if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-          const u = document.getElementById('admin-user').value.trim();
-          const p = document.getElementById('admin-pass').value.trim();
-
-          const ownerKey = Object.keys(OWNER_ACCOUNTS).find(k => k === u && k === p);
-
-          if (ownerKey) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            const owner = OWNER_ACCOUNTS[ownerKey];
-            setupOwnerSession(owner.id, owner.name);
-          } else {
-            localStorage.removeItem('ownerPropId');
-            localStorage.removeItem('ownerPropName');
-          }
-        }, true);
-      }
-
-      if (localStorage.getItem('ownerPropId')) {
-        setupOwnerUI(localStorage.getItem('ownerPropName') || 'مالك عقار');
-      }
-
-      resetBtn?.addEventListener('click', () => {
+      resetBtn?.addEventListener("click", () => {
         addForm?.reset();
-        document.getElementById('map-picked-badge')?.classList.remove('visible');
-        document.getElementById('prop-lat').value = '';
-        document.getElementById('prop-lng').value = '';
-        document.getElementById('upload-status').textContent = '';
+        document.getElementById("map-picked-badge")?.classList.remove("visible");
+        const latEl = document.getElementById("prop-lat");
+        const lngEl = document.getElementById("prop-lng");
+        const uploadStatus = document.getElementById("upload-status");
+        if (latEl) latEl.value = "";
+        if (lngEl) lngEl.value = "";
+        if (uploadStatus) uploadStatus.textContent = "";
         resetUploadPreview();
-        if (typeof window._resetAddMap === 'function') window._resetAddMap();
+        if (typeof window._resetAddMap === "function") window._resetAddMap();
       });
 
-      fileInput?.addEventListener('change', function() {
+      fileInput?.addEventListener("change", function() {
         updateUploadPreview(this.files?.[0] || null);
       });
 
-      propertySearchInput?.addEventListener('input', function() {
+      editFileInput?.addEventListener("change", function() {
+        updateEditUploadPreview(this.files?.[0] || null);
+      });
+
+      propertySearchInput?.addEventListener("input", function() {
         const q = this.value.trim().toLowerCase();
-        const rows = document.querySelectorAll('#properties-tbody tr');
+        const rows = document.querySelectorAll("#properties-tbody tr");
         rows.forEach(row => {
           const txt = row.textContent.toLowerCase();
-          row.style.display = txt.includes(q) ? '' : 'none';
+          row.style.display = txt.includes(q) ? "" : "none";
         });
       });
 
-      document.getElementById('refresh-properties-btn')?.addEventListener('click', () => {
-        if (typeof window.fetchProperties === 'function') window.fetchProperties();
-        if (typeof window.loadProperties === 'function') window.loadProperties();
+      document.getElementById("refresh-properties-btn")?.addEventListener("click", () => {
+        if (typeof window.fetchProperties === "function") window.fetchProperties();
+        else if (typeof window.loadProperties === "function") window.loadProperties();
       });
 
-      document.getElementById('refresh-bookings-btn')?.addEventListener('click', () => {
-        if (typeof window.loadBookings === 'function') window.loadBookings();
+      document.getElementById("refresh-bookings-btn")?.addEventListener("click", () => {
+        if (typeof window.loadBookings === "function") window.loadBookings();
       });
 
       const checkInterval = setInterval(() => {
-        if (typeof updateAdminQuickStats === 'function') {
+        if (typeof updateAdminQuickStats === "function") {
           clearInterval(checkInterval);
           updateAdminQuickStats();
         }
@@ -1827,125 +1878,103 @@
     });
 
     function updateUploadPreview(file) {
-      const zoneText = document.querySelector('.upload-zone-text');
-      const zoneIcon = document.querySelector('.upload-zone i');
-      const previewBox = document.getElementById('upload-preview-box');
-      const previewImg = document.getElementById('upload-preview-img');
-      const previewName = document.getElementById('upload-preview-name');
-      const previewSize = document.getElementById('upload-preview-size');
-      const uploadStatus = document.getElementById('upload-status');
+      const zoneText = document.querySelector(".upload-zone-text");
+      const zoneIcon = document.querySelector(".upload-zone i");
+      const previewBox = document.getElementById("upload-preview-box");
+      const previewImg = document.getElementById("upload-preview-img");
+      const previewName = document.getElementById("upload-preview-name");
+      const previewSize = document.getElementById("upload-preview-size");
+      const uploadStatus = document.getElementById("upload-status");
 
       if (!file) {
         resetUploadPreview();
-        if (uploadStatus) uploadStatus.textContent = '';
+        if (uploadStatus) uploadStatus.textContent = "";
         return;
       }
 
       if (zoneText) {
-        zoneText.textContent = '✅ ' + file.name;
-        zoneText.style.color = 'var(--primary)';
+        zoneText.textContent = "✅ " + file.name;
+        zoneText.style.color = "var(--primary)";
       }
-      if (zoneIcon) zoneIcon.className = 'ph-fill ph-check-circle';
+      if (zoneIcon) zoneIcon.className = "ph-fill ph-check-circle";
 
       const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
       if (previewName) previewName.textContent = file.name;
       if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
-      if (uploadStatus) uploadStatus.textContent = 'تم اختيار ملف الصورة بنجاح';
+      if (uploadStatus) uploadStatus.textContent = "تم اختيار ملف الصورة بنجاح";
 
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onload = (e) => {
           if (previewImg) previewImg.src = e.target.result;
-          previewBox?.classList.add('visible');
+          previewBox?.classList.add("visible");
         };
         reader.readAsDataURL(file);
       } else {
-        previewBox?.classList.remove('visible');
+        previewBox?.classList.remove("visible");
       }
     }
 
     function resetUploadPreview() {
-      const zoneText = document.querySelector('.upload-zone-text');
-      const zoneIcon = document.querySelector('.upload-zone i');
-      const previewBox = document.getElementById('upload-preview-box');
-      const previewImg = document.getElementById('upload-preview-img');
-      const previewName = document.getElementById('upload-preview-name');
-      const previewSize = document.getElementById('upload-preview-size');
+      const zoneText = document.querySelector(".upload-zone-text");
+      const zoneIcon = document.querySelector(".upload-zone i");
+      const previewBox = document.getElementById("upload-preview-box");
+      const previewImg = document.getElementById("upload-preview-img");
+      const previewName = document.getElementById("upload-preview-name");
+      const previewSize = document.getElementById("upload-preview-size");
 
       if (zoneText) {
-        zoneText.textContent = 'اضغط هنا أو اسحب الصورة';
-        zoneText.style.color = '';
+        zoneText.textContent = "اضغط هنا أو اسحب الصورة";
+        zoneText.style.color = "";
       }
-      if (zoneIcon) zoneIcon.className = 'ph ph-cloud-arrow-up';
-      if (previewImg) previewImg.removeAttribute('src');
-      if (previewName) previewName.textContent = 'معاينة الصورة';
-      if (previewSize) previewSize.textContent = 'سيظهر اسم وحجم الملف هنا';
-      previewBox?.classList.remove('visible');
+      if (zoneIcon) zoneIcon.className = "ph ph-cloud-arrow-up";
+      if (previewImg) previewImg.removeAttribute("src");
+      if (previewName) previewName.textContent = "معاينة الصورة";
+      if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
+      previewBox?.classList.remove("visible");
     }
 
-    function setupOwnerSession(propId, displayName) {
-      localStorage.setItem('ownerPropId', propId);
-      localStorage.setItem('ownerPropName', displayName);
+    function updateEditUploadPreview(file) {
+      const zoneText = document.getElementById("edit-upload-zone-text");
+      const previewBox = document.getElementById("edit-upload-preview-box");
+      const previewImg = document.getElementById("edit-upload-preview-img");
+      const previewName = document.getElementById("edit-upload-preview-name");
+      const previewSize = document.getElementById("edit-upload-preview-size");
 
-      document.getElementById('admin-login-screen').style.display = 'none';
-      document.getElementById('admin-layout').style.display = 'flex';
-      setupOwnerUI(displayName);
+      if (!file) {
+        resetEditUploadPreview();
+        return;
+      }
 
-      const waitForAdminJs = setInterval(() => {
-        if (typeof loadBookings === 'function' && typeof loadProperties === 'function') {
-          clearInterval(waitForAdminJs);
-          if (typeof window.fetchProperties === 'function') window.fetchProperties();
-          loadProperties();
-          loadBookings();
-          setTimeout(updateAdminQuickStats, 500);
-        }
-      }, 100);
+      if (zoneText) zoneText.textContent = "✅ " + file.name;
+
+      const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
+      if (previewName) previewName.textContent = file.name;
+      if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
+
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (previewImg) previewImg.src = e.target.result;
+          previewBox?.classList.add("visible");
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewBox?.classList.remove("visible");
+      }
     }
 
-    function setupOwnerUI(displayName) {
-      const navAdd = document.getElementById('nav-add-property');
-      if (navAdd) navAdd.style.display = 'none';
-
-      const nameEl = document.getElementById('admin-profile-name');
-      const roleEl = document.getElementById('admin-profile-role');
-      if (nameEl) nameEl.textContent = displayName || 'مالك عقار';
-      if (roleEl) roleEl.textContent = 'صلاحيات محدودة';
-    }
-
-    function logoutAdmin() {
-      localStorage.removeItem('ownerPropId');
-      localStorage.removeItem('ownerPropName');
-      window.location.reload();
-    }
-
-    function updateAdminQuickStats() {
-      const rows = Array.from(document.querySelectorAll('#properties-tbody tr')).filter(row => row.style.display !== 'none');
-      const bookingCards = Array.from(document.querySelectorAll('#bookings-container .booking-card'));
-      const totalProperties = rows.length;
-      let activeProperties = 0;
-      let pendingBookings = 0;
-
-      rows.forEach(row => {
-        const statusText = row.textContent.toLowerCase();
-        if (statusText.includes('إظهار') || statusText.includes('visible') || statusText.includes('active')) {
-          activeProperties += 1;
-        }
-      });
-
-      bookingCards.forEach(card => {
-        const txt = card.textContent.toLowerCase();
-        if (txt.includes('pending') || txt.includes('معلق') || txt.includes('قيد')) pendingBookings += 1;
-      });
-
-      const setText = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value;
-      };
-
-      setText('stat-total-properties', totalProperties || '--');
-      setText('stat-active-properties', activeProperties || 0);
-      setText('stat-total-bookings', bookingCards.length || '--');
-      setText('stat-pending-bookings', pendingBookings || 0);
+    function resetEditUploadPreview() {
+      const zoneText = document.getElementById("edit-upload-zone-text");
+      const previewBox = document.getElementById("edit-upload-preview-box");
+      const previewImg = document.getElementById("edit-upload-preview-img");
+      const previewName = document.getElementById("edit-upload-preview-name");
+      const previewSize = document.getElementById("edit-upload-preview-size");
+      if (zoneText) zoneText.textContent = "اختر صورة جديدة إن أردت استبدال الحالية";
+      if (previewImg) previewImg.removeAttribute("src");
+      if (previewName) previewName.textContent = "معاينة الصورة الجديدة";
+      if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
+      previewBox?.classList.remove("visible");
     }
   </script>
 
@@ -1961,26 +1990,26 @@
         addMap.invalidateSize();
         return;
       }
-      addMap = L.map('admin-map-picker').setView([28.0, 3.0], 5);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
+      addMap = L.map("admin-map-picker").setView([28.0, 3.0], 5);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
         maxZoom: 19
       }).addTo(addMap);
-      addMap.on('click', function(e) {
+      addMap.on("click", function(e) {
         placeAddMarker(e.latlng.lat, e.latlng.lng);
       });
     }
 
     function placeAddMarker(lat, lng) {
       if (addMarker) addMap.removeLayer(addMarker);
-      addMarker = L.marker([lat, lng]).addTo(addMap).bindPopup('📍 تم تحديد الموقع').openPopup();
-      document.getElementById('prop-lat').value = lat.toFixed(6);
-      document.getElementById('prop-lng').value = lng.toFixed(6);
-      document.getElementById('map-picked-badge').classList.add('visible');
+      addMarker = L.marker([lat, lng]).addTo(addMap).bindPopup("📍 تم تحديد الموقع").openPopup();
+      document.getElementById("prop-lat").value = lat.toFixed(6);
+      document.getElementById("prop-lng").value = lng.toFixed(6);
+      document.getElementById("map-picked-badge").classList.add("visible");
     }
 
     async function searchMapLocation() {
-      const query = document.getElementById('map-search-input').value.trim();
+      const query = document.getElementById("map-search-input").value.trim();
       if (!query) return;
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
@@ -1991,31 +2020,31 @@
           addMap.setView([lat, lng], 14);
           placeAddMarker(lat, lng);
         } else {
-          alert('لم يتم العثور على الموقع، جرب كتابة اسم الولاية أو المنطقة بشكل أوضح.');
+          alert("لم يتم العثور على الموقع، جرب كتابة اسم الولاية أو المنطقة بشكل أوضح.");
         }
       } catch(err) {
-        alert('حدث خطأ أثناء البحث عن الموقع.');
+        alert("حدث خطأ أثناء البحث عن الموقع.");
       }
     }
 
     function initEditMap(existingLat, existingLng) {
-      const hasCoords = existingLat && existingLng;
+      const hasCoords = existingLat !== null && existingLat !== undefined && existingLng !== null && existingLng !== undefined;
       const center = hasCoords ? [existingLat, existingLng] : [28.0, 3.0];
       const zoom = hasCoords ? 14 : 5;
 
       if (!editMap) {
-        editMap = L.map('edit-map-picker').setView(center, zoom);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        editMap = L.map("edit-map-picker").setView(center, zoom);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
-          attribution: '© OpenStreetMap contributors'
+          attribution: "© OpenStreetMap contributors"
         }).addTo(editMap);
-        editMap.on('click', function(e) {
+        editMap.on("click", function(e) {
           const { lat, lng } = e.latlng;
           if (editMarker) editMap.removeLayer(editMarker);
-          editMarker = L.marker([lat, lng]).addTo(editMap).bindPopup('📍 الموقع الجديد').openPopup();
-          document.getElementById('edit-lat').value = lat.toFixed(6);
-          document.getElementById('edit-lng').value = lng.toFixed(6);
-          document.getElementById('edit-map-picked-badge').classList.add('visible');
+          editMarker = L.marker([lat, lng]).addTo(editMap).bindPopup("📍 الموقع الجديد").openPopup();
+          document.getElementById("edit-lat").value = lat.toFixed(6);
+          document.getElementById("edit-lng").value = lng.toFixed(6);
+          document.getElementById("edit-map-picked-badge").classList.add("visible");
         });
       } else {
         editMap.setView(center, zoom);
@@ -2024,41 +2053,45 @@
 
       if (hasCoords) {
         if (editMarker) editMap.removeLayer(editMarker);
-        editMarker = L.marker([existingLat, existingLng]).addTo(editMap).bindPopup('📍 الموقع الحالي').openPopup();
-        document.getElementById('edit-map-picked-badge').classList.add('visible');
+        editMarker = L.marker([existingLat, existingLng]).addTo(editMap).bindPopup("📍 الموقع الحالي").openPopup();
+        document.getElementById("edit-map-picked-badge").classList.add("visible");
+      } else {
+        document.getElementById("edit-map-picked-badge").classList.remove("visible");
       }
     }
 
     function hookSwitchTab() {
-      if (typeof window.switchTab !== 'function') return;
+      if (typeof window.switchTab !== "function") return;
       const _orig = window.switchTab;
       window.switchTab = function(tab) {
         _orig(tab);
-        document.getElementById('admin-sidebar')?.classList.remove('open');
-        if (tab === 'add-property') setTimeout(initAddMap, 150);
-        setTimeout(updateAdminQuickStats, 350);
+        document.getElementById("admin-sidebar")?.classList.remove("open");
+        if (tab === "add-property") setTimeout(initAddMap, 150);
+        setTimeout(() => {
+          if (typeof updateAdminQuickStats === "function") updateAdminQuickStats();
+        }, 350);
       };
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener("DOMContentLoaded", () => {
       const checkInterval = setInterval(() => {
-        if (typeof window.switchTab === 'function') {
+        if (typeof window.switchTab === "function") {
           clearInterval(checkInterval);
           hookSwitchTab();
         }
       }, 100);
 
-      const addTab = document.getElementById('tab-add-property');
-      if (addTab && addTab.classList.contains('active')) {
+      const addTab = document.getElementById("tab-add-property");
+      if (addTab && addTab.classList.contains("active")) {
         setTimeout(initAddMap, 300);
       }
 
       const observer = new MutationObserver(() => {
-        updateAdminQuickStats();
+        if (typeof updateAdminQuickStats === "function") updateAdminQuickStats();
       });
 
-      const propBody = document.getElementById('properties-tbody');
-      const bookingsContainer = document.getElementById('bookings-container');
+      const propBody = document.getElementById("properties-tbody");
+      const bookingsContainer = document.getElementById("bookings-container");
       if (propBody) observer.observe(propBody, { childList: true, subtree: true });
       if (bookingsContainer) observer.observe(bookingsContainer, { childList: true, subtree: true });
     });
