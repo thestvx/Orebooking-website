@@ -1,5 +1,7 @@
 // =========================================
 //   OreBooking Admin Panel Logic — Enhanced
+//   Updated version with validation, safer auth,
+//   richer booking parsing, and stronger UX.
 // =========================================
 
 const firebaseConfig = {
@@ -31,12 +33,40 @@ const editForm = document.getElementById("edit-property-form");
 const submitEditBtn = document.getElementById("submit-edit-btn");
 const editModalEl = document.getElementById("edit-modal");
 
+const SESSION_KEYS = {
+  role: "adminRole",
+  ownerPropId: "ownerPropId",
+  ownerPropName: "ownerPropName",
+  loginAt: "adminLoginAt"
+};
+
 function getIsSuperAdmin() {
-  return !localStorage.getItem("ownerPropId");
+  return !localStorage.getItem(SESSION_KEYS.ownerPropId);
 }
 
 function getOwnerPropId() {
-  return (localStorage.getItem("ownerPropId") || "").trim();
+  return (localStorage.getItem(SESSION_KEYS.ownerPropId) || "").trim();
+}
+
+function getOwnerPropName() {
+  return (localStorage.getItem(SESSION_KEYS.ownerPropName) || "").trim();
+}
+
+function setAdminSession(role = "superadmin", ownerPropId = "", ownerPropName = "") {
+  localStorage.setItem(SESSION_KEYS.role, role);
+  localStorage.setItem(SESSION_KEYS.loginAt, String(Date.now()));
+
+  if (role === "owner" && ownerPropId) {
+    localStorage.setItem(SESSION_KEYS.ownerPropId, ownerPropId);
+    localStorage.setItem(SESSION_KEYS.ownerPropName, ownerPropName || "");
+  } else {
+    localStorage.removeItem(SESSION_KEYS.ownerPropId);
+    localStorage.removeItem(SESSION_KEYS.ownerPropName);
+  }
+}
+
+function clearAdminSession() {
+  Object.values(SESSION_KEYS).forEach(key => localStorage.removeItem(key));
 }
 
 function escapeHtml(value) {
@@ -44,8 +74,17 @@ function escapeHtml(value) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function normalizeText(value) {
+  return String(value ?? "").trim();
+}
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function formatCurrency(value) {
@@ -159,6 +198,27 @@ function showLoginError(msg) {
   setTimeout(() => div.remove(), 4000);
 }
 
+function updateAdminHeaderForRole() {
+  const pageTitle = document.getElementById("page-title");
+  const ownerBadgeId = "owner-session-badge";
+  let badge = document.getElementById(ownerBadgeId);
+
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = ownerBadgeId;
+    badge.style.cssText = "margin-top:8px;font-size:.88rem;font-weight:800;color:var(--text-muted);";
+    if (pageTitle?.parentElement) pageTitle.parentElement.appendChild(badge);
+  }
+
+  if (getIsSuperAdmin()) {
+    badge.textContent = "وضع المدير العام";
+  } else {
+    const ownerPropName = getOwnerPropName();
+    const ownerPropId = getOwnerPropId();
+    badge.textContent = `وضع المالك${ownerPropName ? ` — ${ownerPropName}` : ""}${ownerPropId ? ` (${ownerPropId})` : ""}`;
+  }
+}
+
 function updateQuickStats() {
   const propertyRows = Array.from(document.querySelectorAll("#properties-tbody tr[data-prop-id]"));
   const bookingCards = Array.from(document.querySelectorAll("#bookings-container .booking-card"));
@@ -206,38 +266,337 @@ function renderPropertiesEmpty(message, isError = false) {
   updateQuickStats();
 }
 
-if (loginForm) {
-  loginForm.addEventListener("submit", function(e) {
-    e.preventDefault();
+function renderBookingsEmpty(container, message, extraHtml = "") {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="empty-state">
+      <i class="ph ph-calendar-blank"></i>
+      <div style="font-size:1.05rem; font-weight:800; color:var(--text-main); margin-bottom:8px;">
+        ${escapeHtml(message)}
+      </div>
+      ${extraHtml}
+    </div>`;
+  updateQuickStats();
+}
 
-    const user = document.getElementById("admin-user").value.trim();
-    const pass = document.getElementById("admin-pass").value.trim();
+function showAdminLayout() {
+  if (loginScreen) loginScreen.style.display = "none";
+  if (adminLayout) adminLayout.style.display = "flex";
+  updateAdminHeaderForRole();
+}
 
-    if (user === ADMIN_USER && pass === ADMIN_PASS) {
-      localStorage.removeItem("ownerPropId");
-      localStorage.removeItem("ownerPropName");
-      if (loginScreen) loginScreen.style.display = "none";
-      if (adminLayout) adminLayout.style.display = "flex";
-      showToast("تم تسجيل الدخول بنجاح", "success");
-      loadProperties();
-      loadBookings();
-      return;
+function showLoginLayout() {
+  if (loginScreen) loginScreen.style.display = "block";
+  if (adminLayout) adminLayout.style.display = "none";
+}
+
+function normalizePropertyPayload(source = {}) {
+  return {
+    titleAr: normalizeText(source.titleAr || source.titlear),
+    titleEn: normalizeText(source.titleEn || source.titleen),
+    locationAr: normalizeText(source.locationAr || source.locationar),
+    locationEn: normalizeText(source.locationEn || source.locationen),
+    price: toNumber(source.price, 0),
+    type: normalizeText(source.type || "apartment"),
+    descAr: normalizeText(source.descAr || source.descar),
+    descEn: normalizeText(source.descEn || source.descen),
+    imageUrl: normalizeText(source.imageUrl || source.image || ""),
+    lat: source.lat !== undefined && source.lat !== null && source.lat !== "" ? parseFloat(source.lat) : null,
+    lng: source.lng !== undefined && source.lng !== null && source.lng !== "" ? parseFloat(source.lng) : null,
+    visible: source.visible !== false
+  };
+}
+
+function validatePropertyPayload(payload, { requireImage = false, requireMap = true } = {}) {
+  if (!payload.titleAr) {
+    return "يرجى إدخال اسم العقار بالعربية.";
+  }
+
+  if (!payload.locationAr) {
+    return "يرجى إدخال موقع العقار بالعربية.";
+  }
+
+  if (!payload.price || payload.price <= 0) {
+    return "يرجى إدخال سعر صحيح أكبر من 0.";
+  }
+
+  if (requireMap) {
+    if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) {
+      return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
     }
+  }
 
-    showLoginError("اسم المستخدم أو كلمة المرور غير صحيحة");
+  if (requireImage && !payload.imageUrl) {
+    return "الصورة الرئيسية للعقار مطلوبة.";
+  }
+
+  return "";
+}
+
+function getBookingField(data, candidates = [], fallback = "") {
+  for (const key of candidates) {
+    if (data[key] !== undefined && data[key] !== null && String(data[key]).trim() !== "") {
+      return data[key];
+    }
+  }
+  return fallback;
+}
+
+function getBookingPropertyId(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"], "")
+  );
+}
+
+function getBookingGuestName(data = {}) {
+  const direct = normalizeText(getBookingField(data, ["guestName", "fullName", "name", "billingName"], ""));
+  if (direct) return direct;
+
+  const first = normalizeText(data.guestNameFirst || data.firstName || data.givenName || "");
+  const father = normalizeText(data.guestFatherName || data.fatherName || "");
+  const family = normalizeText(data.guestFamilyName || data.lastName || data.familyName || "");
+  return [first, father, family].filter(Boolean).join(" ").trim() || "غير معروف";
+}
+
+function getBookingPhone(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["guestPhone", "phone", "guestWhatsapp", "billingPhone", "contactPhone"], "—")
+  );
+}
+
+function getBookingEmail(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["guestEmail", "email", "billingEmail", "contactEmail"], "—")
+  );
+}
+
+function getBookingCheckIn(data = {}) {
+  return getBookingField(data, ["checkInDate", "checkIn", "arrivalDate", "arrival_date"], null);
+}
+
+function getBookingCheckOut(data = {}) {
+  return getBookingField(data, ["checkOutDate", "checkOut", "departureDate", "departure_date"], null);
+}
+
+function getBookingNotes(data = {}) {
+  const special = normalizeText(getBookingField(data, ["specialRequests", "notes", "addonNotes", "medicalNotes"], ""));
+  const arrival = normalizeText(getBookingField(data, ["arrivalTime", "arrival_time", "expectedArrivalTime"], ""));
+  const additionalGuests = normalizeText(getBookingField(data, ["additionalGuests", "additionalGuestNames"], ""));
+  const bits = [];
+  if (arrival) bits.push(`وقت الوصول: ${arrival}`);
+  if (special) bits.push(`ملاحظات: ${special}`);
+  if (additionalGuests) bits.push(`أسماء إضافية: ${additionalGuests}`);
+  return bits.join(" — ");
+}
+
+function getBookingAddons(data = {}) {
+  const addOnLabels = {
+    restaurant: "المطعم",
+    wifi: "إنترنت عالي السرعة",
+    spa: "جلسة سبا",
+    parking: "موقف سيارات",
+    airportTransfer: "نقل المطار",
+    lateCheckout: "تسجيل خروج متأخر",
+    extraBed: "سرير إضافي",
+    events: "تنسيق فعاليات",
+    breakfast: "فطور",
+    breakfastIncluded: "فطور",
+    babyCrib: "سرير أطفال",
+    highChair: "كرسي أطفال",
+    accessibleRoom: "غرفة مهيأة",
+    earlyCheckin: "دخول مبكر"
+  };
+
+  let addons = [];
+
+  if (Array.isArray(data.selectedAddons)) {
+    addons = data.selectedAddons;
+  } else if (data.addons && typeof data.addons === "object") {
+    addons = Object.keys(data.addons).filter(key => data.addons[key] === true);
+  } else {
+    const derived = [];
+    if (String(data.breakfastOption || "").toLowerCase() === "yes") derived.push("breakfast");
+    if (String(data.airportTransfer || "").toLowerCase() !== "no" && String(data.airportTransfer || "").trim()) derived.push("airportTransfer");
+    if (String(data.parkingNeeded || "").toLowerCase() !== "no" && String(data.parkingNeeded || "").trim()) derived.push("parking");
+    if (String(data.lateCheckout || "").toLowerCase() === "yes") derived.push("lateCheckout");
+    if (String(data.earlyCheckin || "").toLowerCase() === "yes") derived.push("earlyCheckin");
+    if (String(data.babyCrib || "").toLowerCase() === "yes") derived.push("babyCrib");
+    if (String(data.highChair || "").toLowerCase() === "yes") derived.push("highChair");
+    if (String(data.accessibleRoom || "").toLowerCase() !== "no" && String(data.accessibleRoom || "").trim()) derived.push("accessibleRoom");
+    addons = derived;
+  }
+
+  return addons.map(a => {
+    if (a === "restaurant" && data.restaurantPlan) return `${addOnLabels[a] || a} (${data.restaurantPlan})`;
+    return addOnLabels[a] || a;
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem("ownerPropId")) {
-    if (loginScreen) loginScreen.style.display = "none";
-    if (adminLayout) adminLayout.style.display = "flex";
-    loadProperties();
-    loadBookings();
+function getBookingGuestsMeta(data = {}) {
+  const adults = toNumber(getBookingField(data, ["adults", "guestAdults"], 0), 0);
+  const children = toNumber(getBookingField(data, ["children", "guestChildren"], 0), 0);
+  const infants = toNumber(getBookingField(data, ["infants", "guestInfants"], 0), 0);
+  const rooms = toNumber(getBookingField(data, ["rooms", "roomCount"], 0), 0);
+  const guests = toNumber(getBookingField(data, ["guests", "guestCount"], adults + children + infants || 1), 1);
+
+  return { adults, children, infants, rooms, guests };
+}
+
+function setNavVisibilityByRole() {
+  const addTabBtn = document.querySelector(`[onclick="switchTab('add-property')"]`);
+  const addTabPane = document.getElementById("tab-add-property");
+
+  if (!getIsSuperAdmin()) {
+    if (addTabBtn) addTabBtn.style.display = "none";
+    if (addTabPane) addTabPane.style.display = "none";
+
+    const activePane = document.querySelector(".tab-pane.active");
+    if (activePane?.id === "tab-add-property") {
+      switchTab("manage-props");
+    }
+  } else {
+    if (addTabBtn) addTabBtn.style.display = "";
+    if (addTabPane) addTabPane.style.display = "";
+  }
+}
+
+async function tryOwnerLogin(username, password) {
+  const user = normalizeText(username);
+  const pass = normalizeText(password);
+
+  const candidates = [
+    { userField: "username", passField: "password" },
+    { userField: "ownerUser", passField: "ownerPass" },
+    { userField: "loginUser", passField: "loginPass" },
+    { userField: "adminUser", passField: "adminPass" }
+  ];
+
+  for (const c of candidates) {
+    try {
+      const snap = await db.collection("properties")
+        .where(c.userField, "==", user)
+        .where(c.passField, "==", pass)
+        .limit(1)
+        .get();
+
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        const data = doc.data() || {};
+        return {
+          success: true,
+          docId: doc.id,
+          propName: normalizeText(data.titleAr || data.titleEn || "عقار المالك")
+        };
+      }
+    } catch (_) {}
+  }
+
+  try {
+    const snap = await db.collection("properties").get();
+    const match = snap.docs.find(doc => {
+      const d = doc.data() || {};
+      const pairs = [
+        [d.username, d.password],
+        [d.ownerUser, d.ownerPass],
+        [d.loginUser, d.loginPass],
+        [d.adminUser, d.adminPass]
+      ];
+      return pairs.some(([u, p]) => normalizeText(u) === user && normalizeText(p) === pass);
+    });
+
+    if (match) {
+      const data = match.data() || {};
+      return {
+        success: true,
+        docId: match.id,
+        propName: normalizeText(data.titleAr || data.titleEn || "عقار المالك")
+      };
+    }
+  } catch (_) {}
+
+  return { success: false };
+}
+
+if (loginForm) {
+  loginForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const user = document.getElementById("admin-user")?.value.trim() || "";
+    const pass = document.getElementById("admin-pass")?.value.trim() || "";
+    const loginBtn = loginForm.querySelector('button[type="submit"]');
+
+    if (!user || !pass) {
+      showLoginError("يرجى إدخال اسم المستخدم وكلمة المرور.");
+      return;
+    }
+
+    setButtonLoading(
+      loginBtn,
+      true,
+      `<i class="ph ph-circle-notch ph-spin"></i> جارٍ تسجيل الدخول...`
+    );
+
+    try {
+      if (user === ADMIN_USER && pass === ADMIN_PASS) {
+        setAdminSession("superadmin");
+        showAdminLayout();
+        setNavVisibilityByRole();
+        showToast("تم تسجيل الدخول كمدير عام بنجاح", "success");
+        await loadProperties();
+        await loadBookings();
+        return;
+      }
+
+      const ownerLogin = await tryOwnerLogin(user, pass);
+      if (ownerLogin.success) {
+        setAdminSession("owner", ownerLogin.docId, ownerLogin.propName);
+        showAdminLayout();
+        setNavVisibilityByRole();
+        showToast(`تم تسجيل الدخول كمالك: ${ownerLogin.propName}`, "success");
+        await loadProperties();
+        await loadBookings();
+        return;
+      }
+
+      showLoginError("اسم المستخدم أو كلمة المرور غير صحيحة");
+    } catch (err) {
+      console.error("login error:", err);
+      showLoginError("تعذر تسجيل الدخول حالياً، حاول مرة أخرى.");
+    } finally {
+      setButtonLoading(loginBtn, false, null, `<i class="ph ph-sign-in"></i> تسجيل الدخول`);
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const hasSession = !!localStorage.getItem(SESSION_KEYS.role) || !!localStorage.getItem(SESSION_KEYS.ownerPropId);
+  if (hasSession) {
+    showAdminLayout();
+    setNavVisibilityByRole();
+    await loadProperties();
+    await loadBookings();
+  } else {
+    showLoginLayout();
+  }
+
+  const logoutBtn = document.getElementById("admin-logout-btn");
+  if (logoutBtn && !logoutBtn.dataset.bound) {
+    logoutBtn.dataset.bound = "1";
+    logoutBtn.addEventListener("click", () => {
+      if (!confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
+      clearAdminSession();
+      showToast("تم تسجيل الخروج بنجاح", "success");
+      setTimeout(() => window.location.reload(), 350);
+    });
   }
 });
 
 function switchTab(tabId) {
+  if (tabId === "add-property" && !getIsSuperAdmin()) {
+    showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
+    return;
+  }
+
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
 
@@ -255,6 +614,7 @@ function switchTab(tabId) {
 
   const pageTitle = document.getElementById("page-title");
   if (pageTitle) pageTitle.textContent = titles[tabId] || "لوحة التحكم";
+  updateAdminHeaderForRole();
 
   if (tabId === "bookings") loadBookings();
   if (tabId === "manage-props") loadProperties();
@@ -317,9 +677,9 @@ function renderPropertiesTable(docsArray) {
   tbody.innerHTML = "";
 
   docsArray.forEach(doc => {
-    const p = doc.data() || {};
+    const p = normalizePropertyPayload(doc.data() || {});
     const isVisible = p.visible !== false;
-    const hasLoc = p.lat && p.lng;
+    const hasLoc = Number.isFinite(p.lat) && Number.isFinite(p.lng);
     const typeLabel = getPropertyTypeLabel(p.type);
     const mapBadge = hasLoc
       ? `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph-fill ph-map-pin"></i> موقع محدد</span>`
@@ -387,16 +747,22 @@ function renderPropertiesTable(docsArray) {
 async function toggleVisibility(docId, isVisible, checkboxEl) {
   try {
     if (checkboxEl) checkboxEl.disabled = true;
+
+    if (!getIsSuperAdmin() && getOwnerPropId() !== docId) {
+      throw new Error("غير مسموح لك بتعديل هذا العقار");
+    }
+
     await db.collection("properties").doc(docId).update({
       visible: isVisible,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+
     showToast(`تم ${isVisible ? "إظهار" : "إخفاء"} العقار بنجاح`, "success");
     await loadProperties();
   } catch (err) {
     console.error("toggleVisibility error:", err);
     if (checkboxEl) checkboxEl.checked = !isVisible;
-    showToast("حدث خطأ أثناء تحديث حالة الظهور", "error");
+    showToast(err.message || "حدث خطأ أثناء تحديث حالة الظهور", "error");
   } finally {
     if (checkboxEl) checkboxEl.disabled = false;
   }
@@ -405,6 +771,11 @@ async function toggleVisibility(docId, isVisible, checkboxEl) {
 if (addForm) {
   addForm.addEventListener("submit", async function(e) {
     e.preventDefault();
+
+    if (!getIsSuperAdmin()) {
+      showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
+      return;
+    }
 
     const latVal = document.getElementById("prop-lat")?.value.trim() || "";
     const lngVal = document.getElementById("prop-lng")?.value.trim() || "";
@@ -444,28 +815,34 @@ if (addForm) {
         uploadStatus.style.color = "#10b981";
       }
 
-      const newProperty = {
-        titleAr: document.getElementById("prop-title-ar")?.value.trim() || "",
-        titleEn: document.getElementById("prop-title-en")?.value.trim() || "",
-        locationAr: document.getElementById("prop-loc-ar")?.value.trim() || "",
-        locationEn: document.getElementById("prop-loc-en")?.value.trim() || "",
-        price: Number(document.getElementById("prop-price")?.value || 0),
+      const newProperty = normalizePropertyPayload({
+        titleAr: document.getElementById("prop-title-ar")?.value,
+        titleEn: document.getElementById("prop-title-en")?.value,
+        locationAr: document.getElementById("prop-loc-ar")?.value,
+        locationEn: document.getElementById("prop-loc-en")?.value,
+        price: document.getElementById("prop-price")?.value,
         type: propType,
-        descAr: document.getElementById("prop-desc-ar")?.value.trim() || "",
-        descEn: document.getElementById("prop-desc-en")?.value.trim() || "",
+        descAr: document.getElementById("prop-desc-ar")?.value,
+        descEn: document.getElementById("prop-desc-en")?.value,
         imageUrl,
-        lat: parseFloat(latVal),
-        lng: parseFloat(lngVal),
-        visible: true,
+        lat: latVal,
+        lng: lngVal,
+        visible: true
+      });
+
+      const validationError = validatePropertyPayload(newProperty, { requireImage: true, requireMap: true });
+      if (validationError) throw new Error(validationError);
+
+      await db.collection("properties").add({
+        ...newProperty,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      await db.collection("properties").add(newProperty);
+      });
 
       addForm.reset();
       if (uploadStatus) uploadStatus.textContent = "";
       document.getElementById("map-picked-badge")?.classList.remove("visible");
+
       const latEl = document.getElementById("prop-lat");
       const lngEl = document.getElementById("prop-lng");
       if (latEl) latEl.value = "";
@@ -514,30 +891,45 @@ async function openEditModal(docId) {
   if (!editModal) return;
 
   try {
+    if (!getIsSuperAdmin() && getOwnerPropId() !== docId) {
+      showToast("غير مسموح لك بتعديل هذا العقار", "error");
+      return;
+    }
+
     const doc = await db.collection("properties").doc(docId).get();
     if (!doc.exists) {
       showToast("العقار غير موجود", "error");
       return;
     }
 
-    const p = doc.data() || {};
+    const p = normalizePropertyPayload(doc.data() || {});
+
     document.getElementById("edit-prop-id").value = docId;
     document.getElementById("edit-title-ar").value = p.titleAr || "";
     document.getElementById("edit-price").value = p.price || "";
     document.getElementById("edit-desc-ar").value = p.descAr || "";
 
+    const editTitleEn = document.getElementById("edit-title-en");
+    const editLocAr = document.getElementById("edit-loc-ar");
+    const editLocEn = document.getElementById("edit-loc-en");
+    const editDescEn = document.getElementById("edit-desc-en");
+    if (editTitleEn) editTitleEn.value = p.titleEn || "";
+    if (editLocAr) editLocAr.value = p.locationAr || "";
+    if (editLocEn) editLocEn.value = p.locationEn || "";
+    if (editDescEn) editDescEn.value = p.descEn || "";
+
     const editTypeEl = document.getElementById("edit-type");
     if (editTypeEl) editTypeEl.value = p.type || "apartment";
 
-    const existingLat = p.lat ? parseFloat(p.lat) : null;
-    const existingLng = p.lng ? parseFloat(p.lng) : null;
+    const existingLat = Number.isFinite(p.lat) ? parseFloat(p.lat) : null;
+    const existingLng = Number.isFinite(p.lng) ? parseFloat(p.lng) : null;
 
     const editLatEl = document.getElementById("edit-lat");
     const editLngEl = document.getElementById("edit-lng");
-    if (editLatEl) editLatEl.value = existingLat || "";
-    if (editLngEl) editLngEl.value = existingLng || "";
+    if (editLatEl) editLatEl.value = existingLat ?? "";
+    if (editLngEl) editLngEl.value = existingLng ?? "";
 
-    document.getElementById("edit-map-picked-badge")?.classList.toggle("visible", !!(existingLat && existingLng));
+    document.getElementById("edit-map-picked-badge")?.classList.toggle("visible", !!(existingLat !== null && existingLng !== null));
 
     editModal.classList.add("active");
     document.body.classList.add("modal-open");
@@ -563,28 +955,24 @@ if (editModalEl) {
   });
 }
 
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") closeEditModal();
+});
+
 if (editForm) {
   editForm.addEventListener("submit", async function(e) {
     e.preventDefault();
 
     const docId = document.getElementById("edit-prop-id")?.value;
-    const latVal = document.getElementById("edit-lat")?.value.trim() || "";
-    const lngVal = document.getElementById("edit-lng")?.value.trim() || "";
-    const titleAr = document.getElementById("edit-title-ar")?.value.trim() || "";
-    const price = document.getElementById("edit-price")?.value;
-    const descAr = document.getElementById("edit-desc-ar")?.value.trim() || "";
-    const typeValue = document.getElementById("edit-type")?.value || "apartment";
+    const imageFile = document.getElementById("edit-image")?.files?.[0];
 
     if (!docId) {
       showToast("معرّف العقار غير صالح", "error");
       return;
     }
-    if (!titleAr) {
-      showToast("يرجى إدخال اسم العقار", "error");
-      return;
-    }
-    if (!price || Number.isNaN(Number(price))) {
-      showToast("يرجى إدخال سعر صحيح", "error");
+
+    if (!getIsSuperAdmin() && getOwnerPropId() !== docId) {
+      showToast("غير مسموح لك بتعديل هذا العقار", "error");
       return;
     }
 
@@ -595,17 +983,46 @@ if (editForm) {
     );
 
     try {
+      const payload = normalizePropertyPayload({
+        titleAr: document.getElementById("edit-title-ar")?.value,
+        titleEn: document.getElementById("edit-title-en")?.value,
+        locationAr: document.getElementById("edit-loc-ar")?.value,
+        locationEn: document.getElementById("edit-loc-en")?.value,
+        price: document.getElementById("edit-price")?.value,
+        descAr: document.getElementById("edit-desc-ar")?.value,
+        descEn: document.getElementById("edit-desc-en")?.value,
+        type: document.getElementById("edit-type")?.value || "apartment",
+        lat: document.getElementById("edit-lat")?.value,
+        lng: document.getElementById("edit-lng")?.value
+      });
+
+      const validationError = validatePropertyPayload(payload, { requireImage: false, requireMap: true });
+      if (validationError) {
+        showToast(validationError, "error");
+        return;
+      }
+
       const updateData = {
-        titleAr,
-        price: Number(price),
-        descAr,
-        type: typeValue,
+        titleAr: payload.titleAr,
+        titleEn: payload.titleEn,
+        locationAr: payload.locationAr,
+        locationEn: payload.locationEn,
+        price: payload.price,
+        descAr: payload.descAr,
+        descEn: payload.descEn,
+        type: payload.type,
+        lat: payload.lat,
+        lng: payload.lng,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
-      if (latVal && lngVal && !Number.isNaN(parseFloat(latVal)) && !Number.isNaN(parseFloat(lngVal))) {
-        updateData.lat = parseFloat(latVal);
-        updateData.lng = parseFloat(lngVal);
+      if (imageFile) {
+        if (imageFile.size > 5 * 1024 * 1024) {
+          showToast("حجم الصورة الجديدة يتجاوز 5 ميجابايت", "error");
+          return;
+        }
+        const newImageUrl = await uploadToCloudinary(imageFile);
+        updateData.imageUrl = newImageUrl;
       }
 
       await db.collection("properties").doc(docId).update(updateData);
@@ -630,6 +1047,20 @@ async function deleteProperty(docId) {
   if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\nسيتم مسحه من المنصة ولا يمكن التراجع.")) return;
 
   try {
+    const bookingsSnap = await db.collection("bookings").get().catch(() => null);
+
+    if (bookingsSnap && !bookingsSnap.empty) {
+      const related = bookingsSnap.docs.filter(d => {
+        const data = d.data() || {};
+        return getBookingPropertyId(data) === docId;
+      });
+
+      if (related.length) {
+        const proceed = confirm(`يوجد ${related.length} حجز/حجوزات مرتبطة بهذا العقار.\nسيتم حذف العقار فقط وقد تبقى الحجوزات يتيمة.\nهل تريد المتابعة؟`);
+        if (!proceed) return;
+      }
+    }
+
     await db.collection("properties").doc(docId).delete();
     showToast("تم حذف العقار بنجاح", "success");
     loadProperties();
@@ -663,7 +1094,7 @@ async function loadBookings() {
         docs = snap.docs;
       }
     } else {
-      const FIELD_CANDIDATES = ["propertyId", "propId", "propertyDocId", "property_id"];
+      const FIELD_CANDIDATES = ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"];
       let matched = false;
 
       for (const field of FIELD_CANDIDATES) {
@@ -681,62 +1112,56 @@ async function loadBookings() {
 
       if (!matched) {
         const allSnap = await db.collection("bookings").get();
-        docs = allSnap.docs.filter(d => {
-          const data = d.data() || {};
-          return FIELD_CANDIDATES.some(f => String(data[f] || "").trim() === ownerPropId);
-        });
+        docs = allSnap.docs.filter(d => getBookingPropertyId(d.data() || {}) === ownerPropId);
       }
     }
 
     docs.sort((a, b) => safeDateMs((b.data() || {}).createdAt) - safeDateMs((a.data() || {}).createdAt));
 
     if (!docs.length) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-calendar-blank"></i>
-          <div style="font-size:1.05rem; font-weight:800; color:var(--text-main); margin-bottom:8px;">
-            ${isSuperAdmin ? "لا توجد حجوزات مسجلة حتى الآن." : "لا توجد حجوزات لعقارك حتى الآن."}
-          </div>
-          ${!isSuperAdmin ? `<div style="font-size:.8rem; color:var(--text-muted); font-family:monospace;">Property ID: ${escapeHtml(ownerPropId)}</div>` : ""}
-        </div>`;
-      updateQuickStats();
+      renderBookingsEmpty(
+        container,
+        isSuperAdmin ? "لا توجد حجوزات مسجلة حتى الآن." : "لا توجد حجوزات لعقارك حتى الآن.",
+        !isSuperAdmin ? `<div style="font-size:.8rem; color:var(--text-muted); font-family:monospace;">Property ID: ${escapeHtml(ownerPropId)}</div>` : ""
+      );
       return;
     }
-
-    const addOnLabels = {
-      restaurant: "المطعم",
-      wifi: "إنترنت عالي السرعة",
-      spa: "جلسة سبا",
-      parking: "موقف سيارات",
-      airportTransfer: "نقل المطار",
-      lateCheckout: "تسجيل خروج متأخر",
-      extraBed: "سرير إضافي",
-      events: "تنسيق فعاليات"
-    };
 
     const cards = docs.map(doc => {
       const b = doc.data() || {};
       const meta = getStatusMeta(b.status || "pending");
-      const ci = formatDate(b.checkInDate || b.checkIn);
-      const co = formatDate(b.checkOutDate || b.checkOut);
+      const ci = formatDate(getBookingCheckIn(b));
+      const co = formatDate(getBookingCheckOut(b));
       const createdAtStr = formatDateTime(b.createdAt);
       const docIdShort = doc.id.slice(0, 8).toUpperCase();
-      const adults = Number(b.adults || 0);
-      const children = Number(b.children || 0);
-      const rooms = Number(b.rooms || 0);
-      const guests = Number(b.guests || adults + children || 1);
-      const addons = Array.isArray(b.selectedAddons)
-        ? b.selectedAddons
-        : (b.addons && typeof b.addons === "object"
-            ? Object.keys(b.addons).filter(key => b.addons[key] === true)
-            : []);
+      const guestName = getBookingGuestName(b);
+      const phone = getBookingPhone(b);
+      const email = getBookingEmail(b);
+      const propertyTitle = normalizeText(getBookingField(b, ["propertyTitle", "propertyName", "listingTitle"], "—"));
+      const totalPrice = toNumber(getBookingField(b, ["totalPrice", "finalTotal", "amount", "price"], 0), 0);
+      const nights = toNumber(getBookingField(b, ["nights", "nightCount"], 0), 0);
+      const paymentMethodRaw = normalizeText(getBookingField(b, ["paymentMethod", "payment_method"], "cash")).toLowerCase();
+      const paymentMethod = paymentMethodRaw === "transfer" || paymentMethodRaw === "ccp"
+        ? `<span class="pill-soft" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;"><i class="ph ph-bank"></i> تحويل بنكي</span>`
+        : `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph ph-money"></i> الدفع عند الوصول</span>`;
+
+      const receiptUrl = normalizeText(getBookingField(b, ["receiptUrl", "paymentReceiptUrl", "transferReceiptUrl"], ""));
+      const receipt = (paymentMethodRaw === "transfer" || paymentMethodRaw === "ccp")
+        ? (receiptUrl
+            ? `<a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener noreferrer" class="ghost-action" style="min-height:40px;padding:0 14px;font-size:.82rem;"><i class="ph ph-receipt"></i> عرض الإيصال</a>`
+            : `<span class="pill-soft" style="background:#fef2f2;color:#e11d48;border:1px solid #fecdd3;"><i class="ph ph-warning-circle"></i> الإيصال مفقود</span>`)
+        : "";
+
+      const addons = getBookingAddons(b);
+      const notes = getBookingNotes(b);
+      const { adults, children, infants, rooms, guests } = getBookingGuestsMeta(b);
 
       const occupancy = rooms
         ? `
           <div class="booking-meta-item">
             <label>الإقامة</label>
             <strong>${rooms} غرف</strong>
-            <span>${adults} بالغين${children > 0 ? ` + ${children} أطفال` : ""}</span>
+            <span>${adults} بالغين${children > 0 ? ` + ${children} أطفال` : ""}${infants > 0 ? ` + ${infants} رضع` : ""}</span>
           </div>`
         : `
           <div class="booking-meta-item">
@@ -745,39 +1170,25 @@ async function loadBookings() {
             <span>إجمالي عدد المسافرين</span>
           </div>`;
 
-      const paymentMethod = b.paymentMethod === "transfer" || b.paymentMethod === "ccp"
-        ? `<span class="pill-soft" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;"><i class="ph ph-bank"></i> تحويل بنكي</span>`
-        : `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph ph-money"></i> الدفع عند الوصول</span>`;
-
-      const receipt = (b.paymentMethod === "transfer" || b.paymentMethod === "ccp")
-        ? (b.receiptUrl
-            ? `<a href="${escapeHtml(b.receiptUrl)}" target="_blank" rel="noopener noreferrer" class="ghost-action" style="min-height:40px;padding:0 14px;font-size:.82rem;"><i class="ph ph-receipt"></i> عرض الإيصال</a>`
-            : `<span class="pill-soft" style="background:#fef2f2;color:#e11d48;border:1px solid #fecdd3;"><i class="ph ph-warning-circle"></i> الإيصال مفقود</span>`)
-        : "";
-
-      const notes = b.specialRequests || b.notes || "";
       const addonsHtml = addons.length
         ? `<div class="booking-meta-item" style="grid-column:1/-1;">
             <label>الإضافات المختارة</label>
-            <span>${escapeHtml(addons.map(a => {
-              if (a === "restaurant" && b.restaurantPlan) return `${addOnLabels[a] || a} (${b.restaurantPlan})`;
-              return addOnLabels[a] || a;
-            }).join("، "))}</span>
+            <span>${escapeHtml(addons.join("، "))}</span>
           </div>`
         : "";
 
-      const notesHtml = (b.arrivalTime || notes)
+      const notesHtml = notes
         ? `<div class="booking-meta-item" style="grid-column:1/-1;">
             <label>ملاحظات الحجز</label>
-            <span>${b.arrivalTime ? `وقت الوصول: ${escapeHtml(b.arrivalTime)}` : ""}${b.arrivalTime && notes ? " — " : ""}${notes ? `ملاحظات: ${escapeHtml(notes)}` : ""}</span>
+            <span>${escapeHtml(notes)}</span>
           </div>`
         : "";
 
       return `
-        <div class="booking-card" data-status="${escapeHtml(b.status || "pending")}">
+        <div class="booking-card" data-status="${escapeHtml(b.status || "pending")}" data-booking-id="${escapeHtml(doc.id)}">
           <div class="booking-head">
             <div class="booking-title">
-              <strong>${escapeHtml(b.guestName || "غير معروف")}</strong>
+              <strong>${escapeHtml(guestName)}</strong>
               <span>#${docIdShort} · ${createdAtStr}</span>
             </div>
             <span class="status-badge ${meta.cls}"><i class="ph ${meta.icon}"></i> ${meta.label}</span>
@@ -785,7 +1196,7 @@ async function loadBookings() {
 
           <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
             <div class="pill-soft" style="background:rgba(67,90,191,.08);color:var(--primary);border:1px solid rgba(67,90,191,.1);">
-              <i class="ph ph-buildings"></i> ${escapeHtml(b.propertyTitle || "—")}
+              <i class="ph ph-buildings"></i> ${escapeHtml(propertyTitle)}
             </div>
             ${paymentMethod}
           </div>
@@ -794,17 +1205,17 @@ async function loadBookings() {
             <div class="booking-meta-item">
               <label>تاريخ الإقامة</label>
               <strong>${ci} ← ${co}</strong>
-              <span>${Number(b.nights || 0)} ليالٍ</span>
+              <span>${nights} ليالٍ</span>
             </div>
             ${occupancy}
             <div class="booking-meta-item">
               <label>الهاتف</label>
-              <strong dir="ltr">${escapeHtml(b.guestPhone || "—")}</strong>
+              <strong dir="ltr">${escapeHtml(phone || "—")}</strong>
               <span>رقم التواصل</span>
             </div>
             <div class="booking-meta-item">
               <label>البريد الإلكتروني</label>
-              <strong dir="ltr">${escapeHtml(b.guestEmail || "—")}</strong>
+              <strong dir="ltr">${escapeHtml(email || "—")}</strong>
               <span>بيانات العميل</span>
             </div>
             ${addonsHtml}
@@ -815,7 +1226,7 @@ async function loadBookings() {
             <div>${receipt}</div>
             <div style="text-align:end;">
               <div style="font-size:.73rem; color:var(--text-muted); font-weight:800;">الإجمالي</div>
-              <div style="font-size:1.18rem; color:var(--primary); font-weight:800;">${formatCurrency(b.totalPrice)}</div>
+              <div style="font-size:1.18rem; color:var(--primary); font-weight:800;">${formatCurrency(totalPrice)}</div>
             </div>
           </div>
 
@@ -865,16 +1276,32 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
 
   const row = clickedBtn?.closest?.(".booking-actions-row") || null;
   const buttons = row ? Array.from(row.querySelectorAll("button")) : Array.from(document.querySelectorAll(".btn-approve, .btn-reject"));
+
   buttons.forEach(btn => {
     btn.disabled = true;
     btn.style.opacity = "0.6";
   });
 
   try {
-    await db.collection("bookings").doc(docId).update({
+    const bookingRef = db.collection("bookings").doc(docId);
+    const snap = await bookingRef.get();
+
+    if (!snap.exists) {
+      throw new Error("الحجز غير موجود");
+    }
+
+    const bookingData = snap.data() || {};
+    const bookingPropId = getBookingPropertyId(bookingData);
+
+    if (!getIsSuperAdmin() && bookingPropId !== getOwnerPropId()) {
+      throw new Error("غير مسموح لك بتحديث هذا الحجز");
+    }
+
+    await bookingRef.update({
       status: newStatus,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+
     showToast(`تم ${isConfirm ? "قبول" : "رفض"} الحجز بنجاح`, "success");
     await loadBookings();
   } catch (err) {
@@ -896,3 +1323,4 @@ window.closeEditModal = closeEditModal;
 window.deleteProperty = deleteProperty;
 window.toggleVisibility = toggleVisibility;
 window.updateAdminQuickStats = updateQuickStats;
+window.adminLogout = clearAdminSession;
