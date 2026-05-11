@@ -1,16 +1,18 @@
 // =========================================
-//   Advanced Booking Logic — booking.js
-//   OreBooking © 2025 | Hotel Edition
-//   Enhanced Version v8.0 — Chat & Full Payload Sync
+//   booking.js — OreBooking v9.0
+//   Synced with latest booking.html structure
+//   Responsive booking flow + auth + payment UI
 // =========================================
 
 "use strict";
 
-// ─── Safe Storage Helpers ───────────────────
+// ──────────────────────────────────────────
+// Safe Storage
+// ──────────────────────────────────────────
 function safeGet(key, fallback = null) {
   try {
-    const v = window.localStorage.getItem(key);
-    return v ?? fallback;
+    const value = localStorage.getItem(key);
+    return value ?? fallback;
   } catch (_) {
     return fallback;
   }
@@ -18,17 +20,19 @@ function safeGet(key, fallback = null) {
 
 function safeSet(key, value) {
   try {
-    window.localStorage.setItem(key, value);
+    localStorage.setItem(key, value);
   } catch (_) {}
 }
 
 function safeRemove(key) {
   try {
-    window.localStorage.removeItem(key);
+    localStorage.removeItem(key);
   } catch (_) {}
 }
 
-// ─── Firebase Config ───────────────────────
+// ──────────────────────────────────────────
+// Firebase
+// ──────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
   authDomain: "orebooking-website.firebaseapp.com",
@@ -47,1623 +51,1158 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const storage = firebase.storage();
 
-// ─── Booking State ─────────────────────────
+// ──────────────────────────────────────────
+// State
+// ──────────────────────────────────────────
 let currentUser = null;
 
 const bookingState = {
+  lang: safeGet("ore_lang", "en") || "en",
+  theme: safeGet("ore_theme", "light") || "light",
+
   propertyId: null,
   property: null,
-  checkIn: null,
-  checkOut: null,
-  rooms: 1,
-  adults: 1,
-  children: 0,
-  infants: 0,
-  childAges: [],
-  beds: 1,
+
+  checkIn: "",
+  checkOut: "",
+  guests: 1,
   nights: 0,
-  totalPrice: 0,
-  basePrice: 0,
-  roomPrice: 0,
-  fee: 0,
-  addonsTotal: 0,
-  maxGuests: 10,
-  maxRooms: 5,
-  minNights: 1,
-  bookedDates: [],
-  addons: {
-    restaurant: false,
-    restaurantPlan: "breakfast",
-    wifi: false,
-    parking: false,
-    airportTransfer: false,
-    spa: false,
-    lateCheckout: false,
-    extraBed: false,
-    events: false
-  },
-  lang: safeGet("ore_lang", "en") || "en",
-  paymentMethod: "ccp",
-  receiptUrl: null,
-  guestIdUploadUrl: null
+
+  paymentMethod: "Bank Transfer",
+  paymentValue: "Bank Transfer",
+  paymentProofUrl: null,
+
+  rewardPoints: 0
 };
 
-// ─── Add-on Prices ──────────────────────────
-const ADDON_PRICES = {
-  restaurant_breakfast: 800,
-  restaurant_halfboard: 1800,
-  restaurant_fullboard: 3200,
-  wifi: 300,
-  parking: 500,
-  airportTransfer: 2500,
-  spa: 2000,
-  lateCheckout: 1200,
-  extraBed: 1000,
-  events: 500
-};
-
-// ─── Cached DOM Elements ───────────────────
+// ──────────────────────────────────────────
+// DOM
+// ──────────────────────────────────────────
 const els = {
+  html: document.documentElement,
+  body: document.body,
+
+  langToggle: document.getElementById("lang-toggle"),
+  themeToggle: document.getElementById("theme-toggle"),
+  openAuthBtn: document.getElementById("open-auth-btn"),
+  closeAuthBtn: document.getElementById("close-auth-btn"),
+  authModal: document.getElementById("auth-modal"),
+  profileDropdown: document.getElementById("profile-dropdown"),
+
+  loginForm: document.getElementById("login-form"),
+  registerForm: document.getElementById("register-form"),
+  forgotForm: document.getElementById("forgot-form"),
+  authMessage: document.getElementById("auth-message"),
+
+  loginEmail: document.getElementById("login-email"),
+  loginPassword: document.getElementById("login-password"),
+  regName: document.getElementById("reg-name"),
+  regEmail: document.getElementById("reg-email"),
+  regPassword: document.getElementById("reg-password"),
+  forgotEmail: document.getElementById("forgot-email"),
+
+  passwordStrength: document.getElementById("password-strength"),
+  strengthLabel: document.getElementById("strength-label"),
+
+  dropdownUserName: document.getElementById("dropdown-user-name"),
+  dropdownUserEmail: document.getElementById("dropdown-user-email"),
+  logoutBtn: document.getElementById("logout-btn"),
+  myBookingsBtn: document.getElementById("my-bookings-btn"),
+  myFavoritesBtn: document.getElementById("my-favorites-btn"),
+
   step1: document.getElementById("step-1"),
   step2: document.getElementById("step-2"),
   step3: document.getElementById("step-3"),
+  connector1: document.getElementById("connector-1"),
+  connector2: document.getElementById("connector-2"),
+  indicators: [...document.querySelectorAll(".step-indicator")],
 
   btnNext1: document.getElementById("btn-next-1"),
   btnNext2: document.getElementById("btn-next-2"),
   btnPrev2: document.getElementById("btn-prev-2"),
   btnPrev3: document.getElementById("btn-prev-3"),
-  btnConfirm: document.getElementById("btn-confirm-booking"),
+  btnEditGuest: document.getElementById("btn-edit-guest"),
+  btnEditDates: document.getElementById("btn-edit-dates"),
+  btnEditPayment: document.getElementById("btn-edit-payment"),
+  btnConfirmBooking: document.getElementById("btn-confirm-booking"),
 
-  btnRoomMinus: document.getElementById("btn-minus-room"),
-  btnRoomPlus: document.getElementById("btn-plus-room"),
-  roomCount: document.getElementById("rooms-count"),
-  btnAdultMinus: document.getElementById("btn-minus-adult"),
-  btnAdultPlus: document.getElementById("btn-plus-adult"),
-  adultCount: document.getElementById("adults-count"),
-  btnChildMinus: document.getElementById("btn-minus-child"),
-  btnChildPlus: document.getElementById("btn-plus-child"),
-  childCount: document.getElementById("children-count"),
-  childAgesBox: document.getElementById("child-ages-box"),
+  guestName: document.getElementById("guest-name"),
+  guestEmail: document.getElementById("guest-email"),
+  guestPhone: document.getElementById("guest-phone"),
+  guestNationality: document.getElementById("guest-nationality"),
+  guestGender: document.getElementById("guest-gender"),
+  guestPurpose: document.getElementById("guest-purpose"),
 
-  calPrev: document.getElementById("cal-prev"),
-  calNext: document.getElementById("cal-next"),
-  calGrid: document.getElementById("calendar-grid"),
-  monthLabel: document.getElementById("calendar-month-label"),
+  checkInDate: document.getElementById("check-in-date"),
+  checkOutDate: document.getElementById("check-out-date"),
+  guestCount: document.getElementById("guest-count"),
+  arrivalTime: document.getElementById("arrival-time"),
+  additionalGuests: document.getElementById("additional-guests"),
 
-  payRadios: document.getElementsByName("payment_method"),
-  receiptFile: document.getElementById("receipt-upload"),
-  transferBox: document.getElementById("ccp-details"),
-  cashBox: document.getElementById("cash-details"),
+  roomPreference: document.getElementById("room-preference"),
+  billingRequest: document.getElementById("billing-request"),
+  specialRequests: document.getElementById("special-requests"),
 
-  globalAlert: document.getElementById("booking-global-alert"),
+  paymentCards: [...document.querySelectorAll(".payment-method-card")],
+  paymentRadios: [...document.querySelectorAll('input[name="payment-method"]')],
+  bankTransferDetails: document.getElementById("bank-transfer-details"),
+  cashDetails: document.getElementById("cash-details"),
+  cardDetails: document.getElementById("card-details"),
 
-  revName: document.getElementById("rev-name"),
-  revEmail: document.getElementById("rev-email"),
-  revPhone: document.getElementById("rev-phone"),
-  revCheckin: document.getElementById("rev-checkin"),
-  revCheckout: document.getElementById("rev-checkout"),
-  revGuests: document.getElementById("rev-guests"),
-  revPaymentMethod: document.getElementById("rev-payment-method"),
-  revPoints: document.getElementById("rev-points"),
-  agreePolicy: document.getElementById("agree-policy"),
+  copyBankInfoBtn: document.getElementById("copy-bank-info-btn"),
+  paymentProof: document.getElementById("payment-proof"),
+  selectedProofFile: document.getElementById("selected-proof-file"),
+  selectedProofFileName: document.getElementById("selected-proof-file-name"),
+
+  bankName: document.getElementById("bank-name"),
+  bankHolder: document.getElementById("bank-holder"),
+  bankIban: document.getElementById("bank-iban"),
+  paymentReference: document.getElementById("payment-reference"),
+
+  statCheckin: document.getElementById("stat-checkin"),
+  statCheckout: document.getElementById("stat-checkout"),
+  statNights: document.getElementById("stat-nights"),
+  statGuests: document.getElementById("stat-guests"),
+
+  summaryCheckin: document.getElementById("summary-checkin"),
+  summaryCheckout: document.getElementById("summary-checkout"),
+  summaryGuests: document.getElementById("summary-guests"),
+  summaryPayment: document.getElementById("summary-payment"),
 
   propMiniImg: document.getElementById("prop-mini-img"),
   propMiniTitle: document.getElementById("prop-mini-title"),
   propMiniLoc: document.getElementById("prop-mini-loc"),
   propMiniType: document.getElementById("prop-mini-type"),
-  sbNightsCount: document.getElementById("sb-nights-count"),
+
   sbNightPrice: document.getElementById("sb-night-price"),
-  sbFeeAmount: document.getElementById("sb-fee-amount"),
+  sbNightsCount: document.getElementById("sb-nights-count"),
   sbFeeRow: document.getElementById("sb-fee-row"),
-  sbAddonsAmount: document.getElementById("sb-addons-amount"),
+  sbFeeAmount: document.getElementById("sb-fee-amount"),
   sbAddonsRow: document.getElementById("sb-addons-row"),
+  sbAddonsAmount: document.getElementById("sb-addons-amount"),
   sbFinalTotal: document.getElementById("sb-final-total"),
 
-  gName: document.getElementById("guest-name"),
-  gEmail: document.getElementById("guest-email"),
-  gPhone: document.getElementById("guest-phone"),
-  gArrivalTime: document.getElementById("arrival-time"),
-  gSpecialReq: document.getElementById("special-requests")
+  revName: document.getElementById("rev-name"),
+  revEmail: document.getElementById("rev-email"),
+  revPhone: document.getElementById("rev-phone"),
+  revNationalityGender: document.getElementById("rev-nationality-gender"),
+  revDates: document.getElementById("rev-dates"),
+  revGuests: document.getElementById("rev-guests"),
+  revPurposeArrival: document.getElementById("rev-purpose-arrival"),
+  revAdditionalGuests: document.getElementById("rev-additional-guests"),
+  revDocuments: document.getElementById("rev-documents"),
+  revBilling: document.getElementById("rev-billing"),
+  revRoomPreferences: document.getElementById("rev-room-preferences"),
+  revPaymentMethod: document.getElementById("rev-payment-method"),
+  revPoints: document.getElementById("rev-points"),
+
+  agreePolicy: document.getElementById("agree-policy")
 };
 
-// ─── Calendar State ────────────────────────
-let calViewDate = new Date();
-calViewDate.setDate(1);
-calViewDate.setHours(12, 0, 0, 0);
-
-// ─── Helpers ───────────────────────────────
-const t = (en, ar) => bookingState.lang === "ar" ? ar : en;
-
-function byId(id) {
-  return document.getElementById(id);
-}
-
-function getVal(id) {
-  const el = byId(id);
-  return el ? String(el.value ?? "").trim() : "";
-}
-
-function getNum(id, fallback = 0) {
-  const raw = getVal(id);
-  if (raw === "") return fallback;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function getCheckedRadioValue(name, fallback = "") {
-  return document.querySelector(`input[name="${name}"]:checked`)?.value || fallback;
+// ──────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────
+function t(en, ar) {
+  return bookingState.lang === "ar" ? ar : en;
 }
 
 function cleanText(value) {
   return String(value ?? "").trim();
 }
 
+function escapeHtml(str = "") {
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
 function formatCurrency(value) {
-  const curr = bookingState.lang === "ar" ? "د.ج" : "DZD";
-  return `${Number(value || 0).toLocaleString()} ${curr}`;
-}
-
-function formatDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function parseLocalDate(str) {
-  if (!str) return null;
-  const [y, m, d] = str.split("-").map(Number);
-  return new Date(y, m - 1, d, 12, 0, 0, 0);
-}
-
-function formatDisplayDate(str) {
-  if (!str) return t("Add date", "أضف تاريخ");
-  const d = parseLocalDate(str);
-  if (!d || Number.isNaN(d.getTime())) return t("Add date", "أضف تاريخ");
-  return d.toLocaleDateString(
-    bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
-    { day: "2-digit", month: "short", year: "numeric" }
-  );
-}
-
-function resolvePropertyId() {
-  const params = new URLSearchParams(window.location.search);
-  const fromQuery = params.get("id") || params.get("propertyId") || params.get("pid");
-  if (fromQuery && String(fromQuery).trim()) return String(fromQuery).trim();
-
-  const hash = window.location.hash || "";
-  const hashMatch = hash.match(/#?(?:prop|property)[-_=]?(.+)/i);
-  if (hashMatch && hashMatch[1] && String(hashMatch[1]).trim()) {
-    return String(hashMatch[1]).trim();
-  }
-
-  const stored = safeGet("selectedPropertyId") || safeGet("booking_property_id");
-  if (stored && String(stored).trim()) return String(stored).trim();
-  return null;
-}
-
-function persistPropertyId(id) {
-  if (!id) return;
-  safeSet("selectedPropertyId", String(id));
-  safeSet("booking_property_id", String(id));
-}
-
-function showGlobalAlert(msg, type = "error") {
-  const el = els.globalAlert;
-  if (!el) return;
-
-  const icons = {
-    error: "warning-circle",
-    success: "check-circle",
-    info: "info"
-  };
-
-  el.className = `booking-alert ${type}`;
-  el.innerHTML = `<i class="ph ph-${icons[type] || "info"}"></i><span>${msg}</span>`;
-  el.classList.remove("d-none");
-  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function hideGlobalAlert() {
-  els.globalAlert?.classList.add("d-none");
-}
-
-function setButtonLoading(btn, loading, customText = null) {
-  if (!btn) return;
-  btn.disabled = loading;
-
-  if (loading) {
-    if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> ${customText || t("Processing...", "جارٍ المعالجة...")}`;
-  } else {
-    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
-  }
-}
-
-function applyStoredTheme() {
-  const theme = safeGet("ore_theme");
-  const icon = document.querySelector("#theme-toggle i");
-
-  if (theme === "dark") {
-    document.body.classList.add("dark");
-    if (icon) icon.className = "ph ph-sun";
-  } else {
-    document.body.classList.remove("dark");
-    if (icon) icon.className = "ph ph-moon";
-  }
-}
-
-function syncDocumentDirection() {
-  document.documentElement.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
-  document.documentElement.lang = bookingState.lang;
+  const amount = Number(value || 0);
+  return bookingState.lang === "ar"
+    ? `${amount.toLocaleString("ar-DZ")} د.ج`
+    : `${amount.toLocaleString("en-US")} DZD`;
 }
 
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function slugify(value) {
-  return cleanText(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9\u0600-\u06FF]+/gi, "-")
-    .replace(/^-+|-+$/g, "");
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function buildGuestIdentityFallback() {
-  const email = cleanText(getVal("guest-email")).toLowerCase();
-  const phone = cleanText(getVal("guest-phone")).replace(/\s+/g, "");
-  const name = cleanText(getVal("guest-name")) || cleanText(getVal("guest-family-name")) || "guest";
-
-  if (currentUser?.uid) return currentUser.uid;
-  if (email) return `guest_email_${slugify(email)}`;
-  if (phone) return `guest_phone_${slugify(phone)}`;
-  return `guest_${slugify(name)}_${Date.now()}`;
+function formatDateDisplay(dateStr) {
+  const d = parseDate(dateStr);
+  if (!d) return t("Not selected", "غير محدد");
+  return d.toLocaleDateString(
+    bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
+    { day: "2-digit", month: "short", year: "numeric" }
+  );
 }
 
-async function uploadFileToStorage(file, folder = "receipts", customName = "") {
-  const ext = file.name.split(".").pop() || "file";
-  const finalName = customName || `${folder}_${Date.now()}.${ext}`;
-  const storageRef = storage.ref(`${folder}/${finalName}`);
-  const snapshot = await storageRef.put(file);
-  return await snapshot.ref.getDownloadURL();
+function getDiffNights(checkIn, checkOut) {
+  const inDate = parseDate(checkIn);
+  const outDate = parseDate(checkOut);
+  if (!inDate || !outDate) return 0;
+  const diff = Math.round((outDate - inDate) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : 0;
 }
 
-function getGuestTotal() {
-  return bookingState.adults + bookingState.children + bookingState.infants;
-}
-
-function getPropertyTitleByLang() {
-  const p = bookingState.property || {};
-  return bookingState.lang === "ar"
-    ? (p.titleAr || p.title || p.titleEn || "")
-    : (p.titleEn || p.title || p.titleAr || "");
-}
-
-function getPropertyLocationByLang() {
-  const p = bookingState.property || {};
-  return bookingState.lang === "ar"
-    ? (p.locationAr || p.location || p.locationEn || "")
-    : (p.locationEn || p.location || p.locationAr || "");
-}
-
-function buildSelectedAddonsArray() {
-  const list = [];
-  const a = bookingState.addons;
-
-  if (a.restaurant) list.push("restaurant");
-  if (a.wifi) list.push("wifi");
-  if (a.parking) list.push("parking");
-  if (a.airportTransfer) list.push("airportTransfer");
-  if (a.spa) list.push("spa");
-  if (a.lateCheckout) list.push("lateCheckout");
-  if (a.extraBed) list.push("extraBed");
-  if (a.events) list.push("events");
-
-  const breakfastOption = cleanText(getVal("breakfast-option"));
-  const airportTransferSelect = cleanText(getVal("airport-transfer"));
-  const parkingNeeded = cleanText(getVal("parking-needed"));
-  const lateCheckoutSelect = cleanText(getVal("late-checkout"));
-  const earlyCheckin = cleanText(getVal("early-checkin"));
-  const babyCrib = cleanText(getVal("baby-crib"));
-  const highChair = cleanText(getVal("high-chair"));
-  const accessibleRoom = cleanText(getVal("accessible-room"));
-
-  if (breakfastOption && breakfastOption !== "No" && !list.includes("breakfast")) list.push("breakfast");
-  if (airportTransferSelect && airportTransferSelect !== "No" && !list.includes("airportTransfer")) list.push("airportTransfer");
-  if (parkingNeeded && parkingNeeded !== "No" && !list.includes("parking")) list.push("parking");
-  if (lateCheckoutSelect === "Yes" && !list.includes("lateCheckout")) list.push("lateCheckout");
-  if (earlyCheckin === "Yes" && !list.includes("earlyCheckin")) list.push("earlyCheckin");
-  if (babyCrib === "Yes" && !list.includes("babyCrib")) list.push("babyCrib");
-  if (highChair === "Yes" && !list.includes("highChair")) list.push("highChair");
-  if (accessibleRoom && accessibleRoom !== "No" && accessibleRoom !== "Select option" && !list.includes("accessibleRoom")) {
-    list.push("accessibleRoom");
-  }
-
-  return list;
-}
-
-function validateStep1() {
-  const fullName = getVal("guest-name");
-  const fatherName = getVal("guest-father-name");
-  const familyName = getVal("guest-family-name");
-  const gender = getVal("guest-gender");
-  const dob = getVal("guest-dob");
-  const nationality = getVal("guest-nationality");
-  const occupation = getVal("guest-occupation");
-  const maritalStatus = getVal("guest-marital-status");
-
-  const email = getVal("guest-email");
-  const phone = getVal("guest-phone");
-  const whatsapp = getVal("guest-whatsapp");
-  const address = getVal("guest-address");
-  const city = getVal("guest-city");
-  const state = getVal("guest-state");
-  const country = getVal("guest-country");
-
-  const idType = getVal("guest-id-type");
-  const idNumber = getVal("guest-id-number");
-  const idIssuePlace = getVal("guest-id-issue-place");
-  const idIssueDate = getVal("guest-id-issue-date");
-  const idExpiry = getVal("guest-id-expiry");
-
-  const roomType = getVal("room-type");
-  const smokingPref = getVal("smoking-preference");
-
-  const adults = getNum("guest-adults", bookingState.adults || 1);
-  const children = getNum("guest-children", bookingState.children || 0);
-  const infants = getNum("guest-infants", bookingState.infants || 0);
-  const stayPurpose = getVal("stay-purpose");
-  const arrivalDate = getVal("arrival-date");
-  const departureDate = getVal("departure-date");
-  const arrivalTime = getVal("arrival-time");
-  const arrivalMethod = getVal("arrival-method");
-  const additionalGuests = getVal("additional-guests");
-
-  if (!fullName) return showGlobalAlert(t("Please enter your Full Name.", "يرجى إدخال الاسم الكامل.")), false;
-  if (!fatherName) return showGlobalAlert(t("Please enter the Father's Name.", "يرجى إدخال اسم الأب.")), false;
-  if (!familyName) return showGlobalAlert(t("Please enter the Family Name.", "يرجى إدخال اللقب.")), false;
-  if (!gender || gender === "Select gender") return showGlobalAlert(t("Please select gender.", "يرجى اختيار الجنس.")), false;
-  if (!dob) return showGlobalAlert(t("Please enter your date of birth.", "يرجى إدخال تاريخ الميلاد.")), false;
-  if (!nationality) return showGlobalAlert(t("Please enter nationality.", "يرجى إدخال الجنسية.")), false;
-  if (!occupation) return showGlobalAlert(t("Please enter occupation.", "يرجى إدخال المهنة.")), false;
-  if (!maritalStatus || maritalStatus === "Select marital status") {
-    return showGlobalAlert(t("Please select marital status.", "يرجى اختيار الحالة الاجتماعية.")), false;
-  }
-
-  if (!email) return showGlobalAlert(t("Please enter your Email Address.", "يرجى إدخال البريد الإلكتروني.")), false;
-  if (!validateEmail(email)) {
-    return showGlobalAlert(t("Please enter a valid Email Address.", "يرجى إدخال بريد إلكتروني صحيح.")), false;
-  }
-  if (!phone) return showGlobalAlert(t("Please enter your Phone Number.", "يرجى إدخال رقم الهاتف.")), false;
-  if (!whatsapp) return showGlobalAlert(t("Please enter your WhatsApp Number.", "يرجى إدخال رقم الواتساب.")), false;
-  if (!address) return showGlobalAlert(t("Please enter your Residential Address.", "يرجى إدخال عنوان السكن.")), false;
-  if (!city) return showGlobalAlert(t("Please enter your city.", "يرجى إدخال المدينة.")), false;
-  if (!state) return showGlobalAlert(t("Please enter your state/wilaya.", "يرجى إدخال الولاية.")), false;
-  if (!country) return showGlobalAlert(t("Please enter your country of residence.", "يرجى إدخال بلد الإقامة.")), false;
-
-  if (!idType || idType === "Select document type") {
-    return showGlobalAlert(t("Please select document type.", "يرجى اختيار نوع الوثيقة.")), false;
-  }
-  if (!idNumber) return showGlobalAlert(t("Please enter document number.", "يرجى إدخال رقم الوثيقة.")), false;
-  if (!idIssuePlace) return showGlobalAlert(t("Please enter document issue place.", "يرجى إدخال مكان إصدار الوثيقة.")), false;
-  if (!idIssueDate) return showGlobalAlert(t("Please enter document issue date.", "يرجى إدخال تاريخ إصدار الوثيقة.")), false;
-  if (!idExpiry) return showGlobalAlert(t("Please enter document expiry date.", "يرجى إدخال تاريخ انتهاء الوثيقة.")), false;
-
-  if (!roomType || roomType === "Select room type") {
-    return showGlobalAlert(t("Please select a room type.", "يرجى اختيار نوع الغرفة.")), false;
-  }
-  if (!smokingPref || smokingPref === "Select preference") {
-    return showGlobalAlert(t("Please select smoking preference.", "يرجى اختيار تفضيل التدخين.")), false;
-  }
-
-  if (adults < 1) return showGlobalAlert(t("At least one adult is required.", "يجب وجود بالغ واحد على الأقل.")), false;
-  if (adults + children > bookingState.maxGuests) {
-    return showGlobalAlert(
-      t(`Maximum guests allowed is ${bookingState.maxGuests}.`, `الحد الأقصى للضيوف هو ${bookingState.maxGuests}.`)
-    ), false;
-  }
-
-  if (!stayPurpose || stayPurpose === "Select purpose") {
-    return showGlobalAlert(t("Please select purpose of stay.", "يرجى اختيار سبب الإقامة.")), false;
-  }
-  if (!arrivalDate || !departureDate) {
-    return showGlobalAlert(t("Please select arrival and departure dates.", "يرجى اختيار تاريخ الوصول والمغادرة.")), false;
-  }
-  if (!arrivalTime || arrivalTime === "Select arrival time") {
-    return showGlobalAlert(t("Please select expected arrival time.", "يرجى اختيار وقت الوصول المتوقع.")), false;
-  }
-  if (!arrivalMethod || arrivalMethod === "Select arrival method") {
-    return showGlobalAlert(t("Please select arrival method.", "يرجى اختيار طريقة الوصول.")), false;
-  }
-  if (!additionalGuests) {
-    return showGlobalAlert(
-      t("Please provide names of additional guests, or write N/A if none.", "يرجى كتابة أسماء المرافقين أو N/A إذا لا يوجد.")
-    ), false;
-  }
-
-  bookingState.adults = adults;
-  bookingState.children = children;
-  bookingState.infants = infants;
-  bookingState.checkIn = arrivalDate;
-  bookingState.checkOut = departureDate;
-
-  const start = parseLocalDate(arrivalDate);
-  const end = parseLocalDate(departureDate);
-  bookingState.nights = start && end ? Math.round((end - start) / (1000 * 60 * 60 * 24)) : 0;
-
-  hideGlobalAlert();
-  return true;
-}
-
-function validateDatesForBooking() {
-  if (!bookingState.checkIn || !bookingState.checkOut || bookingState.nights < 1) {
-    showGlobalAlert(t("Please select valid check-in and check-out dates.", "يرجى تحديد تاريخ دخول وخروج صالحين."));
-    return false;
-  }
-
-  if (bookingState.nights < bookingState.minNights) {
-    showGlobalAlert(
-      t(`Minimum stay is ${bookingState.minNights} nights.`, `الحد الأدنى للإقامة هو ${bookingState.minNights} ليالي.`)
-    );
-    return false;
-  }
-
-  if (hasBookedDatesInRange(bookingState.checkIn, bookingState.checkOut)) {
-    showGlobalAlert(t("Selected range contains unavailable dates.", "النطاق المحدد يحتوي على تواريخ غير متاحة."));
-    return false;
-  }
-
-  return true;
-}
-
-function validatePaymentStep() {
-  bookingState.paymentMethod = getCheckedRadioValue("payment_method", "ccp");
-
-  const billingName = getVal("billing-name");
-  const billingPhone = getVal("billing-phone");
-  const billingEmail = getVal("billing-email");
-  const billingAddress = getVal("billing-address");
-  const needInvoice = getVal("need-invoice");
-
-  if (!billingName) return showGlobalAlert(t("Please enter billing name.", "يرجى إدخال اسم الفوترة.")), false;
-  if (!billingPhone) return showGlobalAlert(t("Please enter billing phone.", "يرجى إدخال هاتف الفوترة.")), false;
-  if (!billingEmail) return showGlobalAlert(t("Please enter billing email.", "يرجى إدخال بريد الفوترة.")), false;
-  if (!validateEmail(billingEmail)) {
-    return showGlobalAlert(t("Please enter a valid billing email.", "يرجى إدخال بريد فوترة صحيح.")), false;
-  }
-  if (!billingAddress) return showGlobalAlert(t("Please enter billing address.", "يرجى إدخال عنوان الفوترة.")), false;
-  if (!needInvoice || needInvoice === "Select") {
-    return showGlobalAlert(t("Please select invoice preference.", "يرجى اختيار هل تحتاج فاتورة أم لا.")), false;
-  }
-
-  if (bookingState.paymentMethod === "ccp") {
-    const senderName = getVal("sender-name");
-    const transferAmount = getVal("transfer-amount");
-    const transferDate = getVal("transfer-date");
-
-    if (!senderName) return showGlobalAlert(t("Please enter sender full name.", "يرجى إدخال اسم صاحب التحويل.")), false;
-    if (!transferAmount) return showGlobalAlert(t("Please enter transferred amount.", "يرجى إدخال المبلغ المحول.")), false;
-    if (!transferDate) return showGlobalAlert(t("Please enter transfer date.", "يرجى إدخال تاريخ التحويل.")), false;
-    if (!bookingState.receiptUrl && !els.receiptFile?.files.length) {
-      return showGlobalAlert(t("Please upload your transfer receipt to proceed.", "يرجى إرفاق وصل التحويل للمتابعة.")), false;
-    }
+function setButtonLoading(btn, loading, text = null) {
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="ph ph-spinner-gap ph-spin"></i><span>${text || t("Processing...", "جارٍ المعالجة...")}</span>`;
   } else {
-    const cashPayerName = getVal("cash-payer-name");
-    const cashCurrency = getVal("cash-currency");
-
-    if (!cashPayerName) {
-      return showGlobalAlert(t("Please enter who will pay at check-in.", "يرجى إدخال اسم من سيدفع عند الوصول.")), false;
-    }
-    if (!cashCurrency || cashCurrency === "Select currency") {
-      return showGlobalAlert(t("Please select preferred cash currency.", "يرجى اختيار عملة الدفع النقدي.")), false;
-    }
-  }
-
-  hideGlobalAlert();
-  return true;
-}
-
-// ─── Initialization ─────────────────────────
-document.addEventListener("DOMContentLoaded", async () => {
-  bookingState.propertyId = resolvePropertyId();
-
-  if (bookingState.propertyId) persistPropertyId(bookingState.propertyId);
-
-  if (!bookingState.propertyId) {
-    showGlobalAlert(t("No property selected. Redirecting…", "لم يتم تحديد عقار. جارٍ التحويل…"), "error");
-    setTimeout(() => { window.location.href = "index.html"; }, 2000);
-    return;
-  }
-
-  syncDocumentDirection();
-  applyStoredTheme();
-
-  document.getElementById("theme-toggle")?.addEventListener("click", () => {
-    const isDark = document.body.classList.toggle("dark");
-    safeSet("ore_theme", isDark ? "dark" : "light");
-    const icon = document.querySelector("#theme-toggle i");
-    if (icon) icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
-  });
-
-  document.getElementById("lang-toggle")?.addEventListener("click", () => {
-    bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
-    safeSet("ore_lang", bookingState.lang);
-    location.reload();
-  });
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-
-    if (user) {
-      if (byId("guest-name") && !byId("guest-name").value) byId("guest-name").value = user.displayName || "";
-      if (byId("guest-email") && !byId("guest-email").value) byId("guest-email").value = user.email || "";
-      if (byId("billing-email") && !byId("billing-email").value) byId("billing-email").value = user.email || "";
-      if (byId("billing-name") && !byId("billing-name").value) byId("billing-name").value = user.displayName || "";
-    }
-  });
-
-  document.getElementById("back-btn")?.addEventListener("click", () => {
-    if (document.referrer.includes(window.location.hostname)) history.back();
-    else window.location.href = `property.html?id=${bookingState.propertyId}`;
-  });
-
-  setupNavigation();
-  setupGuestControls();
-  setupPaymentControls();
-  syncGuestInputsToState();
-
-  await loadPropertyDetails();
-  await loadBookedDates();
-
-  syncStateFromFormDates();
-  updateOccupancyCounters();
-  renderChildAges();
-  renderAddonsPanel();
-  renderCalendar();
-  updateBookingSummary();
-});
-
-// ─── Load Property Data ─────────────────────
-async function loadPropertyDetails() {
-  try {
-    let docRef = db.collection("properties").doc(String(bookingState.propertyId));
-    let doc;
-
-    try {
-      doc = await docRef.get({ source: "server" });
-    } catch (_) {
-      doc = await docRef.get();
-    }
-
-    if (!doc.exists) throw new Error("not-found");
-
-    const p = { ...doc.data(), id: doc.id };
-    bookingState.property = p;
-    bookingState.basePrice = Number(p.price || p.basePrice || p.pricePerNight || 0);
-    bookingState.minNights = Number(p.minNights || 1);
-    bookingState.maxGuests = Number(p.maxGuests || 10);
-    bookingState.maxRooms = Number(p.maxRooms || 5);
-
-    const isAr = bookingState.lang === "ar";
-    const title = isAr ? (p.titleAr || p.title || p.titleEn) : (p.titleEn || p.title || p.titleAr);
-    const loc = isAr ? (p.locationAr || p.location || p.locationEn) : (p.locationEn || p.location || p.locationAr);
-    const imageSrc =
-      p.imageUrl ||
-      p.mainImage ||
-      (Array.isArray(p.images) ? p.images[0] : "") ||
-      "images/placeholder.jpg";
-
-    if (els.propMiniImg) {
-      els.propMiniImg.src = imageSrc;
-      els.propMiniImg.alt = title || "Property";
-      els.propMiniImg.classList.remove("skeleton");
-    }
-
-    if (els.propMiniTitle) els.propMiniTitle.textContent = title || "—";
-    if (els.propMiniLoc) els.propMiniLoc.textContent = loc || "—";
-    if (els.propMiniType) els.propMiniType.textContent = isAr ? (p.typeAr || p.type || "—") : (p.typeEn || p.type || "—");
-    if (els.sbNightPrice) els.sbNightPrice.textContent = formatCurrency(bookingState.basePrice);
-
-  } catch (err) {
-    handleError(err, "[loadPropertyDetails]");
+    btn.disabled = false;
+    if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
   }
 }
 
-// ─── Load Booked Dates ──────────────────────
-async function loadBookedDates() {
-  try {
-    let snap;
+function showAuthMessage(message, type = "error") {
+  if (!els.authMessage) return;
+  els.authMessage.className = `auth-message ${type}`;
+  els.authMessage.textContent = message;
+}
 
-    try {
-      snap = await db.collection("bookings")
-        .where("propertyId", "==", String(bookingState.propertyId))
-        .where("status", "in", ["pending", "confirmed"])
-        .get({ source: "server" });
-    } catch (_) {
-      snap = await db.collection("bookings")
-        .where("propertyId", "==", String(bookingState.propertyId))
-        .get();
-    }
+function clearAuthMessage() {
+  if (!els.authMessage) return;
+  els.authMessage.className = "auth-message";
+  els.authMessage.textContent = "";
+}
 
-    bookingState.bookedDates = [];
+function resolvePropertyId() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id") || params.get("propertyId") || safeGet("selectedPropertyId");
+  return id ? String(id).trim() : null;
+}
 
-    snap.forEach(docSnap => {
-      const b = docSnap.data();
-      if (!b.checkIn || !b.checkOut) return;
-      if (!["pending", "confirmed"].includes(String(b.status || "").toLowerCase())) return;
+function updateDirection() {
+  els.html.lang = bookingState.lang;
+  els.html.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
+}
 
-      let curr = b.checkInDate ? b.checkInDate.toDate() : parseLocalDate(b.checkIn);
-      const end = b.checkOutDate ? b.checkOutDate.toDate() : parseLocalDate(b.checkOut);
-      if (!curr || !end) return;
-
-      curr.setHours(12, 0, 0, 0);
-      end.setHours(12, 0, 0, 0);
-
-      while (curr < end) {
-        bookingState.bookedDates.push(formatDateStr(curr));
-        curr = new Date(curr);
-        curr.setDate(curr.getDate() + 1);
-      }
-    });
-  } catch (err) {
-    handleError(err, "[loadBookedDates]");
+function applyTheme() {
+  const isDark = bookingState.theme === "dark";
+  els.body.classList.toggle("dark", isDark);
+  const icon = els.themeToggle?.querySelector("i");
+  if (icon) {
+    icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
   }
 }
 
-function isDateBooked(dateStr) {
-  return bookingState.bookedDates.includes(dateStr);
+function updateLangButton() {
+  const span = els.langToggle?.querySelector("span");
+  if (span) span.textContent = bookingState.lang === "ar" ? "EN" : "AR";
 }
 
-function hasBookedDatesInRange(startStr, endStr) {
-  let curr = parseLocalDate(startStr);
-  const end = parseLocalDate(endStr);
-  if (!curr || !end) return false;
-
-  while (curr < end) {
-    if (isDateBooked(formatDateStr(curr))) return true;
-    curr.setDate(curr.getDate() + 1);
-  }
-  return false;
+function openAuthModal(form = "login") {
+  switchAuthForm(form);
+  clearAuthMessage();
+  els.authModal?.classList.add("active");
+  document.body.classList.add("modal-open");
 }
 
-// ─── Calendar Functions ──────────────────────
-const MONTH_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const MONTH_AR = ["جانفي","فيفري","مارس","أفريل","ماي","جوان","جويلية","أوت","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-const DAYS_EN = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-const DAYS_AR = ["أحد","إثن","ثلا","أرب","خمي","جمع","سبت"];
-
-function renderCalendar() {
-  const grid = els.calGrid;
-  if (!grid) return;
-
-  grid.innerHTML = "";
-  const isAr = bookingState.lang === "ar";
-  const m = calViewDate.getMonth();
-  const y = calViewDate.getFullYear();
-
-  if (els.monthLabel) {
-    els.monthLabel.textContent = `${isAr ? MONTH_AR[m] : MONTH_EN[m]} ${y}`;
-  }
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (els.calPrev) els.calPrev.disabled = new Date(y, m, 1) <= currentMonthStart;
-
-  (isAr ? DAYS_AR : DAYS_EN).forEach(d => {
-    const el = document.createElement("div");
-    el.className = "cal-day-name";
-    el.textContent = d;
-    grid.appendChild(el);
-  });
-
-  const firstDay = new Date(y, m, 1).getDay();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-
-  for (let i = 0; i < firstDay; i++) {
-    const e = document.createElement("div");
-    e.className = "cal-cell empty";
-    grid.appendChild(e);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const cellDate = new Date(y, m, d, 12, 0, 0, 0);
-    const dateStr = formatDateStr(cellDate);
-    const isPast = cellDate < now;
-    const isBooked = isDateBooked(dateStr);
-    const isToday = dateStr === formatDateStr(now);
-
-    const cell = document.createElement("div");
-    const classes = ["cal-cell"];
-    if (isToday) classes.push("today");
-
-    cell.setAttribute("data-date", dateStr);
-
-    if (isPast || isBooked) {
-      classes.push("disabled");
-    } else {
-      if (dateStr === bookingState.checkIn && dateStr === bookingState.checkOut) {
-        classes.push("check-in", "check-out");
-      } else if (dateStr === bookingState.checkIn) {
-        classes.push("check-in");
-      } else if (dateStr === bookingState.checkOut) {
-        classes.push("check-out");
-      } else if (
-        bookingState.checkIn &&
-        bookingState.checkOut &&
-        dateStr > bookingState.checkIn &&
-        dateStr < bookingState.checkOut
-      ) {
-        classes.push("in-range");
-      }
-
-      cell.addEventListener("click", () => handleDateClick(dateStr));
-    }
-
-    cell.className = classes.join(" ");
-    cell.textContent = d;
-    grid.appendChild(cell);
-  }
+function closeAuthModal() {
+  els.authModal?.classList.remove("active");
+  document.body.classList.remove("modal-open");
 }
 
-els.calPrev?.addEventListener("click", () => {
-  calViewDate.setMonth(calViewDate.getMonth() - 1);
-  renderCalendar();
-});
-
-els.calNext?.addEventListener("click", () => {
-  calViewDate.setMonth(calViewDate.getMonth() + 1);
-  renderCalendar();
-});
-
-function syncStateFromFormDates() {
-  const arrivalDate = getVal("arrival-date");
-  const departureDate = getVal("departure-date");
-
-  if (arrivalDate) bookingState.checkIn = arrivalDate;
-  if (departureDate) bookingState.checkOut = departureDate;
-
-  const start = parseLocalDate(bookingState.checkIn);
-  const end = parseLocalDate(bookingState.checkOut);
-  bookingState.nights = start && end ? Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24))) : 0;
-}
-
-function handleDateClick(dateStr) {
-  if (!bookingState.checkIn || (bookingState.checkIn && bookingState.checkOut)) {
-    bookingState.checkIn = dateStr;
-    bookingState.checkOut = null;
-    bookingState.nights = 0;
-  } else {
-    if (dateStr < bookingState.checkIn) {
-      bookingState.checkOut = bookingState.checkIn;
-      bookingState.checkIn = dateStr;
-    } else {
-      bookingState.checkOut = dateStr;
-    }
-
-    if (hasBookedDatesInRange(bookingState.checkIn, bookingState.checkOut)) {
-      showGlobalAlert(t("Selected range contains unavailable dates.", "النطاق المحدد يحتوي على تواريخ غير متاحة."));
-      bookingState.checkOut = null;
-      bookingState.nights = 0;
-    } else {
-      const start = parseLocalDate(bookingState.checkIn);
-      const end = parseLocalDate(bookingState.checkOut);
-      bookingState.nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
-
-      if (bookingState.nights < bookingState.minNights) {
-        showGlobalAlert(
-          t(`Minimum stay is ${bookingState.minNights} nights.`, `الحد الأدنى للإقامة هو ${bookingState.minNights} ليالي.`)
-        );
-        bookingState.checkOut = null;
-        bookingState.nights = 0;
-      } else {
-        hideGlobalAlert();
-      }
-    }
-  }
-
-  const arrivalInput = byId("arrival-date");
-  const departureInput = byId("departure-date");
-  if (arrivalInput) arrivalInput.value = bookingState.checkIn || "";
-  if (departureInput) departureInput.value = bookingState.checkOut || "";
-
-  renderCalendar();
-  updateBookingSummary();
-}
-
-// ─── Guest & Room Controls ──────────────────
-function updateOccupancyCounters() {
-  if (els.roomCount) els.roomCount.textContent = bookingState.rooms;
-  if (els.adultCount) els.adultCount.textContent = bookingState.adults;
-  if (els.childCount) els.childCount.textContent = bookingState.children;
-  updateBookingSummary();
-}
-
-function syncGuestInputsToState() {
-  const adultsInput = byId("guest-adults");
-  const childrenInput = byId("guest-children");
-  const infantsInput = byId("guest-infants");
-  const arrivalInput = byId("arrival-date");
-  const departureInput = byId("departure-date");
-
-  if (adultsInput) {
-    bookingState.adults = Math.max(1, getNum("guest-adults", 1));
-    adultsInput.addEventListener("input", () => {
-      bookingState.adults = Math.max(1, getNum("guest-adults", 1));
-      updateOccupancyCounters();
-    });
-  }
-
-  if (childrenInput) {
-    bookingState.children = Math.max(0, getNum("guest-children", 0));
-    childrenInput.addEventListener("input", () => {
-      const oldChildren = bookingState.children;
-      bookingState.children = Math.max(0, getNum("guest-children", 0));
-
-      if (bookingState.children > oldChildren) {
-        while (bookingState.childAges.length < bookingState.children) bookingState.childAges.push("");
-      } else if (bookingState.children < oldChildren) {
-        bookingState.childAges = bookingState.childAges.slice(0, bookingState.children);
-      }
-
-      renderChildAges();
-      updateOccupancyCounters();
-    });
-  }
-
-  if (infantsInput) {
-    bookingState.infants = Math.max(0, getNum("guest-infants", 0));
-    infantsInput.addEventListener("input", () => {
-      bookingState.infants = Math.max(0, getNum("guest-infants", 0));
-      updateBookingSummary();
-    });
-  }
-
-  if (arrivalInput) {
-    arrivalInput.addEventListener("change", () => {
-      syncStateFromFormDates();
-      renderCalendar();
-      updateBookingSummary();
-    });
-  }
-
-  if (departureInput) {
-    departureInput.addEventListener("change", () => {
-      syncStateFromFormDates();
-      renderCalendar();
-      updateBookingSummary();
-    });
-  }
-}
-
-function setupGuestControls() {
-  const updateState = (key, delta, min, max) => {
-    const newVal = bookingState[key] + delta;
-    if (newVal < min || newVal > max) return;
-
-    if (key === "adults" || key === "children") {
-      const nextAdults = key === "adults" ? newVal : bookingState.adults;
-      const nextChildren = key === "children" ? newVal : bookingState.children;
-      if (nextAdults + nextChildren > bookingState.maxGuests) {
-        showGlobalAlert(
-          t(`Maximum guests allowed is ${bookingState.maxGuests}.`, `الحد الأقصى للضيوف هو ${bookingState.maxGuests}.`)
-        );
-        return;
-      }
-    }
-
-    bookingState[key] = newVal;
-
-    if (key === "children") {
-      if (delta > 0) bookingState.childAges.push("");
-      else bookingState.childAges.pop();
-      renderChildAges();
-      const childInput = byId("guest-children");
-      if (childInput) childInput.value = bookingState.children;
-    }
-
-    if (key === "adults") {
-      const adultInput = byId("guest-adults");
-      if (adultInput) adultInput.value = bookingState.adults;
-    }
-
-    if (key === "rooms") {
-      const roomType = byId("room-type");
-      if (roomType && !roomType.dataset.roomsNoteShown) {
-        roomType.dataset.roomsNoteShown = "1";
-      }
-    }
-
-    updateOccupancyCounters();
-    calcAddonsTotal();
-    updateBookingSummary();
-    hideGlobalAlert();
+function switchAuthForm(form) {
+  const forms = {
+    login: els.loginForm,
+    register: els.registerForm,
+    forgot: els.forgotForm
   };
 
-  els.btnRoomMinus?.addEventListener("click", () => updateState("rooms", -1, 1, bookingState.maxRooms));
-  els.btnRoomPlus?.addEventListener("click", () => updateState("rooms", 1, 1, bookingState.maxRooms));
-
-  els.btnAdultMinus?.addEventListener("click", () => updateState("adults", -1, 1, bookingState.maxGuests));
-  els.btnAdultPlus?.addEventListener("click", () => updateState("adults", 1, 1, bookingState.maxGuests));
-
-  els.btnChildMinus?.addEventListener("click", () => updateState("children", -1, 0, bookingState.maxGuests));
-  els.btnChildPlus?.addEventListener("click", () => updateState("children", 1, 0, bookingState.maxGuests));
+  Object.entries(forms).forEach(([key, el]) => {
+    if (!el) return;
+    el.classList.toggle("active", key === form);
+  });
 }
 
-function renderChildAges() {
-  const box = els.childAgesBox;
-  if (!box) return;
+function toggleProfileDropdown(force = null) {
+  if (!els.profileDropdown) return;
+  if (typeof force === "boolean") {
+    els.profileDropdown.classList.toggle("active", force);
+  } else {
+    els.profileDropdown.classList.toggle("active");
+  }
+}
 
-  if (bookingState.children === 0) {
-    box.classList.add("d-none");
-    box.innerHTML = "";
+// ──────────────────────────────────────────
+// Property Data
+// ──────────────────────────────────────────
+async function loadPropertyData() {
+  bookingState.propertyId = resolvePropertyId();
+
+  if (!bookingState.propertyId) {
+    bookingState.property = {
+      title: "Selected Property",
+      location: "Location unavailable",
+      type: "Stay",
+      imageUrl: "images/placeholder.jpg",
+      price: 0
+    };
+    renderPropertySummary();
+    updateSummary();
     return;
   }
 
-  box.classList.remove("d-none");
+  safeSet("selectedPropertyId", bookingState.propertyId);
 
-  let html = `
-    <p style="font-size:0.9rem;font-weight:700;margin-bottom:10px;color:var(--text-main);">
-      ${t("Children's ages", "أعمار الأطفال")}
-    </p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-  `;
-
-  for (let i = 0; i < bookingState.children; i++) {
-    const currentAge = bookingState.childAges[i] ?? "";
-    html += `
-      <select
-        class="child-age-select"
-        data-index="${i}"
-        style="min-width:110px;padding:10px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--surface-color);color:var(--text-main);font-family:inherit;"
-      >
-        <option value="">${t("Age?", "العمر؟")}</option>
-    `;
-    for (let j = 0; j < 18; j++) {
-      html += `<option value="${j}" ${String(currentAge) === String(j) ? "selected" : ""}>${j === 0 ? t("< 1 yr", "أقل من سنة") : j}</option>`;
-    }
-    html += `</select>`;
+  try {
+    const doc = await db.collection("properties").doc(String(bookingState.propertyId)).get();
+    if (!doc.exists) throw new Error("not-found");
+    bookingState.property = { id: doc.id, ...doc.data() };
+  } catch (_) {
+    bookingState.property = {
+      id: bookingState.propertyId,
+      title: "Selected Property",
+      titleEn: "Selected Property",
+      titleAr: "العقار المحدد",
+      location: "Location unavailable",
+      locationEn: "Location unavailable",
+      locationAr: "الموقع غير متوفر",
+      type: "Stay",
+      typeEn: "Stay",
+      typeAr: "إقامة",
+      imageUrl: "images/placeholder.jpg",
+      price: 0
+    };
   }
 
-  html += `</div>`;
-  box.innerHTML = html;
-
-  box.querySelectorAll(".child-age-select").forEach(sel => {
-    sel.addEventListener("change", e => {
-      bookingState.childAges[e.target.dataset.index] = e.target.value;
-    });
-  });
+  renderPropertySummary();
+  updateSummary();
 }
 
-// ─── Add-ons Calculation & Rendering ────────
-function calcAddonsTotal() {
-  let total = 0;
-  const s = bookingState.addons;
-  const nights = bookingState.nights || 0;
-  const guests = Math.max(bookingState.adults + bookingState.children, 1);
-
-  if (s.restaurant) total += (ADDON_PRICES[`restaurant_${s.restaurantPlan}`] || 0) * nights * guests;
-  if (s.wifi) total += ADDON_PRICES.wifi * nights * bookingState.rooms;
-  if (s.parking) total += ADDON_PRICES.parking * nights;
-  if (s.airportTransfer) total += ADDON_PRICES.airportTransfer;
-  if (s.spa) total += ADDON_PRICES.spa * Math.max(bookingState.adults, 1);
-  if (s.lateCheckout) total += ADDON_PRICES.lateCheckout * bookingState.rooms;
-  if (s.extraBed) total += ADDON_PRICES.extraBed * nights;
-  if (s.events) total += ADDON_PRICES.events * nights * guests;
-
-  bookingState.addonsTotal = total;
-  return total;
+function getPropertyTitle() {
+  const p = bookingState.property || {};
+  return bookingState.lang === "ar"
+    ? (p.titleAr || p.title || p.titleEn || "العقار المحدد")
+    : (p.titleEn || p.title || p.titleAr || "Selected Property");
 }
 
-function renderAddonsPanel() {
-  const container = document.getElementById("addons-panel");
-  if (!container) return;
-
-  const items = [
-    { key: "wifi", label: t("High-Speed WiFi", "واي فاي عالي السرعة"), price: ADDON_PRICES.wifi, suffix: t("/night/room", "/ليلة/غرفة") },
-    { key: "parking", label: t("Secure Parking", "موقف سيارات آمن"), price: ADDON_PRICES.parking, suffix: t("/night", "/ليلة") },
-    { key: "airportTransfer", label: t("Airport Transfer", "نقل من وإلى المطار"), price: ADDON_PRICES.airportTransfer, suffix: t("/booking", "/حجز") },
-    { key: "spa", label: t("Spa Access", "دخول السبا"), price: ADDON_PRICES.spa, suffix: t("/adult", "/للبالغ") },
-    { key: "lateCheckout", label: t("Late Checkout", "مغادرة متأخرة"), price: ADDON_PRICES.lateCheckout, suffix: t("/room", "/غرفة") },
-    { key: "extraBed", label: t("Extra Bed", "سرير إضافي"), price: ADDON_PRICES.extraBed, suffix: t("/night", "/ليلة") },
-    { key: "events", label: t("Events & Entertainment", "فعاليات وترفيه"), price: ADDON_PRICES.events, suffix: t("/guest/night", "/ضيف/ليلة") }
-  ];
-
-  let html = `<div style="display:grid;gap:12px;margin-top:20px;">`;
-
-  html += `
-    <div style="padding:14px;border:1px solid var(--border-color);border-radius:16px;background:var(--surface-color);">
-      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;">
-        <span style="display:flex;align-items:center;gap:10px;">
-          <input type="checkbox" class="addon-cb" data-key="restaurant" ${bookingState.addons.restaurant ? "checked" : ""}>
-          <span style="font-weight:700;color:var(--text-main);">${t("Restaurant Meals", "وجبات المطعم")}</span>
-        </span>
-        <span style="font-size:0.85rem;color:var(--primary);font-weight:700;">
-          ${formatCurrency(ADDON_PRICES[`restaurant_${bookingState.addons.restaurantPlan}`] || ADDON_PRICES.restaurant_breakfast)}
-        </span>
-      </label>
-
-      <div style="margin-top:12px;">
-        <select id="restaurant-plan-select" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-color);color:var(--text-main);font-family:inherit;">
-          <option value="breakfast" ${bookingState.addons.restaurantPlan === "breakfast" ? "selected" : ""}>${t("Breakfast", "فطور")}</option>
-          <option value="halfboard" ${bookingState.addons.restaurantPlan === "halfboard" ? "selected" : ""}>${t("Half Board", "نصف إقامة")}</option>
-          <option value="fullboard" ${bookingState.addons.restaurantPlan === "fullboard" ? "selected" : ""}>${t("Full Board", "إقامة كاملة")}</option>
-        </select>
-      </div>
-    </div>
-  `;
-
-  items.forEach(item => {
-    const checked = bookingState.addons[item.key] ? "checked" : "";
-    html += `
-      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-color);padding:14px 16px;border:1px solid var(--border-color);border-radius:16px;cursor:pointer;transition:all .25s ease;">
-        <span style="display:flex;align-items:center;gap:10px;">
-          <input type="checkbox" class="addon-cb" data-key="${item.key}" ${checked}>
-          <span style="font-weight:600;color:var(--text-main);">${item.label}</span>
-        </span>
-        <span style="font-size:0.82rem;color:var(--text-muted);font-weight:700;white-space:nowrap;">
-          ${formatCurrency(item.price)} ${item.suffix}
-        </span>
-      </label>
-    `;
-  });
-
-  html += `</div>`;
-  container.innerHTML = html;
-
-  container.querySelectorAll(".addon-cb").forEach(cb => {
-    cb.addEventListener("change", e => {
-      bookingState.addons[e.target.dataset.key] = e.target.checked;
-      updateBookingSummary();
-    });
-  });
-
-  document.getElementById("restaurant-plan-select")?.addEventListener("change", e => {
-    bookingState.addons.restaurantPlan = e.target.value;
-    updateBookingSummary();
-  });
+function getPropertyLocation() {
+  const p = bookingState.property || {};
+  return bookingState.lang === "ar"
+    ? (p.locationAr || p.location || p.locationEn || "الموقع غير متوفر")
+    : (p.locationEn || p.location || p.locationAr || "Location unavailable");
 }
 
-// ─── Booking Summary Update ─────────────────
-function updateBookingSummary() {
-  syncStateFromFormDates();
+function getPropertyType() {
+  const p = bookingState.property || {};
+  return bookingState.lang === "ar"
+    ? (p.typeAr || p.type || p.typeEn || "إقامة")
+    : (p.typeEn || p.type || p.typeAr || "Stay");
+}
 
-  bookingState.rooms = Math.max(1, bookingState.rooms || 1);
-  bookingState.adults = Math.max(1, getNum("guest-adults", bookingState.adults || 1));
-  bookingState.children = Math.max(0, getNum("guest-children", bookingState.children || 0));
-  bookingState.infants = Math.max(0, getNum("guest-infants", bookingState.infants || 0));
+function getPropertyImage() {
+  const p = bookingState.property || {};
+  return p.imageUrl || p.mainImage || (Array.isArray(p.images) ? p.images[0] : "") || "images/placeholder.jpg";
+}
 
-  bookingState.roomPrice = bookingState.basePrice * (bookingState.nights || 0) * bookingState.rooms;
-  calcAddonsTotal();
-  bookingState.fee = bookingState.roomPrice > 0 ? bookingState.roomPrice * 0.05 : 0;
-  bookingState.totalPrice = bookingState.roomPrice + bookingState.fee + bookingState.addonsTotal;
+function getPropertyPrice() {
+  const p = bookingState.property || {};
+  return Number(p.price || p.basePrice || p.pricePerNight || 0);
+}
 
-  if (els.sbNightsCount) {
-    els.sbNightsCount.textContent = bookingState.nights > 0 ? bookingState.nights : "—";
+function renderPropertySummary() {
+  if (els.propMiniImg) {
+    els.propMiniImg.src = getPropertyImage();
+    els.propMiniImg.alt = getPropertyTitle();
   }
+  if (els.propMiniTitle) els.propMiniTitle.textContent = getPropertyTitle();
+  if (els.propMiniLoc) els.propMiniLoc.textContent = getPropertyLocation();
+  if (els.propMiniType) els.propMiniType.textContent = getPropertyType();
+}
 
-  if (els.sbNightPrice) {
-    els.sbNightPrice.textContent = formatCurrency(bookingState.basePrice);
-  }
+// ──────────────────────────────────────────
+// Stats / Summary / Review
+// ──────────────────────────────────────────
+function updateBookingStateFromInputs() {
+  bookingState.checkIn = cleanText(els.checkInDate?.value);
+  bookingState.checkOut = cleanText(els.checkOutDate?.value);
+  bookingState.guests = Math.max(1, Number(els.guestCount?.value || 1));
+  bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
+  bookingState.rewardPoints = Math.floor((getEstimatedTotal() || 0) / 100);
+}
 
-  if (els.sbFeeAmount && els.sbFeeRow) {
-    if (bookingState.fee > 0) {
-      els.sbFeeAmount.textContent = formatCurrency(bookingState.fee);
+function getEstimatedFee() {
+  const subtotal = getPropertyPrice() * bookingState.nights;
+  return subtotal > 0 ? Math.round(subtotal * 0.05) : 0;
+}
+
+function getEstimatedTotal() {
+  return (getPropertyPrice() * bookingState.nights) + getEstimatedFee();
+}
+
+function updateStats() {
+  updateBookingStateFromInputs();
+
+  if (els.statCheckin) els.statCheckin.textContent = formatDateDisplay(bookingState.checkIn);
+  if (els.statCheckout) els.statCheckout.textContent = formatDateDisplay(bookingState.checkOut);
+  if (els.statNights) els.statNights.textContent = String(bookingState.nights || 0);
+  if (els.statGuests) els.statGuests.textContent = String(bookingState.guests || 1);
+}
+
+function updateSummary() {
+  updateBookingStateFromInputs();
+
+  if (els.summaryCheckin) els.summaryCheckin.textContent = formatDateDisplay(bookingState.checkIn);
+  if (els.summaryCheckout) els.summaryCheckout.textContent = formatDateDisplay(bookingState.checkOut);
+  if (els.summaryGuests) els.summaryGuests.textContent = String(bookingState.guests || 1);
+  if (els.summaryPayment) els.summaryPayment.textContent = bookingState.paymentMethod || t("Not selected", "غير محدد");
+
+  if (els.sbNightPrice) els.sbNightPrice.textContent = formatCurrency(getPropertyPrice());
+  if (els.sbNightsCount) els.sbNightsCount.textContent = String(bookingState.nights || 0);
+
+  const fee = getEstimatedFee();
+  if (els.sbFeeRow && els.sbFeeAmount) {
+    if (fee > 0) {
       els.sbFeeRow.style.display = "flex";
+      els.sbFeeAmount.textContent = formatCurrency(fee);
     } else {
       els.sbFeeRow.style.display = "none";
     }
   }
 
-  if (els.sbAddonsAmount && els.sbAddonsRow) {
-    if (bookingState.addonsTotal > 0) {
-      els.sbAddonsAmount.textContent = formatCurrency(bookingState.addonsTotal);
-      els.sbAddonsRow.style.display = "flex";
-    } else {
-      els.sbAddonsRow.style.display = "none";
-    }
+  if (els.sbAddonsRow && els.sbAddonsAmount) {
+    els.sbAddonsRow.style.display = "none";
+    els.sbAddonsAmount.textContent = formatCurrency(0);
   }
 
-  if (els.sbFinalTotal) {
-    els.sbFinalTotal.textContent = bookingState.totalPrice > 0 ? formatCurrency(bookingState.totalPrice) : "—";
+  if (els.sbFinalTotal) els.sbFinalTotal.textContent = formatCurrency(getEstimatedTotal());
+}
+
+function updateReview() {
+  updateBookingStateFromInputs();
+
+  const fullName = cleanText(els.guestName?.value);
+  const email = cleanText(els.guestEmail?.value);
+  const phone = cleanText(els.guestPhone?.value);
+  const nationality = cleanText(els.guestNationality?.value);
+  const gender = cleanText(els.guestGender?.value);
+  const purpose = cleanText(els.guestPurpose?.value);
+  const arrival = cleanText(els.arrivalTime?.value);
+  const additionalGuests = cleanText(els.additionalGuests?.value);
+  const billing = cleanText(els.billingRequest?.value);
+  const roomPreference = cleanText(els.roomPreference?.value);
+  const paymentProofName = els.paymentProof?.files?.[0]?.name || t("No file uploaded", "لم يتم رفع ملف");
+  const specialRequests = cleanText(els.specialRequests?.value);
+
+  if (els.revName) els.revName.textContent = fullName || t("Not provided", "غير متوفر");
+  if (els.revEmail) els.revEmail.textContent = email || t("Not provided", "غير متوفر");
+  if (els.revPhone) els.revPhone.textContent = phone || t("Not provided", "غير متوفر");
+  if (els.revNationalityGender) {
+    els.revNationalityGender.textContent = [nationality, gender].filter(Boolean).join(" • ") || t("Not provided", "غير متوفر");
+  }
+  if (els.revDates) {
+    els.revDates.textContent = `${formatDateDisplay(bookingState.checkIn)} → ${formatDateDisplay(bookingState.checkOut)}`;
+  }
+  if (els.revGuests) {
+    els.revGuests.textContent = `${bookingState.guests} ${t("guest(s)", "ضيف/ضيوف")} • ${bookingState.nights} ${t("night(s)", "ليلة/ليالٍ")}`;
+  }
+  if (els.revPurposeArrival) {
+    els.revPurposeArrival.textContent = [purpose, arrival].filter(Boolean).join(" • ") || t("Not provided", "غير متوفر");
+  }
+  if (els.revAdditionalGuests) {
+    els.revAdditionalGuests.textContent = additionalGuests || t("None", "لا يوجد");
+  }
+  if (els.revDocuments) {
+    els.revDocuments.textContent = paymentProofName;
+  }
+  if (els.revBilling) {
+    els.revBilling.textContent = billing || t("Standard receipt", "إيصال عادي");
+  }
+  if (els.revRoomPreferences) {
+    els.revRoomPreferences.textContent = [roomPreference, specialRequests].filter(Boolean).join(" • ") || t("No preference", "لا يوجد تفضيل");
+  }
+  if (els.revPaymentMethod) {
+    const icon =
+      bookingState.paymentValue === "Cash"
+        ? "money"
+        : bookingState.paymentValue === "Card"
+        ? "credit-card"
+        : "bank";
+    els.revPaymentMethod.innerHTML = `<i class="ph ph-${icon}" style="color:var(--primary);margin-inline-end:6px;"></i>${escapeHtml(bookingState.paymentMethod)}`;
+  }
+  if (els.revPoints) {
+    els.revPoints.textContent = String(bookingState.rewardPoints || 0);
   }
 }
 
-// ─── Payment UI ─────────────────────────────
-function setupPaymentControls() {
-  const paymentCards = document.querySelectorAll(".payment-method-card");
-
-  const updatePaymentUI = () => {
-    bookingState.paymentMethod = getCheckedRadioValue("payment_method", "ccp");
-
-    paymentCards.forEach(card => {
-      const radio = card.querySelector('input[type="radio"]');
-      card.classList.toggle("selected", radio?.checked);
-    });
-
-    if (els.transferBox) {
-      els.transferBox.classList.toggle("active", bookingState.paymentMethod === "ccp");
-      els.transferBox.style.display = bookingState.paymentMethod === "ccp" ? "block" : "none";
-    }
-
-    if (els.cashBox) {
-      els.cashBox.classList.toggle("active", bookingState.paymentMethod === "cash");
-      els.cashBox.style.display = bookingState.paymentMethod === "cash" ? "block" : "none";
-    }
-  };
-
-  els.payRadios?.forEach?.(radio => {
-    radio.addEventListener("change", updatePaymentUI);
+// ──────────────────────────────────────────
+// Step Flow
+// ──────────────────────────────────────────
+function setStep(stepNumber) {
+  [els.step1, els.step2, els.step3].forEach((step, index) => {
+    if (!step) return;
+    step.classList.toggle("active", index === stepNumber - 1);
   });
 
-  updatePaymentUI();
-
-  els.receiptFile?.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const maxSize = 5 * 1024 * 1024;
-    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-
-    if (!allowed.includes(file.type)) {
-      showGlobalAlert(t("Only JPG, PNG, WEBP, or PDF files are allowed.", "يسمح فقط بملفات JPG أو PNG أو WEBP أو PDF."));
-      e.target.value = "";
-      return;
-    }
-
-    if (file.size > maxSize) {
-      showGlobalAlert(t("File size must be less than 5MB.", "يجب أن يكون حجم الملف أقل من 5MB."));
-      e.target.value = "";
-      return;
-    }
-
-    try {
-      showGlobalAlert(t("Uploading receipt...", "جاري رفع الإيصال..."), "info");
-
-      const fileName = `booking_receipt_${Date.now()}.${file.name.split(".").pop() || "file"}`;
-      bookingState.receiptUrl = await uploadFileToStorage(file, "receipts", fileName);
-
-      const uploadText = byId("upload-text");
-      if (uploadText) uploadText.textContent = file.name;
-
-      showGlobalAlert(t("Receipt uploaded successfully.", "تم رفع الإيصال بنجاح."), "success");
-    } catch (err) {
-      handleError(err, "[Receipt Upload]");
-      e.target.value = "";
-      bookingState.receiptUrl = null;
+  els.indicators.forEach((indicator, index) => {
+    indicator.classList.remove("active", "completed");
+    if (index < stepNumber - 1) {
+      indicator.classList.add("completed");
+    } else if (index === stepNumber - 1) {
+      indicator.classList.add("active");
     }
   });
 
-  byId("guest-id-upload")?.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  if (els.connector1) els.connector1.classList.toggle("completed", stepNumber >= 2);
+  if (els.connector2) els.connector2.classList.toggle("completed", stepNumber >= 3);
 
-    const maxSize = 5 * 1024 * 1024;
-    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
-    if (!allowed.includes(file.type)) {
-      showGlobalAlert(t("Only JPG, PNG, WEBP, or PDF files are allowed.", "يسمح فقط بملفات JPG أو PNG أو WEBP أو PDF."));
-      e.target.value = "";
-      return;
-    }
+function validateStep1() {
+  const name = cleanText(els.guestName?.value);
+  const email = cleanText(els.guestEmail?.value);
+  const phone = cleanText(els.guestPhone?.value);
+  const checkIn = cleanText(els.checkInDate?.value);
+  const checkOut = cleanText(els.checkOutDate?.value);
+  const guests = Number(els.guestCount?.value || 0);
 
-    if (file.size > maxSize) {
-      showGlobalAlert(t("ID file size must be less than 5MB.", "يجب أن يكون حجم ملف الهوية أقل من 5MB."));
-      e.target.value = "";
-      return;
-    }
+  if (!name) {
+    alert(t("Please enter your full name.", "يرجى إدخال الاسم الكامل."));
+    return false;
+  }
+
+  if (!email || !validateEmail(email)) {
+    alert(t("Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صحيح."));
+    return false;
+  }
+
+  if (!phone) {
+    alert(t("Please enter your phone number.", "يرجى إدخال رقم الهاتف."));
+    return false;
+  }
+
+  if (!checkIn || !checkOut) {
+    alert(t("Please select check-in and check-out dates.", "يرجى تحديد تاريخ الدخول والخروج."));
+    return false;
+  }
+
+  if (getDiffNights(checkIn, checkOut) < 1) {
+    alert(t("Check-out must be after check-in.", "يجب أن يكون تاريخ الخروج بعد تاريخ الدخول."));
+    return false;
+  }
+
+  if (!guests || guests < 1) {
+    alert(t("Please enter at least 1 guest.", "يرجى إدخال ضيف واحد على الأقل."));
+    return false;
+  }
+
+  return true;
+}
+
+function validateStep2() {
+  const selected = document.querySelector('input[name="payment-method"]:checked');
+  if (!selected) {
+    alert(t("Please select a payment method.", "يرجى اختيار طريقة الدفع."));
+    return false;
+  }
+
+  if (selected.value === "Bank Transfer" && !bookingState.paymentProofUrl && !els.paymentProof?.files?.length) {
+    alert(t("Please upload payment proof for bank transfer.", "يرجى رفع إثبات التحويل البنكي."));
+    return false;
+  }
+
+  return true;
+}
+
+function validateStep3() {
+  if (!els.agreePolicy?.checked) {
+    alert(t("You must agree to the terms and policies.", "يجب الموافقة على الشروط والسياسات."));
+    return false;
+  }
+  return true;
+}
+
+// ──────────────────────────────────────────
+// Payment UI
+// ──────────────────────────────────────────
+function syncPaymentMethodFromSelection() {
+  const selectedRadio = document.querySelector('input[name="payment-method"]:checked');
+  if (!selectedRadio) return;
+
+  bookingState.paymentValue = selectedRadio.value;
+
+  const label = selectedRadio.closest(".payment-method-card")?.querySelector(".payment-method-title")?.textContent?.trim();
+  bookingState.paymentMethod = label || selectedRadio.value;
+
+  updateSummary();
+  updateReview();
+}
+
+function updatePaymentCardsUI() {
+  els.paymentCards.forEach(card => {
+    const radio = card.querySelector('input[type="radio"]');
+    card.classList.toggle("selected", !!radio?.checked);
+  });
+
+  const value = document.querySelector('input[name="payment-method"]:checked')?.value;
+
+  if (els.bankTransferDetails) {
+    const active = value === "Bank Transfer";
+    els.bankTransferDetails.classList.toggle("active", active);
+    els.bankTransferDetails.style.display = active ? "block" : "none";
+  }
+
+  if (els.cashDetails) {
+    const active = value === "Cash";
+    els.cashDetails.classList.toggle("active", active);
+    els.cashDetails.style.display = active ? "block" : "none";
+  }
+
+  if (els.cardDetails) {
+    const active = value === "Card";
+    els.cardDetails.classList.toggle("active", active);
+    els.cardDetails.style.display = active ? "block" : "none";
+  }
+
+  syncPaymentMethodFromSelection();
+}
+
+async function handlePaymentProofUpload(file) {
+  if (!file) return null;
+
+  const allowed = ["image/jpeg", "image/png", "application/pdf", "image/webp"];
+  const maxSize = 5 * 1024 * 1024;
+
+  if (!allowed.includes(file.type)) {
+    alert(t("Only JPG, PNG, WEBP, or PDF files are allowed.", "الملفات المسموحة هي JPG وPNG وWEBP وPDF فقط."));
+    return null;
+  }
+
+  if (file.size > maxSize) {
+    alert(t("File size must be less than 5MB.", "يجب أن يكون حجم الملف أقل من 5MB."));
+    return null;
+  }
+
+  try {
+    const ext = file.name.split(".").pop() || "file";
+    const fileName = `booking_proofs/${Date.now()}.${ext}`;
+    const ref = storage.ref(fileName);
+    const snapshot = await ref.put(file);
+    return await snapshot.ref.getDownloadURL();
+  } catch (error) {
+    console.error("Payment proof upload error:", error);
+    alert(t("Upload failed. Please try again.", "فشل الرفع، يرجى المحاولة مرة أخرى."));
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────
+// Copy Bank Info
+// ──────────────────────────────────────────
+function initCopyBankInfo() {
+  if (!els.copyBankInfoBtn) return;
+
+  els.copyBankInfoBtn.addEventListener("click", async () => {
+    const text = [
+      `Bank Name: ${els.bankName?.textContent || ""}`,
+      `Account Holder: ${els.bankHolder?.textContent || ""}`,
+      `IBAN / RIB: ${els.bankIban?.textContent || ""}`,
+      `Reference: ${els.paymentReference?.textContent || ""}`
+    ].join("\n");
 
     try {
-      showGlobalAlert(t("Uploading ID file...", "جاري رفع ملف الهوية..."), "info");
-      const fileName = `guest_id_${Date.now()}.${file.name.split(".").pop() || "file"}`;
-      bookingState.guestIdUploadUrl = await uploadFileToStorage(file, "guest_ids", fileName);
-      showGlobalAlert(t("ID file uploaded successfully.", "تم رفع ملف الهوية بنجاح."), "success");
-    } catch (err) {
-      handleError(err, "[Guest ID Upload]");
-      e.target.value = "";
-      bookingState.guestIdUploadUrl = null;
+      await navigator.clipboard.writeText(text);
+      els.copyBankInfoBtn.innerHTML = `<i class="ph ph-check"></i><span>${t("Copied", "تم النسخ")}</span>`;
+      setTimeout(() => {
+        els.copyBankInfoBtn.innerHTML = `<i class="ph ph-copy"></i><span>${t("Copy info", "نسخ المعلومات")}</span>`;
+      }, 1600);
+    } catch (_) {
+      alert(t("Unable to copy bank info.", "تعذر نسخ معلومات البنك."));
     }
   });
 }
 
-// ─── Setup Navigation ───────────────────────
-function setupNavigation() {
-  const navigateToStep = (stepNum) => {
-    document.querySelectorAll(".booking-step").forEach(s => s.classList.remove("active"));
+// ──────────────────────────────────────────
+// Auth
+// ──────────────────────────────────────────
+function initPasswordToggles() {
+  document.querySelectorAll(".toggle-pass-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const input = btn.parentElement?.querySelector("input");
+      if (!input) return;
 
-    document.querySelectorAll(".step-indicator").forEach((ind, idx) => {
-      ind.classList.remove("active");
-      if (idx < stepNum - 1) {
-        ind.classList.add("completed");
-      } else if (idx === stepNum - 1) {
-        ind.classList.add("active");
-        ind.classList.remove("completed");
-      } else {
-        ind.classList.remove("completed", "active");
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+
+      const icon = btn.querySelector("i");
+      if (icon) {
+        icon.className = isPassword ? "ph ph-eye-slash" : "ph ph-eye";
       }
     });
+  });
+}
 
-    const connector1 = byId("connector-1");
-    const connector2 = byId("connector-2");
-    if (connector1) connector1.classList.toggle("completed", stepNum >= 2);
-    if (connector2) connector2.classList.toggle("completed", stepNum >= 3);
+function calcPasswordStrength(value) {
+  if (!value) return 0;
+  let score = 0;
+  if (value.length >= 6) score++;
+  if (value.length >= 8) score++;
+  if (/[A-Z]/.test(value) || /[a-z]/.test(value)) score++;
+  if (/\d/.test(value) || /[^A-Za-z0-9]/.test(value)) score++;
+  return Math.min(score, 4);
+}
 
-    const targetStep = document.getElementById(`step-${stepNum}`);
-    if (targetStep) targetStep.classList.add("active");
+function initPasswordStrength() {
+  if (!els.regPassword || !els.passwordStrength || !els.strengthLabel) return;
 
-    hideGlobalAlert();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const bars = [...els.passwordStrength.querySelectorAll(".str-bar")];
+  const labels = {
+    en: ["", "Weak", "Fair", "Good", "Strong"],
+    ar: ["", "ضعيفة", "مقبولة", "جيدة", "قوية"]
   };
+  const colors = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
 
+  els.regPassword.addEventListener("input", () => {
+    const val = els.regPassword.value;
+    const score = calcPasswordStrength(val);
+
+    els.passwordStrength.style.display = val ? "block" : "none";
+
+    bars.forEach((bar, index) => {
+      bar.style.background = index < score ? colors[score - 1] : "var(--border-color)";
+    });
+
+    els.strengthLabel.textContent = val ? labels[bookingState.lang][score] : "";
+    els.strengthLabel.style.color = score ? colors[score - 1] : "var(--text-muted)";
+  });
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  clearAuthMessage();
+
+  const email = cleanText(els.loginEmail?.value);
+  const password = cleanText(els.loginPassword?.value);
+
+  if (!email || !password) {
+    showAuthMessage(t("Please fill in all login fields.", "يرجى ملء جميع حقول تسجيل الدخول."), "error");
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    showAuthMessage(t("Login successful.", "تم تسجيل الدخول بنجاح."), "success");
+    setTimeout(closeAuthModal, 700);
+  } catch (error) {
+    console.error(error);
+    showAuthMessage(t("Login failed. Please check your credentials.", "فشل تسجيل الدخول. تحقق من البيانات."), "error");
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  clearAuthMessage();
+
+  const name = cleanText(els.regName?.value);
+  const email = cleanText(els.regEmail?.value);
+  const password = cleanText(els.regPassword?.value);
+
+  if (!name || !email || !password) {
+    showAuthMessage(t("Please complete all registration fields.", "يرجى إكمال كل حقول التسجيل."), "error");
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    showAuthMessage(t("Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صحيح."), "error");
+    return;
+  }
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await cred.user.updateProfile({ displayName: name });
+    showAuthMessage(t("Account created successfully.", "تم إنشاء الحساب بنجاح."), "success");
+    setTimeout(() => {
+      switchAuthForm("login");
+      if (els.loginEmail) els.loginEmail.value = email;
+    }, 900);
+  } catch (error) {
+    console.error(error);
+    showAuthMessage(t("Registration failed. Try another email.", "فشل التسجيل. جرب بريدًا آخر."), "error");
+  }
+}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  clearAuthMessage();
+
+  const email = cleanText(els.forgotEmail?.value);
+  if (!email || !validateEmail(email)) {
+    showAuthMessage(t("Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صحيح."), "error");
+    return;
+  }
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showAuthMessage(t("Reset link sent successfully.", "تم إرسال رابط الاستعادة بنجاح."), "success");
+  } catch (error) {
+    console.error(error);
+    showAuthMessage(t("Failed to send reset link.", "تعذر إرسال رابط الاستعادة."), "error");
+  }
+}
+
+async function handleGoogleAuth() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    closeAuthModal();
+  } catch (error) {
+    console.error(error);
+    showAuthMessage(t("Google sign-in failed.", "فشل تسجيل الدخول عبر Google."), "error");
+  }
+}
+
+async function handleLogout() {
+  try {
+    await auth.signOut();
+    toggleProfileDropdown(false);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function updateUserUI(user) {
+  const loggedIn = !!user;
+
+  if (els.dropdownUserName) {
+    els.dropdownUserName.textContent = user?.displayName || t("Guest User", "مستخدم ضيف");
+  }
+
+  if (els.dropdownUserEmail) {
+    els.dropdownUserEmail.textContent = user?.email || "";
+  }
+
+  if (els.openAuthBtn) {
+    els.openAuthBtn.innerHTML = loggedIn
+      ? `<i class="ph ph-user-circle"></i>`
+      : `<i class="ph ph-user"></i>`;
+  }
+
+  if (loggedIn) {
+    if (els.guestName && !els.guestName.value && user.displayName) els.guestName.value = user.displayName;
+    if (els.guestEmail && !els.guestEmail.value && user.email) els.guestEmail.value = user.email;
+  }
+
+  updateStats();
+  updateSummary();
+  updateReview();
+}
+
+// ──────────────────────────────────────────
+// Submission
+// ──────────────────────────────────────────
+async function submitBooking() {
+  if (!validateStep1()) return;
+  if (!validateStep2()) return;
+  if (!validateStep3()) return;
+
+  setButtonLoading(els.btnConfirmBooking, true, t("Confirming...", "جارٍ التأكيد..."));
+
+  try {
+    let paymentProofUrl = bookingState.paymentProofUrl;
+
+    if (bookingState.paymentValue === "Bank Transfer" && els.paymentProof?.files?.[0] && !paymentProofUrl) {
+      paymentProofUrl = await handlePaymentProofUpload(els.paymentProof.files[0]);
+      bookingState.paymentProofUrl = paymentProofUrl;
+      if (!paymentProofUrl) {
+        setButtonLoading(els.btnConfirmBooking, false);
+        return;
+      }
+    }
+
+    updateBookingStateFromInputs();
+
+    const bookingRef = db.collection("bookings").doc();
+    const payload = {
+      bookingId: bookingRef.id,
+      propertyId: bookingState.propertyId || null,
+      propertyTitle: getPropertyTitle(),
+      propertyLocation: getPropertyLocation(),
+      propertyType: getPropertyType(),
+      propertyImage: getPropertyImage(),
+
+      guestName: cleanText(els.guestName?.value),
+      guestEmail: cleanText(els.guestEmail?.value),
+      guestPhone: cleanText(els.guestPhone?.value),
+      guestNationality: cleanText(els.guestNationality?.value),
+      guestGender: cleanText(els.guestGender?.value),
+      guestPurpose: cleanText(els.guestPurpose?.value),
+
+      checkIn: bookingState.checkIn || null,
+      checkOut: bookingState.checkOut || null,
+      guests: bookingState.guests || 1,
+      nights: bookingState.nights || 0,
+      arrivalTime: cleanText(els.arrivalTime?.value),
+      additionalGuests: cleanText(els.additionalGuests?.value),
+
+      roomPreference: cleanText(els.roomPreference?.value),
+      billingRequest: cleanText(els.billingRequest?.value),
+      specialRequests: cleanText(els.specialRequests?.value),
+
+      paymentMethod: bookingState.paymentMethod,
+      paymentValue: bookingState.paymentValue,
+      paymentProofUrl: paymentProofUrl || null,
+      paymentReference: cleanText(els.paymentReference?.textContent),
+
+      basePrice: getPropertyPrice(),
+      serviceFee: getEstimatedFee(),
+      totalPrice: getEstimatedTotal(),
+      rewardPoints: bookingState.rewardPoints,
+
+      authUid: currentUser?.uid || null,
+      userEmail: currentUser?.email || null,
+      status: "pending",
+      source: "booking_page",
+      lang: bookingState.lang,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    await bookingRef.set(payload);
+
+    safeSet("last_booking_id", bookingRef.id);
+    safeSet("last_booking_property_id", bookingState.propertyId || "");
+    safeSet("last_booking_email", payload.guestEmail || "");
+
+    if (typeof window.confetti === "function") {
+      window.confetti({
+        particleCount: 140,
+        spread: 75,
+        origin: { y: 0.6 }
+      });
+    }
+
+    alert(t("Booking submitted successfully.", "تم إرسال الحجز بنجاح."));
+    setButtonLoading(els.btnConfirmBooking, false);
+
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 1500);
+  } catch (error) {
+    console.error("Booking submit error:", error);
+    setButtonLoading(els.btnConfirmBooking, false);
+    alert(t("An error occurred while submitting your booking.", "حدث خطأ أثناء إرسال الحجز."));
+  }
+}
+
+// ──────────────────────────────────────────
+// Events
+// ──────────────────────────────────────────
+function initInputWatchers() {
+  const watched = [
+    els.guestName,
+    els.guestEmail,
+    els.guestPhone,
+    els.guestNationality,
+    els.guestGender,
+    els.guestPurpose,
+    els.checkInDate,
+    els.checkOutDate,
+    els.guestCount,
+    els.arrivalTime,
+    els.additionalGuests,
+    els.roomPreference,
+    els.billingRequest,
+    els.specialRequests
+  ].filter(Boolean);
+
+  watched.forEach(el => {
+    el.addEventListener("input", () => {
+      updateStats();
+      updateSummary();
+      updateReview();
+    });
+    el.addEventListener("change", () => {
+      updateStats();
+      updateSummary();
+      updateReview();
+    });
+  });
+}
+
+function initPaymentUI() {
+  els.paymentCards.forEach(card => {
+    card.addEventListener("click", () => {
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.checked = true;
+        updatePaymentCardsUI();
+      }
+    });
+  });
+
+  els.paymentRadios.forEach(radio => {
+    radio.addEventListener("change", updatePaymentCardsUI);
+  });
+
+  if (els.paymentProof) {
+    els.paymentProof.addEventListener("change", () => {
+      const file = els.paymentProof.files?.[0];
+      if (file && els.selectedProofFile && els.selectedProofFileName) {
+        els.selectedProofFile.style.display = "flex";
+        els.selectedProofFileName.textContent = file.name;
+      } else if (els.selectedProofFile) {
+        els.selectedProofFile.style.display = "none";
+      }
+      updateReview();
+    });
+  }
+
+  updatePaymentCardsUI();
+}
+
+function initSteps() {
   els.btnNext1?.addEventListener("click", () => {
     if (!validateStep1()) return;
-    if (!validateDatesForBooking()) return;
-    navigateToStep(2);
+    updateStats();
+    updateSummary();
+    setStep(2);
   });
+
+  els.btnPrev2?.addEventListener("click", () => setStep(1));
 
   els.btnNext2?.addEventListener("click", () => {
     if (!validateStep1()) return;
-    if (!validateDatesForBooking()) return;
-    if (!validatePaymentStep()) return;
-
-    const fullName = getVal("guest-name");
-    const fatherName = getVal("guest-father-name");
-    const familyName = getVal("guest-family-name");
-    const nationality = getVal("guest-nationality");
-    const gender = getVal("guest-gender");
-    const additionalGuests = getVal("additional-guests");
-    const stayPurpose = getVal("stay-purpose");
-    const arrivalTime = getVal("arrival-time");
-    const docType = getVal("guest-id-type");
-    const docNumber = getVal("guest-id-number");
-    const billingName = getVal("billing-name");
-    const billingPhone = getVal("billing-phone");
-    const billingEmail = getVal("billing-email");
-    const roomType = getVal("room-type");
-    const bedType = getVal("bed-type");
-    const roomView = getVal("room-view");
-    const floorPreference = getVal("floor-preference");
-    const smokingPreference = getVal("smoking-preference");
-
-    if (els.revName) {
-      els.revName.textContent = [fullName, fatherName, familyName].filter(Boolean).join(" ") || "—";
-    }
-    if (els.revEmail) els.revEmail.textContent = getVal("guest-email") || "—";
-    if (els.revPhone) {
-      const phone = getVal("guest-phone");
-      const whatsapp = getVal("guest-whatsapp");
-      els.revPhone.textContent = [phone, whatsapp ? `WhatsApp: ${whatsapp}` : ""].filter(Boolean).join(" • ") || "—";
-    }
-
-    const revNationalityGender = byId("rev-nationality-gender");
-    if (revNationalityGender) {
-      revNationalityGender.textContent = [nationality, gender].filter(Boolean).join(" • ") || "—";
-    }
-
-    const revDates = byId("rev-dates");
-    if (revDates) {
-      revDates.textContent = `${bookingState.checkIn ? formatDisplayDate(bookingState.checkIn) : t("Not Selected", "غير محدد")} → ${bookingState.checkOut ? formatDisplayDate(bookingState.checkOut) : t("Not Selected", "غير محدد")}`;
-    }
-
-    if (els.revGuests) {
-      els.revGuests.textContent = `${bookingState.adults} ${t("Adults", "بالغين")} • ${bookingState.children} ${t("Children", "أطفال")} • ${bookingState.infants} ${t("Infants", "رضع")} • ${bookingState.rooms} ${t("Rooms", "غرف")}`;
-    }
-
-    const revPurposeArrival = byId("rev-purpose-arrival");
-    if (revPurposeArrival) {
-      revPurposeArrival.textContent = [stayPurpose, arrivalTime].filter(Boolean).join(" • ") || "—";
-    }
-
-    const revAdditionalGuests = byId("rev-additional-guests");
-    if (revAdditionalGuests) {
-      revAdditionalGuests.textContent = additionalGuests || "—";
-    }
-
-    const revDocuments = byId("rev-documents");
-    if (revDocuments) {
-      revDocuments.textContent = [docType, docNumber].filter(Boolean).join(" • ") || "—";
-    }
-
-    const revBilling = byId("rev-billing");
-    if (revBilling) {
-      revBilling.textContent = [billingName, billingPhone, billingEmail].filter(Boolean).join(" • ") || "—";
-    }
-
-    const revRoomPreferences = byId("rev-room-preferences");
-    if (revRoomPreferences) {
-      revRoomPreferences.textContent = [roomType, bedType, roomView, floorPreference, smokingPreference].filter(Boolean).join(" • ") || "—";
-    }
-
-    if (els.revPaymentMethod) {
-      els.revPaymentMethod.innerHTML = bookingState.paymentMethod === "ccp"
-        ? `<i class="ph ph-bank" style="color:var(--primary);margin-inline-end:6px;"></i>${t("Bank Transfer", "تحويل بنكي")}`
-        : `<i class="ph ph-money" style="color:var(--primary);margin-inline-end:6px;"></i>${t("Pay at Property", "الدفع في الفندق")}`;
-    }
-
-    const earnedPoints = Math.floor((bookingState.totalPrice || 0) / 100);
-    if (els.revPoints) els.revPoints.textContent = earnedPoints;
-
-    navigateToStep(3);
+    if (!validateStep2()) return;
+    updateReview();
+    updateSummary();
+    setStep(3);
   });
 
-  els.btnPrev2?.addEventListener("click", () => navigateToStep(1));
-  els.btnPrev3?.addEventListener("click", () => navigateToStep(2));
+  els.btnPrev3?.addEventListener("click", () => setStep(2));
 
-  document.getElementById("btn-edit-guest")?.addEventListener("click", () => navigateToStep(1));
-  document.getElementById("btn-edit-dates")?.addEventListener("click", () => navigateToStep(1));
-  document.getElementById("btn-edit-payment")?.addEventListener("click", () => navigateToStep(2));
+  els.btnEditGuest?.addEventListener("click", () => setStep(1));
+  els.btnEditDates?.addEventListener("click", () => setStep(1));
+  els.btnEditPayment?.addEventListener("click", () => setStep(2));
 
-  els.btnConfirm?.addEventListener("click", async () => {
-    if (els.agreePolicy && !els.agreePolicy.checked) {
-      showGlobalAlert(t("You must agree to the Terms and Policies.", "يجب الموافقة على الشروط والسياسات."));
-      return;
-    }
+  els.btnConfirmBooking?.addEventListener("click", submitBooking);
+}
 
-    if (!validateStep1()) return;
-    if (!validateDatesForBooking()) return;
-    if (!validatePaymentStep()) return;
+function initThemeAndLanguage() {
+  updateDirection();
+  applyTheme();
+  updateLangButton();
 
-    setButtonLoading(els.btnConfirm, true);
+  els.themeToggle?.addEventListener("click", () => {
+    bookingState.theme = bookingState.theme === "dark" ? "light" : "dark";
+    safeSet("ore_theme", bookingState.theme);
+    applyTheme();
+  });
 
-    try {
-      const bookingRef = db.collection("bookings").doc();
-      const guestIdentity = buildGuestIdentityFallback();
-
-      const propertyTitleEn = bookingState.property?.titleEn || bookingState.property?.title || bookingState.property?.titleAr || "";
-      const propertyTitleAr = bookingState.property?.titleAr || bookingState.property?.title || bookingState.property?.titleEn || "";
-      const propertyLocationEn = bookingState.property?.locationEn || bookingState.property?.location || bookingState.property?.locationAr || "";
-      const propertyLocationAr = bookingState.property?.locationAr || bookingState.property?.location || bookingState.property?.locationEn || "";
-      const propertyImage =
-        bookingState.property?.imageUrl ||
-        bookingState.property?.mainImage ||
-        (Array.isArray(bookingState.property?.images) ? bookingState.property.images[0] : "") ||
-        "";
-
-      const guestFullName = getVal("guest-name");
-      const guestFatherName = getVal("guest-father-name");
-      const guestFamilyName = getVal("guest-family-name");
-      const guestCombinedName = [guestFullName, guestFatherName, guestFamilyName].filter(Boolean).join(" ").trim();
-
-      const payload = {
-        bookingId: bookingRef.id,
-
-        propertyId: String(bookingState.propertyId),
-        propId: String(bookingState.propertyId),
-        propertyDocId: String(bookingState.propertyId),
-        propertyTitle: propertyTitleEn,
-        propertyTitleEn,
-        propertyTitleAr,
-        propertyName: getPropertyTitleByLang(),
-        listingTitle: getPropertyTitleByLang(),
-        propertyLocationEn,
-        propertyLocationAr,
-        propertyImage,
-        propertyImageUrl: propertyImage,
-
-        guestId: guestIdentity,
-        userId: guestIdentity,
-        customerId: guestIdentity,
-        clientId: guestIdentity,
-        uid: guestIdentity,
-
-        authUid: currentUser?.uid || null,
-        isAuthenticatedGuest: !!currentUser,
-
-        guestName: guestCombinedName || guestFullName || "Guest",
-        fullName: guestCombinedName || guestFullName || "Guest",
-        name: guestCombinedName || guestFullName || "Guest",
-        guestNameFirst: guestFullName || "",
-        guestFatherName: guestFatherName || "",
-        guestFamilyName: guestFamilyName || "",
-
-        guestEmail: getVal("guest-email"),
-        email: getVal("guest-email"),
-        guestPhone: getVal("guest-phone"),
-        phone: getVal("guest-phone"),
-        guestWhatsapp: getVal("guest-whatsapp"),
-        contactPhone: getVal("guest-phone"),
-        contactEmail: getVal("guest-email"),
-
-        guestAltPhone: getVal("guest-alt-phone"),
-        guestGender: getVal("guest-gender"),
-        guestDob: getVal("guest-dob"),
-        guestNationality: getVal("guest-nationality"),
-        guestOccupation: getVal("guest-occupation"),
-        guestMaritalStatus: getVal("guest-marital-status"),
-
-        guestAddress: getVal("guest-address"),
-        guestCity: getVal("guest-city"),
-        guestState: getVal("guest-state"),
-        guestPostal: getVal("guest-postal"),
-        guestCountry: getVal("guest-country"),
-
-        guestIdType: getVal("guest-id-type"),
-        guestIdNumber: getVal("guest-id-number"),
-        guestIdIssuePlace: getVal("guest-id-issue-place"),
-        guestIdIssueDate: getVal("guest-id-issue-date"),
-        guestIdExpiry: getVal("guest-id-expiry"),
-        guestIdUploadUrl: bookingState.guestIdUploadUrl || null,
-
-        roomType: getVal("room-type"),
-        bedType: getVal("bed-type"),
-        roomView: getVal("room-view"),
-        floorPreference: getVal("floor-preference"),
-        smokingPreference: getVal("smoking-preference"),
-        quietRoom: getVal("quiet-room"),
-        nearElevator: getVal("near-elevator"),
-        connectedRooms: getVal("connected-rooms"),
-
-        adults: bookingState.adults || 1,
-        guestAdults: bookingState.adults || 1,
-        children: bookingState.children || 0,
-        guestChildren: bookingState.children || 0,
-        infants: bookingState.infants || 0,
-        guestInfants: bookingState.infants || 0,
-        guests: getGuestTotal(),
-        guestCount: getGuestTotal(),
-        rooms: bookingState.rooms || 1,
-        roomCount: bookingState.rooms || 1,
-        beds: bookingState.beds || 1,
-        childAges: bookingState.childAges || [],
-
-        stayPurpose: getVal("stay-purpose"),
-        checkIn: bookingState.checkIn || null,
-        checkOut: bookingState.checkOut || null,
-        checkInDate: bookingState.checkIn ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkIn)) : null,
-        checkOutDate: bookingState.checkOut ? firebase.firestore.Timestamp.fromDate(parseLocalDate(bookingState.checkOut)) : null,
-        arrivalDate: bookingState.checkIn || null,
-        departureDate: bookingState.checkOut || null,
-        nights: bookingState.nights || 0,
-        nightCount: bookingState.nights || 0,
-
-        arrivalTime: getVal("arrival-time") || null,
-        expectedArrivalTime: getVal("arrival-time") || null,
-        arrivalMethod: getVal("arrival-method") || null,
-        vehiclePlate: getVal("vehicle-plate") || "",
-        checkinContactPerson: getVal("checkin-contact-person") || "",
-        additionalGuests: getVal("additional-guests") || "",
-        additionalGuestNames: getVal("additional-guests") || "",
-
-        breakfastOption: getVal("breakfast-option") || "",
-        airportTransfer: getVal("airport-transfer") || "",
-        parkingNeeded: getVal("parking-needed") || "",
-        lateCheckout: getVal("late-checkout") || "",
-        earlyCheckin: getVal("early-checkin") || "",
-        housekeepingFrequency: getVal("housekeeping-frequency") || "",
-        extraPillows: getVal("extra-pillows") || "",
-        celebrationSetup: getVal("celebration-setup") || "",
-        addonNotes: getVal("addon-notes") || "",
-
-        babyCrib: getVal("baby-crib") || "",
-        highChair: getVal("high-chair") || "",
-        strollerSpace: getVal("stroller-space") || "",
-        accessibleRoom: getVal("accessible-room") || "",
-        childNotes: getVal("child-notes") || "",
-
-        emergencyName: getVal("emergency-name") || "",
-        emergencyPhone: getVal("emergency-phone") || "",
-        emergencyRelationship: getVal("emergency-relationship") || "",
-        medicalCondition: getVal("medical-condition") || "",
-        foodAllergy: getVal("food-allergy") || "",
-        petsBringing: getVal("pets-bringing") || "",
-        medicalNotes: getVal("medical-notes") || "",
-        specialRequests: getVal("special-requests") || "",
-
-        addons: bookingState.addons || {},
-        selectedAddons: buildSelectedAddonsArray(),
-        restaurantPlan: bookingState.addons.restaurantPlan || "breakfast",
-
-        basePrice: bookingState.basePrice || 0,
-        roomPrice: bookingState.roomPrice || 0,
-        fee: bookingState.fee || 0,
-        addonsTotal: bookingState.addonsTotal || 0,
-        totalPrice: bookingState.totalPrice || 0,
-        finalTotal: bookingState.totalPrice || 0,
-        amount: bookingState.totalPrice || 0,
-        price: bookingState.totalPrice || 0,
-
-        paymentMethod: bookingState.paymentMethod,
-        payment_method: bookingState.paymentMethod,
-        receiptUrl: bookingState.receiptUrl || null,
-        paymentReceiptUrl: bookingState.receiptUrl || null,
-        transferReceiptUrl: bookingState.receiptUrl || null,
-
-        billingName: getVal("billing-name") || "",
-        billingPhone: getVal("billing-phone") || "",
-        billingEmail: getVal("billing-email") || "",
-        billingAddress: getVal("billing-address") || "",
-        billingTaxId: getVal("billing-tax-id") || "",
-        needInvoice: getVal("need-invoice") || "",
-        paymentReference: getVal("payment-reference") || "",
-
-        senderName: getVal("sender-name") || "",
-        transferAmount: getVal("transfer-amount") || "",
-        transferDate: getVal("transfer-date") || "",
-        transferTime: getVal("transfer-time") || "",
-
-        cashPayerName: getVal("cash-payer-name") || "",
-        cashCurrency: getVal("cash-currency") || "",
-        cashPaymentNote: getVal("cash-payment-note") || "",
-
-        rewardsPoints: Math.floor((bookingState.totalPrice || 0) / 100),
-
-        status: "pending",
-        source: "website",
-        lang: bookingState.lang,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      await bookingRef.set(payload);
-
-      const chatId = `booking_${bookingRef.id}`;
-      await db.collection("chats").doc(chatId).set({
-        chatId,
-        bookingId: bookingRef.id,
-        propertyId: String(bookingState.propertyId),
-        propertyTitle: propertyTitleEn,
-        propertyImage,
-        guestId: guestIdentity,
-        guestName: guestCombinedName || guestFullName || "Guest",
-        guestEmail: getVal("guest-email"),
-        guestPhone: getVal("guest-phone"),
-        ownerId: String(bookingState.propertyId),
-        ownerName: propertyTitleEn || "Property Owner",
-        ownerRole: "owner",
-        verified: true,
-        status: "pending",
-        lastMessage: "",
-        lastMessageType: "text",
-        lastSenderId: "",
-        unreadCountGuest: 0,
-        unreadCountOwner: 0,
-        bookingCreatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-
-      safeSet("last_booking_id", bookingRef.id);
-      safeSet("last_booking_guest_id", guestIdentity);
-      safeSet("last_booking_property_id", String(bookingState.propertyId));
-      safeSet("last_booking_chat_id", chatId);
-
-      if (typeof window.confetti === "function") {
-        window.confetti({
-          particleCount: 140,
-          spread: 75,
-          origin: { y: 0.6 }
-        });
-      }
-
-      showGlobalAlert(t("Booking Confirmed Successfully!", "تم تأكيد الحجز بنجاح!"), "success");
-      setButtonLoading(els.btnConfirm, false);
-
-      setTimeout(() => {
-        window.location.href = "index.html";
-      }, 3500);
-
-    } catch (err) {
-      handleError(err, "[Booking Submit]");
-    }
+  els.langToggle?.addEventListener("click", () => {
+    bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
+    safeSet("ore_lang", bookingState.lang);
+    location.reload();
   });
 }
 
-// ─── Error Handler ──────────────────────────
-function handleError(err, context = "") {
-  console.error(context, err);
+function initAuthUI() {
+  els.openAuthBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (currentUser) {
+      toggleProfileDropdown();
+    } else {
+      openAuthModal("login");
+    }
+  });
 
-  let msg = t("Unexpected error. Please try again.", "خطأ غير متوقع. يرجى المحاولة مجدداً.");
+  els.closeAuthBtn?.addEventListener("click", closeAuthModal);
 
-  if (err?.message === "not-found") {
-    msg = t("Property not found.", "العقار غير موجود.");
-  } else if (err?.code === "storage/unauthorized") {
-    msg = t("You are not authorized to upload this file.", "غير مصرح لك برفع هذا الملف.");
-  } else if (err?.code === "storage/canceled") {
-    msg = t("Upload canceled.", "تم إلغاء الرفع.");
-  } else if (err?.code === "storage/unknown") {
-    msg = t("Upload failed. Please try again.", "فشل رفع الملف. حاول مرة أخرى.");
-  } else if (err?.code === "permission-denied") {
-    msg = t("Permission denied while saving booking.", "تم رفض الصلاحية أثناء حفظ الحجز.");
-  }
+  els.authModal?.addEventListener("click", (e) => {
+    if (e.target === els.authModal) closeAuthModal();
+  });
 
-  showGlobalAlert(msg, "error");
-  setButtonLoading(els.btnConfirm, false);
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".profile-container")) {
+      toggleProfileDropdown(false);
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeAuthModal();
+      toggleProfileDropdown(false);
+    }
+  });
+
+  document.getElementById("go-to-register")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("register");
+    clearAuthMessage();
+  });
+
+  document.getElementById("go-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("login");
+    clearAuthMessage();
+  });
+
+  document.getElementById("go-to-forgot")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("forgot");
+    clearAuthMessage();
+  });
+
+  document.getElementById("back-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("login");
+    clearAuthMessage();
+  });
+
+  els.loginForm?.addEventListener("submit", handleLogin);
+  els.registerForm?.addEventListener("submit", handleRegister);
+  els.forgotForm?.addEventListener("submit", handleForgotPassword);
+
+  document.getElementById("google-login-btn")?.addEventListener("click", handleGoogleAuth);
+  document.getElementById("google-register-btn")?.addEventListener("click", handleGoogleAuth);
+
+  els.logoutBtn?.addEventListener("click", handleLogout);
+
+  els.myBookingsBtn?.addEventListener("click", () => {
+    toggleProfileDropdown(false);
+    window.location.href = "profile.html#bookings";
+  });
+
+  els.myFavoritesBtn?.addEventListener("click", () => {
+    toggleProfileDropdown(false);
+    window.location.href = "profile.html#favorites";
+  });
+
+  auth.onAuthStateChanged((user) => {
+    currentUser = user;
+    updateUserUI(user);
+  });
 }
+
+// ──────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────
+async function init() {
+  initThemeAndLanguage();
+  initAuthUI();
+  initPasswordToggles();
+  initPasswordStrength();
+  initInputWatchers();
+  initPaymentUI();
+  initCopyBankInfo();
+  initSteps();
+
+  await loadPropertyData();
+
+  updateStats();
+  updateSummary();
+  updateReview();
+  setStep(1);
+}
+
+document.addEventListener("DOMContentLoaded", init);
