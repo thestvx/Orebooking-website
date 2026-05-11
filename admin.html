@@ -7,42 +7,612 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- 🗺️ Leaflet.js -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <link rel="stylesheet" href="style.css">
 
   <style>
-    .admin-body {
-      background-color: #f8fafc;
+    :root {
+      --admin-bg: linear-gradient(180deg, #f8fbff 0%, #f6f8fc 100%);
+      --admin-surface: rgba(255,255,255,0.92);
+      --admin-surface-strong: #ffffff;
+      --admin-border: rgba(148, 163, 184, 0.18);
+      --admin-ring: 0 0 0 4px rgba(67,90,191,0.12);
+      --admin-shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
+      --admin-shadow-hover: 0 24px 60px rgba(67,90,191,0.12);
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+      --success-text: #059669;
+      --danger-bg: #fef2f2;
+      --danger-border: #fecdd3;
+      --danger-text: #e11d48;
+      --warning-bg: #fff7ed;
+      --warning-border: #fdba74;
+      --warning-text: #ea580c;
+    }
+
+    body.admin-body {
+      min-height: 100vh;
+      background: var(--admin-bg);
+      background-attachment: fixed;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body.admin-body::before,
+    body.admin-body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      width: 380px;
+      height: 380px;
+      border-radius: 999px;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
+    body.admin-body::before {
+      top: -100px;
+      right: -90px;
+      background: rgba(101, 123, 224, 0.20);
+    }
+
+    body.admin-body::after {
+      bottom: -120px;
+      left: -90px;
+      background: rgba(67, 90, 191, 0.12);
+    }
+
+    .admin-login-screen,
+    .admin-layout {
+      position: relative;
+      z-index: 1;
+    }
+
+    .admin-login-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .admin-login-card {
+      width: min(100%, 460px);
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: 0 30px 70px rgba(15,23,42,0.10);
+      animation: fadeIn 0.45s ease;
+    }
+
+    .login-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.82rem;
+      margin: 0 auto 18px;
+    }
+
+    .login-help {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.83rem;
+      line-height: 1.7;
+    }
+
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+      align-items: stretch;
+    }
+
+    .admin-sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.80);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-inline-end: 1px solid rgba(226,232,240,0.9);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      box-shadow: 10px 0 40px rgba(15,23,42,0.03);
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 10px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-top-note {
+      background: linear-gradient(135deg, rgba(67,90,191,0.09), rgba(101,123,224,0.06));
+      border: 1px solid rgba(67,90,191,0.10);
+      border-radius: 18px;
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-top-note strong {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    .sidebar-top-note span {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .sidebar-nav .nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: start;
+      min-height: 52px;
+    }
+
+    .sidebar-nav .nav-item i {
+      width: 20px;
+      height: 20px;
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+
+    .sidebar-nav .nav-item:hover {
+      background: rgba(67,90,191,0.06);
+      border-color: rgba(67,90,191,0.10);
+      transform: translateX(-2px);
+    }
+
+    .sidebar-nav .nav-item.active {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      box-shadow: 0 18px 30px rgba(67,90,191,0.18);
+    }
+
+    .sidebar-nav .nav-item.active i {
+      color: #fff;
+    }
+
+    .sidebar-nav .nav-item.logout-item {
+      margin-top: auto;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    .sidebar-nav .nav-item.logout-item i {
+      color: var(--danger-text);
+    }
+
+    .sidebar-nav .nav-item.logout-item:hover {
+      background: #ffe4e6;
+      transform: none;
+    }
+
+    .admin-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px 24px;
+      border: 1px solid rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 24px;
+      box-shadow: var(--admin-shadow);
+    }
+
+    .header-copy {
+      display: grid;
+      gap: 6px;
+    }
+
+    .header-copy p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      margin: 0;
+    }
+
+    .admin-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(67,90,191,0.05);
+      border: 1px solid rgba(67,90,191,0.08);
+      border-radius: 18px;
+      padding: 10px 12px;
+      flex-shrink: 0;
+    }
+
+    .admin-profile .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.45rem;
+      box-shadow: 0 10px 24px rgba(67,90,191,0.18);
+    }
+
+    .admin-content {
+      display: grid;
+      gap: 22px;
+    }
+
+    .dashboard-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .stat-mini-card {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--admin-shadow);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: var(--transition);
+    }
+
+    .stat-mini-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--admin-shadow-hover);
+    }
+
+    .stat-mini-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.45rem;
+      color: var(--primary);
+      background: rgba(67,90,191,0.08);
+      flex-shrink: 0;
+    }
+
+    .stat-mini-meta {
+      display: grid;
+      gap: 3px;
+    }
+
+    .stat-mini-meta span {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .stat-mini-meta strong {
+      color: var(--text-main);
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .admin-card,
+    .modern-section {
+      background: var(--admin-surface);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--admin-shadow);
+      transition: var(--transition);
+    }
+
+    .admin-card:hover,
+    .modern-section:hover {
+      box-shadow: var(--admin-shadow-hover);
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .pane-head h3 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+    }
+
+    .pane-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-inline {
+      min-width: 240px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 0 12px;
+      min-height: 48px;
+    }
+
+    .search-inline input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-family: inherit;
+      color: var(--text-main);
+      font-size: 0.92rem;
+    }
+
+    .ghost-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.72);
+      color: var(--text-main);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .ghost-action:hover {
+      border-color: rgba(67,90,191,0.20);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
+    }
+
+    .stats-chip-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .stats-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(67,90,191,0.06);
+      border: 1px solid rgba(67,90,191,0.10);
+      color: var(--text-main);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--admin-surface-strong);
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    .admin-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 16px 14px;
+      text-align: start;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    .admin-table tbody td {
+      padding: 16px 14px;
+      border-bottom: 1px solid rgba(226,232,240,0.85);
+      vertical-align: middle;
+      color: var(--text-main);
+      font-size: 0.92rem;
+    }
+
+    .admin-table tbody tr {
+      transition: background 0.22s ease;
+    }
+
+    .admin-table tbody tr:hover {
+      background: rgba(67,90,191,0.035);
+    }
+
+    .prop-thumb {
+      width: 74px;
+      height: 58px;
+      border-radius: 14px;
+      object-fit: cover;
+      border: 1px solid var(--border-color);
+      background: #f1f5f9;
+      display: block;
+    }
+
+    .prop-name-cell {
+      display: grid;
+      gap: 4px;
+    }
+
+    .prop-name-cell strong {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    .prop-name-cell span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .price-pill,
+    .status-badge,
+    .pill-soft {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .price-pill {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+    }
+
+    .status-badge.pending {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      border: 1px solid var(--warning-border);
+    }
+
+    .status-badge.confirmed,
+    .status-badge.visible {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+    }
+
+    .status-badge.rejected,
+    .status-badge.hidden {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .table-actions button,
+    .table-actions a {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .table-actions button:hover,
+    .table-actions a:hover {
+      border-color: rgba(67,90,191,0.22);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
     }
 
     .modern-form-wrapper {
       display: grid;
-      gap: 24px;
-      max-width: 1000px;
+      gap: 22px;
+      max-width: 1120px;
       margin: 0 auto;
     }
 
     .modern-section {
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
       padding: 28px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.03);
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .modern-section:hover {
-      box-shadow: 0 8px 32px rgba(67,90,191,0.08);
     }
 
     .modern-section-header {
@@ -51,22 +621,65 @@
       gap: 12px;
       margin-bottom: 24px;
       padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid rgba(226,232,240,0.85);
     }
 
     .modern-section-header i {
-      font-size: 1.6rem;
+      font-size: 1.45rem;
       color: var(--primary);
-      background: color-mix(in srgb, var(--primary) 10%, transparent);
-      padding: 10px;
-      border-radius: 12px;
+      background: rgba(67,90,191,0.08);
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
     }
 
     .modern-section-header h4 {
-      font-size: 1.2rem;
-      font-weight: 700;
+      font-size: 1.15rem;
+      font-weight: 800;
       color: var(--text-main);
       margin: 0;
+    }
+
+    .modern-section-sub {
+      margin-top: -12px;
+      margin-bottom: 18px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .modern-form-wrapper .input-group,
+    .admin-form .input-group {
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .modern-form-wrapper .input-group label,
+    .admin-form .input-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0;
+    }
+
+    .modern-form-wrapper .input-group small,
+    .admin-form .input-group small {
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.6;
     }
 
     .modern-form-wrapper .input-group input,
@@ -76,10 +689,10 @@
     .admin-form .input-group textarea,
     .admin-form .input-group select {
       width: 100%;
-      padding: 13px 15px;
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border-color);
-      background-color: var(--bg-color);
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(203,213,225,0.95);
+      background-color: rgba(248,250,252,0.92);
       color: var(--text-main);
       font-family: inherit;
       font-size: 0.95rem;
@@ -91,9 +704,9 @@
 
     .modern-form-wrapper .input-group textarea,
     .admin-form .input-group textarea {
-      min-height: 110px;
+      min-height: 120px;
       resize: vertical;
-      line-height: 1.7;
+      line-height: 1.8;
     }
 
     .modern-form-wrapper .input-group input:focus,
@@ -103,8 +716,36 @@
     .admin-form .input-group textarea:focus,
     .admin-form .input-group select:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(67,90,191,0.15);
-      background-color: var(--surface-color);
+      box-shadow: var(--admin-ring);
+      background-color: #fff;
+    }
+
+    .dark .admin-body {
+      background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
+    }
+
+    .dark .admin-login-card,
+    .dark .admin-sidebar,
+    .dark .admin-header,
+    .dark .admin-card,
+    .dark .modern-section,
+    .dark .stat-mini-card {
+      background: rgba(15,23,42,0.78);
+      border-color: rgba(51,65,85,0.82);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.28);
+    }
+
+    .dark .sidebar-top-note,
+    .dark .search-inline,
+    .dark .map-search-row input,
+    .dark .ghost-action,
+    .dark .upload-zone,
+    .dark .table-responsive,
+    .dark .admin-table thead th,
+    .dark .table-actions button,
+    .dark .table-actions a {
+      background: rgba(15,23,42,0.72);
+      border-color: rgba(51,65,85,0.95);
     }
 
     .dark .modern-form-wrapper .input-group input,
@@ -112,50 +753,53 @@
     .dark .modern-form-wrapper .input-group select,
     .dark .admin-form .input-group input,
     .dark .admin-form .input-group textarea,
-    .dark .admin-form .input-group select {
-      background-color: var(--bg-color);
+    .dark .admin-form .input-group select,
+    .dark .coords-row input {
+      background-color: rgba(15,23,42,0.88);
+      border-color: rgba(51,65,85,0.95);
       color: var(--text-main);
-      border-color: var(--border-color);
-    }
-
-    .modern-form-wrapper .input-group label,
-    .admin-form .input-group label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-main);
-      margin-bottom: 8px;
-    }
-
-    .modern-form-wrapper .input-group,
-    .admin-form .input-group {
-      margin-bottom: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
     }
 
     .upload-zone {
-      border: 2px dashed var(--border-color);
-      border-radius: 16px;
-      padding: 40px 20px;
+      border: 2px dashed rgba(148,163,184,0.55);
+      border-radius: 22px;
+      padding: 34px 20px;
       text-align: center;
-      background: #fcfcfc;
+      background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
       position: relative;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: var(--transition);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 12px;
+      overflow: hidden;
+    }
+
+    .upload-zone::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(67,90,191,0.06), transparent 50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .upload-zone:hover::before {
+      opacity: 1;
     }
 
     .upload-zone:hover {
       border-color: var(--primary);
-      background: color-mix(in srgb, var(--primary) 4%, transparent);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 35px rgba(67,90,191,0.08);
     }
 
-    .upload-zone i { font-size: 3rem; color: var(--primary); }
+    .upload-zone i {
+      font-size: 3rem;
+      color: var(--primary);
+    }
 
     .upload-zone input[type="file"] {
       position: absolute;
@@ -166,108 +810,208 @@
       cursor: pointer;
     }
 
-    .upload-zone-text  { font-size: 1rem; font-weight: 600; color: var(--text-main); }
-    .upload-zone-sub   { font-size: 0.85rem; color: var(--text-muted); }
+    .upload-zone-text {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
 
-    .map-picker-wrapper { margin-top: 8px; }
+    .upload-zone-sub {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+    }
+
+    .upload-preview {
+      margin-top: 14px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: rgba(248,250,252,0.75);
+    }
+
+    .upload-preview.visible {
+      display: flex;
+    }
+
+    .upload-preview img {
+      width: 72px;
+      height: 58px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+    }
+
+    .upload-preview-meta {
+      display: grid;
+      gap: 4px;
+      text-align: start;
+    }
+
+    .upload-preview-meta strong {
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    .upload-preview-meta span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .map-picker-wrapper {
+      margin-top: 8px;
+      display: grid;
+      gap: 14px;
+    }
 
     .map-picker-hint {
       font-size: 0.85rem;
       color: var(--text-muted);
-      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 6px;
+      line-height: 1.7;
     }
 
-    #admin-map-picker {
-      width: 100%;
-      height: 350px;
-      border-radius: 16px;
-      border: 2px solid var(--border-color);
-      cursor: crosshair;
-      z-index: 1;
-      display: block;
-    }
-
+    #admin-map-picker,
     #edit-map-picker {
       width: 100%;
-      height: 250px;
-      border-radius: 16px;
-      border: 2px solid var(--border-color);
+      border-radius: 20px;
+      border: 2px solid rgba(203,213,225,0.9);
       cursor: crosshair;
       z-index: 1;
       display: block;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     }
+
+    #admin-map-picker { height: 380px; }
+    #edit-map-picker { height: 260px; }
 
     .coords-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
-      margin-top: 16px;
     }
 
     .coords-row input {
       background-color: var(--bg-color);
-      font-family: monospace;
-      font-weight: bold;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-weight: 800;
       color: var(--primary);
+      letter-spacing: 0.2px;
     }
 
-    .map-search-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .map-search-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 2px;
+    }
 
     .map-search-row input {
       flex: 1;
-      padding: 12px 16px;
+      padding: 13px 16px;
       border: 1px solid var(--border-color);
-      border-radius: 12px;
+      border-radius: 16px;
       font-size: 0.95rem;
       font-family: inherit;
       background: var(--bg-color);
       color: var(--text-main);
       outline: none;
-      transition: border-color 0.2s;
+      transition: var(--transition);
+      min-height: 50px;
     }
 
-    .map-search-row input:focus { border-color: var(--primary); }
+    .map-search-row input:focus {
+      border-color: var(--primary);
+      box-shadow: var(--admin-ring);
+    }
 
     .map-search-row button {
-      padding: 12px 20px;
-      background: var(--primary);
-      color: white;
+      padding: 0 20px;
+      min-height: 50px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
       border: none;
-      border-radius: 12px;
-      font-weight: bold;
+      border-radius: 16px;
+      font-weight: 800;
       font-family: inherit;
       cursor: pointer;
-      transition: 0.3s;
+      transition: var(--transition);
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       white-space: nowrap;
+      box-shadow: 0 12px 26px rgba(67,90,191,0.18);
     }
 
-    .map-search-row button:hover { background: var(--primary-hover); }
+    .map-search-row button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 32px rgba(67,90,191,0.24);
+    }
 
     .map-picked-badge {
       display: none;
       align-items: center;
       gap: 8px;
-      margin-top: 16px;
       padding: 12px 16px;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      border-radius: 12px;
-      color: #059669;
-      font-weight: 700;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      border-radius: 14px;
+      color: var(--success-text);
+      font-weight: 800;
       font-size: 0.9rem;
     }
 
-    .map-picked-badge.visible { display: flex; }
+    .map-picked-badge.visible {
+      display: flex;
+      animation: fadeIn 0.25s ease;
+    }
 
-    /* ===== Bookings Grid ===== */
+    .quick-tips {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 8px;
+    }
+
+    .tip-card {
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(248,250,252,0.75);
+      display: grid;
+      gap: 8px;
+    }
+
+    .tip-card i {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      background: rgba(67,90,191,0.08);
+      font-size: 1.2rem;
+    }
+
+    .tip-card strong {
+      color: var(--text-main);
+      font-size: 0.92rem;
+    }
+
+    .tip-card p {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 0;
+    }
+
     #bookings-container .bookings-grid,
-    #bookings-container > div {
+    #bookings-container > div.bookings-grid {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
       gap: 20px !important;
@@ -276,123 +1020,360 @@
     }
 
     .booking-card {
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
+      background: var(--admin-surface);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 22px;
       padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: var(--shadow-soft);
+      gap: 14px;
+      box-shadow: var(--admin-shadow);
       transition: var(--transition);
       width: 100%;
       box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .booking-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--primary), var(--accent));
+      opacity: 0.9;
     }
 
     .booking-card:hover {
-      box-shadow: var(--shadow-hover);
-      border-color: var(--accent);
+      box-shadow: var(--admin-shadow-hover);
+      border-color: rgba(67,90,191,0.16);
+      transform: translateY(-3px);
     }
 
-    .status-badge {
-      font-size: 0.75rem;
+    .booking-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .booking-title {
+      display: grid;
+      gap: 5px;
+    }
+
+    .booking-title strong {
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    .booking-title span {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .booking-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .booking-meta-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(248,250,252,0.82);
+      border: 1px solid var(--border-color);
+      display: grid;
+      gap: 4px;
+    }
+
+    .booking-meta-item label {
+      font-size: 0.73rem;
+      color: var(--text-muted);
       font-weight: 700;
-      padding: 5px 12px;
-      border-radius: 8px;
-      white-space: nowrap;
+    }
+
+    .booking-meta-item strong,
+    .booking-meta-item span {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      font-weight: 700;
+      word-break: break-word;
     }
 
     .booking-actions-row {
       display: flex;
       gap: 10px;
-      margin-top: 4px;
+      margin-top: 2px;
       padding-top: 16px;
       border-top: 1px solid var(--border-color);
     }
 
-    .btn-approve, .btn-reject {
+    .btn-approve,
+    .btn-reject {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 10px;
-      border-radius: 10px;
-      font-weight: 700;
+      min-height: 46px;
+      padding: 0 12px;
+      border-radius: 14px;
+      font-weight: 800;
       font-size: 0.9rem;
       font-family: inherit;
       border: none;
       cursor: pointer;
-      transition: 0.3s;
+      transition: var(--transition);
     }
 
-    .btn-approve { background:#ecfdf5; color:#059669; border:1px solid #10b981; }
-    .btn-approve:hover:not(:disabled) { background:#10b981; color:white; }
+    .btn-approve { background: var(--success-bg); color: var(--success-text); border: 1px solid #10b981; }
+    .btn-approve:hover:not(:disabled) { background: #10b981; color: white; transform: translateY(-1px); }
 
-    .btn-reject  { background:#fef2f2; color:#e11d48; border:1px solid #ef4444; }
-    .btn-reject:hover:not(:disabled)  { background:#ef4444; color:white; }
+    .btn-reject { background: var(--danger-bg); color: var(--danger-text); border: 1px solid #ef4444; }
+    .btn-reject:hover:not(:disabled) { background: #ef4444; color: white; transform: translateY(-1px); }
 
     .btn-approve:disabled,
     .btn-reject:disabled {
-      opacity: 0.5;
+      opacity: 0.55;
       cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 54px 24px;
+      background: rgba(255,255,255,0.76);
+      border: 1px dashed rgba(148,163,184,0.45);
+      border-radius: 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-state i {
+      font-size: 2.8rem;
+      color: var(--primary);
+      margin-bottom: 12px;
+      display: block;
+      opacity: 0.85;
+    }
+
+    .modal-overlay {
+      z-index: 4000;
+    }
+
+    .modal-content.admin-card {
+      max-width: 720px !important;
+      padding: 26px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .modal-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-topbar h3 {
+      margin: 0;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-footer-actions {
+      display: flex;
+      justify-content: flex-start;
+      gap: 12px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .section-note {
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      line-height: 1.7;
     }
 
     .dark #admin-map-picker,
     .dark #edit-map-picker {
-      border-color: var(--border-color);
-      filter: brightness(0.9) contrast(1.05);
+      border-color: rgba(51,65,85,0.95);
+      filter: brightness(0.92) contrast(1.04);
+    }
+
+    .admin-mobile-topbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .admin-mobile-toggle {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.85);
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+      color: var(--text-main);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
+    @media (max-width: 1280px) {
+      .dashboard-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .admin-layout {
+        display: block;
+      }
+
+      .admin-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        transform: translateX(100%);
+        transition: transform 0.32s ease;
+        z-index: 3000;
+        width: min(88vw, 320px);
+        height: 100vh;
+      }
+
+      .admin-sidebar.open {
+        transform: translateX(0);
+      }
+
+      .admin-main {
+        padding: 18px;
+      }
+
+      .admin-mobile-topbar {
+        display: flex;
+      }
     }
 
     @media (max-width: 900px) {
+      .form-grid,
+      .coords-row,
+      .quick-tips,
+      .booking-meta-grid {
+        grid-template-columns: 1fr;
+      }
+
       #bookings-container .bookings-grid,
-      #bookings-container > div {
+      #bookings-container > div.bookings-grid {
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .admin-header {
+        padding: 18px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .pane-head,
+      .pane-tools,
+      .admin-footer-actions,
+      .map-search-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-inline,
+      .ghost-action,
+      .map-search-row button,
+      .primary-btn {
+        width: 100%;
+      }
+
+      .modern-section,
+      .admin-card,
+      .modal-content.admin-card,
+      .admin-login-card {
+        padding: 20px;
+        border-radius: 22px;
+      }
+
+      .dashboard-strip {
+        grid-template-columns: 1fr;
       }
     }
 
     @media (max-width: 600px) {
       #bookings-container .bookings-grid,
-      #bookings-container > div {
+      #bookings-container > div.bookings-grid {
         grid-template-columns: 1fr !important;
+      }
+
+      .admin-main {
+        padding: 14px;
+      }
+
+      .admin-profile {
+        width: 100%;
+        justify-content: space-between;
       }
     }
   </style>
 </head>
 <body class="admin-body">
 
-  <!-- 🔐 Admin Login Screen -->
   <div id="admin-login-screen" class="admin-login-screen">
     <div class="admin-login-card">
-      <img src="logos/orebooking.png" alt="Logo" class="logo-img"
-           style="height:55px; margin:0 auto 24px; display:block;">
-      <h2 class="font-bold" style="text-align:center; margin-bottom:8px;">تسجيل الدخول</h2>
-      <p style="text-align:center; color:var(--text-muted); margin-bottom:24px; font-size:0.9rem;">
-        لوحة تحكم الإدارة وأصحاب العقارات
+      <div class="login-badge"><i class="ph-fill ph-shield-check"></i> بوابة الإدارة الآمنة</div>
+      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:58px; margin:0 auto 24px; display:block;">
+      <h2 class="font-bold" style="text-align:center; margin-bottom:8px; font-size:1.75rem;">تسجيل الدخول</h2>
+      <p style="text-align:center; color:var(--text-muted); margin-bottom:24px; font-size:0.92rem; line-height:1.8;">
+        لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات بشكل احترافي وآمن.
       </p>
       <form id="admin-login-form">
         <div class="input-group">
           <label>اسم المستخدم</label>
           <input type="text" id="admin-user" required placeholder="أدخل اسم المستخدم">
         </div>
-        <div class="input-group">
+        <div class="input-group mt-3">
           <label>كلمة المرور</label>
           <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور">
         </div>
-        <button type="submit" class="primary-btn mt-4" style="height:50px;">
+        <button type="submit" class="primary-btn mt-4" style="height:52px;">
           تسجيل الدخول <i class="ph ph-sign-in" style="font-size:1.2rem;"></i>
         </button>
       </form>
+      <div class="login-help">
+        <strong style="display:block; margin-bottom:4px; color:var(--text-main);">ملاحظة:</strong>
+        يمكن استخدام نفس الصفحة لتسجيل دخول مدير النظام أو مالك العقار حسب بيانات الاعتماد المخصصة.
+      </div>
     </div>
   </div>
 
-  <!-- 🎛️ Main Admin Layout -->
   <div class="admin-layout" id="admin-layout" style="display:none;">
-
-    <aside class="admin-sidebar">
+    <aside class="admin-sidebar" id="admin-sidebar">
       <div class="sidebar-logo">
-        <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:40px;">
+        <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:42px;">
       </div>
+
+      <div class="sidebar-top-note">
+        <strong>لوحة الإدارة الذكية</strong>
+        <span>إدارة أسرع للعقارات، مراجعة احترافية للحجوزات، وتجربة أكثر وضوحاً لأصحاب الصلاحيات.</span>
+      </div>
+
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="switchTab('manage-props')">
           <i class="ph ph-buildings"></i> إدارة العقارات
@@ -403,44 +1384,99 @@
         <button class="nav-item" onclick="switchTab('bookings')">
           <i class="ph ph-calendar-check"></i> الحجوزات
         </button>
-        <a href="#" onclick="logoutAdmin()" class="nav-item"
-           style="margin-top:auto; color:#e11d48; background:#fef2f2;">
+        <a href="#" onclick="logoutAdmin()" class="nav-item logout-item">
           <i class="ph ph-sign-out"></i> تسجيل الخروج
         </a>
       </nav>
     </aside>
 
     <main class="admin-main">
+      <div class="admin-mobile-topbar">
+        <button type="button" class="admin-mobile-toggle" id="admin-mobile-toggle">
+          <i class="ph ph-list"></i>
+        </button>
+        <img src="logos/orebooking.png" alt="Logo" style="height:30px; object-fit:contain;">
+      </div>
+
       <header class="admin-header">
-        <h2 id="page-title" class="font-bold" style="font-size:1.4rem;">إدارة العقارات</h2>
+        <div class="header-copy">
+          <h2 id="page-title" class="font-bold" style="font-size:1.45rem; margin:0;">إدارة العقارات</h2>
+          <p>واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح.</p>
+        </div>
         <div class="admin-profile">
-          <div style="text-align:left; line-height:1.2;">
-            <span class="font-bold" id="admin-profile-name"
-                  style="display:block; font-size:0.95rem;">مدير النظام</span>
-            <span style="font-size:0.75rem; color:var(--text-muted);"
-                  id="admin-profile-role">بصلاحيات كاملة</span>
+          <div style="text-align:left; line-height:1.25;">
+            <span class="font-bold" id="admin-profile-name" style="display:block; font-size:0.96rem;">مدير النظام</span>
+            <span style="font-size:0.76rem; color:var(--text-muted);" id="admin-profile-role">بصلاحيات كاملة</span>
           </div>
-          <div class="avatar" style="background:var(--primary); color:white;">
+          <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--accent)); color:white;">
             <i class="ph-fill ph-user-circle"></i>
           </div>
         </div>
       </header>
 
+      <section class="dashboard-strip" aria-label="إحصائيات سريعة">
+        <div class="stat-mini-card">
+          <div class="stat-mini-icon"><i class="ph-fill ph-house-line"></i></div>
+          <div class="stat-mini-meta">
+            <span>إجمالي العقارات</span>
+            <strong id="stat-total-properties">--</strong>
+          </div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-icon"><i class="ph-fill ph-eye"></i></div>
+          <div class="stat-mini-meta">
+            <span>العقارات النشطة</span>
+            <strong id="stat-active-properties">--</strong>
+          </div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-icon"><i class="ph-fill ph-calendar-check"></i></div>
+          <div class="stat-mini-meta">
+            <span>إجمالي الحجوزات</span>
+            <strong id="stat-total-bookings">--</strong>
+          </div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-icon"><i class="ph-fill ph-hourglass-medium"></i></div>
+          <div class="stat-mini-meta">
+            <span>الطلبات المعلقة</span>
+            <strong id="stat-pending-bookings">--</strong>
+          </div>
+        </div>
+      </section>
+
       <div class="admin-content">
 
-        <!-- Tab 1: Manage Properties -->
         <div id="tab-manage-props" class="tab-pane active">
           <div class="admin-card">
-            <h3 class="font-bold" style="margin-bottom:20px;">العقارات المضافة</h3>
+            <div class="pane-head">
+              <h3><i class="ph-fill ph-buildings" style="color:var(--primary);"></i> العقارات المضافة</h3>
+              <div class="pane-tools">
+                <label class="search-inline">
+                  <i class="ph ph-magnifying-glass" style="color:var(--text-muted);"></i>
+                  <input type="text" id="property-search-input" placeholder="ابحث باسم العقار أو الموقع...">
+                </label>
+                <button type="button" class="ghost-action" id="refresh-properties-btn">
+                  <i class="ph ph-arrows-clockwise"></i> تحديث القائمة
+                </button>
+              </div>
+            </div>
+
+            <div class="stats-chip-row">
+              <span class="stats-chip"><i class="ph ph-stack"></i> متابعة كل العقارات من مكان واحد</span>
+              <span class="stats-chip"><i class="ph ph-faders-horizontal"></i> تحكم سريع بالحالة والتعديل</span>
+              <span class="stats-chip"><i class="ph ph-lightning"></i> واجهة أخف وأوضح للإدارة اليومية</span>
+            </div>
+
             <div class="table-responsive">
               <table class="admin-table">
                 <thead>
                   <tr>
                     <th>الصورة</th>
-                    <th>الاسم</th>
+                    <th>العقار</th>
                     <th>الموقع</th>
                     <th>السعر</th>
-                    <th>الحالة (إظهار/إخفاء)</th>
+                    <th>الحالة</th>
                     <th>إجراءات</th>
                   </tr>
                 </thead>
@@ -450,14 +1486,16 @@
           </div>
         </div>
 
-        <!-- Tab 2: Add Property -->
         <div id="tab-add-property" class="tab-pane">
           <form id="add-property-form" class="modern-form-wrapper">
 
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-text-aa"></i>
-                <h4>المعلومات الأساسية</h4>
+                <div>
+                  <h4>المعلومات الأساسية</h4>
+                  <div class="section-note">أدخل البيانات التعريفية الرئيسية للعقار بلغتين بشكل منظم وواضح.</div>
+                </div>
               </div>
               <div class="form-grid">
                 <div class="input-group">
@@ -470,13 +1508,12 @@
                 </div>
                 <div class="input-group" style="grid-column:1/-1;">
                   <label>وصف العقار (عربي) <span class="text-danger">*</span></label>
-                  <textarea id="prop-desc-ar" rows="4"
-                            placeholder="اكتب وصفاً جذاباً لعقارك بالعربية..." required></textarea>
+                  <textarea id="prop-desc-ar" rows="4" placeholder="اكتب وصفاً جذاباً ومقنعاً للعقار بالعربية..." required></textarea>
+                  <small>يفضل ذكر نوع الإقامة، المميزات، والأجواء المحيطة بالعقار.</small>
                 </div>
                 <div class="input-group" style="grid-column:1/-1;">
                   <label>وصف العقار (إنجليزي) <span class="text-danger">*</span></label>
-                  <textarea id="prop-desc-en" rows="4"
-                            placeholder="Write an attractive description in English..." required></textarea>
+                  <textarea id="prop-desc-en" rows="4" placeholder="Write a polished and attractive English description..." required></textarea>
                 </div>
               </div>
             </div>
@@ -484,13 +1521,15 @@
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-money"></i>
-                <h4>التسعير والصور ونوع العقار</h4>
+                <div>
+                  <h4>التسعير والصور ونوع العقار</h4>
+                  <div class="section-note">حدد نوع العقار، سعر الليلة، ثم أرفق صورة رئيسية احترافية واضحة.</div>
+                </div>
               </div>
               <div class="form-grid" style="align-items:start;">
-                
                 <div class="input-group">
                   <label>نوع العقار <span class="text-danger">*</span></label>
-                  <select id="prop-type" required style="font-size:1.05rem; font-weight:bold; color:var(--primary); height: 50px;">
+                  <select id="prop-type" required style="font-size:1.03rem; font-weight:800; color:var(--primary); min-height:52px;">
                     <option value="apartment">شقة (Apartment)</option>
                     <option value="villa">فيلا (Villa)</option>
                     <option value="resort">منتجع (Resort)</option>
@@ -500,20 +1539,25 @@
 
                 <div class="input-group">
                   <label>السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
-                  <input type="number" id="prop-price" placeholder="مثال: 15000"
-                         style="font-size:1.2rem; font-weight:bold; color:var(--primary); height: 50px;" required>
+                  <input type="number" id="prop-price" placeholder="مثال: 15000" style="font-size:1.1rem; font-weight:800; color:var(--primary); min-height:52px;" required>
                 </div>
-                
-                <div class="input-group" style="grid-column:1/-1; margin-top: 10px;">
+
+                <div class="input-group" style="grid-column:1/-1; margin-top:4px;">
                   <label>الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
                   <div class="upload-zone">
                     <i class="ph ph-cloud-arrow-up"></i>
                     <span class="upload-zone-text">اضغط هنا أو اسحب الصورة</span>
-                    <span class="upload-zone-sub">PNG, JPG, JPEG (الحد الأقصى 5 ميجابايت)</span>
+                    <span class="upload-zone-sub">PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
                     <input type="file" id="prop-image" accept="image/*" required>
                   </div>
-                  <small id="upload-status" class="text-primary mt-2"
-                         style="display:block; text-align:center; font-weight:bold;"></small>
+                  <div class="upload-preview" id="upload-preview-box">
+                    <img id="upload-preview-img" alt="Preview">
+                    <div class="upload-preview-meta">
+                      <strong id="upload-preview-name">معاينة الصورة</strong>
+                      <span id="upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
+                    </div>
+                  </div>
+                  <small id="upload-status" class="text-primary mt-2" style="display:block; text-align:center; font-weight:700;"></small>
                 </div>
               </div>
             </div>
@@ -521,31 +1565,31 @@
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-map-pin-line"></i>
-                <h4>الموقع الجغرافي للخريطة</h4>
+                <div>
+                  <h4>الموقع الجغرافي للخريطة</h4>
+                  <div class="section-note">حدد العنوان النصي بدقة ثم اختر الإحداثيات مباشرة من الخريطة أو عبر البحث الذكي.</div>
+                </div>
               </div>
-              <div class="form-grid" style="margin-bottom:24px;">
+              <div class="form-grid" style="margin-bottom:12px;">
                 <div class="input-group">
                   <label>العنوان النصي (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-ar"
-                         placeholder="مثال: حي الرياض، الجزائر العاصمة" required>
+                  <input type="text" id="prop-loc-ar" placeholder="مثال: حي الرياض، الجزائر العاصمة" required>
                 </div>
                 <div class="input-group">
                   <label>العنوان النصي (إنجليزي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-en"
-                         placeholder="Example: Riad District, Algiers" required>
+                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" required>
                 </div>
               </div>
               <div class="map-picker-wrapper">
                 <div class="map-search-row">
-                  <input type="text" id="map-search-input"
-                         placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة...">
+                  <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة...">
                   <button type="button" onclick="searchMapLocation()">
                     <i class="ph ph-magnifying-glass"></i> بحث ذكي
                   </button>
                 </div>
                 <p class="map-picker-hint">
                   <i class="ph-fill ph-info"></i>
-                  اسحب الخريطة وانقر بدقة لتحديد الإحداثيات الدقيقة للعقار الخاص بك.
+                  اسحب الخريطة وانقر بدقة لتحديد الإحداثيات الدقيقة للعقار، ثم تأكد من القيم الظاهرة في الحقول التالية.
                 </p>
                 <div id="admin-map-picker"></div>
                 <div class="map-picked-badge" id="map-picked-badge">
@@ -564,31 +1608,58 @@
               </div>
             </div>
 
-            <div style="text-align:left; margin-top:10px;">
-              <button type="submit" class="primary-btn" id="submit-prop-btn"
-                      style="width:auto; padding:16px 40px; font-size:1.1rem;
-                             display:inline-flex; gap:10px; align-items:center;">
+            <div class="modern-section">
+              <div class="modern-section-header">
+                <i class="ph-fill ph-lightbulb"></i>
+                <div>
+                  <h4>نصائح قبل النشر</h4>
+                  <div class="section-note">هذه التوصيات تساعد في إظهار العقار بشكل أقوى أمام الزوار ورفع جودة العرض.</div>
+                </div>
+              </div>
+              <div class="quick-tips">
+                <div class="tip-card">
+                  <i class="ph ph-image"></i>
+                  <strong>اختر صورة جذابة</strong>
+                  <p>استخدم صورة مضيئة وواضحة بزاوية واسعة تعكس أفضل ما في العقار.</p>
+                </div>
+                <div class="tip-card">
+                  <i class="ph ph-text-align-right"></i>
+                  <strong>اكتب وصفاً مقنعاً</strong>
+                  <p>اذكر المميزات الحقيقية، عدد الغرف، القرب من الخدمات، ونوع التجربة التي يقدمها المكان.</p>
+                </div>
+                <div class="tip-card">
+                  <i class="ph ph-map-trifold"></i>
+                  <strong>ثبت الموقع بدقة</strong>
+                  <p>تحديد الإحداثيات بدقة يقلل الاستفسارات ويرفع الثقة عند المستخدم قبل الحجز.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-footer-actions">
+              <button type="submit" class="primary-btn" id="submit-prop-btn" style="width:auto; padding:16px 40px; font-size:1.05rem; display:inline-flex; gap:10px; align-items:center;">
                 <i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة
+              </button>
+              <button type="button" class="ghost-action" id="reset-property-form-btn">
+                <i class="ph ph-eraser"></i> تفريغ الحقول
               </button>
             </div>
           </form>
         </div>
 
-        <!-- Tab 3: Bookings -->
         <div id="tab-bookings" class="tab-pane">
-          <div class="admin-card"
-               style="background:transparent; border:none; box-shadow:none; padding:0;">
-            <h3 class="font-bold"
-                style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">
-              <i class="ph-fill ph-calendar-check" style="color:var(--primary);"></i>
-              طلبات الحجوزات
-            </h3>
+          <div class="admin-card" style="background:transparent; border:none; box-shadow:none; padding:0;">
+            <div class="pane-head">
+              <h3><i class="ph-fill ph-calendar-check" style="color:var(--primary);"></i> طلبات الحجوزات</h3>
+              <div class="pane-tools">
+                <button type="button" class="ghost-action" id="refresh-bookings-btn">
+                  <i class="ph ph-arrows-clockwise"></i> تحديث الحجوزات
+                </button>
+              </div>
+            </div>
             <div id="bookings-container">
-              <div style="text-align:center; padding:60px; color:var(--text-muted);">
-                <i class="ph ph-circle-notch ph-spin"
-                   style="font-size:2.5rem; color:var(--primary);
-                          margin-bottom:16px; display:block;"></i>
-                جارٍ التحميل...
+              <div class="empty-state">
+                <i class="ph ph-circle-notch ph-spin"></i>
+                جارٍ تحميل بيانات الحجوزات...
               </div>
             </div>
           </div>
@@ -598,17 +1669,16 @@
     </main>
   </div>
 
-  <!-- ✏️ Edit Modal -->
   <div class="modal-overlay" id="edit-modal">
-    <div class="modal-content admin-card" style="max-width:600px;">
+    <div class="modal-content admin-card">
       <button class="close-modal-btn" onclick="closeEditModal()">
         <i class="ph ph-x"></i>
       </button>
-      <h3 class="font-bold"
-          style="margin-bottom:24px; border-bottom:1px solid var(--border-color);
-                 padding-bottom:12px; color:var(--primary);">
-        تعديل العقار
-      </h3>
+
+      <div class="modal-topbar">
+        <h3><i class="ph-fill ph-pencil-simple-line"></i> تعديل العقار</h3>
+      </div>
+
       <form id="edit-property-form" class="admin-form">
         <input type="hidden" id="edit-prop-id">
         <div class="form-grid">
@@ -620,7 +1690,7 @@
             <label>السعر (DZD)</label>
             <input type="number" id="edit-price" required>
           </div>
-          
+
           <div class="input-group" style="grid-column: 1 / -1;">
             <label>نوع العقار</label>
             <select id="edit-type" required>
@@ -630,12 +1700,13 @@
               <option value="pool">مسبح (Pool)</option>
             </select>
           </div>
-          
         </div>
+
         <div class="input-group" style="margin-top:16px;">
           <label>الوصف (عربي)</label>
           <textarea id="edit-desc-ar" rows="4" required></textarea>
         </div>
+
         <div class="input-group" style="margin-top:20px;">
           <label style="display:flex; align-items:center; gap:8px;">
             <i class="ph-fill ph-map-pin" style="color:var(--primary); font-size:1.1rem;"></i>
@@ -658,31 +1729,40 @@
             </div>
           </div>
         </div>
-        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn"
-                style="height:50px; display:flex; align-items:center;
-                       justify-content:center; gap:8px;">
+
+        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn" style="height:52px; display:flex; align-items:center; justify-content:center; gap:8px;">
           حفظ التعديلات <i class="ph ph-floppy-disk"></i>
         </button>
       </form>
     </div>
   </div>
 
-  <!-- ================================================
-       🛡️ RBAC — نظام صلاحيات الملاك
-       ================================================ -->
   <script>
-    // =============================================
-    // ⚠️ Document IDs الحقيقية من Firestore
-    // بالم جاردن  → bo0f9aLoiKPj0H8FKi6l
-    // فندق التجاني → Mu1JanKGWSy8xyUmya2C
-    // =============================================
     const OWNER_ACCOUNTS = {
-      palmadmin:    { id: 'bo0f9aLoiKPj0H8FKi6l', name: 'مالك عقار: بالم جاردن'  },
+      palmadmin: { id: 'bo0f9aLoiKPj0H8FKi6l', name: 'مالك عقار: بالم جاردن' },
       tedjaniadmin: { id: 'Mu1JanKGWSy8xyUmya2C', name: 'مالك عقار: فندق التجاني' }
     };
 
     document.addEventListener("DOMContentLoaded", () => {
       const loginForm = document.getElementById('admin-login-form');
+      const sidebar = document.getElementById('admin-sidebar');
+      const mobileToggle = document.getElementById('admin-mobile-toggle');
+      const addForm = document.getElementById('add-property-form');
+      const resetBtn = document.getElementById('reset-property-form-btn');
+      const fileInput = document.getElementById('prop-image');
+      const propertySearchInput = document.getElementById('property-search-input');
+
+      mobileToggle?.addEventListener('click', () => {
+        sidebar?.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth > 1100) return;
+        if (!sidebar || !mobileToggle) return;
+        if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
+        sidebar.classList.remove('open');
+      });
+
       if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
           const u = document.getElementById('admin-user').value.trim();
@@ -705,7 +1785,103 @@
       if (localStorage.getItem('ownerPropId')) {
         setupOwnerUI(localStorage.getItem('ownerPropName') || 'مالك عقار');
       }
+
+      resetBtn?.addEventListener('click', () => {
+        addForm?.reset();
+        document.getElementById('map-picked-badge')?.classList.remove('visible');
+        document.getElementById('prop-lat').value = '';
+        document.getElementById('prop-lng').value = '';
+        document.getElementById('upload-status').textContent = '';
+        resetUploadPreview();
+        if (typeof window._resetAddMap === 'function') window._resetAddMap();
+      });
+
+      fileInput?.addEventListener('change', function() {
+        updateUploadPreview(this.files?.[0] || null);
+      });
+
+      propertySearchInput?.addEventListener('input', function() {
+        const q = this.value.trim().toLowerCase();
+        const rows = document.querySelectorAll('#properties-tbody tr');
+        rows.forEach(row => {
+          const txt = row.textContent.toLowerCase();
+          row.style.display = txt.includes(q) ? '' : 'none';
+        });
+      });
+
+      document.getElementById('refresh-properties-btn')?.addEventListener('click', () => {
+        if (typeof window.fetchProperties === 'function') window.fetchProperties();
+        if (typeof window.loadProperties === 'function') window.loadProperties();
+      });
+
+      document.getElementById('refresh-bookings-btn')?.addEventListener('click', () => {
+        if (typeof window.loadBookings === 'function') window.loadBookings();
+      });
+
+      const checkInterval = setInterval(() => {
+        if (typeof updateAdminQuickStats === 'function') {
+          clearInterval(checkInterval);
+          updateAdminQuickStats();
+        }
+      }, 300);
     });
+
+    function updateUploadPreview(file) {
+      const zoneText = document.querySelector('.upload-zone-text');
+      const zoneIcon = document.querySelector('.upload-zone i');
+      const previewBox = document.getElementById('upload-preview-box');
+      const previewImg = document.getElementById('upload-preview-img');
+      const previewName = document.getElementById('upload-preview-name');
+      const previewSize = document.getElementById('upload-preview-size');
+      const uploadStatus = document.getElementById('upload-status');
+
+      if (!file) {
+        resetUploadPreview();
+        if (uploadStatus) uploadStatus.textContent = '';
+        return;
+      }
+
+      if (zoneText) {
+        zoneText.textContent = '✅ ' + file.name;
+        zoneText.style.color = 'var(--primary)';
+      }
+      if (zoneIcon) zoneIcon.className = 'ph-fill ph-check-circle';
+
+      const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
+      if (previewName) previewName.textContent = file.name;
+      if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
+      if (uploadStatus) uploadStatus.textContent = 'تم اختيار ملف الصورة بنجاح';
+
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (previewImg) previewImg.src = e.target.result;
+          previewBox?.classList.add('visible');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewBox?.classList.remove('visible');
+      }
+    }
+
+    function resetUploadPreview() {
+      const zoneText = document.querySelector('.upload-zone-text');
+      const zoneIcon = document.querySelector('.upload-zone i');
+      const previewBox = document.getElementById('upload-preview-box');
+      const previewImg = document.getElementById('upload-preview-img');
+      const previewName = document.getElementById('upload-preview-name');
+      const previewSize = document.getElementById('upload-preview-size');
+
+      if (zoneText) {
+        zoneText.textContent = 'اضغط هنا أو اسحب الصورة';
+        zoneText.style.color = '';
+      }
+      if (zoneIcon) zoneIcon.className = 'ph ph-cloud-arrow-up';
+      if (previewImg) previewImg.removeAttribute('src');
+      if (previewName) previewName.textContent = 'معاينة الصورة';
+      if (previewSize) previewSize.textContent = 'سيظهر اسم وحجم الملف هنا';
+      previewBox?.classList.remove('visible');
+    }
 
     function setupOwnerSession(propId, displayName) {
       localStorage.setItem('ownerPropId', propId);
@@ -719,7 +1895,9 @@
         if (typeof loadBookings === 'function' && typeof loadProperties === 'function') {
           clearInterval(waitForAdminJs);
           if (typeof window.fetchProperties === 'function') window.fetchProperties();
+          loadProperties();
           loadBookings();
+          setTimeout(updateAdminQuickStats, 500);
         }
       }, 100);
     }
@@ -731,7 +1909,7 @@
       const nameEl = document.getElementById('admin-profile-name');
       const roleEl = document.getElementById('admin-profile-role');
       if (nameEl) nameEl.textContent = displayName || 'مالك عقار';
-      if (roleEl) roleEl.textContent  = 'صلاحيات محدودة';
+      if (roleEl) roleEl.textContent = 'صلاحيات محدودة';
     }
 
     function logoutAdmin() {
@@ -739,21 +1917,50 @@
       localStorage.removeItem('ownerPropName');
       window.location.reload();
     }
+
+    function updateAdminQuickStats() {
+      const rows = Array.from(document.querySelectorAll('#properties-tbody tr')).filter(row => row.style.display !== 'none');
+      const bookingCards = Array.from(document.querySelectorAll('#bookings-container .booking-card'));
+      const totalProperties = rows.length;
+      let activeProperties = 0;
+      let pendingBookings = 0;
+
+      rows.forEach(row => {
+        const statusText = row.textContent.toLowerCase();
+        if (statusText.includes('إظهار') || statusText.includes('visible') || statusText.includes('active')) {
+          activeProperties += 1;
+        }
+      });
+
+      bookingCards.forEach(card => {
+        const txt = card.textContent.toLowerCase();
+        if (txt.includes('pending') || txt.includes('معلق') || txt.includes('قيد')) pendingBookings += 1;
+      });
+
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      };
+
+      setText('stat-total-properties', totalProperties || '--');
+      setText('stat-active-properties', activeProperties || 0);
+      setText('stat-total-bookings', bookingCards.length || '--');
+      setText('stat-pending-bookings', pendingBookings || 0);
+    }
   </script>
 
-  <!-- ✅ Addon utilities -->
   <script src="admin_bookings_addon.js" defer></script>
-
-  <!-- ✅ Core admin logic -->
   <script src="admin.js" defer></script>
 
-  <!-- 🗺️ Admin Map Pickers -->
   <script>
-    let addMap = null, addMarker  = null;
+    let addMap = null, addMarker = null;
     let editMap = null, editMarker = null;
 
     function initAddMap() {
-      if (addMap) { addMap.invalidateSize(); return; }
+      if (addMap) {
+        addMap.invalidateSize();
+        return;
+      }
       addMap = L.map('admin-map-picker').setView([28.0, 3.0], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
@@ -766,10 +1973,7 @@
 
     function placeAddMarker(lat, lng) {
       if (addMarker) addMap.removeLayer(addMarker);
-      addMarker = L.marker([lat, lng])
-        .addTo(addMap)
-        .bindPopup('📍 تم تحديد الموقع')
-        .openPopup();
+      addMarker = L.marker([lat, lng]).addTo(addMap).bindPopup('📍 تم تحديد الموقع').openPopup();
       document.getElementById('prop-lat').value = lat.toFixed(6);
       document.getElementById('prop-lng').value = lng.toFixed(6);
       document.getElementById('map-picked-badge').classList.add('visible');
@@ -779,7 +1983,7 @@
       const query = document.getElementById('map-search-input').value.trim();
       if (!query) return;
       try {
-        const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
         const data = await res.json();
         if (data.length > 0) {
           const lat = parseFloat(data[0].lat);
@@ -787,7 +1991,7 @@
           addMap.setView([lat, lng], 14);
           placeAddMarker(lat, lng);
         } else {
-          alert('لم يتم العثور على الموقع، جرب كتابة اسم الولاية بالإنجليزية.');
+          alert('لم يتم العثور على الموقع، جرب كتابة اسم الولاية أو المنطقة بشكل أوضح.');
         }
       } catch(err) {
         alert('حدث خطأ أثناء البحث عن الموقع.');
@@ -796,21 +2000,19 @@
 
     function initEditMap(existingLat, existingLng) {
       const hasCoords = existingLat && existingLng;
-      const center    = hasCoords ? [existingLat, existingLng] : [28.0, 3.0];
-      const zoom      = hasCoords ? 14 : 5;
+      const center = hasCoords ? [existingLat, existingLng] : [28.0, 3.0];
+      const zoom = hasCoords ? 14 : 5;
 
       if (!editMap) {
         editMap = L.map('edit-map-picker').setView(center, zoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19
+          maxZoom: 19,
+          attribution: '© OpenStreetMap contributors'
         }).addTo(editMap);
         editMap.on('click', function(e) {
           const { lat, lng } = e.latlng;
           if (editMarker) editMap.removeLayer(editMarker);
-          editMarker = L.marker([lat, lng])
-            .addTo(editMap)
-            .bindPopup('📍 الموقع الجديد')
-            .openPopup();
+          editMarker = L.marker([lat, lng]).addTo(editMap).bindPopup('📍 الموقع الجديد').openPopup();
           document.getElementById('edit-lat').value = lat.toFixed(6);
           document.getElementById('edit-lng').value = lng.toFixed(6);
           document.getElementById('edit-map-picked-badge').classList.add('visible');
@@ -822,10 +2024,7 @@
 
       if (hasCoords) {
         if (editMarker) editMap.removeLayer(editMarker);
-        editMarker = L.marker([existingLat, existingLng])
-          .addTo(editMap)
-          .bindPopup('📍 الموقع الحالي')
-          .openPopup();
+        editMarker = L.marker([existingLat, existingLng]).addTo(editMap).bindPopup('📍 الموقع الحالي').openPopup();
         document.getElementById('edit-map-picked-badge').classList.add('visible');
       }
     }
@@ -835,7 +2034,9 @@
       const _orig = window.switchTab;
       window.switchTab = function(tab) {
         _orig(tab);
+        document.getElementById('admin-sidebar')?.classList.remove('open');
         if (tab === 'add-property') setTimeout(initAddMap, 150);
+        setTimeout(updateAdminQuickStats, 350);
       };
     }
 
@@ -852,20 +2053,14 @@
         setTimeout(initAddMap, 300);
       }
 
-      const fileInput = document.getElementById('prop-image');
-      if (fileInput) {
-        fileInput.addEventListener('change', function() {
-          if (this.files && this.files[0]) {
-            const zoneText = document.querySelector('.upload-zone-text');
-            const zoneIcon = document.querySelector('.upload-zone i');
-            if (zoneText) {
-              zoneText.textContent = '✅ ' + this.files[0].name;
-              zoneText.style.color = 'var(--primary)';
-            }
-            if (zoneIcon) zoneIcon.className = 'ph-fill ph-check-circle';
-          }
-        });
-      }
+      const observer = new MutationObserver(() => {
+        updateAdminQuickStats();
+      });
+
+      const propBody = document.getElementById('properties-tbody');
+      const bookingsContainer = document.getElementById('bookings-container');
+      if (propBody) observer.observe(propBody, { childList: true, subtree: true });
+      if (bookingsContainer) observer.observe(bookingsContainer, { childList: true, subtree: true });
     });
 
     window.initEditMapFromAdmin = function(lat, lng) {
@@ -883,6 +2078,5 @@
       if (addMap) addMap.setView([28.0, 3.0], 5);
     };
   </script>
-
 </body>
 </html>
