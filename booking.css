@@ -1,7 +1,7 @@
 /* =========================================================
-   booking.css — OreBooking v7.0
-   Refined to match latest booking.html structure
-   Optimized for responsive, RTL/LTR, dark mode, auth modal
+   booking.css — OreBooking v8.0
+   Synced with latest booking.html structure
+   Full RTL/LTR support, preference chips, improved review UI
    ========================================================= */
 
 /* ═══════════════════════════════════════════
@@ -25,7 +25,11 @@ html[dir="rtl"] .bank-row,
 html[dir="rtl"] .booking-alert,
 html[dir="rtl"] .hero-badge,
 html[dir="rtl"] .stay-stat,
-html[dir="rtl"] .prop-mini-card {
+html[dir="rtl"] .prop-mini-card,
+html[dir="rtl"] .summary-meta-item,
+html[dir="rtl"] .points-box,
+html[dir="rtl"] .checkbox-container,
+html[dir="rtl"] .selected-file {
   flex-direction: row-reverse;
 }
 
@@ -34,7 +38,10 @@ html[dir="rtl"] .step-header,
 html[dir="rtl"] .inline-actions,
 html[dir="rtl"] .hero-secure-badges,
 html[dir="rtl"] .social-logins,
-html[dir="rtl"] .nav-actions {
+html[dir="rtl"] .nav-actions,
+html[dir="rtl"] .review-tags,
+html[dir="rtl"] .preference-chips,
+html[dir="rtl"] .feature-chips {
   direction: rtl;
 }
 
@@ -46,7 +53,14 @@ html[dir="rtl"] .switch-form-text,
 html[dir="rtl"] .auth-subtitle,
 html[dir="rtl"] .step-subtitle,
 html[dir="rtl"] .mini-note,
-html[dir="rtl"] .hint-text {
+html[dir="rtl"] .hint-text,
+html[dir="rtl"] .booking-hero-card p,
+html[dir="rtl"] .sidebar-note,
+html[dir="rtl"] .summary-highlight,
+html[dir="rtl"] .payment-method-desc,
+html[dir="rtl"] .file-upload-text,
+html[dir="rtl"] .file-upload-hint,
+html[dir="rtl"] .points-text p {
   text-align: right;
 }
 
@@ -58,8 +72,29 @@ html[dir="ltr"] .switch-form-text,
 html[dir="ltr"] .auth-subtitle,
 html[dir="ltr"] .step-subtitle,
 html[dir="ltr"] .mini-note,
-html[dir="ltr"] .hint-text {
+html[dir="ltr"] .hint-text,
+html[dir="ltr"] .booking-hero-card p,
+html[dir="ltr"] .sidebar-note,
+html[dir="ltr"] .summary-highlight,
+html[dir="ltr"] .payment-method-desc,
+html[dir="ltr"] .file-upload-text,
+html[dir="ltr"] .file-upload-hint,
+html[dir="ltr"] .points-text p {
   text-align: left;
+}
+
+html[dir="rtl"] .bank-row strong,
+html[dir="rtl"] .summary-row strong,
+html[dir="rtl"] .rd-value,
+html[dir="rtl"] .summary-meta-item span {
+  text-align: left;
+}
+
+html[dir="ltr"] .bank-row strong,
+html[dir="ltr"] .summary-row strong,
+html[dir="ltr"] .rd-value,
+html[dir="ltr"] .summary-meta-item span {
+  text-align: right;
 }
 
 /* ═══════════════════════════════════════════
@@ -94,6 +129,11 @@ html[dir="ltr"] .hint-text {
   0% { box-shadow: 0 0 0 0 rgba(67, 90, 191, .28); }
   70% { box-shadow: 0 0 0 14px rgba(67, 90, 191, 0); }
   100% { box-shadow: 0 0 0 0 rgba(67, 90, 191, 0); }
+}
+
+@keyframes chipFadeIn {
+  from { opacity: 0; transform: translateY(6px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ═══════════════════════════════════════════
@@ -447,6 +487,12 @@ body.dark .step-header-icon {
   line-height: 1.7;
 }
 
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-color, #e2e8f0), transparent);
+  margin: 6px 0 22px;
+}
+
 /* ═══════════════════════════════════════════
    Form Grid / Inputs
 ═══════════════════════════════════════════ */
@@ -520,6 +566,74 @@ textarea.form-control {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+
+/* ═══════════════════════════════════════════
+   Preference Chips
+═══════════════════════════════════════════ */
+.preference-chips,
+.feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.preference-chips .chip-option,
+.feature-chips .chip-option {
+  animation: chipFadeIn .28s ease both;
+}
+
+.chip-option {
+  position: relative;
+}
+
+.chip-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip-option span {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--surface-color, #fff);
+  color: var(--text-main, #0f172a);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 700;
+  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  user-select: none;
+  box-shadow: 0 1px 0 rgba(15,23,42,.02);
+}
+
+.chip-option span i {
+  color: var(--primary, #435abf);
+  font-size: 1rem;
+}
+
+.chip-option span:hover {
+  border-color: rgba(67,90,191,.4);
+  background: rgba(67,90,191,0.03);
+  transform: translateY(-1px);
+}
+
+.chip-option input:checked + span {
+  background: rgba(67,90,191,0.08);
+  border-color: var(--primary, #435abf);
+  color: var(--primary, #435abf);
+  box-shadow: 0 0 0 3px rgba(67,90,191,0.1);
+  transform: translateY(-1px);
+}
+
+.chip-option input:focus-visible + span {
+  box-shadow: 0 0 0 4px rgba(67,90,191,0.14);
 }
 
 /* ═══════════════════════════════════════════
@@ -688,6 +802,7 @@ textarea.form-control {
 .bank-row strong {
   color: var(--text-main, #0f172a);
   text-align: end;
+  word-break: break-word;
 }
 
 .inline-actions {
@@ -897,6 +1012,23 @@ body.dark .review-card-header {
   font-weight: 700;
   line-height: 1.6;
   word-break: break-word;
+}
+
+.review-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-tag {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--surface-color, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-main, #0f172a);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 /* ═══════════════════════════════════════════
@@ -1211,6 +1343,18 @@ body.dark .review-card-header {
   color: var(--primary, #435abf);
 }
 
+.summary-highlight {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.16);
+  color: var(--success, #10b981);
+  font-size: .88rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
 .sidebar-note {
   margin-top: 18px;
   padding-top: 16px;
@@ -1225,6 +1369,10 @@ body.dark .review-card-header {
    Utility
 ═══════════════════════════════════════════ */
 .d-none {
+  display: none !important;
+}
+
+.lang-hidden {
   display: none !important;
 }
 
@@ -1716,7 +1864,9 @@ body.dark .review-card-header {
   }
 
   .hero-secure-badges,
-  .social-logins {
+  .social-logins,
+  .preference-chips,
+  .feature-chips {
     flex-direction: column;
   }
 
@@ -1728,6 +1878,16 @@ body.dark .review-card-header {
   .prop-mini-img {
     width: 100%;
     height: 180px;
+  }
+
+  .chip-option span {
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 14px;
+  }
+
+  html[dir="rtl"] .chip-option span {
+    justify-content: flex-start;
   }
 }
 
