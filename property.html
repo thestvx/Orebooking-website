@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Property Details - OreBooking</title>
+  <meta name="description" content="Explore full property details, amenities, host info, location, and booking options on OreBooking.">
+  <meta name="theme-color" content="#435abf">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logos/orebooking.png">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,308 +16,1729 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
   <!-- Icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web" defer></script>
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- Leaflet.js (Map) -->
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
-  <!-- Main Styles -->
+  <!-- Shared styles -->
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* =============================================
-       PROPERTY SPECIFIC STYLES
-       (Extends style.css)
-    ============================================= */
+    :root {
+      --primary: #435abf;
+      --primary-hover: #34459c;
+      --accent: #657be0;
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.08);
+      --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
+      --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
+      --shadow-card-hover: 0 20px 36px rgba(15, 23, 42, 0.1);
+      --radius-sm: 0.75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.5rem;
+      --radius-2xl: 2rem;
+      --radius-full: 9999px;
+      --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-    /* Sub-nav inside Property Page */
-    .prop-subnav {
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background:
+        radial-gradient(circle at top center, rgba(67,90,191,0.05) 0, transparent 35%),
+        var(--bg-color);
+      color: var(--text-main);
+      transition: background-color 0.3s ease, color 0.3s ease;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    html[dir="ltr"] body { font-family: 'Outfit', sans-serif; }
+    html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
+
+    body.dark {
+      --bg-color: #0f172a;
+      --surface-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.4);
+      --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.25);
+      --shadow-card: 0 14px 40px rgba(0,0,0,0.28);
+      --shadow-card-hover: 0 24px 46px rgba(0,0,0,0.38);
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 12px 24px;
+      background-color: rgba(255,255,255,0.86);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      transition: var(--transition);
+      gap: 12px;
+    }
+
+    body.dark .navbar { background: rgba(15,23,42,0.86); }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-img {
+      height: 42px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-inline-start: auto;
+      flex-shrink: 0;
+    }
+
+    .rewards-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(139,92,246,0.1);
+      color: #8b5cf6;
+      padding: 8px 14px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .icon-btn,
+    .lang-btn,
+    .profile-menu,
+    .back-btn,
+    .share-btn,
+    .quick-chip,
+    .gallery-thumb,
+    .fav-property-btn {
+      font-family: inherit;
+    }
+
+    .icon-btn,
+    .lang-btn,
+    .profile-menu {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      min-width: 44px;
+      min-height: 44px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .icon-btn {
+      width: 44px;
+      border-radius: 50%;
+      font-size: 1.15rem;
+    }
+
+    .lang-btn {
+      border-radius: var(--radius-full);
+      padding: 0 14px;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .profile-menu {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 1.15rem;
+    }
+
+    .icon-btn:hover,
+    .lang-btn:hover,
+    .profile-menu:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .profile-container { position: relative; }
+
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      inset-inline-end: 0;
+      width: 240px;
+      background-color: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-soft);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+      transition: var(--transition);
+      z-index: 1010;
+      overflow: hidden;
+    }
+
+    .profile-dropdown.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .dropdown-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: var(--bg-color);
+    }
+
+    .dropdown-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      text-align: start;
+      cursor: pointer;
+      transition: var(--transition);
+      min-height: 44px;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(67,90,191,0.06);
+      color: var(--primary);
+      padding-inline-start: 22px;
+    }
+
+    .dropdown-item.text-danger:hover {
+      color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+
+    .prop-subnav {
+      padding: 16px 24px;
       max-width: 1160px;
       margin: 0 auto;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 16px;
+      flex-wrap: wrap;
     }
 
-    /* Image Gallery Slider */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      padding: 11px 18px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      transition: var(--transition);
+    }
+
+    .back-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .property-page {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding-bottom: 80px;
+    }
+
+    .card-skeleton {
+      border-radius: 24px;
+      background: linear-gradient(90deg, rgba(148,163,184,0.18) 25%, rgba(148,163,184,0.32) 37%, rgba(148,163,184,0.18) 63%);
+      background-size: 400% 100%;
+      animation: skeletonLoading 1.2s ease-in-out infinite;
+      border: 1px solid var(--border-color);
+    }
+
+    @keyframes skeletonLoading {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
+
+    .prop-header {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .prop-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .prop-title-wrap {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .prop-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      margin: 0 0 10px;
+      color: var(--text-main);
+    }
+
+    .prop-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .prop-rating,
+    .prop-location,
+    .prop-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .prop-rating i { color: #f59e0b; }
+
+    .prop-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .share-btn,
+    .fav-property-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 16px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .share-btn:hover,
+    .fav-property-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
+      transform: translateY(-1px);
+    }
+
+    .fav-property-btn.active {
+      color: #e11d48;
+      border-color: rgba(225,29,72,0.3);
+      background: rgba(225,29,72,0.08);
+    }
+
+    .prop-quick-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .quick-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-full);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      color: var(--text-main);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .quick-chip i { color: var(--primary); }
+
     .prop-image-gallery {
-      border-radius: var(--radius-2xl); 
+      border-radius: var(--radius-2xl);
       overflow: hidden;
-      box-shadow: var(--shadow-soft); 
-      margin-bottom: 40px; 
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 18px;
       position: relative;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
     }
 
-    .slider-container { 
-      position: relative; overflow: hidden; aspect-ratio: 16/9; background: var(--bg-color); cursor: grab; 
+    .slider-container {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      background: var(--bg-color);
+      cursor: grab;
     }
+
     .slider-container:active { cursor: grabbing; }
 
     .slider-track {
-      display: flex; transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      height: 100%; will-change: transform;
+      display: flex;
+      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      height: 100%;
+      will-change: transform;
     }
-    .slider-track img { min-width: 100%; width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; user-select: none; -webkit-user-drag: none; }
+
+    .slider-track img {
+      min-width: 100%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-user-drag: none;
+      background: var(--bg-color);
+    }
 
     .slider-count-badge {
-      position: absolute; top: 16px; inset-inline-end: 16px;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); color: #fff;
-      font-size: 0.8rem; font-weight: 600; padding: 5px 12px;
-      border-radius: var(--radius-full); z-index: 5; pointer-events: none;
+      position: absolute;
+      top: 16px;
+      inset-inline-end: 16px;
+      background: rgba(0,0,0,0.58);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      z-index: 5;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    .slider-fullscreen-btn,
+    .slider-btn {
+      position: absolute;
+      z-index: 10;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
     }
 
     .slider-fullscreen-btn {
-      position: absolute; top: 16px; inset-inline-start: 16px;
-      width: 38px; height: 38px; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
-      border: none; border-radius: 50%; color: #fff; font-size: 1rem;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      z-index: 5; transition: var(--transition);
+      top: 16px;
+      inset-inline-start: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.52);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
     }
-    .slider-fullscreen-btn:hover { background: var(--primary); transform: scale(1.08); }
+
+    .slider-fullscreen-btn:hover {
+      background: var(--primary);
+      transform: scale(1.06);
+    }
 
     .slider-btn {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(6px); border: none; cursor: pointer; display: flex;
-      align-items: center; justify-content: center; font-size: 1.2rem; color: var(--text-main);
-      z-index: 10; transition: var(--transition); box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      top: 50%;
+      transform: translateY(-50%);
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.94);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
     }
-    body.dark .slider-btn { background: rgba(30,30,30,0.88); color: #fff; }
-    .slider-btn:hover { background: var(--primary); color: #fff; transform: translateY(-50%) scale(1.1); }
+
+    body.dark .slider-btn {
+      background: rgba(15,23,42,0.92);
+      color: #fff;
+    }
+
+    .slider-btn:hover {
+      background: var(--primary);
+      color: #fff;
+      transform: translateY(-50%) scale(1.08);
+    }
+
     .slider-btn.prev-btn { inset-inline-start: 14px; }
     .slider-btn.next-btn { inset-inline-end: 14px; }
 
     .slider-dots-container {
-      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 7px; z-index: 5;
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 7px;
+      z-index: 5;
     }
+
     .slider-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5);
-      border: none; cursor: pointer; transition: all 0.25s; padding: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.56);
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s;
+      padding: 0;
     }
-    .slider-dot.active { background: #fff; width: 22px; border-radius: 4px; }
 
-    /* Host card */
+    .slider-dot.active {
+      background: #fff;
+      width: 24px;
+      border-radius: 999px;
+    }
+
+    .gallery-thumbs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .gallery-thumb {
+      border: 1.5px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--surface-color);
+      cursor: pointer;
+      transition: var(--transition);
+      padding: 0;
+      aspect-ratio: 4/3;
+    }
+
+    .gallery-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .gallery-thumb:hover,
+    .gallery-thumb.active {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+
+    .prop-content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .prop-details-section,
+    .prop-booking-card,
+    .host-card,
+    .highlights-card,
+    .tips-card,
+    .map-card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-card);
+    }
+
+    .prop-details-section {
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title i { color: var(--primary); }
+
+    .prop-description {
+      font-size: 1rem;
+      line-height: 1.9;
+      color: var(--text-muted);
+    }
+
+    .highlights-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .highlight-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+    }
+
+    .highlight-item i {
+      font-size: 1.2rem;
+      color: var(--primary);
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    .highlight-item strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+    }
+
+    .highlight-item span {
+      color: var(--text-muted);
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+
     .host-card {
-      display: flex; align-items: center; gap: 16px; padding: 20px;
-      background: var(--bg-color); border: 1px solid var(--border-color);
-      border-radius: var(--radius-2xl); margin-bottom: 36px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      margin-bottom: 22px;
     }
+
     .host-avatar {
-      width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #6c7fd8);
-      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.4rem; flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #6c7fd8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      box-shadow: 0 10px 24px rgba(67,90,191,0.25);
     }
+
     .host-info { flex: 1; }
-    .host-info strong { display: block; font-size: 0.97rem; color: var(--text-main); margin-bottom: 3px; }
-    .host-info span { font-size: 0.83rem; color: var(--text-muted); }
+
+    .host-info strong {
+      display: block;
+      font-size: 1rem;
+      color: var(--text-main);
+      margin-bottom: 3px;
+    }
+
+    .host-info span {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
     .host-badge {
-      display: inline-flex; align-items: center; gap: 4px; background: rgba(67,90,191,0.1);
-      color: var(--primary); font-size: 0.75rem; font-weight: 600; padding: 3px 10px;
-      border-radius: var(--radius-full); margin-top: 5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(67,90,191,0.1);
+      color: var(--primary);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      margin-top: 8px;
     }
 
-    /* Map Section */
-    #property-map { width: 100%; height: 360px; border-radius: var(--radius-2xl); border: 1px solid var(--border-color); z-index: 1; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .features-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 0;
+      margin: 0;
+    }
+
+    .features-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      min-height: 54px;
+    }
+
+    .features-list li i {
+      color: var(--primary);
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .tips-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .tip-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      line-height: 1.7;
+      font-size: 0.92rem;
+    }
+
+    .tip-row i {
+      color: var(--primary);
+      font-size: 1.05rem;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .map-card {
+      padding: 24px;
+      margin-top: 22px;
+    }
+
+    #property-map {
+      width: 100%;
+      height: 360px;
+      border-radius: 24px;
+      border: 1px solid var(--border-color);
+      z-index: 1;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
     .map-open-btn {
-      display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px 20px;
-      background: var(--primary); color: #fff; border: none; border-radius: var(--radius-full);
-      font-family: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-full);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: var(--transition);
     }
-    .map-open-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(67,90,191,0.35); }
-    
-    .map-no-location {
-      width: 100%; height: 180px; border-radius: var(--radius-2xl); background: var(--bg-color); border: 1.5px dashed var(--border-color);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-muted); font-size: 0.9rem;
-    }
-    .map-no-location i { font-size: 2.2rem; opacity: 0.35; }
-    body.dark .leaflet-tile { filter: brightness(0.82) saturate(0.85) contrast(1.05); }
-    body.dark .leaflet-popup-content-wrapper, body.dark .leaflet-popup-tip { background: var(--surface-color); color: var(--text-main); box-shadow: var(--shadow-soft); }
 
-    /* Booking Card */
-    .prop-booking-card {
-      background: var(--surface-color); border: 1px solid var(--border-color);
-      border-radius: var(--radius-2xl); padding: 28px; position: sticky; top: 100px;
-      box-shadow: var(--shadow-card); transition: box-shadow 0.3s;
+    .map-open-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(67,90,191,0.35);
     }
+
+    .map-no-location {
+      width: 100%;
+      min-height: 180px;
+      border-radius: 24px;
+      background: var(--bg-color);
+      border: 1.5px dashed var(--border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      text-align: center;
+      padding: 20px;
+      margin-top: 14px;
+    }
+
+    .map-no-location i {
+      font-size: 2.2rem;
+      opacity: 0.4;
+    }
+
+    body.dark .leaflet-tile {
+      filter: brightness(0.82) saturate(0.85) contrast(1.05);
+    }
+
+    body.dark .leaflet-popup-content-wrapper,
+    body.dark .leaflet-popup-tip {
+      background: var(--surface-color);
+      color: var(--text-main);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .prop-booking-card {
+      padding: 28px;
+      position: sticky;
+      top: 94px;
+      transition: box-shadow 0.3s;
+    }
+
     .prop-booking-card:hover { box-shadow: var(--shadow-card-hover); }
 
-    .booking-price { display: flex; align-items: baseline; gap: 8px; margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
-    .price-val { font-size: 1.9rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em; line-height: 1; }
-
-    .booking-perks { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
-    .booking-perk { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--text-muted); }
-    .booking-perk i { color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }
-
-    .booking-info-box { display: flex; gap: 10px; padding: 14px; background: var(--bg-color); border-radius: var(--radius-xl); margin-bottom: 20px; border: 1px solid var(--border-color); }
-    .booking-info-box i { color: var(--primary); font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
-    .booking-info-box p { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; margin: 0; }
-
-    .no-charge-text { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 12px; font-size: 0.82rem; color: var(--text-muted); }
-    
-    .prop-share-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .share-btn {
-      display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border: 1px solid var(--border-color);
-      border-radius: var(--radius-full); background: transparent; color: var(--text-main); font-family: inherit; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
+    .booking-price {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 22px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
     }
-    .share-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(67,90,191,0.06); }
 
-    /* Lightbox */
+    .price-val {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .booking-mini-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .booking-mini-stat {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .booking-mini-stat i {
+      color: var(--primary);
+      font-size: 1.05rem;
+    }
+
+    .booking-perks {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 22px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .booking-perk {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .booking-perk i {
+      color: var(--primary);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .booking-info-box {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      background: var(--bg-color);
+      border-radius: 18px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .booking-info-box i {
+      color: var(--primary);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .booking-info-box p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .primary-btn {
+      min-height: 52px;
+      padding: 0 22px;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: var(--transition);
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(67,90,191,0.3);
+      width: 100%;
+      text-decoration: none;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .no-charge-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .trust-note {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      text-align: center;
+    }
+
     .lightbox-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999;
-      align-items: center; justify-content: center; backdrop-filter: blur(10px);
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
     }
+
     .lightbox-overlay.active { display: flex; }
-    .lightbox-img-wrapper { max-width: 90vw; max-height: 90vh; position: relative; }
-    .lightbox-img { max-width: 100%; max-height: 90vh; object-fit: contain; transition: transform 0.3s ease; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-    .lightbox-img.zoomed { transform: scale(1.5); cursor: zoom-out; }
-    .close-lightbox { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: white; font-size: 2rem; cursor: pointer; z-index: 10; }
-    .lightbox-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: none; color: white; font-size: 2rem; padding: 10px; cursor: pointer; border-radius: 50%; transition: background 0.3s; z-index: 10; }
-    .lightbox-btn:hover { background: rgba(255,255,255,0.3); }
+
+    .lightbox-img-wrapper {
+      max-width: 90vw;
+      max-height: 90vh;
+      position: relative;
+    }
+
+    .lightbox-img {
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      transition: transform 0.3s ease;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+      cursor: zoom-in;
+    }
+
+    .lightbox-img.zoomed {
+      transform: scale(1.5);
+      cursor: zoom-out;
+    }
+
+    .close-lightbox {
+      position: absolute;
+      top: 20px;
+      inset-inline-end: 20px;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    .lightbox-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: white;
+      font-size: 2rem;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background 0.3s;
+      z-index: 10;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox-btn:hover { background: rgba(255,255,255,0.24); }
     .lightbox-btn.prev-btn { left: 20px; }
     .lightbox-btn.next-btn { right: 20px; }
 
-    @media (max-width: 640px) {
-      .slider-container { aspect-ratio: 4/3; }
-      .features-list { grid-template-columns: 1fr 1fr; }
-      .prop-booking-card { position: static; margin-top: 32px; }
-      .price-val { font-size: 1.6rem; }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      width: 100%;
+      max-width: 460px;
+      border-radius: var(--radius-xl);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+      transform: translateY(20px) scale(0.96);
+      transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0) scale(1);
+    }
+
+    .auth-card { position: relative; }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 16px;
+      inset-inline-end: 16px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: var(--transition);
+      z-index: 10;
+    }
+
+    .close-modal-btn:hover { background: var(--border-color); }
+
+    .auth-header {
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: center;
+    }
+
+    .auth-header img {
+      height: 42px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .auth-content { padding: 28px 24px 28px; }
+
+    .auth-form { display: none; }
+    .auth-form.active { display: flex; flex-direction: column; }
+
+    .auth-title {
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+      color: var(--text-main);
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .auth-subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 22px;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    .auth-message {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      display: none;
+    }
+
+    .auth-message.error {
+      display: block;
+      background: rgba(239,68,68,0.1);
+      color: var(--error);
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+
+    .auth-message.success {
+      display: block;
+      background: rgba(16,185,129,0.1);
+      color: var(--success);
+      border: 1px solid rgba(16,185,129,0.2);
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .input-group input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(67,90,191,0.15);
+      background-color: var(--surface-color);
+    }
+
+    .pass-wrapper { position: relative; }
+
+    .toggle-pass-btn {
+      position: absolute;
+      inset-inline-end: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-strength {
+      display: none;
+      margin-top: -4px;
+      margin-bottom: 12px;
+    }
+
+    .strength-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .str-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--border-color);
+      transition: var(--transition);
+    }
+
+    .strength-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .auth-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      font-size: 0.85rem;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .auth-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      user-select: none;
+    }
+
+    .auth-check input { display: none; }
+
+    .auth-checkmark {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      background: var(--surface-color);
+      flex-shrink: 0;
+    }
+
+    .auth-check input:checked + .auth-checkmark {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .auth-check input:checked + .auth-checkmark::after {
+      content: "";
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translateY(-1px);
+    }
+
+    .forgot-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .social-logins {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+    }
+
+    .social-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: var(--transition);
+      min-height: 46px;
+    }
+
+    .social-btn:hover {
+      background: var(--surface-color);
+      border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .switch-form-text {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .switch-form-text a {
+      color: var(--primary);
+      font-weight: 800;
+      text-decoration: none;
+      margin-inline-start: 4px;
+    }
+
+    .switch-form-text a:hover { text-decoration: underline; }
+
+    .bookings-modal-content {
+      max-width: 680px;
+      max-height: min(88vh, 760px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bookings-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .bookings-modal-header h3 {
+      font-size: 1.2rem;
+      color: var(--text-main);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bookings-modal-header h3 i { color: var(--primary); }
+
+    .bookings-body {
+      padding: 20px 22px;
+      overflow: auto;
+    }
+
+    .close-bookings-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 90px;
+      inset-inline-end: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 5000;
+    }
+
+    #fav-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text-main);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.3s ease;
+      z-index: 5001;
+    }
+
+    #fav-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 992px) {
+      .prop-content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .prop-booking-card {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 0 16px; }
+      .navbar { padding: 10px 14px; }
+      .logo-img { height: 32px; }
+      .rewards-badge { display: none !important; }
+      .nav-actions { gap: 6px; }
+      .icon-btn, .profile-menu {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+        min-height: 38px;
+      }
+
+      .lang-btn {
+        min-height: 38px;
+        padding: 0 10px;
+        font-size: 0.82rem;
+      }
+
+      .prop-subnav {
+        padding: 14px 16px;
+      }
+
+      .prop-title {
+        font-size: 2rem;
+      }
+
+      .slider-container {
+        aspect-ratio: 4 / 3;
+      }
+
+      .features-list,
+      .highlights-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .gallery-thumbs {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .booking-mini-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .lightbox-btn {
+        width: 46px;
+        height: 46px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .lang-btn span { display: none; }
+      .prop-actions {
+        width: 100%;
+      }
+
+      .share-btn,
+      .fav-property-btn {
+        flex: 1;
+      }
+
+      .gallery-thumbs {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .booking-mini-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .prop-details-section,
+      .prop-booking-card,
+      .map-card {
+        padding: 20px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Shared Global Toast & Modals from script.js will attach here -->
-  <div id="toast-container"></div>
-  <div id="fav-toast"></div>
+  <div id="toast-container" aria-live="polite"></div>
+  <div id="fav-toast" aria-live="polite"></div>
 
-  <!-- ======== Universal Navbar ======== -->
+  <!-- Navbar -->
   <nav class="navbar">
-    <a href="index.html" class="logo">
-      <img src="images/logo-light.svg" alt="OreBooking" class="logo-img" id="main-logo">
+    <a href="index.html" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
+      <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="main-logo">
     </a>
 
     <div class="nav-actions">
-      <!-- Hidden on mobile, visible on desktop -->
       <div class="rewards-badge" id="nav-rewards-badge">
         <i class="ph-fill ph-star"></i>
-        <span>1,250 <span data-i18n="pts">Pts</span></span>
+        <span><span id="user-points">1,250</span> <span data-i18n="pts">Pts</span></span>
       </div>
 
-      <button id="lang-toggle" class="lang-btn">
-        <i class="ph ph-globe"></i> <span>العربية</span>
+      <button id="lang-toggle" class="lang-btn" type="button" aria-label="Switch language">
+        <i class="ph ph-globe"></i>
+        <span>English</span>
       </button>
 
-      <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle Theme">
         <i class="ph ph-moon"></i>
       </button>
 
-      <!-- Profile Dropdown -->
       <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu auth-btn-guest">
+        <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button" aria-label="Account">
           <i class="ph ph-user"></i>
         </button>
 
         <div class="profile-dropdown" id="profile-dropdown">
           <div class="dropdown-header">
-            <span class="font-bold text-main" id="dropdown-user-name">Guest User</span>
-            <span class="text-muted text-sm" id="dropdown-user-email"></span>
+            <span id="dropdown-user-name">Guest User</span>
+            <span id="dropdown-user-email"></span>
           </div>
-          <a href="profile.html" class="dropdown-item">
-            <i class="ph ph-user-circle"></i> <span data-i18n="my_profile">My Profile</span>
-          </a>
-          <a href="bookings.html" class="dropdown-item">
-            <i class="ph ph-suitcase"></i> <span data-i18n="my_bookings">My Bookings</span>
-          </a>
-          <a href="favorites.html" class="dropdown-item">
-            <i class="ph ph-heart"></i> <span data-i18n="my_favorites">Saved Places</span>
-          </a>
-          <div style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>
-          <button class="dropdown-item text-danger" id="logout-btn">
-            <i class="ph ph-sign-out"></i> <span data-i18n="log_out">Sign Out</span>
+
+          <button class="dropdown-item" id="my-bookings-btn" type="button">
+            <i class="ph ph-calendar-check"></i>
+            <span data-i18n="mybookings">My Bookings</span>
+          </button>
+
+          <button class="dropdown-item" id="my-favorites-btn" type="button">
+            <i class="ph ph-heart"></i>
+            <span data-i18n="myfavorites">My Favorites</span>
+          </button>
+
+          <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+
+          <button class="dropdown-item text-danger" id="logout-btn" type="button">
+            <i class="ph ph-sign-out"></i>
+            <span data-i18n="logout">Log Out</span>
           </button>
         </div>
       </div>
     </div>
   </nav>
 
-  <!-- Navigation Bar Back Button -->
+  <!-- Subnav -->
   <div class="prop-subnav">
     <a href="index.html" class="back-btn">
       <i class="ph ph-arrow-left"></i>
-      <span data-i18n="back_home">Back to Home</span>
+      <span data-i18n="backhome">Back to Home</span>
     </a>
   </div>
 
-  <!-- ======== Main Content ======== -->
-  <main class="container property-container" style="max-width: 1160px; margin: 0 auto; padding-bottom: 80px;">
+  <!-- Main -->
+  <main class="container property-page" id="property-page">
 
-    <!-- Skeleton Loading -->
+    <!-- Skeleton -->
     <div id="prop-skeleton">
-      <div class="card-skeleton" style="height:480px; margin-bottom: 40px; border-radius: var(--radius-2xl);"></div>
-      <div class="card-skeleton" style="height:120px; margin-bottom: 20px;"></div>
-      <div class="card-skeleton" style="height:300px;"></div>
+      <div class="card-skeleton" style="height: 480px; margin-bottom: 28px;"></div>
+      <div class="card-skeleton" style="height: 120px; margin-bottom: 18px;"></div>
+      <div class="card-skeleton" style="height: 380px;"></div>
     </div>
 
-    <!-- Real Content (Hidden initially) -->
+    <!-- Content -->
     <div id="prop-real-content" style="display:none;">
+      <header class="prop-header">
+        <div class="prop-top-row">
+          <div class="prop-title-wrap">
+            <h1 class="prop-title" id="prop-title">Property Title</h1>
 
-      <div class="prop-header">
-        <div class="prop-share-row">
-          <h1 class="prop-title" id="prop-title" style="flex:1; margin:0;"></h1>
-          <button class="share-btn" id="share-btn" onclick="handleShare()">
-            <i class="ph ph-share-network"></i>
-            <span id="share-text">Share</span>
-          </button>
-        </div>
-        <div class="prop-meta">
-          <div class="prop-rating">
-            <i class="ph-fill ph-star"></i>
-            <span id="prop-rating">4.8</span>
-          </div>
-          <div class="prop-location">
-            <i class="ph ph-map-pin"></i>
-            <span id="prop-location"></span>
-          </div>
-        </div>
-      </div>
+            <div class="prop-meta">
+              <div class="prop-rating">
+                <i class="ph-fill ph-star"></i>
+                <span id="prop-rating">4.8</span>
+              </div>
 
-      <!-- Image Gallery Slider -->
-      <div class="prop-image-gallery" id="gallery-container">
+              <div class="prop-location">
+                <i class="ph ph-map-pin"></i>
+                <span id="prop-location">Location</span>
+              </div>
+
+              <div class="prop-stat">
+                <i class="ph ph-house-line"></i>
+                <span id="prop-type-text">Premium stay</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="prop-actions">
+            <button class="fav-property-btn" id="property-fav-btn" type="button" aria-label="Save property">
+              <i class="ph ph-heart"></i>
+              <span id="fav-btn-text">Save</span>
+            </button>
+
+            <button class="share-btn" id="share-btn" type="button">
+              <i class="ph ph-share-network"></i>
+              <span id="share-text">Share</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="prop-quick-info">
+          <div class="quick-chip">
+            <i class="ph ph-bed"></i>
+            <span id="chip-bedrooms">2 Bedrooms</span>
+          </div>
+          <div class="quick-chip">
+            <i class="ph ph-users-three"></i>
+            <span id="chip-guests">Up to 4 guests</span>
+          </div>
+          <div class="quick-chip">
+            <i class="ph ph-shield-check"></i>
+            <span id="chip-verified">Verified listing</span>
+          </div>
+          <div class="quick-chip">
+            <i class="ph ph-calendar-check"></i>
+            <span id="chip-instant">Instant booking request</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Gallery -->
+      <section class="prop-image-gallery" id="gallery-container">
         <div class="slider-container" id="slider-container">
-          <button class="slider-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous">
+          <button class="slider-btn prev-btn" id="gallery-prev-btn" type="button" aria-label="Previous image">
             <i class="ph ph-caret-left"></i>
           </button>
+
           <div class="slider-track" id="slider-track"></div>
-          <button class="slider-btn next-btn" onclick="nextSlide(event)" aria-label="Next">
+
+          <button class="slider-btn next-btn" id="gallery-next-btn" type="button" aria-label="Next image">
             <i class="ph ph-caret-right"></i>
           </button>
+
           <div class="slider-dots-container" id="slider-dots"></div>
           <div class="slider-count-badge" id="slider-count-badge">1 / 1</div>
-          <button class="slider-fullscreen-btn" onclick="openLightbox()" aria-label="Fullscreen">
+
+          <button class="slider-fullscreen-btn" id="gallery-fullscreen-btn" type="button" aria-label="Fullscreen gallery">
             <i class="ph ph-arrows-out"></i>
           </button>
         </div>
-      </div>
+      </section>
+
+      <div class="gallery-thumbs" id="gallery-thumbs"></div>
 
       <!-- Content Grid -->
       <div class="prop-content-grid">
 
-        <!-- Info Column -->
-        <div class="prop-details">
-          <h2 data-i18n="about_prop">About this space</h2>
-          <p class="prop-description" id="prop-desc"></p>
+        <!-- Left -->
+        <section>
+          <div class="prop-details-section">
+            <h2 class="section-title">
+              <i class="ph ph-info"></i>
+              <span data-i18n="aboutprop">About this space</span>
+            </h2>
+            <p class="prop-description" id="prop-desc"></p>
+          </div>
+
+          <div class="prop-details-section highlights-card">
+            <h3 class="section-title">
+              <i class="ph ph-sparkle"></i>
+              <span id="highlights-title">Why guests like it</span>
+            </h3>
+
+            <div class="highlights-grid">
+              <div class="highlight-item">
+                <i class="ph ph-map-trifold"></i>
+                <div>
+                  <strong id="highlight-1-title">Great location</strong>
+                  <span id="highlight-1-desc">Close to main points of interest and easy to reach.</span>
+                </div>
+              </div>
+
+              <div class="highlight-item">
+                <i class="ph ph-broom"></i>
+                <div>
+                  <strong id="highlight-2-title">Clean and comfortable</strong>
+                  <span id="highlight-2-desc">Prepared for a smooth and pleasant stay.</span>
+                </div>
+              </div>
+
+              <div class="highlight-item">
+                <i class="ph ph-headset"></i>
+                <div>
+                  <strong id="highlight-3-title">Responsive support</strong>
+                  <span id="highlight-3-desc">Fast communication before and during your stay.</span>
+                </div>
+              </div>
+
+              <div class="highlight-item">
+                <i class="ph ph-shield-star"></i>
+                <div>
+                  <strong id="highlight-4-title">Trusted listing</strong>
+                  <span id="highlight-4-desc">Managed with verified details and a consistent booking flow.</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="host-card" id="host-card">
             <div class="host-avatar">
               <i class="ph ph-user-circle"></i>
             </div>
+
             <div class="host-info">
               <strong id="host-name">OreBooking Host</strong>
               <span id="host-since">Hosting since 2024</span>
@@ -323,36 +1749,82 @@
             </div>
           </div>
 
-          <div class="prop-features">
-            <h3 data-i18n="what_offers">What this place offers</h3>
+          <div class="prop-details-section">
+            <h3 class="section-title">
+              <i class="ph ph-list-checks"></i>
+              <span data-i18n="whatoffers">What this place offers</span>
+            </h3>
             <ul class="features-list" id="prop-features-list"></ul>
           </div>
 
-          <!-- Map Section -->
-          <div class="map-section" id="prop-map-section">
-            <h3>
+          <div class="prop-details-section tips-card">
+            <h3 class="section-title">
+              <i class="ph ph-lightbulb"></i>
+              <span id="tips-title">Good to know</span>
+            </h3>
+
+            <div class="tips-list">
+              <div class="tip-row">
+                <i class="ph ph-clock"></i>
+                <span id="tip-1">Booking details and final guest information are completed on the next step.</span>
+              </div>
+              <div class="tip-row">
+                <i class="ph ph-credit-card"></i>
+                <span id="tip-2">Final pricing may depend on dates, guests, and selected booking options.</span>
+              </div>
+              <div class="tip-row">
+                <i class="ph ph-chat-circle-dots"></i>
+                <span id="tip-3">Use the share button to copy or send the listing link quickly.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="map-card" id="prop-map-section">
+            <h3 class="section-title">
               <i class="ph ph-map-trifold"></i>
               <span id="map-title">Where you'll be</span>
             </h3>
+
             <div id="property-map"></div>
+
             <a id="map-open-link" class="map-open-btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
               <i class="ph ph-arrow-square-out"></i>
               <span id="open-maps-text">Open in Google Maps</span>
             </a>
           </div>
-        </div>
+        </section>
 
-        <!-- Booking Card -->
-        <div class="prop-booking-card">
+        <!-- Right -->
+        <aside class="prop-booking-card">
           <div class="booking-price">
             <span class="price-val" id="prop-price"></span>
             <span class="text-muted text-sm">/ <span data-i18n="night">night</span></span>
           </div>
 
+          <div class="booking-mini-stats">
+            <div class="booking-mini-stat">
+              <i class="ph ph-users"></i>
+              <span id="booking-stat-guests">1–4 guests</span>
+            </div>
+            <div class="booking-mini-stat">
+              <i class="ph ph-door-open"></i>
+              <span id="booking-stat-type">Entire place</span>
+            </div>
+          </div>
+
           <div class="booking-perks">
-            <div class="booking-perk"><i class="ph-fill ph-shield-check"></i> <span id="perk-1">Free cancellation within 24h</span></div>
-            <div class="booking-perk"><i class="ph-fill ph-clock-countdown"></i> <span id="perk-2">Instant confirmation</span></div>
-            <div class="booking-perk"><i class="ph-fill ph-headset"></i> <span id="perk-3">24/7 support</span></div>
+            <div class="booking-perk">
+              <i class="ph-fill ph-shield-check"></i>
+              <span id="perk-1">Free cancellation within 24h</span>
+            </div>
+            <div class="booking-perk">
+              <i class="ph-fill ph-clock-countdown"></i>
+              <span id="perk-2">Instant confirmation</span>
+            </div>
+            <div class="booking-perk">
+              <i class="ph-fill ph-headset"></i>
+              <span id="perk-3">24/7 support</span>
+            </div>
           </div>
 
           <div class="booking-info-box">
@@ -360,399 +1832,839 @@
             <p id="booking-info-text">Choose your dates and number of guests on the next page to see the final price.</p>
           </div>
 
-          <a href="#" class="primary-btn" id="book-now-link" style="text-decoration:none;">
+          <a href="#" class="primary-btn" id="book-now-link">
             <i class="ph ph-calendar-check"></i>
-            <span data-i18n="book_now">Reserve Now</span>
+            <span data-i18n="booknow">Reserve Now</span>
           </a>
 
           <div class="no-charge-text">
             <i class="ph ph-lock-simple"></i>
-            <span data-i18n="wont_charged">You won't be charged yet</span>
+            <span data-i18n="wontcharged">You won't be charged yet</span>
           </div>
-        </div>
 
+          <div class="trust-note" id="trust-note">
+            Your request stays secure and you can review full booking details before payment is finalized.
+          </div>
+        </aside>
       </div>
     </div>
   </main>
 
-  <!-- Auth Modal (Included via script.js normally, or inline here) -->
-  <div class="modal-overlay" id="auth-modal">
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="auth-modal" aria-hidden="true">
     <div class="modal-content auth-card">
-      <button class="close-modal-btn" id="close-auth-btn"><i class="ph ph-x"></i></button>
+      <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+
       <div class="auth-header">
-        <img src="images/logo-light.svg" alt="OreBooking" class="logo-img" style="height: 38px;">
+        <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="modal-logo">
       </div>
+
       <div class="auth-content">
-        
         <div id="auth-message" class="auth-message"></div>
 
-        <!-- Login Form -->
-        <form id="login-form" class="auth-form active">
-          <h2 class="auth-title">Welcome back</h2>
-          <p class="auth-subtitle">Log in to manage your bookings and favorites.</p>
+        <!-- Login -->
+        <form id="login-form" class="auth-form active" novalidate>
+          <h2 class="auth-title" data-i18n="welcomeback">Welcome back</h2>
+          <p class="auth-subtitle" data-i18n="logindesc">Enter your details to access your account.</p>
 
           <div class="input-group">
-            <label>Email address</label>
+            <label for="login-email" data-i18n="email">Email Address</label>
             <input type="email" id="login-email" placeholder="name@example.com" required>
           </div>
-          <div class="input-group pass-wrapper">
-            <label>Password</label>
-            <input type="password" id="login-password" placeholder="••••••••" required>
-            <button type="button" class="toggle-pass-btn" onclick="togglePassword('login-password', this)">
-              <i class="ph ph-eye"></i>
-            </button>
+
+          <div class="input-group">
+            <label for="login-password" data-i18n="password">Password</label>
+            <div class="pass-wrapper">
+              <input type="password" id="login-password" placeholder="••••••••" required>
+              <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
           </div>
 
           <div class="auth-options">
-            <label class="checkbox-container">
+            <label class="auth-check">
               <input type="checkbox" checked>
-              <span class="checkmark"></span>
-              Remember me
+              <span class="auth-checkmark"></span>
+              <span data-i18n="rememberme">Remember me</span>
             </label>
-            <a href="#" class="forgot-link">Forgot password?</a>
+
+            <a href="#" class="forgot-link" id="go-to-forgot" data-i18n="forgotpass">Forgot password?</a>
           </div>
 
-          <button type="submit" class="primary-btn" id="login-submit-btn">Sign In</button>
-          
-          <div style="text-align: center; margin: 20px 0; color: var(--text-muted); font-size: 0.85rem; position: relative;">
-            <span style="background: var(--surface-color); padding: 0 10px; position: relative; z-index: 1;">OR</span>
-            <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border-color); z-index: 0;"></div>
-          </div>
+          <button type="submit" class="primary-btn" id="login-submit-btn">
+            <span data-i18n="signin">Sign In</span>
+          </button>
 
           <div class="social-logins">
             <button type="button" class="social-btn" id="google-login-btn">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style="width: 18px; height: 18px;">
-              Google
+              <i class="ph ph-google-logo"></i>
+              <span>Google</span>
             </button>
           </div>
 
-          <p class="switch-form-text">Don't have an account? <a href="#" onclick="switchAuthForm('register')">Sign up</a></p>
+          <p class="switch-form-text">
+            <span data-i18n="noaccount">Don't have an account?</span>
+            <a href="#" id="go-to-register" data-i18n="signup">Sign up</a>
+          </p>
         </form>
 
-        <!-- Register Form -->
-        <form id="register-form" class="auth-form">
-          <h2 class="auth-title">Create account</h2>
-          <p class="auth-subtitle">Join OreBooking to start exploring.</p>
+        <!-- Register -->
+        <form id="register-form" class="auth-form" novalidate>
+          <h2 class="auth-title" data-i18n="createaccount">Create an account</h2>
+          <p class="auth-subtitle" data-i18n="registerdesc">Join OreBooking to unlock premium features.</p>
 
           <div class="input-group">
-            <label>Full Name</label>
+            <label for="reg-name" data-i18n="fullname">Full Name</label>
             <input type="text" id="reg-name" placeholder="John Doe" required>
           </div>
+
           <div class="input-group">
-            <label>Email address</label>
+            <label for="reg-email" data-i18n="email">Email Address</label>
             <input type="email" id="reg-email" placeholder="name@example.com" required>
           </div>
-          <div class="input-group pass-wrapper">
-            <label>Password</label>
-            <input type="password" id="reg-password" placeholder="Min. 8 characters" required>
-            <button type="button" class="toggle-pass-btn" onclick="togglePassword('reg-password', this)">
-              <i class="ph ph-eye"></i>
+
+          <div class="input-group">
+            <label for="reg-password" data-i18n="password">Password</label>
+            <div class="pass-wrapper">
+              <input type="password" id="reg-password" placeholder="Create password" required>
+              <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="password-strength" id="password-strength" style="display:block;">
+            <div class="strength-bars">
+              <div class="str-bar"></div>
+              <div class="str-bar"></div>
+              <div class="str-bar"></div>
+              <div class="str-bar"></div>
+            </div>
+            <div class="strength-label" id="strength-label"></div>
+          </div>
+
+          <button type="submit" class="primary-btn" id="register-submit-btn">
+            <span data-i18n="signupbtn">Create Account</span>
+          </button>
+
+          <div class="social-logins">
+            <button type="button" class="social-btn" id="google-register-btn">
+              <i class="ph ph-google-logo"></i>
+              <span>Google</span>
             </button>
           </div>
 
-          <button type="submit" class="primary-btn" id="register-submit-btn">Sign Up</button>
-          <p class="switch-form-text" style="margin-top: 24px;">Already have an account? <a href="#" onclick="switchAuthForm('login')">Log in</a></p>
+          <p class="switch-form-text">
+            <span data-i18n="hasaccount">Already have an account?</span>
+            <a href="#" id="go-to-login">Sign in</a>
+          </p>
         </form>
+
+        <!-- Forgot -->
+        <form id="forgot-form" class="auth-form" novalidate>
+          <h2 class="auth-title" data-i18n="resetpasstitle">Reset Password</h2>
+          <p class="auth-subtitle" data-i18n="resetpassdesc">Enter your email and we'll send you a reset link.</p>
+
+          <div class="input-group">
+            <label for="forgot-email" data-i18n="email">Email Address</label>
+            <input type="email" id="forgot-email" placeholder="name@example.com" required>
+          </div>
+
+          <button type="submit" class="primary-btn" id="forgot-submit-btn">
+            <span data-i18n="sendlink">Send Reset Link</span>
+          </button>
+
+          <p class="switch-form-text">
+            <a href="#" id="back-to-login" data-i18n="backtologin">Back to login</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookings Modal -->
+  <div class="modal-overlay" id="bookings-modal" aria-hidden="true">
+    <div class="modal-content bookings-modal-content">
+      <div class="bookings-modal-header">
+        <h3>
+          <i class="ph ph-calendar-check"></i>
+          <span data-i18n="mybookings">My Bookings</span>
+        </h3>
+        <button class="close-bookings-btn" type="button" data-close-bookings aria-label="Close bookings">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="bookings-body" id="bookings-list">
+        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+          Loading...
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Lightbox -->
-  <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
-    <button class="close-lightbox" onclick="closeLightbox()" aria-label="Close"><i class="ph ph-x"></i></button>
-    <button class="lightbox-btn prev-btn" onclick="prevSlide(event)" aria-label="Previous"><i class="ph ph-caret-left"></i></button>
+  <div id="lightbox" class="lightbox-overlay" aria-hidden="true">
+    <button class="close-lightbox" id="close-lightbox-btn" type="button" aria-label="Close">
+      <i class="ph ph-x"></i>
+    </button>
+
+    <button class="lightbox-btn prev-btn" id="lightbox-prev-btn" type="button" aria-label="Previous">
+      <i class="ph ph-caret-left"></i>
+    </button>
+
     <div class="lightbox-img-wrapper">
-      <img src="" id="lightbox-img" class="lightbox-img" onclick="toggleZoom(event)" title="Click to Zoom" alt="Property Image">
+      <img src="" id="lightbox-img" class="lightbox-img" title="Click to Zoom" alt="Property Image">
     </div>
-    <button class="lightbox-btn next-btn" onclick="nextSlide(event)" aria-label="Next"><i class="ph ph-caret-right"></i></button>
+
+    <button class="lightbox-btn next-btn" id="lightbox-next-btn" type="button" aria-label="Next">
+      <i class="ph ph-caret-right"></i>
+    </button>
   </div>
 
-  <!-- Main JavaScript (Loads Navbar/Auth Logic) -->
   <script src="script.js"></script>
 
   <script>
     let currentImages = [];
     let currentSlide = 0;
+    let propertyMapInstance = null;
+    let currentPropertyId = null;
+    let currentPropertyData = null;
+    let currentLang = localStorage.getItem('ore_lang') || 'en';
 
-    // Toggle password visibility (for auth modal)
-    function togglePassword(inputId, btn) {
-      const input = document.getElementById(inputId);
-      const icon = btn.querySelector('i');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'ph ph-eye-slash';
-      } else {
-        input.type = 'password';
-        icon.className = 'ph ph-eye';
-      }
+    function isArabic() {
+      return (localStorage.getItem('ore_lang') || 'en') === 'ar';
     }
 
-    function switchAuthForm(formType) {
-      document.getElementById('login-form').classList.remove('active');
-      document.getElementById('register-form').classList.remove('active');
-      if(formType === 'login') {
-        document.getElementById('login-form').classList.add('active');
-      } else {
-        document.getElementById('register-form').classList.add('active');
-      }
+    function getText(ar, en) {
+      return isArabic() ? ar : en;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const propId = urlParams.get('id');
-      const lang = localStorage.getItem('ore_lang') || 'en';
-      const isAr = lang === 'ar';
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = String(value ?? '');
+      return div.innerHTML;
+    }
 
-      // 1. Initial UI Setup (Language dependent strings)
-      const bookNowLink = document.getElementById('book-now-link');
-      if (bookNowLink && propId) bookNowLink.href = `booking.html?id=${propId}`;
+    function normalizeFeatureLabel(feature) {
+      const map = {
+        wifi: getText('واي فاي', 'Wi‑Fi'),
+        pool: getText('مسبح', 'Pool'),
+        parking: getText('موقف سيارات', 'Parking'),
+        gym: getText('قاعة رياضية', 'Gym'),
+        restaurant: getText('مطعم', 'Restaurant'),
+        spa: getText('سبا', 'Spa'),
+        kitchen: getText('مطبخ', 'Kitchen'),
+        ac: getText('مكيف', 'Air conditioning'),
+        balcony: getText('شرفة', 'Balcony'),
+        breakfast: getText('إفطار', 'Breakfast'),
+        security: getText('حراسة', 'Security'),
+        tv: getText('تلفاز', 'TV'),
+        beach: getText('قريب من الشاطئ', 'Beach access')
+      };
+      const key = String(feature || '').trim().toLowerCase();
+      return map[key] || String(feature || '').trim() || getText('ميزة', 'Feature');
+    }
 
-      const infoText = document.getElementById('booking-info-text');
-      if (infoText) infoText.textContent = isAr ? 'اختر تواريخ رحلتك وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي.' : 'Choose your dates and number of guests on the next page to see the final price.';
+    function getFeatureIcon(feature) {
+      const iconMap = {
+        wifi: 'ph-wifi-high',
+        pool: 'ph-swimming-pool',
+        parking: 'ph-car',
+        gym: 'ph-barbell',
+        restaurant: 'ph-fork-knife',
+        spa: 'ph-flower-lotus',
+        kitchen: 'ph-cooking-pot',
+        ac: 'ph-snowflake',
+        balcony: 'ph-balcony',
+        breakfast: 'ph-coffee',
+        security: 'ph-shield-check',
+        tv: 'ph-television',
+        beach: 'ph-island'
+      };
+      return iconMap[String(feature || '').trim().toLowerCase()] || 'ph-check-circle';
+    }
 
+    function getPropertyTypeText(data) {
+      const type = String(data?.type || data?.category || '').toLowerCase();
+      if (/villa/.test(type)) return getText('فيلا', 'Villa');
+      if (/apartment|flat/.test(type)) return getText('شقة', 'Apartment');
+      if (/resort/.test(type)) return getText('منتجع', 'Resort');
+      if (/hotel/.test(type)) return getText('فندق', 'Hotel');
+      if (/cabin/.test(type)) return getText('كوخ', 'Cabin');
+      return getText('إقامة مميزة', 'Premium stay');
+    }
+
+    function getGuestCountText(data) {
+      const guests = Number(data?.maxGuests || data?.guests || data?.capacity || 4);
+      return isArabic() ? `حتى ${guests} ضيوف` : `Up to ${guests} guests`;
+    }
+
+    function getBedroomText(data) {
+      const bedrooms = Number(data?.bedrooms || data?.rooms || 2);
+      return isArabic()
+        ? `${bedrooms} ${bedrooms === 1 ? 'غرفة نوم' : 'غرف نوم'}`
+        : `${bedrooms} ${bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}`;
+    }
+
+    function getLocationText(data) {
+      return (isArabic() ? (data.locationAr || data.locationar) : (data.locationEn || data.locationen))
+        || data.locationEn || data.locationen || data.locationAr || data.locationar
+        || getText('موقع غير محدد', 'Unknown location');
+    }
+
+    function getTitleText(data) {
+      return (isArabic() ? (data.titleAr || data.titlear) : (data.titleEn || data.titleen))
+        || data.titleEn || data.titleen || data.titleAr || data.titlear
+        || getText('عقار بدون اسم', 'Unnamed property');
+    }
+
+    function getDescText(data) {
+      return (isArabic() ? (data.descAr || data.descar) : (data.descEn || data.descen))
+        || data.descEn || data.descen || data.descAr || data.descar
+        || getText('لا يوجد وصف متاح حالياً.', 'No description available.');
+    }
+
+    function getFeaturesArray(data) {
+      const ar = data.featuresAr || data.featuresar;
+      const en = data.featuresEn || data.featuresen;
+      const generic = data.features;
+      if (isArabic() && Array.isArray(ar) && ar.length) return ar;
+      if (!isArabic() && Array.isArray(en) && en.length) return en;
+      if (Array.isArray(en) && en.length) return en;
+      if (Array.isArray(ar) && ar.length) return ar;
+      if (Array.isArray(generic) && generic.length) return generic;
+      return ['wifi', 'parking', 'ac', 'kitchen'];
+    }
+
+    function getPropertyImages(data) {
+      if (Array.isArray(data.images) && data.images.length) return data.images;
+      if (data.imageUrl) return [data.imageUrl];
+      if (data.image) return [data.image];
+      return ['images/placeholder.jpg'];
+    }
+
+    function updateStaticTexts() {
+      const ar = isArabic();
+
+      const shareText = document.getElementById('share-text');
+      const favBtnText = document.getElementById('fav-btn-text');
+      const hostSince = document.getElementById('host-since');
+      const hostBadgeText = document.getElementById('host-badge-text');
+      const bookingInfoText = document.getElementById('booking-info-text');
       const perk1 = document.getElementById('perk-1');
       const perk2 = document.getElementById('perk-2');
       const perk3 = document.getElementById('perk-3');
-      if (perk1) perk1.textContent = isAr ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
-      if (perk2) perk2.textContent = isAr ? 'تأكيد فوري للحجز' : 'Instant confirmation';
-      if (perk3) perk3.textContent = isAr ? 'دعم على مدار الساعة' : '24/7 support';
+      const mapTitle = document.getElementById('map-title');
+      const openMapsText = document.getElementById('open-maps-text');
+      const tipsTitle = document.getElementById('tips-title');
+      const trustNote = document.getElementById('trust-note');
+      const highlightsTitle = document.getElementById('highlights-title');
+      const highlight1Title = document.getElementById('highlight-1-title');
+      const highlight1Desc = document.getElementById('highlight-1-desc');
+      const highlight2Title = document.getElementById('highlight-2-title');
+      const highlight2Desc = document.getElementById('highlight-2-desc');
+      const highlight3Title = document.getElementById('highlight-3-title');
+      const highlight3Desc = document.getElementById('highlight-3-desc');
+      const highlight4Title = document.getElementById('highlight-4-title');
+      const highlight4Desc = document.getElementById('highlight-4-desc');
+      const tip1 = document.getElementById('tip-1');
+      const tip2 = document.getElementById('tip-2');
+      const tip3 = document.getElementById('tip-3');
+      const chipVerified = document.getElementById('chip-verified');
+      const chipInstant = document.getElementById('chip-instant');
 
-      const shareText = document.getElementById('share-text');
-      if (shareText) shareText.textContent = isAr ? 'مشاركة' : 'Share';
+      if (shareText) shareText.textContent = ar ? 'مشاركة' : 'Share';
+      if (favBtnText) favBtnText.textContent = ar ? 'حفظ' : 'Save';
+      if (hostSince) hostSince.textContent = ar ? 'مضيف منذ 2024' : 'Hosting since 2024';
+      if (hostBadgeText) hostBadgeText.textContent = ar ? 'مضيف موثوق' : 'Verified Host';
+      if (mapTitle) mapTitle.textContent = ar ? 'موقع العقار' : "Where you'll be";
+      if (openMapsText) openMapsText.textContent = ar ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
 
-      const hostSince = document.getElementById('host-since');
-      const hostBadgeText = document.getElementById('host-badge-text');
-      if (hostSince) hostSince.textContent = isAr ? 'مضيف منذ 2024' : 'Hosting since 2024';
-      if (hostBadgeText) hostBadgeText.textContent = isAr ? 'مضيف موثوق' : 'Verified Host';
-
-      if (!propId) {
-        if(window.showToast) window.showToast("No property ID found.", "error");
-        return;
+      if (bookingInfoText) {
+        bookingInfoText.textContent = ar
+          ? 'اختر التواريخ وعدد الضيوف في الصفحة التالية لمعرفة السعر النهائي وتفاصيل الحجز.'
+          : 'Choose your dates and number of guests on the next page to see the final price and booking details.';
       }
 
-      // 2. Fetch Data from Firebase
-      try {
-        const doc = await db.collection("properties").doc(propId).get();
-        if (!doc.exists) {
-          if(window.showToast) window.showToast("Property not found.", "error");
-          return;
-        }
+      if (perk1) perk1.textContent = ar ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
+      if (perk2) perk2.textContent = ar ? 'تأكيد أولي سريع' : 'Fast initial confirmation';
+      if (perk3) perk3.textContent = ar ? 'دعم متواصل طوال الوقت' : '24/7 support';
 
-        const data = doc.data();
+      if (tipsTitle) tipsTitle.textContent = ar ? 'معلومات مهمة' : 'Good to know';
+      if (trustNote) trustNote.textContent = ar
+        ? 'طلبك آمن، ويمكنك مراجعة كل تفاصيل الحجز قبل إنهاء الدفع.'
+        : 'Your request stays secure and you can review all booking details before payment is finalized.';
 
-        // 3. Inject Data into UI
-        document.getElementById("prop-title").textContent = (isAr ? data.titleAr : data.titleEn) || data.titleEn || data.titleAr || "Unnamed Property";
-        document.getElementById("prop-location").textContent = (isAr ? data.locationAr : data.locationEn) || data.locationEn || data.locationAr || "Unknown Location";
-        document.getElementById("prop-desc").textContent = (isAr ? data.descAr : data.descEn) || data.descEn || data.descAr || "No description available.";
-        
-        const price = Number(data.price || data.pricePerNight || 0).toLocaleString();
-        document.getElementById("prop-price").textContent = `${price} ${isAr ? 'د.ج' : 'DZD'}`;
-        
-        // Rating Fallback
-        document.getElementById("prop-rating").textContent = data.rating || "4.8";
+      if (highlightsTitle) highlightsTitle.textContent = ar ? 'لماذا قد يعجبك هذا المكان' : 'Why guests like it';
 
-        // Setup Images for Slider
-        if (Array.isArray(data.images) && data.images.length > 0) {
-          currentImages = data.images;
-        } else if (data.imageUrl) {
-          currentImages = [data.imageUrl];
-        } else {
-          currentImages = ["images/placeholder.jpg"];
-        }
-        setupSlider(currentImages);
+      if (highlight1Title) highlight1Title.textContent = ar ? 'موقع مناسب' : 'Great location';
+      if (highlight1Desc) highlight1Desc.textContent = ar ? 'قريب من النقاط المهمة وسهل الوصول.' : 'Close to main points of interest and easy to reach.';
 
-        // Setup Amenities/Features
-        const featContainer = document.getElementById("prop-features-list");
-        featContainer.innerHTML = ""; 
-        const features = data.features || ['wifi', 'parking']; // Fallback
-        
-        const iconMap = {
-          'wifi': 'ph-wifi-high', 'pool': 'ph-swimming-pool', 'parking': 'ph-car',
-          'gym': 'ph-barbell', 'restaurant': 'ph-fork-knife', 'spa': 'ph-flower-lotus',
-          'kitchen': 'ph-cooking-pot', 'ac': 'ph-snowflake'
-        };
+      if (highlight2Title) highlight2Title.textContent = ar ? 'راحة ونظافة' : 'Clean and comfortable';
+      if (highlight2Desc) highlight2Desc.textContent = ar ? 'مهيأ لإقامة مريحة وتجربة سلسة.' : 'Prepared for a smooth and pleasant stay.';
 
-        features.forEach(f => {
+      if (highlight3Title) highlight3Title.textContent = ar ? 'استجابة سريعة' : 'Responsive support';
+      if (highlight3Desc) highlight3Desc.textContent = ar ? 'تواصل سريع قبل الإقامة وأثناءها.' : 'Fast communication before and during your stay.';
+
+      if (highlight4Title) highlight4Title.textContent = ar ? 'إعلان موثوق' : 'Trusted listing';
+      if (highlight4Desc) highlight4Desc.textContent = ar ? 'بيانات موثقة وتجربة حجز مستقرة.' : 'Managed with verified details and a consistent booking flow.';
+
+      if (tip1) tip1.textContent = ar
+        ? 'تفاصيل الحجز النهائية ومعلومات الضيوف تُستكمل في الخطوة التالية.'
+        : 'Booking details and final guest information are completed on the next step.';
+
+      if (tip2) tip2.textContent = ar
+        ? 'قد يعتمد السعر النهائي على التواريخ وعدد الضيوف وخيارات الحجز.'
+        : 'Final pricing may depend on dates, guests, and selected booking options.';
+
+      if (tip3) tip3.textContent = ar
+        ? 'يمكنك استخدام زر المشاركة لنسخ رابط العقار أو إرساله بسرعة.'
+        : 'Use the share button to copy or send the listing link quickly.';
+
+      if (chipVerified) chipVerified.textContent = ar ? 'إعلان موثوق' : 'Verified listing';
+      if (chipInstant) chipInstant.textContent = ar ? 'طلب حجز سريع' : 'Instant booking request';
+    }
+
+    function renderPropertyData(data) {
+      currentPropertyData = data;
+      currentLang = localStorage.getItem('ore_lang') || 'en';
+
+      const title = getTitleText(data);
+      const location = getLocationText(data);
+      const description = getDescText(data);
+      const price = Number(data.price || data.pricePerNight || 0);
+      const rating = Number(data.rating || 4.8).toFixed(1);
+      const features = getFeaturesArray(data);
+      const images = getPropertyImages(data);
+      const propType = getPropertyTypeText(data);
+      const guestsText = getGuestCountText(data);
+      const bedroomsText = getBedroomText(data);
+      const currency = isArabic() ? 'د.ج' : 'DZD';
+
+      const propTitle = document.getElementById('prop-title');
+      const propLocation = document.getElementById('prop-location');
+      const propDesc = document.getElementById('prop-desc');
+      const propPrice = document.getElementById('prop-price');
+      const propRating = document.getElementById('prop-rating');
+      const propTypeText = document.getElementById('prop-type-text');
+
+      const chipGuests = document.getElementById('chip-guests');
+      const chipBedrooms = document.getElementById('chip-bedrooms');
+      const bookingGuests = document.getElementById('booking-stat-guests');
+      const bookingType = document.getElementById('booking-stat-type');
+
+      if (propTitle) propTitle.textContent = title;
+      if (propLocation) propLocation.textContent = location;
+      if (propDesc) propDesc.textContent = description;
+      if (propPrice) propPrice.textContent = `${price.toLocaleString()} ${currency}`;
+      if (propRating) propRating.textContent = rating;
+      if (propTypeText) propTypeText.textContent = propType;
+
+      if (chipGuests) chipGuests.textContent = guestsText;
+      if (chipBedrooms) chipBedrooms.textContent = bedroomsText;
+      if (bookingGuests) bookingGuests.textContent = isArabic() ? `القدرة: ${guestsText}` : `Capacity: ${guestsText}`;
+      if (bookingType) bookingType.textContent = isArabic() ? `النوع: ${propType}` : `Type: ${propType}`;
+
+      const hostName = document.getElementById('host-name');
+      if (hostName) {
+        const host = data.hostName || data.host || data.ownerName;
+        hostName.textContent = host || 'OreBooking Host';
+      }
+
+      const featContainer = document.getElementById('prop-features-list');
+      if (featContainer) {
+        featContainer.innerHTML = '';
+        features.forEach(feature => {
           const li = document.createElement('li');
-          const featureName = f.toLowerCase();
-          const icon = iconMap[featureName] || 'ph-check-circle';
-          li.innerHTML = `<i class="ph ${icon}"></i> <span>${f}</span>`;
+          li.innerHTML = `<i class="ph ${getFeatureIcon(feature)}"></i><span>${escapeHtml(normalizeFeatureLabel(feature))}</span>`;
           featContainer.appendChild(li);
         });
-
-        // Initialize Map
-        if (data.locationLat && data.locationLng) {
-          initPropertyMap(data.locationLat, data.locationLng, (isAr ? data.locationAr : data.locationEn), lang);
-        } else {
-          initPropertyMap(null, null, null, lang);
-        }
-
-        // Show Content
-        showPropertyContent();
-
-      } catch (err) {
-        console.error("Error fetching property:", err);
-        if(window.showToast) window.showToast("Error loading property details.", "error");
       }
-    });
 
-    // --- Slider Logic ---
+      currentImages = images;
+      currentSlide = 0;
+      setupSlider(images);
+      setupThumbs(images);
+      updateFavButtonState();
+
+      const lat = Number(data.lat ?? data.locationLat ?? data.latitude ?? null);
+      const lng = Number(data.lng ?? data.locationLng ?? data.longitude ?? null);
+      initPropertyMap(Number.isFinite(lat) ? lat : null, Number.isFinite(lng) ? lng : null, location);
+
+      const bookNowLink = document.getElementById('book-now-link');
+      if (bookNowLink && currentPropertyId) {
+        bookNowLink.href = `booking.html?id=${encodeURIComponent(currentPropertyId)}`;
+      }
+
+      showPropertyContent();
+    }
+
     function setupSlider(images) {
       const track = document.getElementById('slider-track');
       const dotsContainer = document.getElementById('slider-dots');
+      if (!track || !dotsContainer) return;
+
       track.innerHTML = '';
       dotsContainer.innerHTML = '';
 
       images.forEach((src, idx) => {
-        // Image
         const img = document.createElement('img');
         img.src = src;
-        img.alt = `Property Image ${idx + 1}`;
+        img.alt = `Property image ${idx + 1}`;
+        img.loading = idx === 0 ? 'eager' : 'lazy';
+        img.onerror = function() { this.src = 'images/placeholder.jpg'; };
+        img.addEventListener('click', openLightbox);
         track.appendChild(img);
 
-        // Dot
         const dot = document.createElement('button');
         dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
-        dot.onclick = () => goToSlide(idx);
+        dot.type = 'button';
+        dot.setAttribute('aria-label', `Go to image ${idx + 1}`);
+        dot.addEventListener('click', () => goToSlide(idx));
         dotsContainer.appendChild(dot);
       });
 
-      updateImageBadge(0, images.length);
+      goToSlide(0, false);
     }
 
-    window.goToSlide = function(index) {
-      if (currentImages.length === 0) return;
-      currentSlide = index;
+    function setupThumbs(images) {
+      const thumbs = document.getElementById('gallery-thumbs');
+      if (!thumbs) return;
+
+      thumbs.innerHTML = '';
+      images.forEach((src, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `gallery-thumb ${idx === 0 ? 'active' : ''}`;
+        btn.setAttribute('aria-label', `Thumbnail ${idx + 1}`);
+        btn.innerHTML = `<img src="${src}" alt="Thumbnail ${idx + 1}" loading="lazy" onerror="this.src='images/placeholder.jpg'">`;
+        btn.addEventListener('click', () => goToSlide(idx));
+        thumbs.appendChild(btn);
+      });
+    }
+
+    function updateImageBadge(current, total) {
+      const badge = document.getElementById('slider-count-badge');
+      if (badge) badge.textContent = `${current + 1} / ${total}`;
+    }
+
+    function goToSlide(index, updateLightbox = true) {
+      if (!currentImages.length) return;
+      currentSlide = (index + currentImages.length) % currentImages.length;
+
       const track = document.getElementById('slider-track');
-      track.style.transform = `translateX(-${currentSlide * 100}%)`;
-      
-      // Update Dots
+      if (track) {
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+      }
+
       document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
-        dot.className = `slider-dot ${idx === currentSlide ? 'active' : ''}`;
+        dot.classList.toggle('active', idx === currentSlide);
+      });
+
+      document.querySelectorAll('.gallery-thumb').forEach((thumb, idx) => {
+        thumb.classList.toggle('active', idx === currentSlide);
       });
 
       updateImageBadge(currentSlide, currentImages.length);
-    };
 
-    window.nextSlide = function(e) {
-      if(e) e.stopPropagation();
-      if (currentSlide < currentImages.length - 1) {
-        goToSlide(currentSlide + 1);
-      } else {
-        goToSlide(0); // loop
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      if (updateLightbox && lightbox && lightbox.classList.contains('active') && lightboxImg) {
+        lightboxImg.src = currentImages[currentSlide];
+        lightboxImg.classList.remove('zoomed');
       }
-    };
+    }
 
-    window.prevSlide = function(e) {
-      if(e) e.stopPropagation();
-      if (currentSlide > 0) {
-        goToSlide(currentSlide - 1);
-      } else {
-        goToSlide(currentImages.length - 1); // loop
-      }
-    };
+    function nextSlide(e) {
+      if (e) e.stopPropagation();
+      goToSlide(currentSlide + 1);
+    }
 
-    // --- Lightbox Logic ---
-    window.openLightbox = function() {
-      if(currentImages.length === 0) return;
-      const lb = document.getElementById('lightbox');
-      const lbImg = document.getElementById('lightbox-img');
-      lbImg.src = currentImages[currentSlide];
-      lbImg.classList.remove('zoomed');
-      lb.classList.add('active');
+    function prevSlide(e) {
+      if (e) e.stopPropagation();
+      goToSlide(currentSlide - 1);
+    }
+
+    function openLightbox() {
+      if (!currentImages.length) return;
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      if (!lightbox || !lightboxImg) return;
+
+      lightboxImg.src = currentImages[currentSlide];
+      lightboxImg.classList.remove('zoomed');
+      lightbox.classList.add('active');
       document.body.classList.add('modal-open');
-    };
+    }
 
-    window.closeLightbox = function() {
-      const lb = document.getElementById('lightbox');
-      lb.classList.remove('active');
+    function closeLightbox() {
+      const lightbox = document.getElementById('lightbox');
+      if (!lightbox) return;
+      lightbox.classList.remove('active');
       document.body.classList.remove('modal-open');
-    };
+    }
 
-    window.toggleZoom = function(e) {
+    function toggleZoom(e) {
       e.stopPropagation();
-      e.target.classList.toggle('zoomed');
-    };
+      e.currentTarget.classList.toggle('zoomed');
+    }
 
-    // --- Map Initialization ---
-    window.initPropertyMap = function(lat, lng, locationName, lang) {
+    function initPropertyMap(lat, lng, locationName) {
       const mapEl = document.getElementById('property-map');
       const mapLink = document.getElementById('map-open-link');
-      const mapTitle = document.getElementById('map-title');
-      const mapsText = document.getElementById('open-maps-text');
       if (!mapEl) return;
 
-      const isAr = lang === 'ar';
-      if (mapTitle) mapTitle.textContent = isAr ? 'موقع العقار' : "Where you'll be";
-      if (mapsText) mapsText.textContent = isAr ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
+      mapEl.style.display = '';
+      const existingNoLoc = mapEl.parentNode.querySelector('.map-no-location');
+      if (existingNoLoc) existingNoLoc.remove();
 
-      if (!lat || !lng) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         mapEl.style.display = 'none';
-        const existing = document.querySelector('.map-no-location');
-        if (!existing) {
-          const noLoc = document.createElement('div');
-          noLoc.className = 'map-no-location';
-          noLoc.innerHTML = `
-            <i class="ph ph-map-pin-slash"></i>
-            <p>${isAr ? 'لم يتم تحديد إحداثيات هذا العقار على الخريطة' : 'No location coordinates set for this property'}</p>
-          `;
-          mapEl.parentNode.insertBefore(noLoc, mapEl.nextSibling);
-        }
+        const noLoc = document.createElement('div');
+        noLoc.className = 'map-no-location';
+        noLoc.innerHTML = `
+          <i class="ph ph-map-pin-slash"></i>
+          <p>${isArabic() ? 'لم يتم تحديد إحداثيات هذا العقار على الخريطة بعد.' : 'No map coordinates are available for this property yet.'}</p>
+        `;
+        mapEl.parentNode.insertBefore(noLoc, mapEl.nextSibling);
+        if (mapLink) mapLink.style.display = 'none';
         return;
       }
 
-      if (mapEl._leaflet_id) {
-        mapEl._leaflet_id = null;
-        mapEl.innerHTML = '';
+      if (typeof L === 'undefined') {
+        mapEl.innerHTML = `<div class="map-no-location"><i class="ph ph-map-trifold"></i><p>${isArabic() ? 'تعذر تحميل الخريطة حالياً.' : 'Map could not be loaded right now.'}</p></div>`;
+        return;
       }
 
-      const map = L.map('property-map', { center: [lat, lng], zoom: 15, scrollWheelZoom: false, zoomControl: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      if (propertyMapInstance) {
+        propertyMapInstance.remove();
+        propertyMapInstance = null;
+      }
+
+      propertyMapInstance = L.map('property-map', {
+        center: [lat, lng],
+        zoom: 15,
+        scrollWheelZoom: false,
+        zoomControl: true
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(propertyMapInstance);
 
       const customIcon = L.divIcon({
         className: '',
-        html: `<div style="width:38px; height:38px; background:var(--primary); border:3px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 14px rgba(0,0,0,0.3);"></div>`,
-        iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -42]
+        html: `<div style="width:38px;height:38px;background:var(--primary);border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 14px rgba(0,0,0,0.28);"></div>`,
+        iconSize: [38, 38],
+        iconAnchor: [19, 38],
+        popupAnchor: [0, -42]
       });
 
-      L.marker([lat, lng], { icon: customIcon }).addTo(map).bindPopup(`<strong>${locationName || 'Property Location'}</strong>`).openPopup();
-      setTimeout(() => map.invalidateSize(), 300);
+      L.marker([lat, lng], { icon: customIcon })
+        .addTo(propertyMapInstance)
+        .bindPopup(`<strong>${escapeHtml(locationName || (isArabic() ? 'موقع العقار' : 'Property Location'))}</strong>`)
+        .openPopup();
+
+      setTimeout(() => propertyMapInstance && propertyMapInstance.invalidateSize(), 250);
 
       if (mapLink) {
         mapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
         mapLink.style.display = 'inline-flex';
       }
-    };
+    }
 
-    // --- UI Helpers ---
-    window.showPropertyContent = function() {
+    function showPropertyContent() {
       const skeleton = document.getElementById('prop-skeleton');
       const content = document.getElementById('prop-real-content');
       if (skeleton) skeleton.style.display = 'none';
       if (content) content.style.display = 'block';
-    };
+    }
 
-    window.updateImageBadge = function(current, total) {
-      const badge = document.getElementById('slider-count-badge');
-      if (badge) badge.textContent = `${current + 1} / ${total}`;
-    };
-
-    window.handleShare = function() {
-      const lang = localStorage.getItem('ore_lang') || 'en';
+    function handleShare() {
       const title = document.getElementById('prop-title')?.textContent || 'OreBooking Property';
       const url = window.location.href;
 
       if (navigator.share) {
         navigator.share({ title, url }).catch(() => {});
-      } else {
+      } else if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
-          if(window.showToast) window.showToast(lang === 'ar' ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!', 'success');
+          window.showToast?.(isArabic() ? 'تم نسخ الرابط بنجاح!' : 'Link copied to clipboard!', 'success');
         }).catch(() => {
-          if(window.showToast) window.showToast(lang === 'ar' ? 'تعذّر نسخ الرابط' : 'Could not copy link', 'error');
+          window.showToast?.(isArabic() ? 'تعذر نسخ الرابط' : 'Could not copy link', 'error');
         });
       }
-    };
-  </script>
+    }
 
+    function getUserFavorites() {
+      const user = firebase?.auth?.().currentUser;
+      if (!user) return [];
+      try {
+        const raw = localStorage.getItem(`ore_favs_${user.uid}`) || localStorage.getItem(`orefavs_${user.uid}`);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function setUserFavorites(list) {
+      const user = firebase?.auth?.().currentUser;
+      if (!user) return;
+      const val = JSON.stringify(list.map(String));
+      localStorage.setItem(`orefavs_${user.uid}`, val);
+      localStorage.setItem(`ore_favs_${user.uid}`, val);
+    }
+
+    function updateFavButtonState() {
+      const btn = document.getElementById('property-fav-btn');
+      if (!btn || !currentPropertyId) return;
+      const favs = getUserFavorites();
+      const isFav = favs.includes(String(currentPropertyId));
+      btn.classList.toggle('active', isFav);
+      btn.innerHTML = isFav
+        ? `<i class="ph-fill ph-heart"></i><span>${isArabic() ? 'محفوظ' : 'Saved'}</span>`
+        : `<i class="ph ph-heart"></i><span>${isArabic() ? 'حفظ' : 'Save'}</span>`;
+    }
+
+    function togglePropertyFavorite() {
+      const user = firebase?.auth?.().currentUser;
+      if (!user) {
+        if (typeof window.openModal === 'function') {
+          window.openModal();
+        } else {
+          document.getElementById('auth-modal')?.classList.add('active');
+          document.body.classList.add('modal-open');
+        }
+        return;
+      }
+
+      const favs = getUserFavorites();
+      const id = String(currentPropertyId);
+      const exists = favs.includes(id);
+      const next = exists ? favs.filter(x => x !== id) : [...favs, id];
+      setUserFavorites(next);
+      updateFavButtonState();
+
+      if (typeof window.showFavToast === 'function') {
+        window.showFavToast(exists
+          ? (isArabic() ? 'تمت إزالة العقار من المفضلة' : 'Removed from favorites')
+          : (isArabic() ? 'تمت إضافة العقار إلى المفضلة' : 'Added to favorites'));
+      } else if (typeof window.showToast === 'function') {
+        window.showToast(exists
+          ? (isArabic() ? 'تمت إزالة العقار من المفضلة' : 'Removed from favorites')
+          : (isArabic() ? 'تمت إضافة العقار إلى المفضلة' : 'Added to favorites'), 'success');
+      }
+    }
+
+    function bindEvents() {
+      document.getElementById('share-btn')?.addEventListener('click', handleShare);
+      document.getElementById('property-fav-btn')?.addEventListener('click', togglePropertyFavorite);
+
+      document.getElementById('gallery-next-btn')?.addEventListener('click', nextSlide);
+      document.getElementById('gallery-prev-btn')?.addEventListener('click', prevSlide);
+      document.getElementById('gallery-fullscreen-btn')?.addEventListener('click', openLightbox);
+
+      document.getElementById('lightbox-next-btn')?.addEventListener('click', nextSlide);
+      document.getElementById('lightbox-prev-btn')?.addEventListener('click', prevSlide);
+      document.getElementById('close-lightbox-btn')?.addEventListener('click', closeLightbox);
+
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+
+      lightbox?.addEventListener('click', function(e) {
+        if (e.target === lightbox) closeLightbox();
+      });
+
+      lightboxImg?.addEventListener('click', toggleZoom);
+
+      document.addEventListener('keydown', function(e) {
+        const lb = document.getElementById('lightbox');
+        if (lb && lb.classList.contains('active')) {
+          if (e.key === 'ArrowRight') nextSlide();
+          if (e.key === 'ArrowLeft') prevSlide();
+        }
+      });
+
+      let startX = 0;
+      let isDragging = false;
+      const slider = document.getElementById('slider-container');
+
+      slider?.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+      }, { passive: true });
+
+      slider?.addEventListener('touchend', e => {
+        if (!isDragging) return;
+        const endX = e.changedTouches[0].clientX;
+        const diff = endX - startX;
+        if (Math.abs(diff) > 50) {
+          if (diff < 0) nextSlide();
+          else prevSlide();
+        }
+        isDragging = false;
+      }, { passive: true });
+    }
+
+    async function loadProperty() {
+      updateStaticTexts();
+      bindEvents();
+
+      const params = new URLSearchParams(window.location.search);
+      currentPropertyId = params.get('id');
+
+      if (!currentPropertyId) {
+        window.showToast?.(isArabic() ? 'لم يتم العثور على معرف العقار.' : 'No property ID found.', 'error');
+        return;
+      }
+
+      const bookNowLink = document.getElementById('book-now-link');
+      if (bookNowLink) {
+        bookNowLink.href = `booking.html?id=${encodeURIComponent(currentPropertyId)}`;
+      }
+
+      try {
+        const doc = await db.collection('properties').doc(String(currentPropertyId)).get();
+
+        if (doc.exists) {
+          renderPropertyData({ id: doc.id, ...doc.data() });
+          return;
+        }
+
+        if (window.state?.liveProperties?.length) {
+          const localProp = window.state.liveProperties.find(p => String(p.id) === String(currentPropertyId));
+          if (localProp) {
+            renderPropertyData(localProp);
+            return;
+          }
+        }
+
+        window.showToast?.(isArabic() ? 'العقار غير موجود.' : 'Property not found.', 'error');
+      } catch (err) {
+        console.error('Error fetching property:', err);
+
+        if (window.state?.liveProperties?.length) {
+          const localProp = window.state.liveProperties.find(p => String(p.id) === String(currentPropertyId));
+          if (localProp) {
+            renderPropertyData(localProp);
+            return;
+          }
+        }
+
+        window.showToast?.(isArabic() ? 'حدث خطأ أثناء تحميل بيانات العقار.' : 'Error loading property details.', 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProperty();
+
+      firebase.auth().onAuthStateChanged(() => {
+        updateFavButtonState();
+      });
+    });
+  </script>
 </body>
 </html>
