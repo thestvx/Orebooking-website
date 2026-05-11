@@ -14,6 +14,7 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -93,7 +94,19 @@ const translations = {
     login_success: "Login successful",
     register_success: "Account created successfully",
     logout_success: "Logged out successfully",
-    invalid_credentials: "Invalid email or password"
+    invalid_credentials: "Invalid email or password",
+    booking_status_pending: "Pending",
+    booking_status_confirmed: "Confirmed",
+    booking_status_cancelled: "Cancelled",
+    booking_status_rejected: "Rejected",
+    booking_property: "Property",
+    booking_dates: "Dates",
+    booking_total: "Total",
+    booking_guests: "Guests",
+    booking_payment: "Payment",
+    booking_created: "Created",
+    booking_addons: "Add-ons",
+    booking_notes: "Notes"
   },
   ar: {
     hero_title: "اكتشف إقامتك المثالية القادمة",
@@ -155,7 +168,19 @@ const translations = {
     login_success: "تم تسجيل الدخول بنجاح",
     register_success: "تم إنشاء الحساب بنجاح",
     logout_success: "تم تسجيل الخروج بنجاح",
-    invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+    invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    booking_status_pending: "قيد الانتظار",
+    booking_status_confirmed: "مؤكد",
+    booking_status_cancelled: "ملغي",
+    booking_status_rejected: "مرفوض",
+    booking_property: "العقار",
+    booking_dates: "التواريخ",
+    booking_total: "الإجمالي",
+    booking_guests: "الضيوف",
+    booking_payment: "الدفع",
+    booking_created: "تاريخ الإنشاء",
+    booking_addons: "الإضافات",
+    booking_notes: "الملاحظات"
   }
 };
 
@@ -376,9 +401,9 @@ function init() {
 
   if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
 
-  auth.onAuthStateChanged(user => {
+  auth.onAuthStateChanged(async user => {
     state.user = user;
-    loadFavorites();
+    await loadFavorites();
     updateUserUI();
   });
 }
@@ -621,6 +646,10 @@ window.selectCategory = function (catName) {
 // ==========================================
 // 5. HELPERS
 // ==========================================
+function t(key) {
+  return translations[state.lang]?.[key] || key;
+}
+
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = String(str ?? "");
@@ -636,25 +665,98 @@ function escapeAttr(str) {
     .replace(/>/g, "&gt;");
 }
 
+function normalizeText(value) {
+  return String(value ?? "").trim();
+}
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function formatCurrency(value) {
+  return `${Number(value || 0).toLocaleString(state.lang === "ar" ? "ar-DZ" : "en-US")} DZD`;
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  if (typeof value?.toDate === "function") {
+    return value.toDate().toLocaleDateString(state.lang === "ar" ? "ar-DZ" : "en-GB");
+  }
+  const d = new Date(value);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString(state.lang === "ar" ? "ar-DZ" : "en-GB");
+  }
+  return String(value);
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const d = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${d.toLocaleDateString(state.lang === "ar" ? "ar-DZ" : "en-GB")} ${d.toLocaleTimeString(state.lang === "ar" ? "ar-DZ" : "en-GB", {
+    hour: "2-digit",
+    minute: "2-digit"
+  })}`;
+}
+
+function safeDateMs(value) {
+  try {
+    if (!value) return 0;
+    if (typeof value?.toDate === "function") return value.toDate().getTime();
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  } catch (_) {
+    return 0;
+  }
+}
+
+function getStatusMeta(status) {
+  const map = {
+    pending: {
+      label: t("booking_status_pending"),
+      cls: "pending",
+      icon: "ph-hourglass-medium"
+    },
+    confirmed: {
+      label: t("booking_status_confirmed"),
+      cls: "confirmed",
+      icon: "ph-check-circle"
+    },
+    cancelled: {
+      label: t("booking_status_cancelled"),
+      cls: "cancelled",
+      icon: "ph-x-circle"
+    },
+    rejected: {
+      label: t("booking_status_rejected"),
+      cls: "cancelled",
+      icon: "ph-x-circle"
+    }
+  };
+  return map[String(status || "").toLowerCase()] || map.pending;
+}
+
 function propertyMatchesCategory(property, category) {
   const haystack = [
     property.title_en, property.title_ar,
     property.titleEn, property.titleAr,
     property.desc_en, property.desc_ar,
     property.descEn, property.descAr,
+    property.type, property.typeEn, property.typeAr,
     ...(property.features_en || property.featuresEn || []),
     ...(property.features_ar || property.featuresAr || [])
   ].join(" ").toLowerCase();
 
   switch (category) {
     case "Apartments":
-      return /apartment|شقة/.test(haystack);
+      return /apartment|شقة|شقق/.test(haystack);
     case "Villas":
-      return /villa|فيلا/.test(haystack);
+      return /villa|فيلا|فلل/.test(haystack);
     case "Resorts":
-      return /resort|camp|منتجع/.test(haystack);
+      return /resort|camp|منتجع|كوخ/.test(haystack);
     case "Pools":
-      return /pool|swimming|مسبح/.test(haystack);
+      return /pool|swimming|مسبح|مسابح/.test(haystack);
     default:
       return true;
   }
@@ -663,25 +765,169 @@ function propertyMatchesCategory(property, category) {
 function normalizeProperty(p) {
   const lat = p.lat ?? p.locationLat ?? p.latitude ?? p.coords?.lat ?? null;
   const lng = p.lng ?? p.locationLng ?? p.longitude ?? p.coords?.lng ?? null;
+  const baseImage = p.image || p.imageUrl || p.mainImage || "images/placeholder.jpg";
+  const imgs = Array.isArray(p.images) && p.images.length ? p.images : [baseImage];
 
   return {
-    id: String(p.id || ""),
-    title_en: p.title_en || p.titleEn || "",
-    title_ar: p.title_ar || p.titleAr || "",
-    location_en: p.location_en || p.locationEn || "",
-    location_ar: p.location_ar || p.locationAr || "",
-    price: Number(p.price || 0),
+    id: String(p.id || p.docId || ""),
+    title_en: p.title_en || p.titleEn || p.title || "",
+    title_ar: p.title_ar || p.titleAr || p.title || "",
+    location_en: p.location_en || p.locationEn || p.location || "",
+    location_ar: p.location_ar || p.locationAr || p.location || "",
+    price: Number(p.price || p.basePrice || p.pricePerNight || 0),
     rating: Number(p.rating || 4.8),
-    image: p.image || p.imageUrl || "images/placeholder.jpg",
-    images: Array.isArray(p.images) && p.images.length ? p.images : [p.image || p.imageUrl || "images/placeholder.jpg"],
+    image: baseImage,
+    images: imgs,
     urgency: p.urgency || null,
     desc_en: p.desc_en || p.descEn || "",
     desc_ar: p.desc_ar || p.descAr || "",
     features_en: p.features_en || p.featuresEn || [],
     features_ar: p.features_ar || p.featuresAr || [],
+    type: p.type || "",
+    typeEn: p.typeEn || "",
+    typeAr: p.typeAr || "",
+    visible: p.visible !== false,
     lat: lat !== null ? Number(lat) : null,
     lng: lng !== null ? Number(lng) : null
   };
+}
+
+function getBookingField(data, candidates = [], fallback = "") {
+  for (const key of candidates) {
+    if (data[key] !== undefined && data[key] !== null && String(data[key]).trim() !== "") {
+      return data[key];
+    }
+  }
+  return fallback;
+}
+
+function getBookingPropertyId(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"], "")
+  );
+}
+
+function getBookingGuestName(data = {}) {
+  const direct = normalizeText(getBookingField(data, ["guestName", "fullName", "name", "billingName"], ""));
+  if (direct) return direct;
+
+  const first = normalizeText(data.guestNameFirst || data.firstName || data.givenName || "");
+  const father = normalizeText(data.guestFatherName || data.fatherName || "");
+  const family = normalizeText(data.guestFamilyName || data.lastName || data.familyName || "");
+  return [first, father, family].filter(Boolean).join(" ").trim() || "—";
+}
+
+function getBookingPhone(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["guestPhone", "phone", "guestWhatsapp", "billingPhone", "contactPhone"], "—")
+  );
+}
+
+function getBookingEmail(data = {}) {
+  return normalizeText(
+    getBookingField(data, ["guestEmail", "email", "billingEmail", "contactEmail"], "—")
+  );
+}
+
+function getBookingCheckIn(data = {}) {
+  return getBookingField(data, ["checkInDate", "checkIn", "arrivalDate", "arrival_date"], null);
+}
+
+function getBookingCheckOut(data = {}) {
+  return getBookingField(data, ["checkOutDate", "checkOut", "departureDate", "departure_date"], null);
+}
+
+function getBookingGuestsMeta(data = {}) {
+  const adults = toNumber(getBookingField(data, ["adults", "guestAdults"], 0), 0);
+  const children = toNumber(getBookingField(data, ["children", "guestChildren"], 0), 0);
+  const infants = toNumber(getBookingField(data, ["infants", "guestInfants"], 0), 0);
+  const rooms = toNumber(getBookingField(data, ["rooms", "roomCount"], 0), 0);
+  const guests = toNumber(getBookingField(data, ["guests", "guestCount"], adults + children + infants || 1), 1);
+
+  return { adults, children, infants, rooms, guests };
+}
+
+function getBookingNotes(data = {}) {
+  const special = normalizeText(getBookingField(data, ["specialRequests", "notes", "addonNotes", "medicalNotes"], ""));
+  const arrival = normalizeText(getBookingField(data, ["arrivalTime", "arrival_time", "expectedArrivalTime"], ""));
+  const additionalGuests = normalizeText(getBookingField(data, ["additionalGuests", "additionalGuestNames"], ""));
+  const bits = [];
+  if (arrival) bits.push(`${state.lang === "ar" ? "وقت الوصول" : "Arrival"}: ${arrival}`);
+  if (special) bits.push(`${state.lang === "ar" ? "ملاحظات" : "Notes"}: ${special}`);
+  if (additionalGuests) bits.push(`${state.lang === "ar" ? "أسماء إضافية" : "Additional guests"}: ${additionalGuests}`);
+  return bits.join(" — ");
+}
+
+function getBookingAddons(data = {}) {
+  const addOnLabels = {
+    restaurant: state.lang === "ar" ? "المطعم" : "Restaurant",
+    wifi: state.lang === "ar" ? "إنترنت عالي السرعة" : "WiFi",
+    spa: state.lang === "ar" ? "جلسة سبا" : "Spa",
+    parking: state.lang === "ar" ? "موقف سيارات" : "Parking",
+    airportTransfer: state.lang === "ar" ? "نقل المطار" : "Airport transfer",
+    lateCheckout: state.lang === "ar" ? "تسجيل خروج متأخر" : "Late checkout",
+    extraBed: state.lang === "ar" ? "سرير إضافي" : "Extra bed",
+    events: state.lang === "ar" ? "تنسيق فعاليات" : "Events",
+    breakfast: state.lang === "ar" ? "فطور" : "Breakfast",
+    breakfastIncluded: state.lang === "ar" ? "فطور" : "Breakfast",
+    babyCrib: state.lang === "ar" ? "سرير أطفال" : "Baby crib",
+    highChair: state.lang === "ar" ? "كرسي أطفال" : "High chair",
+    accessibleRoom: state.lang === "ar" ? "غرفة مهيأة" : "Accessible room",
+    earlyCheckin: state.lang === "ar" ? "دخول مبكر" : "Early check-in"
+  };
+
+  let addons = [];
+
+  if (Array.isArray(data.selectedAddons)) {
+    addons = data.selectedAddons;
+  } else if (data.addons && typeof data.addons === "object") {
+    addons = Object.keys(data.addons).filter(key => data.addons[key] === true);
+  } else {
+    const derived = [];
+    if (String(data.breakfastOption || "").toLowerCase() === "yes") derived.push("breakfast");
+    if (String(data.airportTransfer || "").toLowerCase() !== "no" && String(data.airportTransfer || "").trim()) derived.push("airportTransfer");
+    if (String(data.parkingNeeded || "").toLowerCase() !== "no" && String(data.parkingNeeded || "").trim()) derived.push("parking");
+    if (String(data.lateCheckout || "").toLowerCase() === "yes") derived.push("lateCheckout");
+    if (String(data.earlyCheckin || "").toLowerCase() === "yes") derived.push("earlyCheckin");
+    if (String(data.babyCrib || "").toLowerCase() === "yes") derived.push("babyCrib");
+    if (String(data.highChair || "").toLowerCase() === "yes") derived.push("highChair");
+    if (String(data.accessibleRoom || "").toLowerCase() !== "no" && String(data.accessibleRoom || "").trim()) derived.push("accessibleRoom");
+    addons = derived;
+  }
+
+  return addons.map(a => {
+    if (a === "restaurant" && data.restaurantPlan) return `${addOnLabels[a] || a} (${data.restaurantPlan})`;
+    return addOnLabels[a] || a;
+  });
+}
+
+function showToast(message, type = "success") {
+  let host = document.getElementById("global-toast-host");
+
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "global-toast-host";
+    host.style.cssText = "position:fixed;top:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,380px);";
+    document.body.appendChild(host);
+  }
+
+  const cfg = {
+    success: { bg: "#ecfdf5", border: "#10b981", text: "#047857", icon: "ph-check-circle" },
+    error: { bg: "#fef2f2", border: "#ef4444", text: "#b91c1c", icon: "ph-warning-circle" },
+    info: { bg: "#eff6ff", border: "#3b82f6", text: "#1d4ed8", icon: "ph-info" }
+  }[type] || { bg: "#eff6ff", border: "#3b82f6", text: "#1d4ed8", icon: "ph-info" };
+
+  const toast = document.createElement("div");
+  toast.style.cssText = `background:${cfg.bg};border:1px solid ${cfg.border};color:${cfg.text};padding:14px 16px;border-radius:16px;box-shadow:0 14px 30px rgba(15,23,42,.12);font-weight:700;font-family:inherit;display:flex;align-items:flex-start;gap:10px;line-height:1.6;`;
+  toast.innerHTML = `<i class="ph ${cfg.icon}" style="font-size:1.2rem;flex-shrink:0;margin-top:2px;"></i><span>${escapeHtml(message)}</span>`;
+  host.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "all .25s ease";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-6px)";
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
 }
 
 // ==========================================
@@ -786,7 +1032,7 @@ async function handleForgotPassword(e) {
   const email = emailInput?.value.trim();
 
   if (!email) {
-    showMessage(state.lang === "ar" ? "يرجى إدخال بريدك الإلكتروني" : "Please enter your email", "error");
+    showMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني أولاً" : "Please enter your email", "error");
     return;
   }
 
@@ -797,17 +1043,16 @@ async function handleForgotPassword(e) {
   } catch (error) {
     const isAr = state.lang === "ar";
     const map = {
-      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد الإلكتروني" : "No account found with this email",
-      "auth/invalid-email": isAr ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format",
+      "auth/user-not-found": isAr ? "لا يوجد حساب بهذا البريد" : "No account found with this email",
+      "auth/invalid-email": isAr ? "صيغة البريد غير صحيحة" : "Invalid email format",
       "auth/network-request-failed": isAr ? "تحقق من اتصال الإنترنت" : "Check your internet connection"
     };
-
     showMessage(map[error.code] || error.message, "error");
   }
 }
 
 // ==========================================
-// 10. RESET HOME
+// 10. RESET TO HOME
 // ==========================================
 function resetToHome() {
   state.currentView = "home";
@@ -838,15 +1083,12 @@ function resetToHome() {
 }
 
 // ==========================================
-// 11. CLEAR SEARCH
+// 11. CLEAR SEARCH BUTTON
 // ==========================================
 function initClearSearchBtn() {
   const clearBtn = document.getElementById("clear-search-btn");
   if (!clearBtn) return;
-
-  clearBtn.addEventListener("click", () => {
-    resetToHome();
-  });
+  clearBtn.addEventListener("click", resetToHome);
 }
 
 function showClearSearchBtn() {
@@ -866,462 +1108,488 @@ function initSmartSearch() {
   const searchInput = document.getElementById("search-location");
   const searchDropdown = document.getElementById("search-dropdown");
   const searchBtn = document.getElementById("main-search-btn");
+
   if (!searchInput || !searchDropdown) return;
 
-  const dict = translations[state.lang];
-
   const renderWilayas = wilayas => {
+    const topLabel = state.lang === "ar" ? "كل الولايات" : "All Wilayas";
+    const topSub = state.lang === "ar" ? "عرض جميع العقارات" : "Show all properties";
+
     let html = `
-      <div class="search-item" onclick="selectWilaya('', '')" style="border-bottom:1px solid var(--border-color)">
-        <div class="search-icon-box"><i class="ph ph-globe-hemisphere-west"></i></div>
-        <div class="search-item-info">
-          <span class="search-item-title">${escapeHtml(dict.all_wilayas)}</span>
-          <span class="search-item-sub">${escapeHtml(dict.all_wilayas_sub)}</span>
+      <button class="search-suggestion" data-value="">
+        <i class="ph ph-globe-hemisphere-west"></i>
+        <div>
+          <strong>${escapeHtml(topLabel)}</strong>
+          <small>${escapeHtml(topSub)}</small>
         </div>
-      </div>
+      </button>
     `;
 
-    if (wilayas.length > 0) {
-      html += wilayas.map(w => `
-        <div class="search-item" onclick="selectWilaya('${escapeAttr(w.ar)}', '${escapeAttr(w.en)}')">
-          <div class="search-icon-box"><i class="ph ph-map-pin"></i></div>
-          <div class="search-item-info">
-            <span class="search-item-title">${escapeHtml(state.lang === "en" ? w.en : w.ar)}</span>
-            <span class="search-item-sub">${escapeHtml(state.lang === "en" ? "Algeria" : `الجزائر • ${w.id}`)}</span>
-          </div>
+    html += wilayas.map(w => `
+      <button class="search-suggestion" data-value="${escapeAttr(state.lang === "ar" ? w.ar : w.en)}">
+        <i class="ph ph-map-pin"></i>
+        <div>
+          <strong>${escapeHtml(state.lang === "ar" ? w.ar : w.en)}</strong>
         </div>
-      `).join("");
-    } else {
-      html += `
-        <div class="no-results">
-          <i class="ph ph-magnifying-glass"></i>
-          <span>${escapeHtml(dict.no_results)}</span>
-        </div>
-      `;
-    }
+      </button>
+    `).join("");
 
     searchDropdown.innerHTML = html;
     searchDropdown.classList.add("active");
+
+    searchDropdown.querySelectorAll(".search-suggestion").forEach(btn => {
+      btn.addEventListener("click", () => {
+        searchInput.value = btn.getAttribute("data-value") || "";
+        searchDropdown.classList.remove("active");
+        runSearch();
+      });
+    });
   };
 
-  searchInput.addEventListener("focus", () => renderWilayas(algerianWilayas));
-  searchInput.addEventListener("click", () => renderWilayas(algerianWilayas));
+  const runSearch = () => {
+    const q = searchInput.value.trim().toLowerCase();
+    state.activeSearch = q;
 
-  searchInput.addEventListener("input", e => {
-    const val = e.target.value.trim().toLowerCase();
-
-    if (!val) {
-      renderWilayas(algerianWilayas);
-      return;
-    }
-
-    const filtered = algerianWilayas.filter(w =>
-      (w.ar && w.ar.includes(e.target.value.trim())) ||
-      (w.en && w.en.toLowerCase().includes(val)) ||
-      String(w.id) === val
-    );
-
-    renderWilayas(filtered);
-  });
-
-  document.addEventListener("click", e => {
-    if (!e.target.closest(".search-location-wrapper") && !e.target.closest(".search-bar")) {
-      searchDropdown.classList.remove("active");
-    }
-  });
-
-  let focusedIndex = -1;
-
-  searchInput.addEventListener("keydown", e => {
-    const items = searchDropdown.querySelectorAll(".search-item");
-    if (!items.length) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      focusedIndex = Math.min(focusedIndex + 1, items.length - 1);
-      updateKeyboardFocus(items, focusedIndex);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      focusedIndex = Math.max(focusedIndex - 1, 0);
-      updateKeyboardFocus(items, focusedIndex);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (focusedIndex >= 0 && items[focusedIndex]) {
-        items[focusedIndex].click();
-      } else {
-        searchBtn?.click();
-      }
-      focusedIndex = -1;
-    } else if (e.key === "Escape") {
-      searchDropdown.classList.remove("active");
-      focusedIndex = -1;
-    }
-  });
-
-  function updateKeyboardFocus(items, index) {
-    items.forEach((item, i) => item.classList.toggle("selected", i === index));
-    if (items[index]) items[index].scrollIntoView({ block: "nearest" });
-  }
-
-  window.selectWilaya = function (arName, enName) {
-    searchDropdown.classList.remove("active");
-    focusedIndex = -1;
-
-    if (!arName && !enName) {
-      searchInput.value = "";
-      state.activeSearch = "";
-      hideClearSearchBtn();
-
-      const sectionTitle = document.getElementById("section-main-title");
-      if (sectionTitle) {
-        sectionTitle.setAttribute("data-i18n", "trending");
-        sectionTitle.textContent = translations[state.lang].trending;
-      }
-
-      renderListings();
-      document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-
-    searchInput.value = state.lang === "en" ? enName : arName;
-    state.activeSearch = enName;
-    showClearSearchBtn();
+    const hero = document.getElementById("hero-section");
+    const cats = document.getElementById("categories-container");
+    if (hero) hero.style.display = "none";
+    if (cats) cats.style.display = "none";
 
     const sectionTitle = document.getElementById("section-main-title");
     if (sectionTitle) {
       sectionTitle.removeAttribute("data-i18n");
-      sectionTitle.textContent = state.lang === "en" ? `Results: ${enName}` : arName;
+      sectionTitle.textContent = q ? translations[state.lang].search_results : translations[state.lang].trending;
     }
 
-    filterAndRender(enName, arName);
+    if (q) showClearSearchBtn();
+    else hideClearSearchBtn();
+
+    let filtered = [...state.liveProperties];
+
+    if (q) {
+      filtered = filtered.filter(p => {
+        const haystack = [
+          p.title_en, p.title_ar,
+          p.location_en, p.location_ar,
+          p.desc_en, p.desc_ar,
+          p.type, p.typeEn, p.typeAr
+        ].join(" ").toLowerCase();
+
+        return haystack.includes(q);
+      });
+    }
+
+    if (state.activeCategory) {
+      filtered = filtered.filter(p => propertyMatchesCategory(p, state.activeCategory));
+    }
+
+    state.currentView = q || state.activeCategory ? "search" : "home";
+    renderListings(filtered);
   };
 
-  if (searchBtn) {
-    searchBtn.addEventListener("click", e => {
+  searchInput.addEventListener("focus", () => renderWilayas(algerianWilayas.slice(0, 12)));
+
+  searchInput.addEventListener("input", () => {
+    const value = searchInput.value.trim().toLowerCase();
+    const filtered = algerianWilayas.filter(w =>
+      w.ar.toLowerCase().includes(value) || w.en.toLowerCase().includes(value)
+    ).slice(0, 12);
+
+    renderWilayas(filtered.length ? filtered : algerianWilayas.slice(0, 12));
+  });
+
+  searchBtn?.addEventListener("click", runSearch);
+
+  searchInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
       e.preventDefault();
       searchDropdown.classList.remove("active");
-
-      const val = searchInput.value.trim();
-      const valLow = val.toLowerCase();
-
-      if (!val) {
-        resetToHome();
-        return;
-      }
-
-      state.activeSearch = val;
-      showClearSearchBtn();
-
-      const sectionTitle = document.getElementById("section-main-title");
-      if (sectionTitle) {
-        sectionTitle.removeAttribute("data-i18n");
-        sectionTitle.textContent = state.lang === "en" ? `Results: ${val}` : val;
-      }
-
-      const filtered = state.liveProperties.filter(p =>
-        (p.title_en && p.title_en.toLowerCase().includes(valLow)) ||
-        (p.title_ar && p.title_ar.includes(val)) ||
-        (p.location_en && p.location_en.toLowerCase().includes(valLow)) ||
-        (p.location_ar && p.location_ar.includes(val))
-      );
-
-      renderListings(filtered);
-      document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  function filterAndRender(enName, arName) {
-    const enLow = enName ? enName.toLowerCase() : "";
-    const arTrim = arName || "";
-
-    const filtered = state.liveProperties.filter(p =>
-      (p.location_en && p.location_en.toLowerCase().includes(enLow)) ||
-      (p.location_ar && p.location_ar.includes(arTrim))
-    );
-
-    renderListings(filtered);
-    document.getElementById("listings-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-}
-
-// ==========================================
-// 13. LOAD PROPERTIES
-// ==========================================
-async function loadPropertiesFromFirestore() {
-  const container = document.getElementById("listings-grid");
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="card-skeleton"></div>
-    <div class="card-skeleton"></div>
-    <div class="card-skeleton"></div>
-    <div class="card-skeleton"></div>
-  `;
-
-  try {
-    const snapshot = await db.collection("properties").where("visible", "==", true).get();
-
-    if (!snapshot.empty) {
-      state.liveProperties = snapshot.docs.map(doc => {
-        const d = doc.data();
-        return normalizeProperty({
-          id: String(doc.id),
-          titleEn: d.titleEn || d.titleen,
-          titleAr: d.titleAr || d.titlear,
-          locationEn: d.locationEn || d.locationen,
-          locationAr: d.locationAr || d.locationar,
-          price: Number(d.price || 0),
-          rating: Number(d.rating || 4.8),
-          imageUrl: d.imageUrl || d.image,
-          images: Array.isArray(d.images) && d.images.length > 0 ? d.images : [d.imageUrl || d.image || "images/placeholder.jpg"],
-          urgency: d.urgency || null,
-          descEn: d.descEn || d.descen,
-          descAr: d.descAr || d.descar,
-          featuresEn: Array.isArray(d.featuresEn) ? d.featuresEn : (Array.isArray(d.featuresen) ? d.featuresen : []),
-          featuresAr: Array.isArray(d.featuresAr) ? d.featuresAr : (Array.isArray(d.featuresar) ? d.featuresar : []),
-          lat: d.lat ?? d.locationLat ?? d.latitude ?? null,
-          lng: d.lng ?? d.locationLng ?? d.longitude ?? null
-        });
-      });
-    } else {
-      state.liveProperties = properties.map(normalizeProperty);
+      runSearch();
     }
-  } catch (err) {
-    console.error("Firestore error:", err);
-    state.liveProperties = properties.map(normalizeProperty);
-  }
-
-  renderListings();
+  });
 }
 
 // ==========================================
-// 14. THEME / LANGUAGE
+// 13. THEME & LANGUAGE
 // ==========================================
-function updateLogo() {
-  const mainLogo = document.getElementById("main-logo");
-  const modalLogo = document.getElementById("modal-logo");
-  const logoPath = state.theme === "dark" ? "logos/orebooking2.png" : "logos/orebooking.png";
-
-  if (mainLogo) mainLogo.src = logoPath;
-  if (modalLogo) modalLogo.src = logoPath;
-}
-
 function applyInitialState() {
-  if (state.theme === "dark") {
-    document.body.classList.add("dark");
-    if (themeBtn) themeBtn.innerHTML = '<i class="ph ph-sun"></i>';
-  } else {
-    document.body.classList.remove("dark");
-    if (themeBtn) themeBtn.innerHTML = '<i class="ph ph-moon"></i>';
-  }
+  document.body.classList.toggle("dark", state.theme === "dark");
+  htmlEl.lang = state.lang;
+  htmlEl.dir = state.lang === "ar" ? "rtl" : "ltr";
 
-  updateLogo();
+  const themeIcon = themeBtn?.querySelector("i");
+  if (themeIcon) themeIcon.className = state.theme === "dark" ? "ph ph-sun" : "ph ph-moon";
 
-  htmlEl.setAttribute("dir", state.lang === "en" ? "ltr" : "rtl");
-  htmlEl.setAttribute("lang", state.lang);
-
-  if (langBtn) {
-    langBtn.innerHTML = state.lang === "en"
-      ? '<i class="ph ph-globe"></i><span>العربية</span>'
-      : '<i class="ph ph-globe"></i><span>English</span>';
-  }
-
-  updateLanguageUI();
+  applyTranslations();
 }
 
 function toggleTheme() {
-  state.theme = state.theme === "light" ? "dark" : "light";
+  state.theme = state.theme === "dark" ? "light" : "dark";
   localStorage.setItem("ore_theme", state.theme);
-  applyInitialState();
+  document.body.classList.toggle("dark", state.theme === "dark");
+
+  const themeIcon = themeBtn?.querySelector("i");
+  if (themeIcon) themeIcon.className = state.theme === "dark" ? "ph ph-sun" : "ph ph-moon";
 }
 
 function toggleLanguage() {
-  state.lang = state.lang === "en" ? "ar" : "en";
+  state.lang = state.lang === "ar" ? "en" : "ar";
   localStorage.setItem("ore_lang", state.lang);
-  applyInitialState();
-
-  if (document.getElementById("categories-container")) {
-    renderCategories();
-
-    if (state.activeSearch && state.currentView !== "favorites") {
-      const val = state.activeSearch.toLowerCase();
-      const filtered = state.liveProperties.filter(p =>
-        (p.title_en && p.title_en.toLowerCase().includes(val)) ||
-        (p.title_ar && p.title_ar.includes(state.activeSearch)) ||
-        (p.location_en && p.location_en.toLowerCase().includes(val)) ||
-        (p.location_ar && p.location_ar.includes(state.activeSearch))
-      );
-      renderListings(filtered);
-    } else {
-      renderListings();
-    }
-
-    const searchInput = document.getElementById("search-location");
-    if (searchInput && state.activeSearch) {
-      const matched = algerianWilayas.find(w => w.en.toLowerCase() === state.activeSearch.toLowerCase());
-      if (matched) {
-        searchInput.value = state.lang === "en" ? matched.en : matched.ar;
-      }
-    }
-
-    const sectionTitle = document.getElementById("section-main-title");
-    if (sectionTitle && state.currentView === "favorites") {
-      sectionTitle.textContent = translations[state.lang].my_favorites;
-    }
-  }
-
-  if (typeof renderPropertyDetails === "function") renderPropertyDetails();
+  htmlEl.lang = state.lang;
+  htmlEl.dir = state.lang === "ar" ? "rtl" : "ltr";
+  applyTranslations();
+  renderCategories();
+  renderListings();
+  if (document.getElementById("property-details-page")) renderPropertyDetails();
 }
 
-function updateLanguageUI() {
-  const dict = translations[state.lang];
-
+function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
-    if (dict[key] !== undefined) el.textContent = dict[key];
+    if (translations[state.lang][key]) {
+      el.textContent = translations[state.lang][key];
+    }
   });
 
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     const key = el.getAttribute("data-i18n-placeholder");
-    if (dict[key] !== undefined) el.placeholder = dict[key];
-  });
-
-  updatePropertyPageTexts();
-}
-
-function updatePropertyPageTexts() {
-  const isAr = state.lang === "ar";
-  const infoText = document.getElementById("booking-info-text");
-  if (infoText) {
-    infoText.textContent = isAr
-      ? "اختر التواريخ وعدد الضيوف في الصفحة التالية لرؤية السعر النهائي."
-      : "Choose your dates and number of guests on the next page to see the final price.";
-  }
-}
-
-// ==========================================
-// 15. FAVORITES
-// ==========================================
-function loadFavorites() {
-  if (state.user) {
-    try {
-      const saved = localStorage.getItem(`ore_favs_${state.user.uid}`);
-      state.favorites = saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.warn("Could not parse favorites:", e);
-      state.favorites = [];
+    if (translations[state.lang][key]) {
+      el.setAttribute("placeholder", translations[state.lang][key]);
     }
-  } else {
-    state.favorites = [];
+  });
+}
+
+// ==========================================
+// 14. LOAD PROPERTIES
+// ==========================================
+async function loadPropertiesFromFirestore() {
+  const grid = document.getElementById("listings-grid");
+  if (grid) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-circle-notch ph-spin"></i>
+        <div>${escapeHtml(translations[state.lang].loading)}</div>
+      </div>
+    `;
   }
 
-  if (document.getElementById("listings-grid")) {
+  try {
+    const snap = await db.collection("properties").get();
+    const firestoreProps = snap.docs
+      .map(doc => normalizeProperty({ ...doc.data(), id: doc.id }))
+      .filter(p => p.visible !== false);
+
+    state.liveProperties = firestoreProps.length ? firestoreProps : properties.map(normalizeProperty);
+    renderListings();
+  } catch (error) {
+    console.error("loadPropertiesFromFirestore error:", error);
+    state.liveProperties = properties.map(normalizeProperty);
     renderListings();
   }
 }
 
-function saveFavorites() {
-  if (state.user) {
-    localStorage.setItem(`ore_favs_${state.user.uid}`, JSON.stringify(state.favorites));
+// ==========================================
+// 15. RENDER LISTINGS
+// ==========================================
+function getCurrentListings() {
+  if (state.currentView === "favorites") {
+    return state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
   }
+  return state.liveProperties;
 }
 
-window.toggleFavorite = function (e, id) {
-  e.stopPropagation();
-  e.preventDefault();
+function renderListings(customList = null) {
+  const grid = document.getElementById("listings-grid");
+  if (!grid) return;
 
-  if (!state.user) {
-    openModal();
-    showMessage(translations[state.lang].auth_required, "error");
+  const items = Array.isArray(customList) ? customList : getCurrentListings();
+
+  if (!items.length) {
+    const msg = state.currentView === "favorites"
+      ? translations[state.lang].no_favorites
+      : (state.currentView === "search" ? translations[state.lang].no_results : translations[state.lang].no_props);
+
+    grid.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-house-line"></i>
+        <div>${escapeHtml(msg)}</div>
+      </div>
+    `;
     return;
   }
 
-  const strId = String(id);
-  const index = state.favorites.indexOf(strId);
-  const wasFav = index > -1;
+  grid.innerHTML = items.map(p => {
+    const title = state.lang === "ar" ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
+    const location = state.lang === "ar" ? (p.location_ar || p.location_en) : (p.location_en || p.location_ar);
+    const isFav = state.favorites.includes(String(p.id));
+    const urgencyText = p.urgency === "few"
+      ? translations[state.lang].urgency_few
+      : p.urgency === "hot"
+        ? translations[state.lang].urgency_hot
+        : "";
 
-  if (wasFav) {
-    state.favorites.splice(index, 1);
-  } else {
-    state.favorites.push(strId);
+    return `
+      <article class="listing-card" onclick="openPropertyPage('${escapeAttr(String(p.id))}')">
+        <div class="listing-thumb-wrap">
+          <img src="${escapeAttr(p.image)}" alt="${escapeAttr(title)}" class="listing-thumb">
+          <button class="fav-btn ${isFav ? "active" : ""}" onclick="event.stopPropagation(); toggleFavorite('${escapeAttr(String(p.id))}')">
+            <i class="ph ${isFav ? "ph-fill ph-heart" : "ph-heart"}"></i>
+          </button>
+          ${urgencyText ? `<span class="urgency-chip">${escapeHtml(urgencyText)}</span>` : ""}
+        </div>
+        <div class="listing-body">
+          <div class="listing-top">
+            <h3>${escapeHtml(title)}</h3>
+            <span class="listing-rating"><i class="ph-fill ph-star"></i>${Number(p.rating || 4.8).toFixed(2)}</span>
+          </div>
+          <div class="listing-location">
+            <i class="ph ph-map-pin"></i>
+            <span>${escapeHtml(location)}</span>
+          </div>
+          <div class="listing-price">
+            <strong>${escapeHtml(formatCurrency(p.price))}</strong>
+            <span> / ${escapeHtml(translations[state.lang].night)}</span>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+window.openPropertyPage = function (id) {
+  window.location.href = `property.html?id=${encodeURIComponent(id)}`;
+};
+
+// ==========================================
+// 16. PROPERTY DETAILS
+// ==========================================
+function getPropertyIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("id") || params.get("propertyId") || params.get("pid");
+}
+
+async function renderPropertyDetails() {
+  const page = document.getElementById("property-details-page");
+  if (!page) return;
+
+  const propId = getPropertyIdFromUrl();
+  if (!propId) return;
+
+  let prop = null;
+
+  try {
+    const doc = await db.collection("properties").doc(String(propId)).get();
+    if (doc.exists) {
+      prop = normalizeProperty({ ...doc.data(), id: doc.id });
+    }
+  } catch (error) {
+    console.error("renderPropertyDetails error:", error);
   }
 
-  saveFavorites();
-
-  const btn = e.currentTarget;
-  const icon = btn.querySelector("i");
-  if (icon) {
-    icon.className = wasFav ? "ph ph-heart" : "ph-fill ph-heart";
+  if (!prop) {
+    prop = state.liveProperties.find(p => String(p.id) === String(propId)) || properties.map(normalizeProperty).find(p => String(p.id) === String(propId));
   }
-  btn.classList.toggle("active", !wasFav);
 
-  showFavToast(wasFav ? translations[state.lang].fav_removed : translations[state.lang].fav_added);
+  if (!prop) return;
 
-  if (state.currentView === "favorites") {
+  currentPropImages = prop.images || [prop.image];
+
+  const title = state.lang === "ar" ? (prop.title_ar || prop.title_en) : (prop.title_en || prop.title_ar);
+  const location = state.lang === "ar" ? (prop.location_ar || prop.location_en) : (prop.location_en || prop.location_ar);
+  const desc = state.lang === "ar" ? (prop.desc_ar || prop.desc_en) : (prop.desc_en || prop.desc_ar);
+  const features = state.lang === "ar" ? (prop.features_ar || []) : (prop.features_en || []);
+  const isFav = state.favorites.includes(String(prop.id));
+
+  const titleEl = document.getElementById("prop-title");
+  const locationEl = document.getElementById("prop-location");
+  const descEl = document.getElementById("prop-description");
+  const featuresEl = document.getElementById("prop-features");
+  const mainImg = document.getElementById("prop-main-img");
+  const thumbs = document.getElementById("prop-thumbs");
+  const priceEl = document.getElementById("prop-price");
+  const favBtn = document.getElementById("prop-fav-btn");
+  const bookBtn = document.getElementById("book-now-btn");
+
+  if (titleEl) titleEl.textContent = title;
+  if (locationEl) locationEl.textContent = location;
+  if (descEl) descEl.textContent = desc;
+  if (priceEl) priceEl.textContent = formatCurrency(prop.price);
+
+  if (mainImg) {
+    mainImg.src = currentPropImages[0] || prop.image;
+    mainImg.alt = title;
+    mainImg.addEventListener("click", () => openLightbox(0));
+  }
+
+  if (thumbs) {
+    thumbs.innerHTML = currentPropImages.map((img, idx) => `
+      <button class="prop-thumb-btn ${idx === 0 ? "active" : ""}" onclick="setActivePropImage(${idx})">
+        <img src="${escapeAttr(img)}" alt="thumb-${idx + 1}">
+      </button>
+    `).join("");
+  }
+
+  if (featuresEl) {
+    featuresEl.innerHTML = features.map(f => `
+      <li><i class="ph ph-check-circle"></i><span>${escapeHtml(f)}</span></li>
+    `).join("");
+  }
+
+  if (favBtn) {
+    favBtn.classList.toggle("active", isFav);
+    favBtn.innerHTML = `<i class="ph ${isFav ? "ph-fill ph-heart" : "ph-heart"}"></i>`;
+    favBtn.onclick = () => toggleFavorite(String(prop.id), true);
+  }
+
+  if (bookBtn) {
+    bookBtn.onclick = () => {
+      localStorage.setItem("selectedPropertyId", String(prop.id));
+      window.location.href = `booking.html?id=${encodeURIComponent(prop.id)}`;
+    };
+  }
+
+  if (prop.lat && prop.lng && typeof L !== "undefined") {
+    setTimeout(() => initPropertyMap(prop.lat, prop.lng, title), 150);
+  }
+}
+
+window.setActivePropImage = function (idx) {
+  const mainImg = document.getElementById("prop-main-img");
+  const thumbBtns = document.querySelectorAll(".prop-thumb-btn");
+  if (!mainImg || !currentPropImages[idx]) return;
+
+  state.currentImageIndex = idx;
+  mainImg.src = currentPropImages[idx];
+
+  thumbBtns.forEach((btn, i) => btn.classList.toggle("active", i === idx));
+};
+
+function initPropertyMap(lat, lng, title) {
+  const mapEl = document.getElementById("property-map");
+  if (!mapEl) return;
+
+  if (propertyMap) {
+    propertyMap.remove();
+    propertyMap = null;
+  }
+
+  propertyMap = L.map(mapEl).setView([lat, lng], 14);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(propertyMap);
+
+  L.marker([lat, lng]).addTo(propertyMap).bindPopup(escapeHtml(title)).openPopup();
+}
+
+// ==========================================
+// 17. LIGHTBOX
+// ==========================================
+function openLightbox(index = 0) {
+  const lb = document.getElementById("lightbox");
+  const img = document.getElementById("lightbox-img");
+  if (!lb || !img || !currentPropImages.length) return;
+
+  state.currentImageIndex = index;
+  img.src = currentPropImages[index];
+  lb.classList.add("active");
+  document.body.classList.add("modal-open");
+}
+
+function closeLightbox() {
+  const lb = document.getElementById("lightbox");
+  if (!lb) return;
+  lb.classList.remove("active");
+  document.body.classList.remove("modal-open");
+}
+
+function changeLightboxImage(step) {
+  if (!currentPropImages.length) return;
+  state.currentImageIndex = (state.currentImageIndex + step + currentPropImages.length) % currentPropImages.length;
+  const img = document.getElementById("lightbox-img");
+  if (img) img.src = currentPropImages[state.currentImageIndex];
+}
+
+window.openLightbox = openLightbox;
+window.closeLightbox = closeLightbox;
+window.changeLightboxImage = changeLightboxImage;
+
+// ==========================================
+// 18. FAVORITES
+// ==========================================
+async function loadFavorites() {
+  if (!state.user) {
+    state.favorites = JSON.parse(localStorage.getItem("ore_favorites_guest") || "[]");
+    return;
+  }
+
+  try {
+    const doc = await db.collection("users").doc(state.user.uid).get();
+    const data = doc.data() || {};
+    state.favorites = Array.isArray(data.favorites) ? data.favorites.map(String) : [];
+  } catch (error) {
+    console.error("loadFavorites error:", error);
+    state.favorites = [];
+  }
+}
+
+async function toggleFavorite(propId, rerender = false) {
+  const id = String(propId);
+
+  if (!state.user) {
+    const current = new Set(JSON.parse(localStorage.getItem("ore_favorites_guest") || "[]").map(String));
+    const exists = current.has(id);
+
+    if (exists) current.delete(id);
+    else current.add(id);
+
+    state.favorites = [...current];
+    localStorage.setItem("ore_favorites_guest", JSON.stringify(state.favorites));
+
+    showToast(exists ? translations[state.lang].fav_removed : translations[state.lang].fav_added, "success");
     renderListings();
-  }
-};
-
-window.goToProperty = function (id) {
-  window.location.href = `property.html?id=${String(id)}`;
-};
-
-// ==========================================
-// 16. TOASTS
-// ==========================================
-function showToast(message, type = "info", duration = 3000) {
-  let container = document.getElementById("toast-container");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "toast-container";
-    document.body.appendChild(container);
+    if (rerender) renderPropertyDetails();
+    return;
   }
 
-  const icons = {
-    success: "ph-check-circle",
-    error: "ph-x-circle",
-    info: "ph-info"
-  };
+  try {
+    const current = new Set(state.favorites.map(String));
+    const exists = current.has(id);
 
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<i class="ph ${icons[type] || icons.info}"></i><span>${escapeHtml(message)}</span>`;
-  container.appendChild(toast);
+    if (exists) current.delete(id);
+    else current.add(id);
 
-  setTimeout(() => {
-    toast.classList.add("toast-out");
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
+    state.favorites = [...current];
+
+    await db.collection("users").doc(state.user.uid).set({
+      favorites: state.favorites,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    showToast(exists ? translations[state.lang].fav_removed : translations[state.lang].fav_added, "success");
+    renderListings();
+    if (rerender) renderPropertyDetails();
+  } catch (error) {
+    console.error("toggleFavorite error:", error);
+    showToast(error.message, "error");
+  }
 }
 
-function showFavToast(message) {
-  let el = document.getElementById("fav-toast");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "fav-toast";
-    document.body.appendChild(el);
-  }
-
-  el.textContent = message;
-  el.classList.add("show");
-  clearTimeout(el.timer);
-  el.timer = setTimeout(() => el.classList.remove("show"), 2200);
-}
+window.toggleFavorite = toggleFavorite;
 
 // ==========================================
-// 17. BOOKINGS
+// 19. BOOKINGS MODAL
 // ==========================================
 function initBookingsModal() {
+  const closeBtn = document.getElementById("close-bookings-modal");
+  closeBtn?.addEventListener("click", closeBookingsModal);
+}
+
+function openBookingsModal() {
   const modal = document.getElementById("bookings-modal");
   if (!modal) return;
-
-  modal.querySelectorAll("[data-close-bookings], .close-bookings-btn, #close-bookings-btn").forEach(btn => {
-    btn.addEventListener("click", closeBookingsModal);
-  });
-
-  modal.addEventListener("click", e => {
-    if (e.target === modal) closeBookingsModal();
-  });
+  modal.classList.add("active");
+  document.body.classList.add("modal-open");
 }
 
 function closeBookingsModal() {
@@ -1331,384 +1599,169 @@ function closeBookingsModal() {
   document.body.classList.remove("modal-open");
 }
 
+window.closeBookingsModal = closeBookingsModal;
+
+// ==========================================
+// 20. MY BOOKINGS
+// ==========================================
 async function showMyBookings() {
   if (!state.user) {
+    showToast(translations[state.lang].auth_required, "error");
+    switchForm("login");
     openModal();
     return;
   }
 
-  const modal = document.getElementById("bookings-modal");
-  if (!modal) {
-    showToast(state.lang === "ar" ? "جارٍ تحميل الحجوزات..." : "Loading bookings...", "info");
-    return;
-  }
+  openBookingsModal();
 
-  modal.classList.add("active");
-  document.body.classList.add("modal-open");
-
-  const body = document.getElementById("bookings-list") || modal.querySelector(".bookings-body") || modal.querySelector(".modal-content");
-  if (body) {
-    body.innerHTML = `
-      <div style="text-align:center;padding:40px">
-        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem;color:var(--primary)"></i>
-      </div>
-    `;
-  }
-
-  try {
-    const snap = await db
-      .collection("bookings")
-      .where("guestId", "==", state.user.uid)
-      .orderBy("createdAt", "desc")
-      .get();
-
-    if (snap.empty) {
-      if (body) {
-        body.innerHTML = `
-          <div style="text-align:center;padding:40px;color:var(--text-muted)">
-            <i class="ph ph-calendar-x" style="font-size:3rem;display:block;margin-bottom:12px;opacity:.4"></i>
-            <p>${escapeHtml(translations[state.lang].no_bookings)}</p>
-          </div>
-        `;
-      }
-      return;
-    }
-
-    if (body) {
-      body.innerHTML = snap.docs.map(doc => {
-        const b = doc.data();
-        const isAr = state.lang === "ar";
-        const title = b.propertyTitle || `Booking #${doc.id.slice(0, 6)}`;
-        const curr = isAr ? "د.ج" : "DZD";
-
-        return `
-          <div class="booking-card" style="padding:16px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px">
-            <strong style="display:block;margin-bottom:8px;font-size:1.1rem;color:var(--text-main)">${escapeHtml(title)}</strong>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap">
-              <span class="text-muted" style="font-size:0.9rem">
-                <i class="ph ph-calendar-blank"></i>
-                ${escapeHtml(b.checkIn || "-")} → ${escapeHtml(b.checkOut || "-")}
-              </span>
-              <span class="status-badge" style="padding:4px 10px;background:rgba(67,90,191,0.1);color:var(--primary);border-radius:99px;font-size:0.8rem;font-weight:600">
-                ${escapeHtml(b.status || "pending")}
-              </span>
-            </div>
-            <div style="font-size:0.9rem;color:var(--text-main)">
-              <strong>${isAr ? "الإجمالي:" : "Total:"}</strong>
-              ${Number(b.totalPrice || 0).toLocaleString()} ${curr}
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-  } catch (err) {
-    console.error(err);
-    if (body) {
-      body.innerHTML = `
-        <div style="text-align:center;padding:40px;color:var(--error)">
-          <p>${state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات" : "Error loading bookings"}</p>
-        </div>
-      `;
-    }
-  }
-}
-
-// ==========================================
-// 18. RENDER LISTINGS
-// ==========================================
-window.renderListings = function (props = null) {
-  const container = document.getElementById("listings-grid");
+  const container = document.getElementById("bookings-list");
   if (!container) return;
 
-  let displayProps = Array.isArray(props) ? props : [...state.liveProperties];
-
-  if (state.currentView === "favorites") {
-    displayProps = state.liveProperties.filter(p => state.favorites.includes(String(p.id)));
-  }
-
-  if (!displayProps.length) {
-    const emptyText =
-      state.currentView === "favorites"
-        ? translations[state.lang].no_favorites
-        : (state.activeSearch || state.activeCategory)
-          ? translations[state.lang].no_results
-          : translations[state.lang].no_props;
-
-    container.innerHTML = `
-      <div class="listings-empty">
-        <i class="ph ph-house-line"></i>
-        <p>${escapeHtml(emptyText)}</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = displayProps.map(raw => {
-    const p = normalizeProperty(raw);
-    const isAr = state.lang === "ar";
-    const title = isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
-    const loc = isAr ? (p.location_ar || p.location_en) : (p.location_en || p.location_ar);
-    const curr = isAr ? "د.ج" : "DZD";
-    const img = p.image || (p.images && p.images[0]) || "images/placeholder.jpg";
-    const isFav = state.favorites.includes(String(p.id));
-    const urgencyText =
-      p.urgency === "few"
-        ? translations[state.lang].urgency_few
-        : p.urgency === "hot"
-          ? translations[state.lang].urgency_hot
-          : "";
-
-    return `
-      <article class="card" onclick="goToProperty('${escapeAttr(p.id)}')">
-        <div class="card-img-wrapper">
-          <img
-            src="${escapeAttr(img)}"
-            alt="${escapeAttr(title)}"
-            class="card-img"
-            loading="lazy"
-            onerror="this.src='images/placeholder.jpg'"
-          />
-
-          ${urgencyText ? `
-            <div class="urgency-label">
-              <i class="ph ph-fire"></i>
-              <span>${escapeHtml(urgencyText)}</span>
-            </div>
-          ` : ""}
-
-          <button class="fav-btn ${isFav ? "active" : ""}" onclick="toggleFavorite(event, '${escapeAttr(p.id)}')" aria-label="Favorite">
-            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
-          </button>
-        </div>
-
-        <div class="card-content">
-          <div class="card-header">
-            <div style="flex:1;min-width:0">
-              <h3 class="card-title">${escapeHtml(title)}</h3>
-              <div class="card-location">
-                <i class="ph ph-map-pin"></i>
-                <span>${escapeHtml(loc)}</span>
-              </div>
-            </div>
-
-            <div class="card-rating">
-              <i class="ph-fill ph-star"></i>
-              <span>${Number(p.rating || 4.8).toFixed(1)}</span>
-            </div>
-          </div>
-
-          <div class="card-footer">
-            <div class="card-price">
-              ${Number(p.price || 0).toLocaleString()} ${curr}
-              <span>/ ${escapeHtml(translations[state.lang].night)}</span>
-            </div>
-
-            <div class="card-arrow">
-              <i class="ph ph-arrow-right"></i>
-            </div>
-          </div>
-        </div>
-      </article>
-    `;
-  }).join("");
-};
-
-// ==========================================
-// 19. PROPERTY DETAILS + MAP
-// ==========================================
-async function renderPropertyDetails() {
-  const page = document.getElementById("property-page");
-  if (!page) return;
-
-  const params = new URLSearchParams(window.location.search);
-  const propertyId = params.get("id");
-
-  if (!propertyId) {
-    page.innerHTML = `
-      <div class="container property-container">
-        <p style="text-align:center;color:var(--text-muted);padding:40px;">
-          ${state.lang === "ar" ? "لم يتم تحديد العقار." : "No property selected."}
-        </p>
-      </div>
-    `;
-    return;
-  }
-
-  let prop = null;
-
-  try {
-    const doc = await db.collection("properties").doc(String(propertyId)).get();
-    if (doc.exists) {
-      prop = normalizeProperty({ id: doc.id, ...doc.data() });
-    }
-  } catch (err) {
-    console.error("Property fetch error:", err);
-  }
-
-  if (!prop) {
-    const localProp = (state.liveProperties || []).find(p => String(p.id) === String(propertyId))
-      || properties.find(p => String(p.id) === String(propertyId));
-
-    if (localProp) {
-      prop = normalizeProperty(localProp);
-    }
-  }
-
-  if (!prop) {
-    page.innerHTML = `
-      <div class="container property-container">
-        <p style="text-align:center;color:var(--text-muted);padding:40px;">
-          ${state.lang === "ar" ? "العقار غير موجود." : "Property not found."}
-        </p>
-      </div>
-    `;
-    return;
-  }
-
-  const isAr = state.lang === "ar";
-  const title = isAr ? (prop.title_ar || prop.title_en) : (prop.title_en || prop.title_ar);
-  const location = isAr ? (prop.location_ar || prop.location_en) : (prop.location_en || prop.location_ar);
-  const description = isAr ? (prop.desc_ar || prop.desc_en) : (prop.desc_en || prop.desc_ar);
-  const features = isAr ? (prop.features_ar || prop.features_en || []) : (prop.features_en || prop.features_ar || []);
-  const currency = isAr ? "د.ج" : "DZD";
-  const mainImage = (prop.images && prop.images[0]) || prop.image || "images/placeholder.jpg";
-
-  currentPropImages = Array.isArray(prop.images) ? prop.images : [mainImage];
-
-  page.innerHTML = `
-    <div class="container property-container">
-      <div class="prop-header">
-        <h1 class="prop-title">${escapeHtml(title)}</h1>
-        <div class="prop-meta">
-          <div class="prop-rating">
-            <i class="ph-fill ph-star"></i>
-            <span>${Number(prop.rating || 4.8).toFixed(1)}</span>
-          </div>
-          <div class="prop-location">
-            <i class="ph ph-map-pin"></i>
-            <span>${escapeHtml(location)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="prop-content-grid">
-        <div class="prop-details">
-          <img
-            src="${escapeAttr(mainImage)}"
-            alt="${escapeAttr(title)}"
-            style="width:100%;border-radius:20px;max-height:420px;object-fit:cover;margin-bottom:24px;"
-            onerror="this.src='images/placeholder.jpg'"
-          />
-
-          <h2>${escapeHtml(translations[state.lang].about_prop)}</h2>
-          <p class="prop-description">${escapeHtml(description || "")}</p>
-
-          <div class="prop-features">
-            <h3>${escapeHtml(translations[state.lang].what_offers)}</h3>
-            <ul class="features-list">
-              ${features.map(item => `
-                <li>
-                  <i class="ph ph-check-circle"></i>
-                  <span>${escapeHtml(item)}</span>
-                </li>
-              `).join("")}
-            </ul>
-          </div>
-
-          <div class="prop-map-section">
-            <h3>${escapeHtml(translations[state.lang].location_on_map)}</h3>
-            <div id="property-map" style="height:340px;border-radius:20px;overflow:hidden;border:1px solid var(--border-color);"></div>
-          </div>
-        </div>
-
-        <aside class="booking-card-side" style="background:var(--surface-color);border:1px solid var(--border-color);border-radius:20px;padding:24px;box-shadow:var(--shadow-sm);position:sticky;top:100px;">
-          <div style="font-size:1.8rem;font-weight:800;margin-bottom:8px;">
-            ${Number(prop.price || 0).toLocaleString()} ${currency}
-            <span style="font-size:0.95rem;color:var(--text-muted);font-weight:500;">/ ${escapeHtml(translations[state.lang].night)}</span>
-          </div>
-          <p id="booking-info-text" style="color:var(--text-muted);line-height:1.7;">
-            ${isAr
-              ? "اختر التواريخ وعدد الضيوف في الصفحة التالية لرؤية السعر النهائي."
-              : "Choose your dates and number of guests on the next page to see the final price."}
-          </p>
-          <button class="primary-btn" style="margin-top:18px;">
-            <i class="ph ph-calendar-check"></i>
-            <span>${escapeHtml(translations[state.lang].book_now)}</span>
-          </button>
-        </aside>
-      </div>
+  container.innerHTML = `
+    <div class="empty-state">
+      <i class="ph ph-circle-notch ph-spin"></i>
+      <div>${escapeHtml(state.lang === "ar" ? "جارٍ تحميل الحجوزات..." : "Loading bookings...")}</div>
     </div>
   `;
 
-  initPropertyMap(prop);
-}
+  try {
+    const snap = await db.collection("bookings").get();
+    const all = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-function initPropertyMap(prop) {
-  const mapEl = document.getElementById("property-map");
-  if (!mapEl) return;
+    const mine = all.filter(b => {
+      const guestId = String(b.guestId || "");
+      const guestEmail = String(b.guestEmail || "").toLowerCase();
+      const email = String(state.user?.email || "").toLowerCase();
 
-  const lat = Number(prop?.lat);
-  const lng = Number(prop?.lng);
+      return guestId === state.user.uid || guestEmail === email;
+    }).sort((a, b) => safeDateMs(b.createdAt) - safeDateMs(a.createdAt));
 
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    mapEl.innerHTML = `
-      <div style="
-        height:100%;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        padding:24px;
-        color:var(--text-muted);
-        background:var(--bg-color);
-      ">
-        ${state.lang === "ar"
-          ? "لم يتم تحديد إحداثيات هذا العقار بعد."
-          : "This property does not have map coordinates yet."}
+    if (!mine.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="ph ph-calendar-blank"></i>
+          <div>${escapeHtml(translations[state.lang].no_bookings)}</div>
+        </div>
+      `;
+      return;
+    }
+
+    const propIds = [...new Set(mine.map(getBookingPropertyId).filter(Boolean))];
+    const propMap = new Map();
+
+    await Promise.all(propIds.map(async pid => {
+      try {
+        const doc = await db.collection("properties").doc(pid).get();
+        if (doc.exists) propMap.set(pid, { id: doc.id, ...doc.data() });
+      } catch (_) {}
+    }));
+
+    container.innerHTML = mine.map(b => {
+      const propId = getBookingPropertyId(b);
+      const prop = propMap.get(propId) || null;
+      const propTitle = state.lang === "ar"
+        ? (prop?.titleAr || prop?.title || prop?.titleEn || b.propertyTitle || "—")
+        : (prop?.titleEn || prop?.title || prop?.titleAr || b.propertyTitle || "—");
+
+      const status = getStatusMeta(b.status);
+      const checkIn = getBookingCheckIn(b);
+      const checkOut = getBookingCheckOut(b);
+      const g = getBookingGuestsMeta(b);
+      const addons = getBookingAddons(b);
+      const notes = getBookingNotes(b);
+
+      return `
+        <article class="booking-card booking-status-${escapeAttr(status.cls)}">
+          <div class="booking-card-top">
+            <div>
+              <h3>${escapeHtml(propTitle)}</h3>
+              <div class="booking-subline">${escapeHtml(getBookingGuestName(b))} • ${escapeHtml(getBookingEmail(b))}</div>
+            </div>
+            <span class="booking-status-chip ${escapeAttr(status.cls)}">
+              <i class="ph ${escapeAttr(status.icon)}"></i>
+              ${escapeHtml(status.label)}
+            </span>
+          </div>
+
+          <div class="booking-grid">
+            <div><strong>${escapeHtml(t("booking_dates"))}:</strong> ${escapeHtml(formatDate(checkIn))} → ${escapeHtml(formatDate(checkOut))}</div>
+            <div><strong>${escapeHtml(t("booking_total"))}:</strong> ${escapeHtml(formatCurrency(b.totalPrice || 0))}</div>
+            <div><strong>${escapeHtml(t("booking_guests"))}:</strong> ${escapeHtml(`${g.guests} / ${g.rooms || 1}`)}</div>
+            <div><strong>${escapeHtml(t("booking_payment"))}:</strong> ${escapeHtml(b.paymentMethod || "—")}</div>
+            <div><strong>${escapeHtml(t("booking_created"))}:</strong> ${escapeHtml(formatDateTime(b.createdAt))}</div>
+            <div><strong>${escapeHtml(state.lang === "ar" ? "الهاتف" : "Phone")}:</strong> ${escapeHtml(getBookingPhone(b))}</div>
+          </div>
+
+          ${addons.length ? `
+            <div class="booking-extra-line">
+              <strong>${escapeHtml(t("booking_addons"))}:</strong> ${escapeHtml(addons.join(" • "))}
+            </div>
+          ` : ""}
+
+          ${notes ? `
+            <div class="booking-extra-line">
+              <strong>${escapeHtml(t("booking_notes"))}:</strong> ${escapeHtml(notes)}
+            </div>
+          ` : ""}
+
+          ${b.receiptUrl ? `
+            <div class="booking-actions">
+              <a href="${escapeAttr(b.receiptUrl)}" target="_blank" rel="noopener" class="booking-link-btn">
+                <i class="ph ph-paperclip"></i>
+                ${escapeHtml(state.lang === "ar" ? "عرض الإيصال" : "View receipt")}
+              </a>
+            </div>
+          ` : ""}
+        </article>
+      `;
+    }).join("");
+  } catch (error) {
+    console.error("showMyBookings error:", error);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-warning-circle"></i>
+        <div>${escapeHtml(state.lang === "ar" ? "حدث خطأ أثناء تحميل الحجوزات" : "Error loading bookings")}</div>
       </div>
     `;
-    return;
   }
-
-  if (typeof L === "undefined") {
-    mapEl.innerHTML = `
-      <div style="
-        height:100%;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        padding:24px;
-        color:var(--text-muted);
-        background:var(--bg-color);
-      ">
-        ${state.lang === "ar"
-          ? "مكتبة الخريطة غير محمّلة. تأكد من إضافة Leaflet داخل property.html."
-          : "Map library not loaded. Make sure Leaflet is included in property.html."}
-      </div>
-    `;
-    return;
-  }
-
-  if (propertyMap) {
-    propertyMap.remove();
-    propertyMap = null;
-  }
-
-  propertyMap = L.map("property-map", {
-    center: [lat, lng],
-    zoom: 14,
-    scrollWheelZoom: false
-  });
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap"
-  }).addTo(propertyMap);
-
-  L.marker([lat, lng]).addTo(propertyMap);
-
-  setTimeout(() => {
-    propertyMap.invalidateSize();
-  }, 200);
 }
+
+// ==========================================
+// 21. EXTRA UTILITIES
+// ==========================================
+function initSliderTouch() {
+  const mainImg = document.getElementById("prop-main-img");
+  if (!mainImg) return;
+
+  let startX = 0;
+
+  mainImg.addEventListener("touchstart", e => {
+    startX = e.changedTouches[0].clientX;
+  }, { passive: true });
+
+  mainImg.addEventListener("touchend", e => {
+    const endX = e.changedTouches[0].clientX;
+    const diff = endX - startX;
+
+    if (Math.abs(diff) < 40 || !currentPropImages.length) return;
+
+    if (diff < 0) {
+      const next = (state.currentImageIndex + 1) % currentPropImages.length;
+      window.setActivePropImage(next);
+    } else {
+      const prev = (state.currentImageIndex - 1 + currentPropImages.length) % currentPropImages.length;
+      window.setActivePropImage(prev);
+    }
+  }, { passive: true });
+}
+
+// ==========================================
+// 22. GLOBAL EXPORTS
+// ==========================================
+window.renderPropertyDetails = renderPropertyDetails;
+window.showMyBookings = showMyBookings;
+window.resetToHome = resetToHome;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.switchForm = switchForm;
+window.handleAuthButtonClick = handleAuthButtonClick;
