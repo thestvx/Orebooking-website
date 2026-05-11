@@ -35,10 +35,12 @@
       --success: #10b981;
       --error: #ef4444;
       --warning: #f59e0b;
+      --info: #0ea5e9;
       --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
       --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.08);
       --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
       --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
+      --shadow-card-hover: 0 18px 34px rgba(15,23,42,0.1);
       --radius-sm: 0.75rem;
       --radius-lg: 1rem;
       --radius-xl: 1.5rem;
@@ -57,6 +59,7 @@
       --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.4);
       --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.25);
       --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.28);
+      --shadow-card-hover: 0 22px 44px rgba(0,0,0,0.34);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,6 +83,7 @@
 
     img { display: block; max-width: 100%; }
     a { color: inherit; text-decoration: none; }
+    button, input, textarea, select { font: inherit; }
 
     .container {
       max-width: 1280px;
@@ -91,8 +95,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 40px;
-      background-color: var(--surface-color);
+      padding: 12px 24px;
+      background-color: rgba(255,255,255,0.86);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-color);
       position: sticky;
       top: 0;
@@ -100,6 +106,8 @@
       transition: var(--transition);
       gap: 12px;
     }
+
+    .dark .navbar { background: rgba(15,23,42,0.86); }
 
     .logo {
       display: flex;
@@ -109,11 +117,13 @@
     }
 
     .logo-img {
-      height: 56px;
+      height: 52px;
       max-width: 200px;
       object-fit: contain;
       transition: transform 0.3s;
     }
+
+    .logo:hover .logo-img { transform: scale(1.02); }
 
     .nav-actions {
       display: flex;
@@ -122,6 +132,8 @@
       flex-shrink: 0;
       overflow: visible;
       margin-inline-start: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .rewards-badge {
@@ -130,16 +142,18 @@
       gap: 6px;
       background-color: rgba(245,158,11,0.1);
       color: #d97706;
-      padding: 7px 14px;
+      padding: 8px 14px;
       border-radius: var(--radius-full);
-      font-weight: 600;
+      font-weight: 700;
       font-size: 0.85rem;
       white-space: nowrap;
     }
 
     .dark .rewards-badge { color: #fbbf24; }
 
-    .icon-btn, .lang-btn, .back-home-btn {
+    .icon-btn,
+    .lang-btn,
+    .back-home-btn {
       background: none;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-full);
@@ -147,13 +161,14 @@
       cursor: pointer;
       color: var(--text-main);
       transition: var(--transition);
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       min-width: 44px;
       min-height: 44px;
       font-family: inherit;
       flex-shrink: 0;
+      background-color: var(--surface-color);
     }
 
     .lang-btn {
@@ -161,24 +176,28 @@
       font-size: 0.875rem;
       white-space: nowrap;
       gap: 6px;
+      font-weight: 700;
     }
 
     .back-home-btn {
       padding: 0 16px;
       gap: 8px;
       font-size: 0.92rem;
-      font-weight: 600;
+      font-weight: 700;
       white-space: nowrap;
     }
 
-    .icon-btn:hover, .lang-btn:hover, .back-home-btn:hover {
+    .icon-btn:hover,
+    .lang-btn:hover,
+    .back-home-btn:hover {
       background-color: var(--bg-color);
       border-color: var(--primary);
       color: var(--primary);
       transform: translateY(-1px);
     }
 
-    .icon-btn i, .back-home-btn i { font-size: 1.1rem; }
+    .icon-btn i,
+    .back-home-btn i { font-size: 1.1rem; }
 
     .profile-container { position: relative; }
 
@@ -189,7 +208,7 @@
       border-radius: var(--radius-full);
       background-color: var(--primary);
       color: white;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
@@ -266,19 +285,45 @@
     }
 
     .booking-page {
-      padding: 34px 0 64px;
+      padding: 34px 0 72px;
     }
 
     .booking-hero {
-      margin-bottom: 26px;
+      margin-bottom: 24px;
     }
 
     .booking-hero-card {
-      background: linear-gradient(180deg, rgba(67,90,191,0.05), rgba(67,90,191,0.01));
+      background:
+        linear-gradient(180deg, rgba(67,90,191,0.06), rgba(67,90,191,0.015)),
+        var(--surface-color);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-2xl);
       padding: 28px;
       box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .booking-hero-card::before {
+      content: "";
+      position: absolute;
+      inset-inline-end: -40px;
+      top: -40px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(101,123,224,0.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .booking-hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
     }
 
     .booking-hero-card h1 {
@@ -295,16 +340,41 @@
       font-size: 1rem;
     }
 
+    .hero-secure-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-full);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero-badge i { color: var(--primary); }
+
     .booking-steps-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       background: var(--surface-color);
-      padding: 24px 32px;
+      padding: 22px 26px;
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow-card);
       border: 1px solid var(--border-color);
       margin-bottom: 26px;
+      gap: 12px;
+      overflow-x: auto;
     }
 
     .step-indicator {
@@ -315,9 +385,11 @@
       opacity: 0.45;
       transition: var(--transition);
       flex-shrink: 0;
+      min-width: 100px;
     }
 
-    .step-indicator.active, .step-indicator.completed { opacity: 1; }
+    .step-indicator.active,
+    .step-indicator.completed { opacity: 1; }
 
     .step-num {
       width: 42px;
@@ -328,7 +400,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-muted);
       transition: var(--transition);
       font-size: 0.95rem;
@@ -355,16 +427,17 @@
 
     .step-label {
       font-size: 0.84rem;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-main);
       white-space: nowrap;
+      text-align: center;
     }
 
     .step-connector {
       flex: 1;
+      min-width: 50px;
       height: 2px;
       background: var(--border-color);
-      margin: 0 10px;
       align-self: center;
       margin-bottom: 28px;
       transition: background 0.4s;
@@ -375,7 +448,7 @@
 
     .booking-wrapper {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
+      grid-template-columns: minmax(0, 1fr) 370px;
       gap: 28px;
       align-items: start;
     }
@@ -446,12 +519,61 @@
       margin: 0;
     }
 
+    .booking-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      font-size: 0.93rem;
+      line-height: 1.65;
+      border: 1px solid transparent;
+    }
+
+    .booking-alert i {
+      font-size: 1.15rem;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .booking-alert.error {
+      background: rgba(239,68,68,0.1);
+      color: var(--error);
+      border-color: rgba(239,68,68,0.2);
+    }
+
+    .booking-alert.success {
+      background: rgba(16,185,129,0.1);
+      color: var(--success);
+      border-color: rgba(16,185,129,0.2);
+    }
+
+    .booking-alert.info {
+      background: rgba(14,165,233,0.1);
+      color: var(--info);
+      border-color: rgba(14,165,233,0.2);
+    }
+
+    .booking-alert.warning {
+      background: rgba(245,158,11,0.1);
+      color: #b45309;
+      border-color: rgba(245,158,11,0.2);
+    }
+
     .section-block {
-      margin-bottom: 28px;
+      margin-bottom: 24px;
       padding: 22px;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       background: linear-gradient(180deg, rgba(67,90,191,0.02), transparent);
+      transition: var(--transition);
+    }
+
+    .section-block:hover {
+      border-color: rgba(67,90,191,0.22);
+      box-shadow: var(--shadow-sm);
     }
 
     .section-block h3 {
@@ -465,6 +587,14 @@
     .section-block h3 i {
       color: var(--primary);
       font-size: 1.15rem;
+    }
+
+    .mini-note {
+      margin-top: -4px;
+      margin-bottom: 14px;
+      color: var(--text-muted);
+      font-size: 0.86rem;
+      line-height: 1.7;
     }
 
     .form-grid {
@@ -523,6 +653,51 @@
       font-size: 0.78rem;
       color: var(--text-muted);
       margin-top: -2px;
+      line-height: 1.5;
+    }
+
+    .split-inputs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stay-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .stay-stat {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 64px;
+    }
+
+    .stay-stat i {
+      color: var(--primary);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stay-stat strong {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .stay-stat span {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: var(--text-main);
     }
 
     .payment-methods-grid {
@@ -534,13 +709,17 @@
 
     .payment-method-card {
       border: 1.5px solid var(--border-color);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 20px;
       cursor: pointer;
       transition: var(--transition);
       text-align: center;
       background: var(--surface-color);
       position: relative;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .payment-method-card:hover {
@@ -549,11 +728,30 @@
       transform: translateY(-2px);
       box-shadow: var(--shadow-sm);
     }
-    
+
     .payment-method-card.selected {
       border-color: var(--primary);
       background: rgba(67,90,191,0.05);
       box-shadow: 0 0 0 1.5px var(--primary);
+    }
+
+    .payment-method-card::after {
+      content: "";
+      position: absolute;
+      top: 14px;
+      inset-inline-end: 14px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      background: transparent;
+      transition: var(--transition);
+    }
+
+    .payment-method-card.selected::after {
+      background: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(67,90,191,0.14);
     }
 
     .payment-method-icon {
@@ -582,7 +780,7 @@
       display: none;
       background: var(--bg-color);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 24px;
       margin-top: 10px;
       animation: fadeStepIn 0.3s ease;
@@ -605,14 +803,46 @@
       padding: 10px 0;
       border-bottom: 1px dashed var(--border-color);
       font-size: 0.9rem;
+      line-height: 1.6;
     }
 
     .bank-row:last-child { border-bottom: none; }
     .bank-row span:first-child { color: var(--text-muted); }
+    .bank-row strong { color: var(--text-main); }
+
+    .inline-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .mini-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .mini-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(67,90,191,0.04);
+    }
 
     .file-upload-wrapper {
       border: 2px dashed var(--border-color);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 28px 20px;
       text-align: center;
       cursor: pointer;
@@ -636,16 +866,33 @@
     .file-upload-text {
       font-size: 0.96rem;
       color: var(--text-main);
-      font-weight: 700;
+      font-weight: 800;
       margin-bottom: 4px;
     }
 
     .file-upload-hint {
       font-size: 0.8rem;
       color: var(--text-muted);
+      line-height: 1.6;
     }
 
     .file-upload-input { display: none; }
+
+    .selected-file {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.2);
+      color: #047857;
+      font-size: 0.88rem;
+      font-weight: 700;
+      display: none;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dark .selected-file { color: #34d399; }
 
     .step-actions {
       display: flex;
@@ -659,7 +906,8 @@
 
     .step-actions-between { justify-content: space-between; }
 
-    .primary-btn, .ghost-btn {
+    .primary-btn,
+    .ghost-btn {
       min-height: 50px;
       padding: 0 28px;
       border-radius: 14px;
@@ -673,13 +921,13 @@
       gap: 10px;
       transition: var(--transition);
       white-space: nowrap;
-      border: none;
     }
 
     .primary-btn {
       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
       color: white;
       box-shadow: 0 6px 16px rgba(67,90,191,0.3);
+      border: none;
     }
 
     .primary-btn:hover:not(:disabled) {
@@ -690,6 +938,13 @@
     .primary-btn.green-btn {
       background: linear-gradient(135deg, var(--success), #059669);
       box-shadow: 0 6px 16px rgba(16,185,129,0.28);
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     .ghost-btn {
@@ -716,7 +971,7 @@
     .review-card {
       background: var(--bg-color);
       border: 1.5px solid var(--border-color);
-      border-radius: 14px;
+      border-radius: 16px;
       overflow: hidden;
       transition: var(--transition);
     }
@@ -736,6 +991,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .dark .review-card-header { background: rgba(255,255,255,0.03); }
@@ -760,14 +1016,14 @@
       border: none;
       color: var(--primary);
       font-size: 0.85rem;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 4px;
       transition: var(--transition);
-      padding: 4px 8px;
-      border-radius: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
     }
 
     .edit-btn:hover { background: rgba(67,90,191,0.1); }
@@ -790,6 +1046,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .rd-label {
@@ -811,7 +1068,7 @@
     .points-box {
       background: rgba(101,123,224,0.08);
       border: 1px solid rgba(101,123,224,0.18);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 16px 20px;
       display: flex;
       gap: 16px;
@@ -852,7 +1109,7 @@
       padding: 20px;
       background: rgba(245,158,11,0.08);
       border: 1.5px solid rgba(245,158,11,0.2);
-      border-radius: 14px;
+      border-radius: 16px;
     }
 
     .checkbox-container {
@@ -864,7 +1121,7 @@
     }
 
     .checkbox-container input { display: none; }
-    
+
     .checkmark {
       width: 22px;
       height: 22px;
@@ -897,7 +1154,7 @@
     .agree-text {
       font-size: 0.95rem;
       color: var(--text-main);
-      line-height: 1.6;
+      line-height: 1.7;
     }
 
     .agree-text a {
@@ -909,6 +1166,11 @@
       padding: 24px;
       position: sticky;
       top: 92px;
+      transition: var(--transition);
+    }
+
+    .booking-summary-sidebar:hover {
+      box-shadow: var(--shadow-card-hover);
     }
 
     .sidebar-title {
@@ -929,6 +1191,7 @@
       padding-bottom: 18px;
       border-bottom: 1px dashed var(--border-color);
       margin-bottom: 18px;
+      align-items: flex-start;
     }
 
     .prop-mini-img {
@@ -958,6 +1221,7 @@
       gap: 4px;
       margin-top: 4px;
       line-height: 1.5;
+      flex-wrap: wrap;
     }
 
     .prop-type-badge {
@@ -971,6 +1235,33 @@
       font-weight: 700;
     }
 
+    .summary-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .summary-meta-item {
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .summary-meta-item strong {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .summary-meta-item span {
+      font-size: 0.94rem;
+      color: var(--text-main);
+      font-weight: 800;
+    }
+
     .summary-row {
       display: flex;
       justify-content: space-between;
@@ -979,6 +1270,7 @@
       font-size: 0.9rem;
       color: var(--text-main);
       gap: 8px;
+      line-height: 1.6;
     }
 
     .summary-row span:first-child { color: var(--text-muted); }
@@ -994,26 +1286,14 @@
 
     .summary-row.total span { color: var(--primary); }
 
-    .booking-alert {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .booking-alert.error {
-      background: rgba(239,68,68,0.1);
-      color: var(--error);
-      border: 1px solid rgba(239,68,68,0.2);
-    }
-
-    .booking-alert.error i {
-      color: var(--error);
-      font-size: 1.2rem;
+    .sidebar-note {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      text-align: center;
     }
 
     .d-none { display: none !important; }
@@ -1104,6 +1384,7 @@
       margin-bottom: 6px;
       color: var(--text-main);
       font-weight: 800;
+      text-align: center;
     }
 
     .auth-subtitle {
@@ -1111,6 +1392,7 @@
       font-size: 0.9rem;
       margin-bottom: 22px;
       line-height: 1.6;
+      text-align: center;
     }
 
     .auth-message {
@@ -1151,7 +1433,7 @@
       font-weight: 700;
     }
 
-    .input-group input, .input-group select {
+    .input-group input {
       width: 100%;
       padding: 14px 16px;
       border-radius: 12px;
@@ -1164,10 +1446,54 @@
       outline: none;
     }
 
-    .input-group input:focus, .input-group select:focus {
+    .input-group input:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 4px rgba(67,90,191,0.15);
       background-color: var(--surface-color);
+    }
+
+    .pass-wrapper { position: relative; }
+
+    .toggle-pass-btn {
+      position: absolute;
+      inset-inline-end: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-strength {
+      display: none;
+      margin-top: -4px;
+      margin-bottom: 12px;
+    }
+
+    .strength-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .str-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--border-color);
+      transition: var(--transition);
+    }
+
+    .strength-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 700;
     }
 
     .auth-options {
@@ -1179,14 +1505,6 @@
       gap: 8px;
       flex-wrap: wrap;
     }
-    .forgot-link {
-      color: var(--primary);
-      text-decoration: none;
-      white-space: nowrap;
-      font-weight: 700;
-    }
-
-    .forgot-link:hover { text-decoration: underline; }
 
     .auth-check {
       display: flex;
@@ -1213,13 +1531,13 @@
       flex-shrink: 0;
     }
 
-    .auth-check input:checked ~ .auth-checkmark {
-      background-color: var(--primary);
+    .auth-check input:checked + .auth-checkmark {
+      background: var(--primary);
       border-color: var(--primary);
     }
 
-    .auth-check input:checked ~ .auth-checkmark::after {
-      content: '';
+    .auth-check input:checked + .auth-checkmark::after {
+      content: "";
       width: 5px;
       height: 10px;
       border: solid white;
@@ -1227,10 +1545,17 @@
       transform: rotate(45deg) translateY(-1px);
     }
 
+    .forgot-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 800;
+    }
+
     .social-logins {
       display: flex;
       gap: 12px;
-      margin-bottom: 20px;
+      margin-top: 14px;
+      margin-bottom: 18px;
     }
 
     .social-btn {
@@ -1239,7 +1564,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      background-color: var(--bg-color);
+      background: var(--bg-color);
       border: 1px solid var(--border-color);
       padding: 12px;
       border-radius: 12px;
@@ -1249,21 +1574,20 @@
       color: var(--text-main);
       cursor: pointer;
       transition: var(--transition);
-      min-height: 44px;
+      min-height: 46px;
     }
 
     .social-btn:hover {
-      background-color: var(--surface-color);
+      background: var(--surface-color);
       border-color: var(--primary);
       box-shadow: var(--shadow-sm);
     }
 
     .switch-form-text {
       text-align: center;
-      font-size: 0.875rem;
+      font-size: 0.9rem;
       color: var(--text-muted);
-      margin-top: 8px;
-      line-height: 1.6;
+      line-height: 1.7;
     }
 
     .switch-form-text a {
@@ -1275,90 +1599,104 @@
 
     .switch-form-text a:hover { text-decoration: underline; }
 
-    @media (max-width: 992px) {
-      .booking-wrapper { grid-template-columns: 1fr; }
+    .loading-skeleton {
+      border-radius: 18px;
+      background: linear-gradient(90deg, rgba(148,163,184,0.16) 25%, rgba(148,163,184,0.3) 37%, rgba(148,163,184,0.16) 63%);
+      background-size: 400% 100%;
+      animation: skeletonLoading 1.2s ease-in-out infinite;
+    }
+
+    @keyframes skeletonLoading {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
+
+    @media (max-width: 1100px) {
+      .booking-wrapper {
+        grid-template-columns: 1fr;
+      }
+
       .booking-summary-sidebar {
         position: static;
         order: -1;
-        margin-bottom: 24px;
       }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 820px) {
+      .form-grid,
+      .split-inputs,
+      .stay-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .booking-main-card {
+        padding: 24px 20px;
+      }
+
+      .booking-steps-header {
+        padding: 18px 14px;
+      }
+
+      .step-connector {
+        min-width: 30px;
+      }
+
+      .booking-hero-card {
+        padding: 22px;
+      }
+    }
+
+    @media (max-width: 640px) {
       .container { padding: 0 16px; }
-      .navbar { padding: 10px 14px; gap: 8px; }
-      .rewards-badge { display: none !important; }
-      .nav-actions { gap: 4px; }
-      .icon-btn { width: 36px; height: 36px; font-size: 1.05rem; padding: 0; min-width: 36px; min-height: 36px; }
-      #lang-toggle {
-        display: flex !important;
-        align-items: center;
-        padding: 5px 10px;
-        font-size: 0.78rem;
-        white-space: nowrap;
-        border-radius: 8px;
-        min-width: fit-content;
-      }
-      .profile-menu { width: 36px; height: 36px; }
-      .logo-img { height: 28px; }
-      .back-home-btn {
-        padding: 0 12px;
-        min-height: 36px;
-        font-size: 0.84rem;
+
+      .navbar {
+        padding: 12px 16px;
       }
 
-      .booking-page { padding: 22px 0 40px; }
-      .booking-hero-card { padding: 20px; }
-      .booking-steps-header { padding: 16px; margin-bottom: 20px; }
-      .step-connector { margin: 0 4px; margin-bottom: 28px; }
-      .step-label { font-size: 0.72rem; }
-      .booking-main-card { padding: 22px 18px; }
-      .form-grid, .payment-methods-grid, .review-grid { grid-template-columns: 1fr; }
-      .step-header { flex-direction: column; text-align: center; }
-      .step-actions { flex-direction: column-reverse; }
-      .step-actions .ghost-btn, .step-actions .primary-btn {
-        width: 100%;
-        justify-content: center;
-      }
-      .review-data.full-width {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .points-box { flex-direction: column; }
-      .bank-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-      }
+      .rewards-badge { display: none; }
 
-      input[type="text"],
-      input[type="email"],
-      input[type="password"],
-      input[type="tel"],
-      input[type="date"],
-      textarea,
-      select {
-        font-size: 16px !important;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .nav-actions .lang-btn span { display: none; }
-      #lang-toggle {
-        font-size: 0.72rem;
-        padding: 4px 8px;
-        border-radius: var(--radius-full);
-      }
-      .icon-btn, .profile-menu {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        min-height: 32px;
-      }
       .back-home-btn span { display: none; }
-      .back-home-btn {
-        min-width: 36px;
-        padding: 0;
+
+      .booking-page {
+        padding: 22px 0 56px;
+      }
+
+      .booking-hero-card h1 {
+        font-size: 1.7rem;
+      }
+
+      .step-header {
+        align-items: flex-start;
+      }
+
+      .step-header-icon {
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
+        font-size: 1.45rem;
+      }
+
+      .step-title {
+        font-size: 1.2rem;
+      }
+
+      .payment-methods-grid,
+      .review-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .step-actions,
+      .step-actions-between {
+        flex-direction: column;
+      }
+
+      .step-actions .primary-btn,
+      .step-actions .ghost-btn {
+        width: 100%;
+      }
+
+      .hero-secure-badges {
+        flex-direction: column;
       }
     }
   </style>
@@ -1367,314 +1705,277 @@
 
   <nav class="navbar">
     <a href="index.html" class="logo" id="home-logo-btn">
-      <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="main-logo">
+      <img src="images/logo-light.svg" alt="OreBooking" class="logo-img" id="main-logo">
     </a>
 
     <div class="nav-actions">
-      <a href="index.html" class="back-home-btn">
-        <i class="ph ph-house"></i>
-        <span data-i18n="back_home">Home</span>
-      </a>
-
-      <div class="rewards-badge">
-        <i class="ph ph-star"></i>
-        <span><span id="user-points">1250</span> <span data-i18n="pts">Pts</span></span>
+      <div class="rewards-badge" id="nav-rewards-badge">
+        <i class="ph-fill ph-star"></i>
+        <span>1,250 <span data-i18n="pts">Pts</span></span>
       </div>
 
-      <button class="lang-btn" id="lang-toggle" type="button">
+      <a href="index.html" class="back-home-btn">
+        <i class="ph ph-house"></i>
+        <span data-i18n="back_home">Back to Home</span>
+      </a>
+
+      <button id="lang-toggle" class="lang-btn" type="button">
         <i class="ph ph-globe"></i>
-        <span>EN</span>
+        <span>العربية</span>
       </button>
 
-      <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme" type="button">
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme" type="button">
         <i class="ph ph-moon"></i>
       </button>
 
       <div class="profile-container">
-        <button class="profile-menu auth-btn-guest" id="open-auth-btn" aria-label="Account" type="button">
+        <button id="open-auth-btn" class="profile-menu" type="button" aria-label="User Menu">
           <i class="ph ph-user"></i>
         </button>
 
         <div class="profile-dropdown" id="profile-dropdown">
           <div class="dropdown-header">
-            <span id="dropdown-user-name">Guest User</span>
-            <span id="dropdown-user-email">Sign in to continue</span>
+            <span class="font-bold text-main" id="dropdown-user-name">Guest User</span>
+            <span class="text-muted text-sm" id="dropdown-user-email"></span>
           </div>
+          <a href="profile.html" class="dropdown-item">
+            <i class="ph ph-user-circle"></i>
+            <span>My Profile</span>
+          </a>
           <button class="dropdown-item" id="my-bookings-btn" type="button">
-            <i class="ph ph-calendar-check"></i>
+            <i class="ph ph-suitcase"></i>
             <span data-i18n="my_bookings">My Bookings</span>
           </button>
           <button class="dropdown-item" id="my-favorites-btn" type="button">
             <i class="ph ph-heart"></i>
             <span data-i18n="my_favorites">My Favorites</span>
           </button>
+          <div style="height:1px;background:var(--border-color);margin:4px 0;"></div>
           <button class="dropdown-item" id="logout-btn" type="button">
             <i class="ph ph-sign-out"></i>
-            <span data-i18n="logout">Log Out</span>
+            <span>Log Out</span>
           </button>
         </div>
       </div>
     </div>
   </nav>
 
-  <div class="auth-modal" id="auth-modal">
-    <div class="modal-content auth-card">
-      <button class="close-modal-btn" id="close-auth-btn" aria-label="Close" type="button">
-        <i class="ph ph-x"></i>
-      </button>
-
-      <div class="auth-header">
-        <img src="logos/orebooking.png" alt="OreBooking" id="modal-logo">
-      </div>
-
-      <div class="auth-content">
-        <div class="auth-message" id="auth-message"></div>
-
-        <form class="auth-form active" id="login-form">
-          <h2 class="auth-title" data-i18n="welcome_back">Welcome back</h2>
-          <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
-
-          <div class="input-group">
-            <label for="login-email" data-i18n="email">Email Address</label>
-            <input type="email" id="login-email" placeholder="john@example.com" required>
-          </div>
-          <div class="input-group">
-            <label for="login-password" data-i18n="password">Password</label>
-            <input type="password" id="login-password" placeholder="••••••••" required>
-          </div>
-
-          <div class="auth-options">
-            <label class="auth-check">
-              <input type="checkbox">
-              <span class="auth-checkmark"></span>
-              <span data-i18n="remember_me">Remember me</span>
-            </label>
-            <a href="#" class="forgot-link" id="go-to-forgot" data-i18n="forgot_pass">Forgot password?</a>
-          </div>
-
-          <button type="submit" class="primary-btn" id="login-submit-btn" data-i18n="sign_in">Sign In</button>
-
-          <div class="social-logins" style="margin-top:14px;">
-            <button type="button" class="social-btn" id="google-login-btn">
-              <i class="ph ph-google-logo"></i>
-              <span>Google</span>
-            </button>
-          </div>
-
-          <p class="switch-form-text">
-            <span data-i18n="no_account">Don't have an account?</span>
-            <a href="#" id="go-to-register" data-i18n="sign_up">Sign up</a>
-          </p>
-        </form>
-
-        <form class="auth-form" id="register-form">
-          <h2 class="auth-title" data-i18n="create_account">Create an account</h2>
-          <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
-
-          <div class="input-group">
-            <label for="reg-name" data-i18n="full_name">Full Name</label>
-            <input type="text" id="reg-name" placeholder="Your full name" required>
-          </div>
-          <div class="input-group">
-            <label for="reg-email" data-i18n="email">Email Address</label>
-            <input type="email" id="reg-email" placeholder="john@example.com" required>
-          </div>
-          <div class="input-group">
-            <label for="reg-password" data-i18n="password">Password</label>
-            <input type="password" id="reg-password" placeholder="Create password" required>
-          </div>
-
-          <button type="submit" class="primary-btn" id="register-submit-btn" data-i18n="sign_up_btn">Create Account</button>
-
-          <div class="social-logins" style="margin-top:14px;">
-            <button type="button" class="social-btn" id="google-register-btn">
-              <i class="ph ph-google-logo"></i>
-              <span>Google</span>
-            </button>
-          </div>
-
-          <p class="switch-form-text">
-            <span data-i18n="has_account">Already have an account?</span>
-            <a href="#" id="go-to-login" data-i18n="sign_in">Sign in</a>
-          </p>
-        </form>
-
-        <form class="auth-form" id="forgot-form">
-          <h2 class="auth-title" data-i18n="reset_pass_title">Reset Password</h2>
-          <p class="auth-subtitle" data-i18n="reset_pass_desc">Enter your email and we'll send you a reset link.</p>
-
-          <div class="input-group">
-            <label for="forgot-email" data-i18n="email">Email Address</label>
-            <input type="email" id="forgot-email" placeholder="john@example.com" required>
-          </div>
-
-          <button type="submit" class="primary-btn" data-i18n="send_link">Send Reset Link</button>
-
-          <p class="switch-form-text">
-            <a href="#" id="back-to-login" data-i18n="back_to_login">Back to login</a>
-          </p>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <main class="booking-page">
     <div class="container">
+
       <section class="booking-hero">
         <div class="booking-hero-card">
-          <h1 data-i18n="complete_booking">Complete your booking</h1>
-          <p data-i18n="complete_booking_desc">
-            Fill in the essential information to ensure a smooth and secure reservation.
-          </p>
+          <div class="booking-hero-top">
+            <div>
+              <h1 data-i18n="pageTitle">Complete Booking</h1>
+              <p data-i18n="heroDesc">
+                Finalize your reservation in a few simple steps. Review the stay details, choose a payment method, and confirm your booking securely.
+              </p>
+
+              <div class="hero-secure-badges">
+                <div class="hero-badge">
+                  <i class="ph ph-shield-check"></i>
+                  <span>Secure reservation flow</span>
+                </div>
+                <div class="hero-badge">
+                  <i class="ph ph-clock-countdown"></i>
+                  <span>Fast multi-step booking</span>
+                </div>
+                <div class="hero-badge">
+                  <i class="ph ph-headset"></i>
+                  <span>Support available when needed</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <div id="booking-global-alert" class="booking-alert error d-none">
-        <i class="ph ph-warning-circle"></i>
-        <span data-i18n="fill_required">Please complete all required information before continuing.</span>
-      </div>
-
-      <div class="booking-steps-header">
-        <div class="step-indicator active" id="indicator-1">
+      <div class="booking-steps-header" id="booking-steps-header">
+        <div class="step-indicator active" data-step="1">
           <div class="step-num">1</div>
-          <span class="step-label" data-i18n="step_details">Details</span>
+          <div class="step-label">Details</div>
         </div>
         <div class="step-connector" id="connector-1"></div>
-        <div class="step-indicator" id="indicator-2">
+        <div class="step-indicator" data-step="2">
           <div class="step-num">2</div>
-          <span class="step-label" data-i18n="step_payment">Payment</span>
+          <div class="step-label">Payment</div>
         </div>
         <div class="step-connector" id="connector-2"></div>
-        <div class="step-indicator" id="indicator-3">
+        <div class="step-indicator" data-step="3">
           <div class="step-num">3</div>
-          <span class="step-label" data-i18n="step_review">Review</span>
+          <div class="step-label">Review</div>
         </div>
       </div>
 
       <div class="booking-wrapper">
-        <div class="booking-main-card">
+
+        <section class="booking-main-card">
+          <div class="booking-alert info" id="booking-info-banner">
+            <i class="ph ph-info"></i>
+            <div>
+              Make sure all reservation details are correct before confirmation. Your selected property and price summary will appear on the side.
+            </div>
+          </div>
 
           <div class="booking-step active" id="step-1">
             <div class="step-header">
-              <div class="step-header-icon"><i class="ph ph-identification-card"></i></div>
+              <div class="step-header-icon"><i class="ph ph-user-circle"></i></div>
               <div>
-                <h2 class="step-title" data-i18n="guest_details">Guest & Reservation Details</h2>
-                <p class="step-subtitle" data-i18n="guest_details_sub">Please fill in your primary information.</p>
+                <h2 class="step-title">Guest & Stay Details</h2>
+                <p class="step-subtitle">Enter the booking information required for your reservation.</p>
               </div>
             </div>
 
             <div class="section-block">
-              <h3><i class="ph ph-user"></i> <span data-i18n="primary_guest">Primary guest information</span></h3>
+              <h3><i class="ph ph-chart-bar"></i> Reservation Snapshot</h3>
+              <p class="mini-note">These quick details help the guest review the stay before continuing.</p>
+
+              <div class="stay-stats">
+                <div class="stay-stat">
+                  <i class="ph ph-calendar-check"></i>
+                  <div>
+                    <strong>Check-in</strong>
+                    <span id="stat-checkin">—</span>
+                  </div>
+                </div>
+                <div class="stay-stat">
+                  <i class="ph ph-calendar-x"></i>
+                  <div>
+                    <strong>Check-out</strong>
+                    <span id="stat-checkout">—</span>
+                  </div>
+                </div>
+                <div class="stay-stat">
+                  <i class="ph ph-moon-stars"></i>
+                  <div>
+                    <strong>Nights</strong>
+                    <span id="stat-nights">—</span>
+                  </div>
+                </div>
+                <div class="stay-stat">
+                  <i class="ph ph-users"></i>
+                  <div>
+                    <strong>Guests</strong>
+                    <span id="stat-guests">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <h3><i class="ph ph-user"></i> Primary Guest</h3>
+
               <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="guest-name">Full Name <span class="required-star">*</span></label>
+                  <input type="text" id="guest-name" class="form-control" placeholder="John Doe" autocomplete="name" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-email">Email Address <span class="required-star">*</span></label>
+                  <input type="email" id="guest-email" class="form-control" placeholder="name@example.com" autocomplete="email" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-phone">Phone Number <span class="required-star">*</span></label>
+                  <input type="tel" id="guest-phone" class="form-control" placeholder="+213 ..." autocomplete="tel" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-nationality">Nationality</label>
+                  <input type="text" id="guest-nationality" class="form-control" placeholder="Algerian">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-gender">Gender</label>
+                  <select id="guest-gender" class="form-control">
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-purpose">Purpose of Stay</label>
+                  <select id="guest-purpose" class="form-control">
+                    <option value="">Select</option>
+                    <option value="Tourism">Tourism</option>
+                    <option value="Business">Business</option>
+                    <option value="Family Visit">Family Visit</option>
+                    <option value="Event">Event</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <h3><i class="ph ph-calendar-blank"></i> Stay Information</h3>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="check-in-date">Check-in Date <span class="required-star">*</span></label>
+                  <input type="date" id="check-in-date" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="check-out-date">Check-out Date <span class="required-star">*</span></label>
+                  <input type="date" id="check-out-date" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-count">Guests <span class="required-star">*</span></label>
+                  <input type="number" id="guest-count" class="form-control" min="1" max="20" value="1" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="arrival-time">Estimated Arrival</label>
+                  <input type="time" id="arrival-time" class="form-control">
+                </div>
+
                 <div class="form-group full-width">
-                  <label class="form-label" for="guest-name"><span data-i18n="full_name_label">Full Name</span> <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-name" data-i18n-placeholder="full_name_ph" placeholder="Full legal name as in ID" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-gender"><span data-i18n="gender">Gender</span> <span class="required-star">*</span></label>
-                  <select class="form-control" id="guest-gender" required>
-                    <option value="" data-i18n="select_gender">Select gender</option>
-                    <option value="Male" data-i18n="male">Male</option>
-                    <option value="Female" data-i18n="female">Female</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-nationality"><span data-i18n="nationality">Nationality</span> <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-nationality" data-i18n-placeholder="nationality_ph" placeholder="Nationality" required>
+                  <label class="form-label" for="additional-guests">Additional Guests</label>
+                  <textarea id="additional-guests" class="form-control" placeholder="Enter guest names or any relevant details"></textarea>
+                  <div class="hint-text">Useful for family stays or reservations with multiple guests.</div>
                 </div>
               </div>
             </div>
 
             <div class="section-block">
-              <h3><i class="ph ph-phone"></i> <span data-i18n="contact_info">Contact information</span></h3>
+              <h3><i class="ph ph-bed"></i> Preferences & Notes</h3>
+
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label" for="guest-email"><span data-i18n="email_label">Email Address</span> <span class="required-star">*</span></label>
-                  <input type="email" class="form-control" id="guest-email" placeholder="name@example.com" required>
+                  <label class="form-label" for="room-preference">Room Preference</label>
+                  <select id="room-preference" class="form-control">
+                    <option value="">No preference</option>
+                    <option value="Single Bed">Single Bed</option>
+                    <option value="Double Bed">Double Bed</option>
+                    <option value="Twin Beds">Twin Beds</option>
+                    <option value="Family Setup">Family Setup</option>
+                  </select>
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="guest-phone"><span data-i18n="phone_number">Phone Number</span> <span class="required-star">*</span></label>
-                  <input type="tel" class="form-control" id="guest-phone" placeholder="+213 ..." required>
+                  <label class="form-label" for="billing-request">Billing Option</label>
+                  <select id="billing-request" class="form-control">
+                    <option value="">Standard receipt</option>
+                    <option value="Invoice">Invoice</option>
+                    <option value="Company Invoice">Company Invoice</option>
+                  </select>
                 </div>
+
                 <div class="form-group full-width">
-                  <label class="form-label" for="guest-address"><span data-i18n="address">Address</span></label>
-                  <input type="text" class="form-control" id="guest-address" data-i18n-placeholder="address_ph" placeholder="City, Country">
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-cardholder"></i> <span data-i18n="identity_verification">Identity verification</span></h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-type"><span data-i18n="document_type">Document Type</span> <span class="required-star">*</span></label>
-                  <select class="form-control" id="guest-id-type" required>
-                    <option value="" data-i18n="select_doc">Select document type</option>
-                    <option value="National ID" data-i18n="national_id">National ID</option>
-                    <option value="Passport" data-i18n="passport">Passport</option>
-                    <option value="Driver License" data-i18n="driver_license">Driver License</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-number"><span data-i18n="document_number">Document Number</span> <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-id-number" data-i18n-placeholder="document_number_ph" placeholder="ID / Passport number" required>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-calendar-blank"></i> <span data-i18n="stay_details">Stay details</span></h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="guest-adults"><span data-i18n="adults">Adults</span> <span class="required-star">*</span></label>
-                  <input type="number" class="form-control" id="guest-adults" min="1" value="1" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-children"><span data-i18n="children">Children</span></label>
-                  <input type="number" class="form-control" id="guest-children" min="0" value="0">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="arrival-time"><span data-i18n="arrival_time">Expected Arrival Time</span></label>
-                  <select class="form-control" id="arrival-time">
-                    <option value="" data-i18n="select_time">Select arrival time</option>
-                    <option value="08:00 - 12:00">08:00 - 12:00</option>
-                    <option value="12:00 - 16:00">12:00 - 16:00</option>
-                    <option value="16:00 - 20:00">16:00 - 20:00</option>
-                    <option value="After 20:00" data-i18n="after_20">After 20:00</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-baby"></i> <span data-i18n="family_needs">Family & Special Needs (Optional)</span></h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="baby-crib" data-i18n="need_crib">Need Baby Crib?</label>
-                  <select class="form-control" id="baby-crib">
-                    <option value="" data-i18n="select_option">Select option</option>
-                    <option value="Yes" data-i18n="yes">Yes</option>
-                    <option value="No" data-i18n="no">No</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="accessible-room" data-i18n="accessible_room">Accessible Room?</label>
-                  <select class="form-control" id="accessible-room">
-                    <option value="" data-i18n="select_option">Select option</option>
-                    <option value="Yes" data-i18n="yes">Yes</option>
-                    <option value="No" data-i18n="no">No</option>
-                  </select>
-                </div>
-                <div class="form-group full-width">
-                  <label class="form-label" for="special-requests" data-i18n="special_requests">Special Requests</label>
-                  <textarea class="form-control" id="special-requests" data-i18n-placeholder="special_requests_ph" placeholder="Any specific requirements..."></textarea>
+                  <label class="form-label" for="special-requests">Special Requests</label>
+                  <textarea id="special-requests" class="form-control" placeholder="Airport pickup, early check-in, quiet room, floor preference, or any extra request"></textarea>
                 </div>
               </div>
             </div>
 
             <div class="step-actions">
               <button class="primary-btn" id="btn-next-1" type="button">
-                <span data-i18n="continue_payment">Continue to Payment</span>
+                <span>Continue to Payment</span>
                 <i class="ph ph-arrow-right"></i>
               </button>
             </div>
@@ -1684,67 +1985,108 @@
             <div class="step-header">
               <div class="step-header-icon"><i class="ph ph-credit-card"></i></div>
               <div>
-                <h2 class="step-title" data-i18n="payment_billing">Payment & Billing</h2>
-                <p class="step-subtitle" data-i18n="payment_desc">Choose the payment method.</p>
+                <h2 class="step-title">Payment Method</h2>
+                <p class="step-subtitle">Choose how you want to complete or secure this booking.</p>
               </div>
             </div>
 
-            <div class="payment-methods-grid">
-              <label class="payment-method-card selected" id="card-method-ccp">
-                <input type="radio" name="payment_method" value="ccp" class="payment-radio" checked>
-                <div class="payment-method-icon"><i class="ph ph-bank"></i></div>
-                <div class="payment-method-title" data-i18n="bank_transfer">Bank Transfer (CCP)</div>
-                <div class="payment-method-desc" data-i18n="bank_transfer_desc">Transfer the amount and upload receipt.</div>
-              </label>
-
-              <label class="payment-method-card" id="card-method-cash">
-                <input type="radio" name="payment_method" value="cash" class="payment-radio">
-                <div class="payment-method-icon"><i class="ph ph-money"></i></div>
-                <div class="payment-method-title" data-i18n="pay_at_prop">Pay at Property</div>
-                <div class="payment-method-desc" data-i18n="pay_at_prop_desc">Pay in cash at check-in.</div>
-              </label>
+            <div class="booking-alert warning" id="payment-note">
+              <i class="ph ph-warning-circle"></i>
+              <div>
+                Some payment methods may require manual review by the host or admin before final approval.
+              </div>
             </div>
 
-            <div id="ccp-details" class="payment-details-box active">
-              <h4 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:1.08rem;" data-i18n="bank_details">Bank transfer details</h4>
-              
-              <div class="bank-box">
-                <div class="bank-row">
-                  <span data-i18n="account_name">Account Name:</span>
-                  <strong>OreBooking LLC</strong>
+            <div class="section-block">
+              <h3><i class="ph ph-wallet"></i> Choose Payment</h3>
+
+              <div class="payment-methods-grid">
+                <label class="payment-method-card selected" for="payment-bank-transfer" data-method="bank-transfer">
+                  <input class="payment-radio" type="radio" name="payment-method" id="payment-bank-transfer" value="Bank Transfer" checked>
+                  <div class="payment-method-icon"><i class="ph ph-bank"></i></div>
+                  <div class="payment-method-title">Bank Transfer</div>
+                  <p class="payment-method-desc">Transfer to the official account and upload a payment proof.</p>
+                </label>
+
+                <label class="payment-method-card" for="payment-cash" data-method="cash">
+                  <input class="payment-radio" type="radio" name="payment-method" id="payment-cash" value="Cash">
+                  <div class="payment-method-icon"><i class="ph ph-money"></i></div>
+                  <div class="payment-method-title">Cash</div>
+                  <p class="payment-method-desc">Pay later in cash, subject to property approval and confirmation.</p>
+                </label>
+
+                <label class="payment-method-card" for="payment-card" data-method="card">
+                  <input class="payment-radio" type="radio" name="payment-method" id="payment-card" value="Card">
+                  <div class="payment-method-icon"><i class="ph ph-credit-card"></i></div>
+                  <div class="payment-method-title">Card Request</div>
+                  <p class="payment-method-desc">Submit the reservation now and continue with card payment once enabled.</p>
+                </label>
+              </div>
+
+              <div class="payment-details-box active" id="bank-transfer-details">
+                <h4 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:1.08rem;">Bank transfer details</h4>
+
+                <div class="bank-box">
+                  <div class="bank-row">
+                    <span>Bank Name</span>
+                    <strong id="bank-name">OreBooking Bank</strong>
+                  </div>
+                  <div class="bank-row">
+                    <span>Account Holder</span>
+                    <strong id="bank-holder">OreBooking Hospitality</strong>
+                  </div>
+                  <div class="bank-row">
+                    <span>IBAN / RIB</span>
+                    <strong id="bank-iban">002 123 456 789 000 111</strong>
+                  </div>
+                  <div class="bank-row">
+                    <span>Reference</span>
+                    <strong id="payment-reference">BOOK-REF-001</strong>
+                  </div>
                 </div>
-                <div class="bank-row">
-                  <span>RIP / RIB:</span>
-                  <strong>007 99999 0000000000 12</strong>
+
+                <div class="inline-actions">
+                  <button class="mini-btn" type="button" id="copy-bank-info-btn">
+                    <i class="ph ph-copy"></i>
+                    <span>Copy info</span>
+                  </button>
                 </div>
-                <div class="bank-row">
-                  <span data-i18n="bank_name">Bank:</span>
-                  <strong>Algérie Poste</strong>
+
+                <label for="payment-proof" class="file-upload-wrapper">
+                  <div class="file-upload-icon"><i class="ph ph-upload-simple"></i></div>
+                  <div class="file-upload-text">Upload transfer proof</div>
+                  <div class="file-upload-hint">Accepted formats: JPG, PNG, PDF. Keep the amount and reference visible.</div>
+                </label>
+                <input type="file" id="payment-proof" class="file-upload-input" accept=".jpg,.jpeg,.png,.pdf">
+
+                <div class="selected-file" id="selected-proof-file">
+                  <i class="ph ph-file"></i>
+                  <span id="selected-proof-file-name">No file selected</span>
                 </div>
               </div>
 
-              <label class="file-upload-wrapper">
-                <input type="file" id="receipt-upload" class="file-upload-input" accept="image/*,.pdf">
-                <div class="file-upload-icon"><i class="ph ph-upload-simple"></i></div>
-                <div class="file-upload-text" id="upload-text" data-i18n="upload_receipt">Click to upload receipt</div>
-                <div class="file-upload-hint">JPG, PNG or PDF (Max 5MB)</div>
-              </label>
-            </div>
+              <div class="payment-details-box" id="cash-details">
+                <h4 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:1.08rem;">Cash payment confirmation</h4>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.7;">
+                  Your reservation request will be sent to the host or admin for review. Confirmation may depend on availability and internal approval.
+                </p>
+              </div>
 
-            <div class="payment-details-box" id="cash-details">
-              <h4 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:1.08rem;" data-i18n="cash_confirm">Cash payment confirmation</h4>
-              <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.6;" data-i18n="cash_note">
-                Please be aware that your booking is subject to host approval when choosing to pay in cash.
-              </p>
+              <div class="payment-details-box" id="card-details">
+                <h4 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:1.08rem;">Card request notice</h4>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.7;">
+                  This option can be used as a payment preference. If direct card processing is not yet enabled, your booking can still be submitted for follow-up.
+                </p>
+              </div>
             </div>
 
             <div class="step-actions step-actions-between">
               <button class="ghost-btn" id="btn-prev-2" type="button">
                 <i class="ph ph-arrow-left"></i>
-                <span data-i18n="back_details">Back to Details</span>
+                <span>Back to Details</span>
               </button>
               <button class="primary-btn" id="btn-next-2" type="button">
-                <span data-i18n="review_booking">Review Booking</span>
+                <span>Review Booking</span>
                 <i class="ph ph-arrow-right"></i>
               </button>
             </div>
@@ -1754,8 +2096,8 @@
             <div class="step-header">
               <div class="step-header-icon"><i class="ph ph-check-square-offset"></i></div>
               <div>
-                <h2 class="step-title" data-i18n="review_confirm">Review & Confirm</h2>
-                <p class="step-subtitle" data-i18n="review_desc">Review all details before final confirmation.</p>
+                <h2 class="step-title">Review & Confirm</h2>
+                <p class="step-subtitle">Review all booking details before the final confirmation.</p>
               </div>
             </div>
 
@@ -1763,49 +2105,93 @@
               <div class="review-grid">
                 <div class="review-card">
                   <div class="review-card-header">
-                    <h3><i class="ph ph-user"></i> <span data-i18n="guest_info">Guest Information</span></h3>
-                    <button class="edit-btn" id="btn-edit-guest" type="button"><i class="ph ph-pencil-simple"></i> <span data-i18n="edit">Edit</span></button>
+                    <h3><i class="ph ph-user"></i> Guest Information</h3>
+                    <button class="edit-btn" id="btn-edit-guest" type="button">
+                      <i class="ph ph-pencil-simple"></i> Edit
+                    </button>
                   </div>
                   <div class="review-card-body">
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="full_name_label">Full Name</span>
+                      <span class="rd-label">Full Name</span>
                       <span class="rd-value" id="rev-name">—</span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="phone_number">Phone</span>
+                      <span class="rd-label">Email</span>
+                      <span class="rd-value" id="rev-email">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Phone</span>
                       <span class="rd-value" id="rev-phone">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Nationality / Gender</span>
+                      <span class="rd-value" id="rev-nationality-gender">—</span>
                     </div>
                   </div>
                 </div>
 
                 <div class="review-card">
                   <div class="review-card-header">
-                    <h3><i class="ph ph-calendar-blank"></i> <span data-i18n="stay_details">Stay Details</span></h3>
-                    <button class="edit-btn" id="btn-edit-dates" type="button"><i class="ph ph-pencil-simple"></i> <span data-i18n="edit">Edit</span></button>
+                    <h3><i class="ph ph-calendar-blank"></i> Stay Details</h3>
+                    <button class="edit-btn" id="btn-edit-dates" type="button">
+                      <i class="ph ph-pencil-simple"></i> Edit
+                    </button>
                   </div>
                   <div class="review-card-body">
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="check_in_out">Check-in / Check-out</span>
+                      <span class="rd-label">Check-in / Check-out</span>
                       <span class="rd-value" id="rev-dates">—</span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="guests">Guests</span>
+                      <span class="rd-label">Guests</span>
                       <span class="rd-value" id="rev-guests">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Purpose / Arrival</span>
+                      <span class="rd-value" id="rev-purpose-arrival">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Additional Guests</span>
+                      <span class="rd-value" id="rev-additional-guests">—</span>
                     </div>
                   </div>
                 </div>
 
                 <div class="review-card full-width">
                   <div class="review-card-header">
-                    <h3><i class="ph ph-cardholder"></i> <span data-i18n="payment_method">Payment Method</span></h3>
-                    <button class="edit-btn" id="btn-edit-payment" type="button"><i class="ph ph-pencil-simple"></i> <span data-i18n="edit">Edit</span></button>
+                    <h3><i class="ph ph-cardholder"></i> Identity, Room & Payment</h3>
+                    <button class="edit-btn" id="btn-edit-payment" type="button">
+                      <i class="ph ph-pencil-simple"></i> Edit
+                    </button>
                   </div>
                   <div class="review-card-body">
+                    <div class="review-data">
+                      <span class="rd-label">Document</span>
+                      <span class="rd-value" id="rev-document">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Billing</span>
+                      <span class="rd-value" id="rev-billing">—</span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">Room Preference</span>
+                      <span class="rd-value" id="rev-room-preference">—</span>
+                    </div>
                     <div class="review-data full-width">
-                      <span class="rd-label" data-i18n="selected_payment">Selected Payment Method</span>
+                      <span class="rd-label">Selected Payment Method</span>
                       <span class="rd-value" id="rev-payment-method">—</span>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <div class="points-box">
+                <div class="points-icon"><i class="ph ph-star"></i></div>
+                <div class="points-text">
+                  <span class="points-title">Earn OreBooking Points!</span>
+                  <p>
+                    You will earn <strong id="rev-points">0</strong> points after completing this stay. Points can be used for future discounts and upgrades.
+                  </p>
                 </div>
               </div>
 
@@ -1813,8 +2199,8 @@
                 <label class="checkbox-container">
                   <input type="checkbox" id="agree-policy" required>
                   <span class="checkmark"></span>
-                  <span class="agree-text" data-i18n="agree_policy">
-                    I confirm that all submitted booking information is accurate and I agree to the Terms of Service and property rules.
+                  <span class="agree-text">
+                    I confirm that all submitted booking information is accurate, that all guests are authorized to stay, and that I agree to the Terms of Service, Privacy Policy, property rules, cancellation policy, and payment verification procedures.
                   </span>
                 </label>
               </div>
@@ -1823,46 +2209,433 @@
             <div class="step-actions step-actions-between">
               <button class="ghost-btn" id="btn-prev-3" type="button">
                 <i class="ph ph-arrow-left"></i>
-                <span data-i18n="back_payment">Back to Payment</span>
+                <span>Back to Payment</span>
               </button>
               <button class="primary-btn green-btn" id="btn-confirm-booking" type="button">
-                <span data-i18n="confirm_book">Confirm & Book</span>
+                <span>Confirm & Book</span>
                 <i class="ph ph-check-circle"></i>
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
         <aside class="booking-summary-sidebar">
-          <h3 class="sidebar-title"><i class="ph ph-receipt"></i> <span data-i18n="booking_summary">Booking Summary</span></h3>
+          <h3 class="sidebar-title"><i class="ph ph-receipt"></i> <span>Booking Summary</span></h3>
 
           <div class="prop-mini-card">
             <img src="images/placeholder.jpg" id="prop-mini-img" alt="Property" class="prop-mini-img">
             <div class="prop-mini-details">
-              <h4 id="prop-mini-title" data-i18n="loading">Loading...</h4>
+              <h4 id="prop-mini-title">Loading...</h4>
               <p><i class="ph ph-map-pin"></i> <span id="prop-mini-loc">—</span></p>
               <div class="prop-type-badge" id="prop-mini-type">—</div>
             </div>
           </div>
 
+          <div class="summary-meta">
+            <div class="summary-meta-item">
+              <strong>Check-in</strong>
+              <span id="summary-checkin">—</span>
+            </div>
+            <div class="summary-meta-item">
+              <strong>Check-out</strong>
+              <span id="summary-checkout">—</span>
+            </div>
+            <div class="summary-meta-item">
+              <strong>Guests</strong>
+              <span id="summary-guests">—</span>
+            </div>
+            <div class="summary-meta-item">
+              <strong>Method</strong>
+              <span id="summary-payment">—</span>
+            </div>
+          </div>
+
           <div class="summary-details">
             <div class="summary-row">
-              <span data-i18n="price_per_night">Price per night</span>
+              <span>Price per night</span>
               <span id="sb-night-price">—</span>
             </div>
             <div class="summary-row">
-              <span data-i18n="nights">Nights</span>
+              <span>Nights</span>
               <span id="sb-nights-count">—</span>
             </div>
+            <div class="summary-row" id="sb-fee-row" style="display:none;">
+              <span>Service Fee</span>
+              <span id="sb-fee-amount">—</span>
+            </div>
+            <div class="summary-row" id="sb-addons-row" style="display:none;">
+              <span>Add-ons</span>
+              <span id="sb-addons-amount">—</span>
+            </div>
             <div class="summary-row total">
-              <span data-i18n="total">Total</span>
+              <span>Total</span>
               <span id="sb-final-total">—</span>
             </div>
+          </div>
+
+          <div class="sidebar-note">
+            The final total may depend on selected dates, guest count, and any additional service or verification requirements.
           </div>
         </aside>
       </div>
     </div>
   </main>
+
+  <div class="auth-modal" id="auth-modal">
+    <div class="modal-content auth-card">
+      <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+
+      <div class="auth-header">
+        <img src="images/logo-light.svg" alt="OreBooking">
+      </div>
+
+      <div class="auth-content">
+        <div id="auth-message" class="auth-message"></div>
+
+        <form id="login-form" class="auth-form active">
+          <h2 class="auth-title">Welcome back</h2>
+          <p class="auth-subtitle">Log in to continue your booking and manage your reservations.</p>
+
+          <div class="input-group">
+            <label for="login-email">Email address</label>
+            <input type="email" id="login-email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="input-group pass-wrapper">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" required>
+            <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
+              <i class="ph ph-eye"></i>
+            </button>
+          </div>
+
+          <div class="auth-options">
+            <label class="auth-check">
+              <input type="checkbox" checked>
+              <span class="auth-checkmark"></span>
+              <span>Remember me</span>
+            </label>
+
+            <a href="#" class="forgot-link" id="go-to-forgot">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="primary-btn" id="login-submit-btn">Sign In</button>
+
+          <div style="text-align:center;margin:20px 0;color:var(--text-muted);font-size:0.85rem;position:relative;">
+            <span style="background:var(--surface-color);padding:0 10px;position:relative;z-index:1;">OR</span>
+            <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border-color);z-index:0;"></div>
+          </div>
+
+          <div class="social-logins">
+            <button type="button" class="social-btn" id="google-login-btn">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style="width:18px;height:18px;">
+              Google
+            </button>
+          </div>
+
+          <p class="switch-form-text">
+            Don't have an account?
+            <a href="#" id="go-to-register">Create one</a>
+          </p>
+        </form>
+
+        <form id="register-form" class="auth-form">
+          <h2 class="auth-title">Create account</h2>
+          <p class="auth-subtitle">Sign up to save your bookings, favorites, and rewards.</p>
+
+          <div class="input-group">
+            <label for="reg-name">Full Name</label>
+            <input type="text" id="reg-name" placeholder="John Doe" required>
+          </div>
+
+          <div class="input-group">
+            <label for="reg-email">Email address</label>
+            <input type="email" id="reg-email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="input-group pass-wrapper">
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" placeholder="Min. 8 characters" required>
+            <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
+              <i class="ph ph-eye"></i>
+            </button>
+          </div>
+
+          <div class="password-strength" id="password-strength">
+            <div class="strength-bars">
+              <span class="str-bar"></span>
+              <span class="str-bar"></span>
+              <span class="str-bar"></span>
+              <span class="str-bar"></span>
+            </div>
+            <div class="strength-label" id="strength-label"></div>
+          </div>
+
+          <button type="submit" class="primary-btn" id="register-submit-btn">Sign Up</button>
+
+          <div style="text-align:center;margin:20px 0;color:var(--text-muted);font-size:0.85rem;position:relative;">
+            <span style="background:var(--surface-color);padding:0 10px;position:relative;z-index:1;">OR</span>
+            <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border-color);z-index:0;"></div>
+          </div>
+
+          <div class="social-logins">
+            <button type="button" class="social-btn" id="google-register-btn">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style="width:18px;height:18px;">
+              Google
+            </button>
+          </div>
+
+          <p class="switch-form-text">
+            Already have an account?
+            <a href="#" id="go-to-login">Log in</a>
+          </p>
+        </form>
+
+        <form id="forgot-form" class="auth-form">
+          <h2 class="auth-title">Reset Password</h2>
+          <p class="auth-subtitle">Enter your email and we'll send you a password reset link.</p>
+
+          <div class="input-group">
+            <label for="forgot-email">Email address</label>
+            <input type="email" id="forgot-email" placeholder="name@example.com" required>
+          </div>
+
+          <button type="submit" class="primary-btn">Send Reset Link</button>
+
+          <p class="switch-form-text" style="margin-top:18px;">
+            <a href="#" id="back-to-login">Back to login</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const body = document.body;
+      const html = document.documentElement;
+
+      const savedTheme = localStorage.getItem('ore_theme') || 'light';
+      if (savedTheme === 'dark') body.classList.add('dark');
+
+      const savedLang = localStorage.getItem('ore_lang') || 'en';
+      html.lang = savedLang;
+      html.dir = savedLang === 'ar' ? 'rtl' : 'ltr';
+
+      const fileInput = document.getElementById('payment-proof');
+      const fileBox = document.getElementById('selected-proof-file');
+      const fileName = document.getElementById('selected-proof-file-name');
+
+      if (fileInput && fileBox && fileName) {
+        fileInput.addEventListener('change', function () {
+          const file = this.files && this.files[0];
+          if (file) {
+            fileName.textContent = file.name;
+            fileBox.style.display = 'flex';
+          } else {
+            fileBox.style.display = 'none';
+          }
+        });
+      }
+
+      const copyBtn = document.getElementById('copy-bank-info-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+          const bankName = document.getElementById('bank-name')?.textContent || '';
+          const bankHolder = document.getElementById('bank-holder')?.textContent || '';
+          const iban = document.getElementById('bank-iban')?.textContent || '';
+          const ref = document.getElementById('payment-reference')?.textContent || '';
+
+          const text = `Bank Name: ${bankName}
+Account Holder: ${bankHolder}
+IBAN / RIB: ${iban}
+Reference: ${ref}`;
+
+          try {
+            await navigator.clipboard.writeText(text);
+            copyBtn.innerHTML = '<i class="ph ph-check"></i><span>Copied</span>';
+            setTimeout(() => {
+              copyBtn.innerHTML = '<i class="ph ph-copy"></i><span>Copy info</span>';
+            }, 1600);
+          } catch (_) {}
+        });
+      }
+
+      const paymentCards = document.querySelectorAll('.payment-method-card');
+      const detailsMap = {
+        'bank-transfer': document.getElementById('bank-transfer-details'),
+        'cash': document.getElementById('cash-details'),
+        'card': document.getElementById('card-details')
+      };
+
+      paymentCards.forEach(card => {
+        card.addEventListener('click', () => {
+          paymentCards.forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+
+          Object.values(detailsMap).forEach(box => box && box.classList.remove('active'));
+          const method = card.dataset.method;
+          if (detailsMap[method]) detailsMap[method].classList.add('active');
+
+          const paymentLabel = card.querySelector('.payment-method-title')?.textContent || '—';
+          const summaryPayment = document.getElementById('summary-payment');
+          const reviewPayment = document.getElementById('rev-payment-method');
+          if (summaryPayment) summaryPayment.textContent = paymentLabel;
+          if (reviewPayment) reviewPayment.textContent = paymentLabel;
+
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+        });
+      });
+
+      const steps = [
+        document.getElementById('step-1'),
+        document.getElementById('step-2'),
+        document.getElementById('step-3')
+      ];
+      const indicators = document.querySelectorAll('.step-indicator');
+      const connectors = [
+        document.getElementById('connector-1'),
+        document.getElementById('connector-2')
+      ];
+
+      function setStep(stepNumber) {
+        steps.forEach((step, idx) => {
+          step.classList.toggle('active', idx === stepNumber - 1);
+        });
+
+        indicators.forEach((indicator, idx) => {
+          indicator.classList.remove('active', 'completed');
+          if (idx + 1 < stepNumber) indicator.classList.add('completed');
+          else if (idx + 1 === stepNumber) indicator.classList.add('active');
+        });
+
+        connectors.forEach((connector, idx) => {
+          connector.classList.toggle('completed', idx + 1 < stepNumber);
+        });
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function value(id) {
+        return document.getElementById(id)?.value?.trim() || '';
+      }
+
+      function updateStatsAndSummary() {
+        const checkIn = value('check-in-date') || '—';
+        const checkOut = value('check-out-date') || '—';
+        const guests = value('guest-count') || '—';
+
+        const statCheckin = document.getElementById('stat-checkin');
+        const statCheckout = document.getElementById('stat-checkout');
+        const statGuests = document.getElementById('stat-guests');
+
+        if (statCheckin) statCheckin.textContent = checkIn;
+        if (statCheckout) statCheckout.textContent = checkOut;
+        if (statGuests) statGuests.textContent = guests;
+
+        const sumCheckin = document.getElementById('summary-checkin');
+        const sumCheckout = document.getElementById('summary-checkout');
+        const sumGuests = document.getElementById('summary-guests');
+
+        if (sumCheckin) sumCheckin.textContent = checkIn;
+        if (sumCheckout) sumCheckout.textContent = checkOut;
+        if (sumGuests) sumGuests.textContent = guests;
+
+        const nightsEl = document.getElementById('stat-nights');
+        if (checkIn !== '—' && checkOut !== '—') {
+          const inDate = new Date(checkIn);
+          const outDate = new Date(checkOut);
+          const diff = Math.round((outDate - inDate) / (1000 * 60 * 60 * 24));
+          if (!Number.isNaN(diff) && diff > 0) {
+            if (nightsEl) nightsEl.textContent = String(diff);
+            const sbNights = document.getElementById('sb-nights-count');
+            if (sbNights) sbNights.textContent = diff;
+          }
+        }
+      }
+
+      function updateReview() {
+        const name = value('guest-name') || '—';
+        const email = value('guest-email') || '—';
+        const phone = value('guest-phone') || '—';
+        const nationality = value('guest-nationality');
+        const gender = value('guest-gender');
+        const purpose = value('guest-purpose');
+        const arrival = value('arrival-time');
+        const additionalGuests = value('additional-guests') || '—';
+        const checkIn = value('check-in-date') || '—';
+        const checkOut = value('check-out-date') || '—';
+        const guests = value('guest-count') || '—';
+        const billing = value('billing-request') || 'Standard receipt';
+        const roomPreference = value('room-preference') || 'No preference';
+        const documentLabel = fileInput?.files?.[0]?.name || 'No file uploaded';
+        const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || '—';
+
+        document.getElementById('rev-name').textContent = name;
+        document.getElementById('rev-email').textContent = email;
+        document.getElementById('rev-phone').textContent = phone;
+        document.getElementById('rev-nationality-gender').textContent =
+          [nationality, gender].filter(Boolean).join(' / ') || '—';
+
+        document.getElementById('rev-dates').textContent = `${checkIn} → ${checkOut}`;
+        document.getElementById('rev-guests').textContent = guests;
+        document.getElementById('rev-purpose-arrival').textContent =
+          [purpose, arrival].filter(Boolean).join(' / ') || '—';
+        document.getElementById('rev-additional-guests').textContent = additionalGuests;
+
+        document.getElementById('rev-document').textContent = documentLabel;
+        document.getElementById('rev-billing').textContent = billing;
+        document.getElementById('rev-room-preference').textContent = roomPreference;
+        document.getElementById('rev-payment-method').textContent = paymentMethod;
+
+        const pts = Math.max(Number(document.getElementById('sb-nights-count')?.textContent || 1), 1) * 25;
+        document.getElementById('rev-points').textContent = pts;
+      }
+
+      const watchedIds = [
+        'guest-name','guest-email','guest-phone','guest-nationality','guest-gender',
+        'guest-purpose','check-in-date','check-out-date','guest-count','arrival-time',
+        'additional-guests','billing-request','room-preference'
+      ];
+
+      watchedIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', () => {
+            updateStatsAndSummary();
+            updateReview();
+          });
+          el.addEventListener('change', () => {
+            updateStatsAndSummary();
+            updateReview();
+          });
+        }
+      });
+
+      document.getElementById('btn-next-1')?.addEventListener('click', () => {
+        updateStatsAndSummary();
+        setStep(2);
+      });
+
+      document.getElementById('btn-prev-2')?.addEventListener('click', () => setStep(1));
+      document.getElementById('btn-next-2')?.addEventListener('click', () => {
+        updateStatsAndSummary();
+        updateReview();
+        setStep(3);
+      });
+      document.getElementById('btn-prev-3')?.addEventListener('click', () => setStep(2));
+
+      document.getElementById('btn-edit-guest')?.addEventListener('click', () => setStep(1));
+      document.getElementById('btn-edit-dates')?.addEventListener('click', () => setStep(1));
+      document.getElementById('btn-edit-payment')?.addEventListener('click', () => setStep(2));
+
+      updateStatsAndSummary();
+      updateReview();
+    })();
+  </script>
 
   <script src="booking.js"></script>
 </body>
