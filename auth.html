@@ -1,76 +1,86 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="OreBooking authentication page for sign in, sign up, and password reset." />
+  <meta name="theme-color" content="#3b82f6" />
   <title>OreBooking - Sign In / Sign Up</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- 🔥 Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem("ore_theme") || "light";
+      const savedLang = localStorage.getItem("ore_lang") || "en";
+      document.documentElement.lang = savedLang;
+      document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
+      if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+    })();
+  </script>
+
   <style>
-    /* ============================================================
-       RESET & BASE
-    ============================================================ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary:       #3b82f6;      /* Blue 500 */
-      --primary-dark:  #2563eb;      /* Blue 600 */
-      --primary-light: #60a5fa;      /* Blue 400 */
-      --accent:        #8b5cf6;      /* Purple 500 */
-
-      --bg:            #f0fdfa;      /* Soft gradient background base */
-      --surface:       #ffffff;
-      --border:        #e2e8f0;
-      --text:          #0f172a;
-      --text-muted:    #64748b;
-      --input-bg:      #f8fafc;
-      --input-focus:   #f1f5f9;
-      --error:         #ef4444;
-      --success:       #10b981;
-
-      --radius:        24px;
-      --radius-sm:     12px;
-      --shadow:        0 20px 40px -10px rgba(15, 23, 42, 0.08);
-      --shadow-hover:  0 30px 60px -15px rgba(59, 130, 246, 0.15);
-      --transition:    0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-      --font-en:       'Outfit', sans-serif;
-      --font-ar:       'Tajawal', sans-serif;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --primary-light: #60a5fa;
+      --accent: #8b5cf6;
+      --bg: #f0fdfa;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --input-bg: #f8fafc;
+      --input-focus: #f1f5f9;
+      --error: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --info: #0ea5e9;
+      --radius: 24px;
+      --radius-sm: 12px;
+      --shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08);
+      --shadow-hover: 0 30px 60px -15px rgba(59, 130, 246, 0.15);
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-en: "Outfit", sans-serif;
+      --font-ar: "Tajawal", sans-serif;
     }
 
+    .preload-dark body,
     body.dark {
-      --primary:       #60a5fa;
-      --primary-dark:  #3b82f6;
-      --bg:            #020617;
-      --surface:       #0f172a;
-      --border:        #1e293b;
-      --text:          #f8fafc;
-      --text-muted:    #94a3b8;
-      --input-bg:      #1e293b;
-      --input-focus:   #334155;
-      --shadow:        0 20px 40px -10px rgba(0, 0, 0, 0.5);
+      --primary: #60a5fa;
+      --primary-dark: #3b82f6;
+      --bg: #020617;
+      --surface: #0f172a;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --input-bg: #1e293b;
+      --input-focus: #334155;
+      --shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+      --shadow-hover: 0 26px 50px -14px rgba(59, 130, 246, 0.25);
     }
 
     html[lang="ar"] body,
     html[dir="rtl"] body { font-family: var(--font-ar); }
+
     html[lang="en"] body,
     html[dir="ltr"] body { font-family: var(--font-en); }
 
     body {
       min-height: 100dvh;
       background-color: var(--bg);
-      /* الاحترافية في التدرج (Gradient) المميز والمتحرك للخلفية */
-      background-image: 
-        radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, transparent 50%), 
-        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.08) 0, transparent 50%), 
+      background-image:
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, transparent 50%),
+        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.08) 0, transparent 50%),
         radial-gradient(at 100% 0%, hsla(339,49%,30%,0.08) 0, transparent 50%);
       background-size: 200% 200%;
       animation: gradientBg 15s ease infinite;
@@ -83,7 +93,7 @@
     }
 
     body.dark {
-      background-image: 
+      background-image:
         radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
         radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
     }
@@ -94,9 +104,6 @@
       100% { background-position: 0% 50%; }
     }
 
-    /* ============================================================
-       FLOATING CONTROLS
-    ============================================================ */
     .auth-controls {
       position: fixed;
       top: 24px;
@@ -112,6 +119,7 @@
       border: 1px solid rgba(255,255,255,0.2);
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       color: var(--text);
       display: flex;
       align-items: center;
@@ -119,10 +127,12 @@
       cursor: pointer;
       transition: var(--transition);
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      font-weight: 600;
+      font-weight: 700;
+      font-family: inherit;
     }
 
-    body.dark .icon-btn, body.dark .lang-btn {
+    body.dark .icon-btn,
+    body.dark .lang-btn {
       background: rgba(15, 23, 42, 0.7);
       border: 1px solid rgba(255,255,255,0.1);
     }
@@ -130,23 +140,20 @@
     .icon-btn { width: 44px; font-size: 1.2rem; }
     .lang-btn { padding: 0 20px; font-size: 0.9rem; }
 
-    .icon-btn:hover, .lang-btn:hover { 
-      background: var(--surface); 
+    .icon-btn:hover,
+    .lang-btn:hover {
+      background: var(--surface);
       transform: translateY(-2px);
       color: var(--primary);
       box-shadow: 0 6px 16px rgba(0,0,0,0.1);
     }
 
-    /* ============================================================
-       AUTH CARD
-    ============================================================ */
     .auth-card-wrapper {
       position: relative;
       width: 100%;
       max-width: 460px;
     }
 
-    /* تأثير توهج خلف البطاقة */
     .auth-card-glow {
       position: absolute;
       inset: -2px;
@@ -158,12 +165,8 @@
       z-index: 0;
     }
 
-    .auth-card-wrapper:hover .auth-card-glow {
-      opacity: 0.4;
-    }
-    body.dark .auth-card-wrapper:hover .auth-card-glow {
-      opacity: 0.6;
-    }
+    .auth-card-wrapper:hover .auth-card-glow { opacity: 0.4; }
+    body.dark .auth-card-wrapper:hover .auth-card-glow { opacity: 0.6; }
 
     .auth-card {
       position: relative;
@@ -177,11 +180,8 @@
       z-index: 1;
     }
 
-    .auth-card:hover {
-      box-shadow: var(--shadow-hover);
-    }
+    .auth-card:hover { box-shadow: var(--shadow-hover); }
 
-    /* Logo Header */
     .auth-header {
       padding: 40px 40px 20px;
       text-align: center;
@@ -224,18 +224,13 @@
       letter-spacing: -0.5px;
     }
 
-    /* Auth Body */
-    .auth-body-inner {
-      padding: 0 40px 40px;
-    }
+    .auth-body-inner { padding: 0 40px 40px; }
 
-    /* ============================================================
-       FORMS
-    ============================================================ */
-    .auth-form { 
-      display: none; 
+    .auth-form {
+      display: none;
       animation: fadeIn 0.4s ease forwards;
     }
+
     .auth-form.active { display: block; }
 
     @keyframes fadeIn {
@@ -256,13 +251,10 @@
       color: var(--text-muted);
       margin-bottom: 32px;
       text-align: center;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
-    /* Input Groups */
-    .input-group {
-      margin-bottom: 20px;
-    }
+    .input-group { margin-bottom: 20px; }
 
     .input-group label {
       display: block;
@@ -287,6 +279,11 @@
       box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     }
 
+    .input-icon-wrap.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
+    }
+
     .input-group input {
       width: 100%;
       height: 52px;
@@ -303,7 +300,14 @@
       padding: 0 46px 0 16px;
     }
 
-    .input-group input::placeholder { color: var(--text-muted); opacity: 0.6; }
+    .password-field input {
+      padding-inline-end: 48px;
+    }
+
+    .input-group input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
 
     .input-icon-wrap > i:first-child {
       position: absolute;
@@ -316,11 +320,10 @@
       transition: color var(--transition);
     }
 
-    .input-icon-wrap:focus-within > i:first-child { 
-      color: var(--primary); 
+    .input-icon-wrap:focus-within > i:first-child {
+      color: var(--primary);
     }
 
-    /* Password toggle */
     .pass-toggle {
       position: absolute;
       top: 0;
@@ -337,15 +340,59 @@
       justify-content: center;
       transition: color var(--transition);
     }
+
     .pass-toggle:hover { color: var(--primary); }
 
-    /* Auth Options Row */
+    .helper-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .password-strength {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .password-strength.active { display: block; }
+
+    .strength-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .str-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--border);
+      transition: var(--transition);
+    }
+
+    .strength-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
     .auth-options {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 28px;
       margin-top: 8px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .checkbox-container {
@@ -359,9 +406,11 @@
       user-select: none;
       transition: var(--transition);
     }
+
     .checkbox-container:hover { color: var(--text); }
 
     .checkbox-container input[type="checkbox"] { display: none; }
+
     .checkmark {
       width: 20px;
       height: 20px;
@@ -372,14 +421,17 @@
       align-items: center;
       justify-content: center;
       transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      flex-shrink: 0;
     }
+
     .checkbox-container input:checked + .checkmark {
       background: var(--primary);
       border-color: var(--primary);
       transform: scale(1.05);
     }
+
     .checkbox-container input:checked + .checkmark::after {
-      content: '';
+      content: "";
       width: 5px;
       height: 10px;
       border: 2px solid white;
@@ -396,9 +448,12 @@
       text-decoration: none;
       transition: var(--transition);
     }
-    .forgot-link:hover { color: var(--primary-dark); text-decoration: underline; }
 
-    /* Primary Button */
+    .forgot-link:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+
     .primary-btn {
       position: relative;
       width: 100%;
@@ -416,15 +471,18 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       overflow: hidden;
       box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
     }
 
     .primary-btn::before {
-      content: '';
+      content: "";
       position: absolute;
-      top: 0; left: -100%; width: 50%; height: 100%;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
       transform: skewX(-20deg);
       transition: 0.5s;
@@ -436,10 +494,16 @@
     }
 
     .primary-btn:hover:not(:disabled)::before { left: 150%; }
-    .primary-btn:active:not(:disabled) { transform: translateY(0); }
-    .primary-btn:disabled { opacity: 0.7; cursor: not-allowed; box-shadow: none; background: var(--text-muted); }
 
-    /* Divider */
+    .primary-btn:active:not(:disabled) { transform: translateY(0); }
+
+    .primary-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      box-shadow: none;
+      background: var(--text-muted);
+    }
+
     .auth-divider {
       display: flex;
       align-items: center;
@@ -449,15 +513,15 @@
       font-size: 0.85rem;
       font-weight: 500;
     }
+
     .auth-divider::before,
     .auth-divider::after {
-      content: '';
+      content: "";
       flex: 1;
       height: 1px;
       background: var(--border);
     }
 
-    /* Social Buttons */
     .social-logins {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -482,21 +546,30 @@
       transition: var(--transition);
       box-shadow: 0 2px 5px rgba(0,0,0,0.02);
     }
+
     .social-btn:hover {
       border-color: var(--text-muted);
       background: var(--input-bg);
       transform: translateY(-1px);
     }
+
     .social-btn i { font-size: 1.3rem; }
 
-    /* Switch Form */
+    .social-btn img {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+    }
+
     .switch-form-text {
       text-align: center;
       font-size: 0.95rem;
       color: var(--text-muted);
       margin-top: 32px;
       font-weight: 500;
+      line-height: 1.7;
     }
+
     .switch-form-text a {
       color: var(--primary);
       font-weight: 700;
@@ -504,9 +577,12 @@
       margin-inline-start: 6px;
       transition: var(--transition);
     }
-    .switch-form-text a:hover { color: var(--primary-dark); text-decoration: underline; }
 
-    /* Auth Message */
+    .switch-form-text a:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+
     .auth-message {
       padding: 14px 16px;
       border-radius: var(--radius-sm);
@@ -517,7 +593,9 @@
       align-items: center;
       gap: 10px;
       animation: fadeIn 0.3s ease;
+      line-height: 1.6;
     }
+
     .auth-message i { font-size: 1.2rem; }
 
     .auth-message.error {
@@ -526,53 +604,67 @@
       border: 1px solid #fecaca;
       display: flex;
     }
+
     .auth-message.success {
       background: #f0fdf4;
       color: var(--success);
       border: 1px solid #bbf7d0;
       display: flex;
     }
-    body.dark .auth-message.error   { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); }
-    body.dark .auth-message.success { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); }
 
-    /* ============================================================
-       RESPONSIVE
-    ============================================================ */
+    .auth-message.info {
+      background: #eff6ff;
+      color: var(--info);
+      border: 1px solid #bfdbfe;
+      display: flex;
+    }
+
+    body.dark .auth-message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    body.dark .auth-message.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    body.dark .auth-message.info {
+      background: rgba(14, 165, 233, 0.1);
+      border-color: rgba(14, 165, 233, 0.2);
+    }
+
+    .hidden { display: none !important; }
+
     @media (max-width: 480px) {
       body { padding: 16px; }
       .auth-card-wrapper { max-width: 100%; }
-      .auth-header    { padding: 32px 24px 16px; }
+      .auth-header { padding: 32px 24px 16px; }
       .auth-body-inner { padding: 0 24px 32px; }
-      .auth-title      { font-size: 1.35rem; }
-      .social-logins   { grid-template-columns: 1fr; gap: 12px; }
-      .auth-controls   { top: 16px; inset-inline-end: 16px; }
+      .auth-title { font-size: 1.35rem; }
+      .social-logins { grid-template-columns: 1fr; gap: 12px; }
+      .auth-controls { top: 16px; inset-inline-end: 16px; }
+      .lang-btn { padding: 0 14px; }
     }
 
-    /* spin animation for loading */
     @keyframes spin { to { transform: rotate(360deg); } }
     .ph-spin { animation: spin 0.8s linear infinite; display: inline-block; }
   </style>
 </head>
 <body>
-
-  <!-- Floating Controls -->
   <div class="auth-controls">
-    <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
+    <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle Theme">
       <i class="ph ph-moon"></i>
     </button>
-    <button id="lang-toggle" class="lang-btn">English</button>
+    <button id="lang-toggle" class="lang-btn" type="button">AR</button>
   </div>
 
-  <!-- Wrapper for Glow Effect -->
   <div class="auth-card-wrapper">
     <div class="auth-card-glow"></div>
 
-    <!-- Auth Card -->
     <div class="auth-card">
-
-      <!-- Logo -->
       <div class="auth-header">
-        <a href="index.html" class="auth-logo-link">
+        <a href="index.html" class="auth-logo-link" aria-label="OreBooking Home">
           <div class="logo-icon-wrap">
             <i class="ph-fill ph-buildings"></i>
           </div>
@@ -581,31 +673,26 @@
       </div>
 
       <div class="auth-body-inner">
+        <div id="auth-message" class="auth-message" role="alert" aria-live="polite"></div>
 
-        <!-- Auth Message (errors/success) -->
-        <div id="auth-message" class="auth-message"></div>
-
-        <!-- ====== Login Form ====== -->
-        <form id="login-form" class="auth-form active">
-          <h2 class="auth-title" data-i18n="welcome_back">مرحباً بعودتك!</h2>
-          <p class="auth-subtitle" data-i18n="login_desc">أدخل بياناتك للوصول إلى حسابك والاستمتاع بعروضنا الحصرية.</p>
+        <form id="login-form" class="auth-form active" novalidate>
+          <h2 class="auth-title" data-i18n="welcome_back">Welcome back!</h2>
+          <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account and enjoy exclusive offers.</p>
 
           <div class="input-group">
-            <label data-i18n="email">البريد الإلكتروني</label>
+            <label for="login-email" data-i18n="email">Email Address</label>
             <div class="input-icon-wrap">
               <i class="ph ph-envelope"></i>
-              <input type="email" id="login-email"
-                     placeholder="name@example.com" required autocomplete="email">
+              <input type="email" id="login-email" placeholder="name@example.com" required autocomplete="email" />
             </div>
           </div>
 
           <div class="input-group">
-            <label data-i18n="password">كلمة المرور</label>
-            <div class="input-icon-wrap">
+            <label for="login-password" data-i18n="password">Password</label>
+            <div class="input-icon-wrap password-field">
               <i class="ph ph-lock"></i>
-              <input type="password" id="login-password"
-                     placeholder="••••••••" required autocomplete="current-password">
-              <button type="button" class="pass-toggle" onclick="togglePass('login-password', this)">
+              <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
+              <button type="button" class="pass-toggle" data-toggle-password="login-password" aria-label="Toggle password visibility">
                 <i class="ph ph-eye"></i>
               </button>
             </div>
@@ -613,105 +700,598 @@
 
           <div class="auth-options">
             <label class="checkbox-container">
-              <input type="checkbox" id="remember-me" checked>
+              <input type="checkbox" id="remember-me" checked />
               <span class="checkmark"></span>
-              <span data-i18n="remember_me">تذكرني</span>
+              <span data-i18n="remember_me">Remember me</span>
             </label>
-            <a href="#" class="forgot-link" data-i18n="forgot_pass">نسيت كلمة المرور؟</a>
+
+            <a href="#" class="forgot-link" id="go-to-forgot" data-i18n="forgot_pass">Forgot password?</a>
           </div>
 
           <button type="submit" class="primary-btn" id="login-btn">
             <i class="ph ph-sign-in"></i>
-            <span data-i18n="sign_in">تسجيل الدخول</span>
+            <span data-i18n="sign_in">Sign In</span>
           </button>
 
           <div class="auth-divider">
-            <span data-i18n="or_continue">أو تابع باستخدام</span>
+            <span data-i18n="or_continue">Or continue with</span>
           </div>
 
           <div class="social-logins">
             <button type="button" class="social-btn" id="google-btn">
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20" height="20" alt="Google">
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20" height="20" alt="Google" />
               Google
             </button>
-            <button type="button" class="social-btn">
+
+            <button type="button" class="social-btn" id="apple-btn">
               <i class="ph-fill ph-apple-logo"></i>
               Apple
             </button>
           </div>
 
           <p class="switch-form-text">
-            <span data-i18n="no_account">ليس لديك حساب؟</span>
-            <a href="#" id="go-to-register" data-i18n="sign_up">إنشاء حساب جديد</a>
+            <span data-i18n="no_account">Don’t have an account?</span>
+            <a href="#" id="go-to-register" data-i18n="sign_up">Create one</a>
           </p>
         </form>
 
-        <!-- ====== Register Form ====== -->
-        <form id="register-form" class="auth-form">
-          <h2 class="auth-title" data-i18n="create_account">إنشاء حساب جديد</h2>
-          <p class="auth-subtitle" data-i18n="register_desc">انضم إلى OreBooking وابدأ بتجميع نقاط الولاء الآن.</p>
+        <form id="register-form" class="auth-form" novalidate>
+          <h2 class="auth-title" data-i18n="create_account">Create new account</h2>
+          <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking and start collecting loyalty points now.</p>
 
           <div class="input-group">
-            <label data-i18n="full_name">الاسم الكامل</label>
+            <label for="reg-name" data-i18n="full_name">Full Name</label>
             <div class="input-icon-wrap">
               <i class="ph ph-user"></i>
-              <input type="text" id="reg-name"
-                     placeholder="مثال: أحمد محمد" required autocomplete="name">
+              <input type="text" id="reg-name" placeholder="John Doe" required autocomplete="name" />
             </div>
           </div>
 
           <div class="input-group">
-            <label data-i18n="email">البريد الإلكتروني</label>
+            <label for="reg-email" data-i18n="email">Email Address</label>
             <div class="input-icon-wrap">
               <i class="ph ph-envelope"></i>
-              <input type="email" id="reg-email"
-                     placeholder="name@example.com" required autocomplete="email">
+              <input type="email" id="reg-email" placeholder="name@example.com" required autocomplete="email" />
             </div>
           </div>
 
           <div class="input-group">
-            <label data-i18n="password">كلمة المرور</label>
-            <div class="input-icon-wrap">
+            <label for="reg-password" data-i18n="password">Password</label>
+            <div class="input-icon-wrap password-field">
               <i class="ph ph-lock"></i>
-              <input type="password" id="reg-password"
-                     placeholder="••••••••" required autocomplete="new-password">
-              <button type="button" class="pass-toggle" onclick="togglePass('reg-password', this)">
+              <input type="password" id="reg-password" placeholder="••••••••" required autocomplete="new-password" />
+              <button type="button" class="pass-toggle" data-toggle-password="reg-password" aria-label="Toggle password visibility">
                 <i class="ph ph-eye"></i>
               </button>
+            </div>
+
+            <div class="helper-row">
+              <span class="field-hint" data-i18n="password_hint">Use at least 8 characters with letters and numbers.</span>
+            </div>
+
+            <div class="password-strength" id="password-strength">
+              <div class="strength-bars">
+                <div class="str-bar"></div>
+                <div class="str-bar"></div>
+                <div class="str-bar"></div>
+                <div class="str-bar"></div>
+              </div>
+              <div class="strength-label" id="strength-label"></div>
             </div>
           </div>
 
           <button type="submit" class="primary-btn" id="register-btn">
             <i class="ph ph-user-plus"></i>
-            <span data-i18n="sign_up_btn">إنشاء حساب</span>
+            <span data-i18n="sign_up_btn">Create Account</span>
           </button>
 
           <p class="switch-form-text">
-            <span data-i18n="has_account">لديك حساب بالفعل؟</span>
-            <a href="#" id="go-to-login" data-i18n="sign_in">تسجيل الدخول</a>
+            <span data-i18n="has_account">Already have an account?</span>
+            <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
           </p>
         </form>
 
-      </div><!-- /auth-body-inner -->
-    </div><!-- /auth-card -->
-  </div><!-- /auth-card-wrapper -->
+        <form id="forgot-form" class="auth-form" novalidate>
+          <h2 class="auth-title" data-i18n="reset_title">Reset your password</h2>
+          <p class="auth-subtitle" data-i18n="reset_desc">Enter your email address and we will send you a password reset link.</p>
 
-  <script src="auth.js"></script>
+          <div class="input-group">
+            <label for="forgot-email" data-i18n="email">Email Address</label>
+            <div class="input-icon-wrap">
+              <i class="ph ph-envelope"></i>
+              <input type="email" id="forgot-email" placeholder="name@example.com" required autocomplete="email" />
+            </div>
+          </div>
+
+          <button type="submit" class="primary-btn" id="forgot-btn">
+            <i class="ph ph-paper-plane-tilt"></i>
+            <span data-i18n="send_reset_link">Send reset link</span>
+          </button>
+
+          <p class="switch-form-text">
+            <span data-i18n="remembered_password">Remembered your password?</span>
+            <a href="#" id="back-to-login" data-i18n="sign_in">Sign In</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // ── Password visibility toggle ──
+    const authI18n = {
+      en: {
+        page_title: "OreBooking - Sign In / Sign Up",
+        welcome_back: "Welcome back!",
+        login_desc: "Enter your details to access your account and enjoy exclusive offers.",
+        email: "Email Address",
+        password: "Password",
+        remember_me: "Remember me",
+        forgot_pass: "Forgot password?",
+        sign_in: "Sign In",
+        or_continue: "Or continue with",
+        no_account: "Don’t have an account?",
+        sign_up: "Create one",
+        create_account: "Create new account",
+        register_desc: "Join OreBooking and start collecting loyalty points now.",
+        full_name: "Full Name",
+        sign_up_btn: "Create Account",
+        has_account: "Already have an account?",
+        reset_title: "Reset your password",
+        reset_desc: "Enter your email address and we will send you a password reset link.",
+        send_reset_link: "Send reset link",
+        remembered_password: "Remembered your password?",
+        password_hint: "Use at least 8 characters with letters and numbers.",
+        weak: "Weak",
+        fair: "Fair",
+        good: "Good",
+        strong: "Strong",
+        lang_btn: "AR",
+        firebase_missing: "Firebase configuration is missing. Add your project settings first.",
+        invalid_email: "Please enter a valid email address.",
+        invalid_name: "Please enter your full name.",
+        invalid_password: "Password must be at least 8 characters.",
+        login_success: "Logged in successfully.",
+        register_success: "Account created successfully.",
+        reset_success: "Password reset link sent successfully.",
+        login_failed: "Unable to sign in. Please check your details.",
+        register_failed: "Unable to create account right now.",
+        reset_failed: "Unable to send reset email right now.",
+        google_not_ready: "Google sign-in is not available until Firebase is configured.",
+        apple_not_ready: "Apple sign-in is not available in this page yet.",
+        coming_soon: "Coming soon.",
+        loading: "Please wait..."
+      },
+      ar: {
+        page_title: "OreBooking - تسجيل الدخول / إنشاء حساب",
+        welcome_back: "مرحباً بعودتك!",
+        login_desc: "أدخل بياناتك للوصول إلى حسابك والاستمتاع بعروضنا الحصرية.",
+        email: "البريد الإلكتروني",
+        password: "كلمة المرور",
+        remember_me: "تذكرني",
+        forgot_pass: "نسيت كلمة المرور؟",
+        sign_in: "تسجيل الدخول",
+        or_continue: "أو تابع باستخدام",
+        no_account: "ليس لديك حساب؟",
+        sign_up: "إنشاء حساب جديد",
+        create_account: "إنشاء حساب جديد",
+        register_desc: "انضم إلى OreBooking وابدأ بتجميع نقاط الولاء الآن.",
+        full_name: "الاسم الكامل",
+        sign_up_btn: "إنشاء حساب",
+        has_account: "لديك حساب بالفعل؟",
+        reset_title: "إعادة تعيين كلمة المرور",
+        reset_desc: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.",
+        send_reset_link: "إرسال رابط التعيين",
+        remembered_password: "تذكرت كلمة المرور؟",
+        password_hint: "استخدم 8 أحرف على الأقل مع حروف وأرقام.",
+        weak: "ضعيفة",
+        fair: "مقبولة",
+        good: "جيدة",
+        strong: "قوية",
+        lang_btn: "EN",
+        firebase_missing: "إعدادات Firebase غير موجودة. أضف إعدادات مشروعك أولاً.",
+        invalid_email: "يرجى إدخال بريد إلكتروني صحيح.",
+        invalid_name: "يرجى إدخال الاسم الكامل.",
+        invalid_password: "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
+        login_success: "تم تسجيل الدخول بنجاح.",
+        register_success: "تم إنشاء الحساب بنجاح.",
+        reset_success: "تم إرسال رابط إعادة التعيين بنجاح.",
+        login_failed: "تعذر تسجيل الدخول. تحقق من بياناتك.",
+        register_failed: "تعذر إنشاء الحساب حالياً.",
+        reset_failed: "تعذر إرسال بريد إعادة التعيين حالياً.",
+        google_not_ready: "تسجيل الدخول عبر Google غير متاح حتى تتم إضافة إعدادات Firebase.",
+        apple_not_ready: "تسجيل الدخول عبر Apple غير مفعّل في هذه الصفحة حالياً.",
+        coming_soon: "قريباً.",
+        loading: "يرجى الانتظار..."
+      }
+    };
+
+    const state = {
+      lang: localStorage.getItem("ore_lang") || "en",
+      theme: localStorage.getItem("ore_theme") || "light",
+      authReady: false,
+      auth: null
+    };
+
+    const firebaseConfig = window.OREBOOKING_FIREBASE_CONFIG || {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    function t(key) {
+      return (authI18n[state.lang] && authI18n[state.lang][key]) || authI18n.en[key] || key;
+    }
+
+    function qs(id) {
+      return document.getElementById(id);
+    }
+
+    function isFirebaseConfigured(cfg) {
+      if (!cfg || typeof cfg !== "object") return false;
+      const values = ["apiKey", "authDomain", "projectId", "appId"].map(k => String(cfg[k] || ""));
+      return values.every(v => v && !v.includes("YOUR_"));
+    }
+
+    function setTheme(theme) {
+      state.theme = theme;
+      localStorage.setItem("ore_theme", theme);
+      document.body.classList.toggle("dark", theme === "dark");
+      document.documentElement.classList.toggle("preload-dark", theme === "dark");
+      const icon = qs("theme-toggle")?.querySelector("i");
+      if (icon) icon.className = theme === "dark" ? "ph ph-sun" : "ph ph-moon";
+    }
+
+    function setLanguage(lang) {
+      state.lang = lang;
+      localStorage.setItem("ore_lang", lang);
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+      applyTranslations();
+      updateStrengthMeter(qs("reg-password")?.value || "");
+    }
+
+    function applyTranslations() {
+      document.title = t("page_title");
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (key) el.textContent = t(key);
+      });
+      const langBtn = qs("lang-toggle");
+      if (langBtn) langBtn.textContent = t("lang_btn");
+    }
+
+    function showMessage(type, text, icon = null) {
+      const box = qs("auth-message");
+      if (!box) return;
+      box.className = `auth-message ${type}`;
+      box.innerHTML = `<i class="${icon || (type === "success" ? "ph ph-check-circle" : type === "info" ? "ph ph-info" : "ph ph-warning-circle")}"></i><span>${text}</span>`;
+    }
+
+    function clearMessage() {
+      const box = qs("auth-message");
+      if (!box) return;
+      box.className = "auth-message";
+      box.innerHTML = "";
+    }
+
+    function showForm(formId) {
+      clearMessage();
+      document.querySelectorAll(".auth-form").forEach(form => {
+        form.classList.toggle("active", form.id === formId);
+      });
+    }
+
     function togglePass(inputId, btn) {
-      const input = document.getElementById(inputId);
-      const icon  = btn.querySelector('i');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'ph ph-eye-slash';
-      } else {
-        input.type = 'password';
-        icon.className = 'ph ph-eye';
+      const input = qs(inputId);
+      const icon = btn.querySelector("i");
+      if (!input || !icon) return;
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      icon.className = isPassword ? "ph ph-eye-slash" : "ph ph-eye";
+    }
+
+    function setLoading(button, loading) {
+      if (!button) return;
+      if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
+      button.disabled = loading;
+      button.innerHTML = loading
+        ? `<i class="ph ph-spinner-gap ph-spin"></i><span>${t("loading")}</span>`
+        : button.dataset.originalHtml;
+    }
+
+    function markInvalid(input, invalid) {
+      const wrap = input?.closest(".input-icon-wrap");
+      if (wrap) wrap.classList.toggle("invalid", !!invalid);
+    }
+
+    function clearInvalids(form) {
+      form?.querySelectorAll(".input-icon-wrap.invalid").forEach(el => el.classList.remove("invalid"));
+    }
+
+    function validEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    }
+
+    function scorePassword(password) {
+      let score = 0;
+      if (password.length >= 8) score++;
+      if (/[A-Z]/.test(password) || /[a-z]/.test(password)) score++;
+      if (/\d/.test(password)) score++;
+      if (/[^A-Za-z0-9]/.test(password) || password.length >= 12) score++;
+      return Math.min(score, 4);
+    }
+
+    function updateStrengthMeter(password) {
+      const wrapper = qs("password-strength");
+      const label = qs("strength-label");
+      if (!wrapper || !label) return;
+
+      const bars = wrapper.querySelectorAll(".str-bar");
+      if (!password) {
+        wrapper.classList.remove("active");
+        bars.forEach(bar => bar.style.background = "var(--border)");
+        label.textContent = "";
+        return;
+      }
+
+      wrapper.classList.add("active");
+      const score = scorePassword(password);
+      const colors = ["#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
+      const textMap = ["weak", "fair", "good", "strong"];
+      bars.forEach((bar, index) => {
+        bar.style.background = index < score ? colors[Math.min(score - 1, colors.length - 1)] : "var(--border)";
+      });
+      label.textContent = t(textMap[Math.max(score - 1, 0)]);
+    }
+
+    function initFirebase() {
+      try {
+        if (!isFirebaseConfigured(firebaseConfig)) {
+          state.authReady = false;
+          state.auth = null;
+          return;
+        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        state.auth = firebase.auth();
+        state.authReady = true;
+      } catch (error) {
+        state.authReady = false;
+        state.auth = null;
       }
     }
-  </script>
 
+    function getErrorMessage(error, fallbackKey) {
+      const code = error?.code || "";
+      const map = {
+        "auth/invalid-email": t("invalid_email"),
+        "auth/user-not-found": t("login_failed"),
+        "auth/wrong-password": t("login_failed"),
+        "auth/invalid-credential": t("login_failed"),
+        "auth/email-already-in-use": state.lang === "ar" ? "هذا البريد مستخدم بالفعل." : "This email is already in use.",
+        "auth/weak-password": t("invalid_password"),
+        "auth/too-many-requests": state.lang === "ar" ? "تمت محاولات كثيرة. حاول لاحقاً." : "Too many attempts. Please try again later."
+      };
+      return map[code] || t(fallbackKey);
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      clearMessage();
+      const form = event.currentTarget;
+      clearInvalids(form);
+
+      const email = qs("login-email").value.trim();
+      const password = qs("login-password").value;
+      const btn = qs("login-btn");
+
+      let ok = true;
+      if (!validEmail(email)) {
+        markInvalid(qs("login-email"), true);
+        ok = false;
+      }
+      if (!password || password.length < 8) {
+        markInvalid(qs("login-password"), true);
+        ok = false;
+      }
+
+      if (!ok) {
+        showMessage("error", !validEmail(email) ? t("invalid_email") : t("invalid_password"));
+        return;
+      }
+
+      if (!state.authReady || !state.auth) {
+        showMessage("info", t("firebase_missing"));
+        return;
+      }
+
+      try {
+        setLoading(btn, true);
+        const persistence = qs("remember-me")?.checked
+          ? firebase.auth.Auth.Persistence.LOCAL
+          : firebase.auth.Auth.Persistence.SESSION;
+        await state.auth.setPersistence(persistence);
+        await state.auth.signInWithEmailAndPassword(email, password);
+        showMessage("success", t("login_success"));
+        setTimeout(() => {
+          const redirect = new URLSearchParams(location.search).get("redirect") || "index.html";
+          window.location.href = redirect;
+        }, 800);
+      } catch (error) {
+        showMessage("error", getErrorMessage(error, "login_failed"));
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      clearMessage();
+      const form = event.currentTarget;
+      clearInvalids(form);
+
+      const name = qs("reg-name").value.trim();
+      const email = qs("reg-email").value.trim();
+      const password = qs("reg-password").value;
+      const btn = qs("register-btn");
+
+      let ok = true;
+      if (name.length < 3) {
+        markInvalid(qs("reg-name"), true);
+        ok = false;
+      }
+      if (!validEmail(email)) {
+        markInvalid(qs("reg-email"), true);
+        ok = false;
+      }
+      if (!password || password.length < 8) {
+        markInvalid(qs("reg-password"), true);
+        ok = false;
+      }
+
+      if (!ok) {
+        if (name.length < 3) showMessage("error", t("invalid_name"));
+        else if (!validEmail(email)) showMessage("error", t("invalid_email"));
+        else showMessage("error", t("invalid_password"));
+        return;
+      }
+
+      if (!state.authReady || !state.auth) {
+        showMessage("info", t("firebase_missing"));
+        return;
+      }
+
+      try {
+        setLoading(btn, true);
+        const cred = await state.auth.createUserWithEmailAndPassword(email, password);
+        if (cred.user) {
+          await cred.user.updateProfile({ displayName: name });
+        }
+        showMessage("success", t("register_success"));
+        setTimeout(() => {
+          const redirect = new URLSearchParams(location.search).get("redirect") || "index.html";
+          window.location.href = redirect;
+        }, 900);
+      } catch (error) {
+        showMessage("error", getErrorMessage(error, "register_failed"));
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function handleForgot(event) {
+      event.preventDefault();
+      clearMessage();
+      const form = event.currentTarget;
+      clearInvalids(form);
+
+      const email = qs("forgot-email").value.trim();
+      const btn = qs("forgot-btn");
+
+      if (!validEmail(email)) {
+        markInvalid(qs("forgot-email"), true);
+        showMessage("error", t("invalid_email"));
+        return;
+      }
+
+      if (!state.authReady || !state.auth) {
+        showMessage("info", t("firebase_missing"));
+        return;
+      }
+
+      try {
+        setLoading(btn, true);
+        await state.auth.sendPasswordResetEmail(email);
+        showMessage("success", t("reset_success"));
+      } catch (error) {
+        showMessage("error", getErrorMessage(error, "reset_failed"));
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function handleGoogleLogin() {
+      clearMessage();
+      if (!state.authReady || !state.auth) {
+        showMessage("info", t("google_not_ready"));
+        return;
+      }
+
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await state.auth.signInWithPopup(provider);
+        showMessage("success", t("login_success"));
+        setTimeout(() => {
+          const redirect = new URLSearchParams(location.search).get("redirect") || "index.html";
+          window.location.href = redirect;
+        }, 700);
+      } catch (error) {
+        showMessage("error", getErrorMessage(error, "login_failed"));
+      }
+    }
+
+    function bindEvents() {
+      qs("theme-toggle")?.addEventListener("click", () => {
+        setTheme(state.theme === "dark" ? "light" : "dark");
+      });
+
+      qs("lang-toggle")?.addEventListener("click", () => {
+        setLanguage(state.lang === "en" ? "ar" : "en");
+      });
+
+      qs("go-to-register")?.addEventListener("click", e => {
+        e.preventDefault();
+        showForm("register-form");
+      });
+
+      qs("go-to-login")?.addEventListener("click", e => {
+        e.preventDefault();
+        showForm("login-form");
+      });
+
+      qs("go-to-forgot")?.addEventListener("click", e => {
+        e.preventDefault();
+        showForm("forgot-form");
+      });
+
+      qs("back-to-login")?.addEventListener("click", e => {
+        e.preventDefault();
+        showForm("login-form");
+      });
+
+      document.querySelectorAll("[data-toggle-password]").forEach(btn => {
+        btn.addEventListener("click", () => togglePass(btn.dataset.togglePassword, btn));
+      });
+
+      qs("login-form")?.addEventListener("submit", handleLogin);
+      qs("register-form")?.addEventListener("submit", handleRegister);
+      qs("forgot-form")?.addEventListener("submit", handleForgot);
+
+      qs("google-btn")?.addEventListener("click", handleGoogleLogin);
+      qs("apple-btn")?.addEventListener("click", () => showMessage("info", t("apple_not_ready")));
+
+      qs("reg-password")?.addEventListener("input", e => {
+        markInvalid(e.target, false);
+        updateStrengthMeter(e.target.value);
+      });
+
+      ["login-email","login-password","reg-name","reg-email","forgot-email"].forEach(id => {
+        qs(id)?.addEventListener("input", e => markInvalid(e.target, false));
+      });
+    }
+
+    function init() {
+      document.body.classList.toggle("dark", state.theme === "dark");
+      setTheme(state.theme);
+      setLanguage(state.lang);
+      initFirebase();
+      bindEvents();
+      if (!state.authReady) {
+        showMessage("info", t("firebase_missing"));
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
 </body>
 </html>
