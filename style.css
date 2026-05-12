@@ -67,6 +67,11 @@ html {
   scroll-behavior: smooth;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-main);
@@ -160,7 +165,8 @@ i[class*="ph-"], i[class*=" ph-"] {
 .nav-actions i, .dropdown-item i, .category-item i, .action-btn i, .primary-btn i,
 .ghost-btn i, .back-btn i, .search-btn i, .social-btn i, .icon-btn i, .profile-menu i,
 .fav-btn i, .slider-btn i, .close-modal-btn i, .close-lightbox i, .lightbox-btn i,
-.nav-item i, .stat-icon i, .btn-approve i, .btn-reject i, .mob-nav-btn i, .toggle-pass-btn i {
+.nav-item i, .stat-icon i, .btn-approve i, .btn-reject i, .mob-nav-btn i, .toggle-pass-btn i,
+.back-home-btn i {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -207,6 +213,7 @@ i[class*="ph-"], i[class*=" ph-"] {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
+  width: 100%;
 }
 
 /* --- Navbar --- */
@@ -214,7 +221,7 @@ i[class*="ph-"], i[class*=" ph-"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 40px;
+  padding: 12px 20px;
   background-color: color-mix(in srgb, var(--surface-color) 88%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -224,6 +231,7 @@ i[class*="ph-"], i[class*=" ph-"] {
   z-index: 1000;
   transition: var(--transition);
   gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .logo {
@@ -234,19 +242,28 @@ i[class*="ph-"], i[class*=" ph-"] {
 }
 
 .logo-img {
-  height: 56px;
-  max-width: 200px;
+  height: 46px;
+  width: auto;
+  max-width: 165px;
   object-fit: contain;
   transition: transform 0.3s;
+}
+
+.logo:hover .logo-img {
+  transform: scale(1.02);
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex-shrink: 0;
   overflow: visible;
   margin-inline-start: auto;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .rewards-badge {
@@ -260,12 +277,14 @@ i[class*="ph-"], i[class*=" ph-"] {
   font-weight: 600;
   font-size: 0.85rem;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .dark .rewards-badge { color: #fbbf24; }
 
 .icon-btn,
-.lang-btn {
+.lang-btn,
+.back-home-btn {
   background: none;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
@@ -273,34 +292,59 @@ i[class*="ph-"], i[class*=" ph-"] {
   cursor: pointer;
   color: var(--text-main);
   transition: var(--transition);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
   font-family: inherit;
   flex-shrink: 0;
+  background-color: var(--surface-color);
 }
 
 .lang-btn {
   padding: 8px 14px;
   font-size: 0.875rem;
   white-space: nowrap;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.back-home-btn {
+  padding: 0 16px;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  gap: 8px;
+  font-weight: 600;
 }
 
 .icon-btn:hover,
-.lang-btn:hover {
+.lang-btn:hover,
+.back-home-btn:hover {
   background-color: var(--bg-color);
   border-color: var(--primary);
   color: var(--primary);
   transform: translateY(-1px);
 }
 
-.icon-btn i { font-size: 1.15rem; }
+.icon-btn i,
+.back-home-btn i { font-size: 1.15rem; }
+
+html[dir="rtl"] .navbar {
+  direction: rtl;
+}
+
+html[dir="rtl"] .nav-actions {
+  justify-content: flex-start;
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
 
 /* --- Profile Dropdown --- */
 .profile-container {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .profile-menu {
@@ -327,7 +371,7 @@ i[class*="ph-"], i[class*=" ph-"] {
 
 .profile-dropdown {
   position: absolute;
-  top: 120%;
+  top: calc(100% + 10px);
   inset-inline-end: 0;
   width: 230px;
   background-color: var(--surface-color);
@@ -340,6 +384,11 @@ i[class*="ph-"], i[class*=" ph-"] {
   transition: var(--transition);
   z-index: 1010;
   overflow: hidden;
+}
+
+html[dir="rtl"] .profile-dropdown {
+  inset-inline-end: auto;
+  inset-inline-start: 0;
 }
 
 .profile-dropdown.active {
@@ -417,6 +466,97 @@ i[class*="ph-"], i[class*=" ph-"] {
   max-width: 600px;
   margin-inline: auto;
   line-height: 1.6;
+}
+
+/* --- Booking Hero --- */
+.booking-hero {
+  margin-bottom: 20px;
+}
+
+.booking-hero-card {
+  background:
+    linear-gradient(180deg, rgba(67,90,191,0.06), rgba(67,90,191,0.015)),
+    var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  min-height: auto;
+}
+
+.booking-hero-card::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -30px;
+  top: -30px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(101,123,224,0.18), transparent 70%);
+  pointer-events: none;
+}
+
+html[dir="rtl"] .booking-hero-card::before {
+  inset-inline-start: auto;
+  inset-inline-end: -30px;
+}
+
+.booking-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.booking-hero-card h1 {
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1.1;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+
+.booking-hero-card p {
+  color: var(--text-muted);
+  max-width: 760px;
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.hero-secure-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-full);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  min-height: 44px;
+}
+
+.hero-badge i { color: var(--primary); }
+
+html[dir="rtl"] .booking-hero-card {
+  text-align: right;
+}
+
+html[dir="ltr"] .booking-hero-card {
+  text-align: left;
 }
 
 /* --- Search Bar --- */
@@ -1100,7 +1240,8 @@ html[dir="rtl"] .card-action-arrow i { transform: rotate(180deg); }
 }
 
 /* --- Modal Overlay --- */
-.modal-overlay {
+.modal-overlay,
+.auth-modal {
   position: fixed;
   inset: 0;
   background-color: rgba(0,0,0,0.6);
@@ -1116,7 +1257,8 @@ html[dir="rtl"] .card-action-arrow i { transform: rotate(180deg); }
   transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-overlay.active {
+.modal-overlay.active,
+.auth-modal.active {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1136,7 +1278,11 @@ html[dir="rtl"] .card-action-arrow i { transform: rotate(180deg); }
 }
 
 .modal-content::-webkit-scrollbar { display: none; }
-.modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+
+.modal-overlay.active .modal-content,
+.auth-modal.active .modal-content {
+  transform: translateY(0) scale(1);
+}
 
 #bookings-modal .modal-content {
   max-width: 580px;
@@ -1266,6 +1412,7 @@ html[dir="rtl"] .card-action-arrow i { transform: rotate(180deg); }
 }
 
 .input-group input[type="file"] { padding: 9px 15px; cursor: pointer; }
+
 .dark .input-group input::placeholder,
 .dark .input-group textarea::placeholder,
 .dark .search-field input::placeholder,
@@ -1328,6 +1475,7 @@ html[dir="rtl"] .card-action-arrow i { transform: rotate(180deg); }
   justify-content: center;
   transition: var(--transition);
   background: var(--surface-color);
+  flex-shrink: 0;
 }
 
 .checkbox-container input:checked ~ .checkmark {
@@ -1654,6 +1802,20 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   border-radius: 50%;
 }
 
+/* --- Booking Shared Bits --- */
+.selected-file {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  word-break: break-word;
+}
+
 /* --- Responsive Adjustments --- */
 @media (max-width: 992px) {
   .search-bar {
@@ -1691,36 +1853,70 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
 
 @media (max-width: 768px) {
   .container { padding: 0 16px; }
-  .navbar { padding: 10px 14px; gap: 8px; }
+
+  .navbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
   .rewards-badge { display: none !important; }
-  .nav-actions { gap: 4px; }
+
+  .nav-actions {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
   .icon-btn {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     font-size: 1.05rem;
     padding: 0;
     flex-shrink: 0;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 38px;
+    min-height: 38px;
   }
 
   #lang-toggle {
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center;
-    padding: 5px 10px;
+    justify-content: center;
+    padding: 6px 10px;
     font-size: 0.78rem;
     white-space: nowrap;
     flex-shrink: 0;
-    border-radius: 8px;
+    border-radius: 999px;
     min-width: fit-content;
   }
 
-  .profile-menu { width: 36px; height: 36px; flex-shrink: 0; }
-  .logo-img { height: 28px; }
+  .back-home-btn {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0 10px;
+  }
+
+  .back-home-btn span {
+    display: none;
+  }
+
+  .profile-menu {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .logo-img { height: 34px; max-width: 120px; }
+
   body { padding-bottom: 64px; }
   #mobile-bottom-nav { display: block; }
 
   .hero { padding: 50px 16px 20px; }
+  .booking-hero-card { padding: 20px; }
+  .hero-secure-badges { gap: 8px; }
+  .hero-badge {
+    border-radius: 16px;
+    white-space: normal;
+  }
+
   .card-img-wrapper { height: 200px; }
   .input-group input { padding: 12px 14px; }
   .auth-card { border-radius: 20px; }
@@ -1746,11 +1942,17 @@ html[dir="rtl"] .back-btn i { transform: rotate(180deg); }
   }
 
   .icon-btn,
-  .profile-menu {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
+  .profile-menu,
+  .back-home-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .logo-img {
+    height: 30px;
+    max-width: 108px;
   }
 
   .listings-grid { grid-template-columns: 1fr; }
