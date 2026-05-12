@@ -2,9 +2,11 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="OreBooking – Discover and book premium hotels, apartments, and villas.">
   <meta name="theme-color" content="#435abf">
+  <meta name="format-detection" content="telephone=no">
   <title>OreBooking - Premium Stays</title>
 
   <link rel="icon" type="image/png" href="logos/orebooking.png">
@@ -12,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=2.2">
+  <link rel="stylesheet" href="style.css?v=2.3">
 
   <script>
     (function () {
@@ -25,7 +27,6 @@
   </script>
 
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
-
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -99,9 +100,7 @@
       to { transform: rotate(360deg); }
     }
 
-    .ph-spin {
-      animation: spin 1s linear infinite;
-    }
+    .ph-spin { animation: spin 1s linear infinite; }
 
     .animate-up { opacity: 0; animation: slideUpFade var(--transition-smooth) forwards; }
     .delay-1 { animation-delay: 0.1s; }
@@ -168,7 +167,7 @@
       white-space: nowrap;
     }
 
-    .icon-btn, .lang-btn, .profile-menu {
+    .icon-btn, .lang-btn, .profile-menu, .chat-toggle-btn {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -181,7 +180,13 @@
       font-family: inherit;
     }
 
-    .icon-btn { width: 42px; border-radius: 50%; font-size: 1.2rem; }
+    .icon-btn,
+    .profile-menu {
+      width: 42px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+    }
+
     .lang-btn {
       padding: 0 18px;
       border-radius: var(--radius-full);
@@ -189,9 +194,11 @@
       font-size: 0.95rem;
       gap: 6px;
     }
-    .profile-menu { width: 42px; border-radius: 50%; font-size: 1.2rem; }
 
-    .icon-btn:hover, .lang-btn:hover, .profile-menu:hover {
+    .icon-btn:hover,
+    .lang-btn:hover,
+    .profile-menu:hover,
+    .chat-toggle-btn:hover {
       border-color: var(--primary);
       color: var(--primary);
       transform: translateY(-2px);
@@ -497,6 +504,27 @@
       position: relative;
     }
 
+    .sort-select,
+    .clear-search-btn {
+      padding: 12px 20px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
+      font-family: inherit;
+    }
+
+    .clear-search-btn {
+      padding: 12px 18px;
+      display: none;
+    }
+
     #listings-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -688,14 +716,13 @@
       color: var(--primary);
     }
 
-    #scroll-top-btn {
+    #scroll-top-btn,
+    #chat-open-btn {
       position: fixed;
-      bottom: 88px;
       inset-inline-end: 24px;
       width: 52px;
       height: 52px;
       border-radius: 50%;
-      background: var(--primary);
       color: #fff;
       border: none;
       cursor: pointer;
@@ -703,11 +730,16 @@
       align-items: center;
       justify-content: center;
       font-size: 1.5rem;
+      z-index: 500;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #scroll-top-btn {
+      bottom: 88px;
+      background: var(--primary);
       box-shadow: 0 8px 24px rgba(67,90,191,0.4);
       opacity: 0;
       transform: translateY(20px) scale(0.8);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 500;
       pointer-events: none;
     }
 
@@ -721,6 +753,34 @@
       transform: translateY(-4px) scale(1.1);
       background: var(--primary-hover);
       box-shadow: 0 12px 30px rgba(67,90,191,0.5);
+    }
+
+    #chat-open-btn {
+      bottom: 150px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      box-shadow: 0 10px 28px rgba(67,90,191,0.35);
+    }
+
+    #chat-open-btn:hover {
+      transform: translateY(-3px) scale(1.06);
+    }
+
+    .chat-unread-badge {
+      position: absolute;
+      top: -4px;
+      inset-inline-end: -2px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
     }
 
     .modal-overlay {
@@ -822,7 +882,8 @@
       font-weight: 600;
     }
 
-    .input-group input {
+    .input-group input,
+    .chat-input-area textarea {
       padding: 12px 16px;
       border-radius: 10px;
       border: 1px solid var(--border-color);
@@ -985,9 +1046,7 @@
       padding: 18px;
     }
 
-    .bookings-modal.active {
-      display: flex;
-    }
+    .bookings-modal.active { display: flex; }
 
     .bookings-modal-dialog {
       width: min(960px, 100%);
@@ -1102,6 +1161,163 @@
       color: #b91c1c;
     }
 
+    .chat-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.58);
+      z-index: 10030;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .chat-modal.active { display: flex; }
+
+    .chat-modal-dialog {
+      width: min(460px, 100%);
+      height: min(720px, 88vh);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: var(--shadow-hover);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-modal-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .chat-modal-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(67,90,191,0.12);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .chat-title-text h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .chat-title-text p {
+      margin: 3px 0 0;
+      font-size: 0.84rem;
+      color: var(--text-muted);
+    }
+
+    .chat-close-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .chat-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg-color);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-empty-state {
+      margin: auto 0;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 24px;
+      border: 1px dashed var(--border-color);
+      border-radius: 18px;
+      background: var(--surface-color);
+    }
+
+    .chat-message {
+      max-width: 82%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      line-height: 1.6;
+      font-size: 0.93rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chat-message.admin {
+      align-self: flex-start;
+      background: var(--surface-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-top-left-radius: 6px;
+    }
+
+    .chat-message.customer {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: #fff;
+      border-top-right-radius: 6px;
+    }
+
+    .chat-meta {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.75rem;
+      opacity: 0.8;
+    }
+
+    .chat-input-area {
+      border-top: 1px solid var(--border-color);
+      background: var(--surface-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-input-area textarea {
+      resize: none;
+      min-height: 92px;
+      width: 100%;
+    }
+
+    .chat-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chat-note {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .chat-send-btn {
+      min-width: 140px;
+    }
+
     #mobile-bottom-nav {
       position: sticky;
       bottom: 0;
@@ -1114,6 +1330,12 @@
     .dark #mobile-bottom-nav {
       background: rgba(15,23,42,0.9);
       border-top-color: rgba(255,255,255,0.05);
+    }
+
+    .mobile-nav-inner {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
     }
 
     .mob-nav-btn {
@@ -1141,6 +1363,20 @@
       padding: 40px 0;
       border-top: 1px solid var(--border-color);
       background: var(--surface-color);
+    }
+
+    .footer-copy {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .developers-names {
+      color: var(--text-main);
+    }
+
+    .copyright-line {
+      font-size: 0.85rem;
     }
 
     @media (max-width: 992px) {
@@ -1186,13 +1422,27 @@
       .section-header-controls { width: 100%; }
       .section-header-controls > * { flex: 1; }
       .property-card-actions { flex-direction: column; }
+      #chat-open-btn {
+        bottom: 146px;
+        inset-inline-end: 18px;
+      }
+      #scroll-top-btn {
+        bottom: 82px;
+        inset-inline-end: 18px;
+      }
     }
 
     @media (max-width: 520px) {
       .nav-actions { gap: 8px; }
       .lang-btn span { display: none; }
       .hero p { font-size: 1rem; }
-      .bookings-modal-dialog { border-radius: 18px; }
+      .bookings-modal-dialog,
+      .chat-modal-dialog { border-radius: 18px; }
+      .chat-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .chat-send-btn { width: 100%; }
     }
   </style>
 </head>
@@ -1202,11 +1452,16 @@
     <i class="ph ph-caret-up" aria-hidden="true"></i>
   </button>
 
+  <button id="chat-open-btn" aria-label="Open support chat" type="button">
+    <i class="ph ph-chat-centered-dots" aria-hidden="true"></i>
+    <span class="chat-unread-badge" id="chat-unread-badge">0</span>
+  </button>
+
   <div id="toast-container" aria-live="polite"></div>
   <div id="fav-toast" role="status" aria-live="polite"></div>
 
   <nav class="navbar" role="navigation" aria-label="Main navigation">
-    <a href="#" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
+    <a href="index.html" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
       <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
     </a>
 
@@ -1227,7 +1482,15 @@
       </button>
 
       <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu auth-btn-guest" aria-label="Profile menu" aria-haspopup="true" type="button">
+        <button
+          id="open-auth-btn"
+          class="profile-menu auth-btn-guest"
+          aria-label="Profile menu"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="profile-dropdown"
+          type="button"
+        >
           <i class="ph ph-user"></i>
         </button>
 
@@ -1241,11 +1504,19 @@
               <i class="ph ph-list-checks"></i>
               <span data-i18n="my_bookings">My Bookings</span>
             </button>
+
             <button class="dropdown-item" id="my-favorites-btn" role="menuitem" type="button">
               <i class="ph ph-heart"></i>
               <span data-i18n="my_favorites">My Favorites</span>
             </button>
+
+            <button class="dropdown-item" id="open-chat-btn" role="menuitem" type="button">
+              <i class="ph ph-chat-centered-text"></i>
+              <span data-i18n="support_chat">Support Chat</span>
+            </button>
+
             <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
+
             <button class="dropdown-item text-danger" id="logout-btn" role="menuitem" type="button">
               <i class="ph ph-sign-out"></i>
               <span data-i18n="logout">Log Out</span>
@@ -1262,7 +1533,7 @@
       Discover premium apartments, villas, and unique homes around the world.
     </p>
 
-    <div class="search-bar animate-up delay-2" role="search">
+    <div class="search-bar animate-up delay-2" role="search" aria-label="Property search">
       <div class="search-field" id="search-location-wrapper">
         <label for="search-location" data-i18n="location">Location</label>
         <input
@@ -1272,7 +1543,7 @@
           data-i18n-placeholder="location_placeholder"
           autocomplete="off"
         >
-        <div id="search-dropdown" class="search-dropdown" role="listbox"></div>
+        <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="Search suggestions"></div>
       </div>
 
       <div class="search-divider" aria-hidden="true"></div>
@@ -1285,7 +1556,6 @@
           placeholder="Add dates"
           data-i18n-placeholder="dates_placeholder"
           readonly
-          style="cursor:pointer;"
         >
       </div>
 
@@ -1299,7 +1569,6 @@
           placeholder="Add guests"
           data-i18n-placeholder="guests_placeholder"
           readonly
-          style="cursor:pointer;"
         >
       </div>
 
@@ -1319,59 +1588,53 @@
       </h2>
 
       <div class="section-header-controls">
-        <select
-          id="sort-select"
-          aria-label="Sort listings"
-          style="padding:12px 20px; border-radius:var(--radius-full); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-main); font-size:0.95rem; font-weight:600; cursor:pointer; outline:none; transition:var(--transition-smooth); box-shadow:var(--shadow-sm); font-family:inherit;"
-        >
+        <select id="sort-select" class="sort-select" aria-label="Sort listings">
           <option value="default">Sort: Default</option>
           <option value="price_asc">Price ↑</option>
           <option value="price_desc">Price ↓</option>
           <option value="rating">Top Rated</option>
         </select>
 
-        <button
-          id="clear-search-btn"
-          type="button"
-          style="display:none; padding:12px 18px; border-radius:var(--radius-full); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-main); font-weight:600; cursor:pointer; font-family:inherit;"
-          data-i18n="clear_search"
-        >
+        <button id="clear-search-btn" class="clear-search-btn" type="button" data-i18n="clear_search">
           Clear Search
         </button>
       </div>
     </div>
 
-    <div id="listings-grid" role="list"></div>
+    <div id="listings-grid" role="list" aria-live="polite"></div>
   </main>
 
   <footer class="footer" role="contentinfo">
     <div class="container">
-      <p class="developed-by" style="text-align:center; color: var(--text-muted); font-size: 0.95rem;">
+      <p class="footer-copy">
         <span data-i18n="developed_by">Developed by:</span>
-        <span class="developers-names font-bold" style="color: var(--text-main);">Henni Abdennour, Khadem Mohammed, Kouidi Adel</span>
+        <span class="developers-names font-bold">Henni Abdennour, Khadem Mohammed, Kouidi Adel</span>
         <br><br>
-        <span style="font-size:0.85rem;">© 2025 OreBooking</span>
+        <span class="copyright-line">© 2025 OreBooking</span>
       </p>
     </div>
   </footer>
 
   <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
-    <div class="mobile-nav-inner" style="display:flex; justify-content:space-around; padding:10px 0;">
+    <div class="mobile-nav-inner">
       <button class="mob-nav-btn active" id="mob-nav-home" data-target="home" type="button">
         <i class="ph-fill ph-house" style="font-size:1.5rem;"></i>
-        <span>Home</span>
+        <span data-i18n="home">Home</span>
       </button>
+
       <button class="mob-nav-btn" id="mob-nav-search" data-target="home" type="button">
         <i class="ph ph-magnifying-glass" style="font-size:1.5rem;"></i>
-        <span>Search</span>
+        <span data-i18n="search">Search</span>
       </button>
+
       <button class="mob-nav-btn" id="mob-nav-favorites" data-target="favorites" type="button">
         <i class="ph ph-heart" style="font-size:1.5rem;"></i>
-        <span>Saved</span>
+        <span data-i18n="saved">Saved</span>
       </button>
+
       <button class="mob-nav-btn" id="mob-nav-profile" data-target="profile" type="button">
         <i class="ph ph-user" style="font-size:1.5rem;"></i>
-        <span>Profile</span>
+        <span data-i18n="profile">Profile</span>
       </button>
     </div>
   </nav>
@@ -1383,7 +1646,7 @@
       </button>
 
       <div class="auth-header">
-        <img src="logos/orebooking.png" id="modal-logo" alt="Logo">
+        <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking Logo">
       </div>
 
       <div class="auth-content">
@@ -1505,24 +1768,90 @@
     </div>
   </div>
 
-  <script src="script.js?v=3.0"></script>
+  <div id="chat-modal" class="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
+    <div class="chat-modal-dialog">
+      <div class="chat-modal-header">
+        <div class="chat-modal-title">
+          <div class="chat-avatar">
+            <i class="ph ph-headset"></i>
+          </div>
+          <div class="chat-title-text">
+            <h3 id="chat-modal-title" data-i18n="support_chat">Support Chat</h3>
+            <p data-i18n="support_chat_subtitle">Talk to admin about bookings, payments, or issues.</p>
+          </div>
+        </div>
+
+        <button id="close-chat-btn" class="chat-close-btn" type="button" aria-label="Close chat">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="chat-modal-body" id="chat-messages" aria-live="polite">
+        <div class="chat-empty-state" id="chat-empty-state">
+          <i class="ph ph-chat-centered-text" style="font-size:2rem; color:var(--primary); margin-bottom:10px;"></i>
+          <p style="margin:0 0 8px;" data-i18n="chat_empty_title">No messages yet.</p>
+          <p style="margin:0;" data-i18n="chat_empty_subtitle">Start the conversation and the admin will reply here.</p>
+        </div>
+
+        <div class="chat-message admin" style="display:none;" id="chat-demo-admin">
+          Welcome to OreBooking support.
+          <span class="chat-meta">Admin · 10:00</span>
+        </div>
+
+        <div class="chat-message customer" style="display:none;" id="chat-demo-customer">
+          I need help with my reservation.
+          <span class="chat-meta">You · 10:01</span>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea
+          id="chat-message-input"
+          placeholder="Type your message here..."
+          data-i18n-placeholder="chat_placeholder"
+        ></textarea>
+
+        <div class="chat-actions">
+          <span class="chat-note" data-i18n="chat_note">Messages should be linked later with Firestore between customer and admin.</span>
+          <button id="send-chat-btn" class="primary-btn chat-send-btn" type="button">
+            <i class="ph ph-paper-plane-tilt"></i>
+            <span data-i18n="send_message">Send Message</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js?v=3.1"></script>
 
   <script>
     (function () {
       const sortSelect = document.getElementById("sort-select");
       const listingsGrid = document.getElementById("listings-grid");
+      const profileBtn = document.getElementById("open-auth-btn");
+      const profileDropdown = document.getElementById("profile-dropdown");
+
+      const chatModal = document.getElementById("chat-modal");
+      const chatOpenBtn = document.getElementById("chat-open-btn");
+      const chatMenuBtn = document.getElementById("open-chat-btn");
+      const chatCloseBtn = document.getElementById("close-chat-btn");
+      const chatSendBtn = document.getElementById("send-chat-btn");
+      const chatInput = document.getElementById("chat-message-input");
+      const chatMessages = document.getElementById("chat-messages");
+      const chatEmptyState = document.getElementById("chat-empty-state");
+      const chatUnreadBadge = document.getElementById("chat-unread-badge");
 
       if (sortSelect && listingsGrid) {
         sortSelect.addEventListener("change", () => {
           const cards = [...listingsGrid.querySelectorAll(".property-card")];
           if (!cards.length) return;
 
-          const getPrice = card => {
+          const getPrice = (card) => {
             const txt = card.querySelector(".property-card-price strong")?.textContent || "0";
             return Number(String(txt).replace(/[^\d]/g, "")) || 0;
           };
 
-          const getRating = card => {
+          const getRating = (card) => {
             const txt = card.querySelector(".property-card-rating span")?.textContent || "0";
             return Number(txt) || 0;
           };
@@ -1540,7 +1869,71 @@
             }
           });
 
-          cards.forEach(card => listingsGrid.appendChild(card));
+          cards.forEach((card) => listingsGrid.appendChild(card));
+        });
+      }
+
+      if (profileBtn && profileDropdown) {
+        profileBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isActive = profileDropdown.classList.toggle("active");
+          profileBtn.setAttribute("aria-expanded", isActive ? "true" : "false");
+        });
+
+        document.addEventListener("click", (e) => {
+          if (!profileDropdown.contains(e.target) && !profileBtn.contains(e.target)) {
+            profileDropdown.classList.remove("active");
+            profileBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+      }
+
+      const openChat = () => {
+        if (!chatModal) return;
+        chatModal.classList.add("active");
+        document.body.classList.add("modal-open");
+        if (chatUnreadBadge) chatUnreadBadge.textContent = "0";
+      };
+
+      const closeChat = () => {
+        if (!chatModal) return;
+        chatModal.classList.remove("active");
+        document.body.classList.remove("modal-open");
+      };
+
+      if (chatOpenBtn) chatOpenBtn.addEventListener("click", openChat);
+      if (chatMenuBtn) {
+        chatMenuBtn.addEventListener("click", () => {
+          if (profileDropdown) profileDropdown.classList.remove("active");
+          if (profileBtn) profileBtn.setAttribute("aria-expanded", "false");
+          openChat();
+        });
+      }
+      if (chatCloseBtn) chatCloseBtn.addEventListener("click", closeChat);
+
+      if (chatModal) {
+        chatModal.addEventListener("click", (e) => {
+          if (e.target === chatModal) closeChat();
+        });
+      }
+
+      if (chatSendBtn && chatInput && chatMessages) {
+        chatSendBtn.addEventListener("click", () => {
+          const message = chatInput.value.trim();
+          if (!message) return;
+
+          if (chatEmptyState) chatEmptyState.style.display = "none";
+
+          const bubble = document.createElement("div");
+          bubble.className = "chat-message customer";
+          bubble.innerHTML = `
+            ${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            <span class="chat-meta">You · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          `;
+
+          chatMessages.appendChild(bubble);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          chatInput.value = "";
         });
       }
     })();
