@@ -2,33 +2,39 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Property Details - OreBooking</title>
   <meta name="description" content="Explore full property details, amenities, host info, location, and booking options on OreBooking.">
   <meta name="theme-color" content="#435abf">
+  <meta name="format-detection" content="telephone=no">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="logos/orebooking.png">
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
-  <!-- Icons -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem("ore_theme") || "light";
+      const savedLang = localStorage.getItem("ore_lang") || "en";
+      document.documentElement.lang = savedLang;
+      document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
+      if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+    })();
+  </script>
+
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
-  <!-- Shared styles -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.3">
 
   <style>
     :root {
@@ -77,6 +83,7 @@
     html[dir="ltr"] body { font-family: 'Outfit', sans-serif; }
     html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
 
+    .preload-dark body,
     body.dark {
       --bg-color: #0f172a;
       --surface-color: #1e293b;
@@ -160,7 +167,9 @@
     .share-btn,
     .quick-chip,
     .gallery-thumb,
-    .fav-property-btn {
+    .fav-property-btn,
+    .contact-host-btn,
+    .chat-fab-btn {
       font-family: inherit;
     }
 
@@ -375,7 +384,8 @@
     }
 
     .share-btn,
-    .fav-property-btn {
+    .fav-property-btn,
+    .contact-host-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -392,7 +402,8 @@
     }
 
     .share-btn:hover,
-    .fav-property-btn:hover {
+    .fav-property-btn:hover,
+    .contact-host-btn:hover {
       border-color: var(--primary);
       color: var(--primary);
       background: rgba(67,90,191,0.05);
@@ -636,6 +647,7 @@
       font-size: 1rem;
       line-height: 1.9;
       color: var(--text-muted);
+      white-space: pre-line;
     }
 
     .highlights-grid {
@@ -680,6 +692,7 @@
       gap: 16px;
       padding: 20px;
       margin-bottom: 22px;
+      flex-wrap: wrap;
     }
 
     .host-avatar {
@@ -721,6 +734,14 @@
       padding: 4px 10px;
       border-radius: var(--radius-full);
       margin-top: 8px;
+    }
+
+    .host-actions {
+      margin-inline-start: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .features-list {
@@ -975,6 +996,29 @@
       box-shadow: var(--shadow-hover);
     }
 
+    .secondary-action-btn {
+      margin-top: 12px;
+      width: 100%;
+      min-height: 48px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-main);
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .secondary-action-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(67,90,191,0.04);
+    }
+
     .no-charge-text {
       display: flex;
       align-items: center;
@@ -993,6 +1037,48 @@
       color: var(--text-muted);
       line-height: 1.7;
       text-align: center;
+    }
+
+    .chat-fab-btn {
+      position: fixed;
+      bottom: 24px;
+      inset-inline-end: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.45rem;
+      box-shadow: 0 14px 34px rgba(67,90,191,0.35);
+      cursor: pointer;
+      z-index: 1100;
+      transition: var(--transition);
+    }
+
+    .chat-fab-btn:hover {
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    .chat-unread-badge {
+      position: absolute;
+      top: -4px;
+      inset-inline-end: -2px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
     }
 
     .lightbox-overlay {
@@ -1196,7 +1282,8 @@
       font-weight: 700;
     }
 
-    .input-group input {
+    .input-group input,
+    .chat-input-area textarea {
       width: 100%;
       padding: 14px 16px;
       border-radius: 12px;
@@ -1209,7 +1296,8 @@
       outline: none;
     }
 
-    .input-group input:focus {
+    .input-group input:focus,
+    .chat-input-area textarea:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 4px rgba(67,90,191,0.15);
       background-color: var(--surface-color);
@@ -1404,6 +1492,141 @@
       cursor: pointer;
     }
 
+    .chat-modal-content {
+      max-width: 520px;
+      max-height: min(88vh, 760px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .chat-modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-modal-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(67,90,191,0.12);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .chat-modal-title-wrap h3 {
+      font-size: 1.12rem;
+      color: var(--text-main);
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .chat-modal-title-wrap p {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 0.86rem;
+    }
+
+    .chat-body {
+      padding: 18px 20px;
+      overflow: auto;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 260px;
+    }
+
+    .chat-empty-state {
+      margin: auto 0;
+      padding: 24px;
+      border-radius: 18px;
+      background: var(--surface-color);
+      border: 1px dashed var(--border-color);
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .chat-empty-state i {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 10px;
+      display: inline-flex;
+    }
+
+    .chat-message {
+      max-width: 84%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      line-height: 1.7;
+      font-size: 0.93rem;
+      box-shadow: var(--shadow-sm);
+      word-break: break-word;
+    }
+
+    .chat-message.admin {
+      align-self: flex-start;
+      background: var(--surface-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-top-left-radius: 6px;
+    }
+
+    .chat-message.customer {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: #fff;
+      border-top-right-radius: 6px;
+    }
+
+    .chat-meta {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.75rem;
+      opacity: 0.82;
+    }
+
+    .chat-input-area {
+      border-top: 1px solid var(--border-color);
+      padding: 16px 20px 20px;
+      background: var(--surface-color);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-input-area textarea {
+      resize: none;
+      min-height: 100px;
+    }
+
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chat-note {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+
     #toast-container {
       position: fixed;
       top: 90px;
@@ -1451,6 +1674,7 @@
       .logo-img { height: 32px; }
       .rewards-badge { display: none !important; }
       .nav-actions { gap: 6px; }
+
       .icon-btn, .profile-menu {
         width: 38px;
         height: 38px;
@@ -1493,16 +1717,23 @@
         width: 46px;
         height: 46px;
       }
+
+      .chat-fab-btn {
+        bottom: 18px;
+        inset-inline-end: 18px;
+      }
     }
 
     @media (max-width: 520px) {
       .lang-btn span { display: none; }
+
       .prop-actions {
         width: 100%;
       }
 
       .share-btn,
-      .fav-property-btn {
+      .fav-property-btn,
+      .contact-host-btn {
         flex: 1;
       }
 
@@ -1519,6 +1750,16 @@
       .map-card {
         padding: 20px;
       }
+
+      .host-actions {
+        width: 100%;
+        margin-inline-start: 0;
+      }
+
+      .chat-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
     }
   </style>
 </head>
@@ -1527,8 +1768,7 @@
   <div id="toast-container" aria-live="polite"></div>
   <div id="fav-toast" aria-live="polite"></div>
 
-  <!-- Navbar -->
-  <nav class="navbar">
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
     <a href="index.html" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
       <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="main-logo">
     </a>
@@ -1549,29 +1789,42 @@
       </button>
 
       <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button" aria-label="Account">
+        <button
+          id="open-auth-btn"
+          class="profile-menu auth-btn-guest"
+          type="button"
+          aria-label="Account"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="profile-dropdown"
+        >
           <i class="ph ph-user"></i>
         </button>
 
-        <div class="profile-dropdown" id="profile-dropdown">
+        <div class="profile-dropdown" id="profile-dropdown" role="menu">
           <div class="dropdown-header">
             <span id="dropdown-user-name">Guest User</span>
             <span id="dropdown-user-email"></span>
           </div>
 
-          <button class="dropdown-item" id="my-bookings-btn" type="button">
+          <button class="dropdown-item" id="my-bookings-btn" type="button" role="menuitem">
             <i class="ph ph-calendar-check"></i>
             <span data-i18n="mybookings">My Bookings</span>
           </button>
 
-          <button class="dropdown-item" id="my-favorites-btn" type="button">
+          <button class="dropdown-item" id="my-favorites-btn" type="button" role="menuitem">
             <i class="ph ph-heart"></i>
             <span data-i18n="myfavorites">My Favorites</span>
           </button>
 
+          <button class="dropdown-item" id="open-chat-btn" type="button" role="menuitem">
+            <i class="ph ph-chat-centered-text"></i>
+            <span data-i18n="support_chat">Support Chat</span>
+          </button>
+
           <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
 
-          <button class="dropdown-item text-danger" id="logout-btn" type="button">
+          <button class="dropdown-item text-danger" id="logout-btn" type="button" role="menuitem">
             <i class="ph ph-sign-out"></i>
             <span data-i18n="logout">Log Out</span>
           </button>
@@ -1580,7 +1833,6 @@
     </div>
   </nav>
 
-  <!-- Subnav -->
   <div class="prop-subnav">
     <a href="index.html" class="back-btn">
       <i class="ph ph-arrow-left"></i>
@@ -1588,17 +1840,13 @@
     </a>
   </div>
 
-  <!-- Main -->
   <main class="container property-page" id="property-page">
-
-    <!-- Skeleton -->
     <div id="prop-skeleton">
       <div class="card-skeleton" style="height: 480px; margin-bottom: 28px;"></div>
       <div class="card-skeleton" style="height: 120px; margin-bottom: 18px;"></div>
       <div class="card-skeleton" style="height: 380px;"></div>
     </div>
 
-    <!-- Content -->
     <div id="prop-real-content" style="display:none;">
       <header class="prop-header">
         <div class="prop-top-row">
@@ -1633,6 +1881,11 @@
               <i class="ph ph-share-network"></i>
               <span id="share-text">Share</span>
             </button>
+
+            <button class="contact-host-btn" id="contact-host-btn" type="button">
+              <i class="ph ph-chat-centered-dots"></i>
+              <span id="contact-host-text">Contact Host</span>
+            </button>
           </div>
         </div>
 
@@ -1656,7 +1909,6 @@
         </div>
       </header>
 
-      <!-- Gallery -->
       <section class="prop-image-gallery" id="gallery-container">
         <div class="slider-container" id="slider-container">
           <button class="slider-btn prev-btn" id="gallery-prev-btn" type="button" aria-label="Previous image">
@@ -1680,10 +1932,7 @@
 
       <div class="gallery-thumbs" id="gallery-thumbs"></div>
 
-      <!-- Content Grid -->
       <div class="prop-content-grid">
-
-        <!-- Left -->
         <section>
           <div class="prop-details-section">
             <h2 class="section-title">
@@ -1747,6 +1996,13 @@
                 <span id="host-badge-text">Verified Host</span>
               </div>
             </div>
+
+            <div class="host-actions">
+              <button class="contact-host-btn" id="host-chat-btn" type="button">
+                <i class="ph ph-chat-centered-text"></i>
+                <span id="host-chat-text">Message Host</span>
+              </button>
+            </div>
           </div>
 
           <div class="prop-details-section">
@@ -1794,7 +2050,6 @@
           </div>
         </section>
 
-        <!-- Right -->
         <aside class="prop-booking-card">
           <div class="booking-price">
             <span class="price-val" id="prop-price"></span>
@@ -1837,6 +2092,11 @@
             <span data-i18n="booknow">Reserve Now</span>
           </a>
 
+          <button class="secondary-action-btn" id="booking-chat-btn" type="button">
+            <i class="ph ph-chat-centered-dots"></i>
+            <span id="booking-chat-text">Ask about this property</span>
+          </button>
+
           <div class="no-charge-text">
             <i class="ph ph-lock-simple"></i>
             <span data-i18n="wontcharged">You won't be charged yet</span>
@@ -1850,7 +2110,11 @@
     </div>
   </main>
 
-  <!-- Auth Modal -->
+  <button id="chat-fab-btn" class="chat-fab-btn" type="button" aria-label="Open support chat">
+    <i class="ph ph-chat-centered-dots"></i>
+    <span class="chat-unread-badge" id="chat-unread-badge">0</span>
+  </button>
+
   <div class="modal-overlay" id="auth-modal" aria-hidden="true">
     <div class="modal-content auth-card">
       <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
@@ -1864,7 +2128,6 @@
       <div class="auth-content">
         <div id="auth-message" class="auth-message"></div>
 
-        <!-- Login -->
         <form id="login-form" class="auth-form active" novalidate>
           <h2 class="auth-title" data-i18n="welcomeback">Welcome back</h2>
           <p class="auth-subtitle" data-i18n="logindesc">Enter your details to access your account.</p>
@@ -1911,7 +2174,6 @@
           </p>
         </form>
 
-        <!-- Register -->
         <form id="register-form" class="auth-form" novalidate>
           <h2 class="auth-title" data-i18n="createaccount">Create an account</h2>
           <p class="auth-subtitle" data-i18n="registerdesc">Join OreBooking to unlock premium features.</p>
@@ -1963,7 +2225,6 @@
           </p>
         </form>
 
-        <!-- Forgot -->
         <form id="forgot-form" class="auth-form" novalidate>
           <h2 class="auth-title" data-i18n="resetpasstitle">Reset Password</h2>
           <p class="auth-subtitle" data-i18n="resetpassdesc">Enter your email and we'll send you a reset link.</p>
@@ -1985,7 +2246,6 @@
     </div>
   </div>
 
-  <!-- Bookings Modal -->
   <div class="modal-overlay" id="bookings-modal" aria-hidden="true">
     <div class="modal-content bookings-modal-content">
       <div class="bookings-modal-header">
@@ -2006,7 +2266,47 @@
     </div>
   </div>
 
-  <!-- Lightbox -->
+  <div class="modal-overlay" id="chat-modal" aria-hidden="true">
+    <div class="modal-content chat-modal-content">
+      <div class="chat-modal-header">
+        <div class="chat-modal-title-wrap">
+          <div class="chat-modal-avatar">
+            <i class="ph ph-headset"></i>
+          </div>
+          <div>
+            <h3 id="chat-title">Support Chat</h3>
+            <p id="chat-subtitle">Ask about this property, availability, or booking details.</p>
+          </div>
+        </div>
+
+        <button class="close-bookings-btn" type="button" id="close-chat-btn" aria-label="Close chat">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="chat-body" id="chat-messages">
+        <div class="chat-empty-state" id="chat-empty-state">
+          <i class="ph ph-chat-centered-text"></i>
+          <p id="chat-empty-title">No messages yet.</p>
+          <p id="chat-empty-subtitle">Start the conversation and mention this property to contact support.</p>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <input type="hidden" id="chat-property-id" value="">
+        <textarea id="chat-message-input" placeholder="Type your message here..."></textarea>
+
+        <div class="chat-actions">
+          <span class="chat-note" id="chat-note">This UI is ready to connect to Firestore conversations using the current property ID.</span>
+          <button class="primary-btn" type="button" id="send-chat-btn">
+            <i class="ph ph-paper-plane-tilt"></i>
+            <span id="send-chat-text">Send Message</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="lightbox" class="lightbox-overlay" aria-hidden="true">
     <button class="close-lightbox" id="close-lightbox-btn" type="button" aria-label="Close">
       <i class="ph ph-x"></i>
@@ -2025,7 +2325,7 @@
     </button>
   </div>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=3.1"></script>
 
   <script>
     let currentImages = [];
@@ -2047,6 +2347,11 @@
       const div = document.createElement('div');
       div.textContent = String(value ?? '');
       return div.innerHTML;
+    }
+
+    function safeNumber(value, fallback = 0) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
     }
 
     function normalizeFeatureLabel(feature) {
@@ -2079,7 +2384,7 @@
         spa: 'ph-flower-lotus',
         kitchen: 'ph-cooking-pot',
         ac: 'ph-snowflake',
-        balcony: 'ph-balcony',
+        balcony: 'ph-windows',
         breakfast: 'ph-coffee',
         security: 'ph-shield-check',
         tv: 'ph-television',
@@ -2099,12 +2404,12 @@
     }
 
     function getGuestCountText(data) {
-      const guests = Number(data?.maxGuests || data?.guests || data?.capacity || 4);
+      const guests = safeNumber(data?.maxGuests || data?.guests || data?.capacity, 4);
       return isArabic() ? `حتى ${guests} ضيوف` : `Up to ${guests} guests`;
     }
 
     function getBedroomText(data) {
-      const bedrooms = Number(data?.bedrooms || data?.rooms || 2);
+      const bedrooms = safeNumber(data?.bedrooms || data?.rooms, 2);
       return isArabic()
         ? `${bedrooms} ${bedrooms === 1 ? 'غرفة نوم' : 'غرف نوم'}`
         : `${bedrooms} ${bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}`;
@@ -2141,7 +2446,8 @@
     }
 
     function getPropertyImages(data) {
-      if (Array.isArray(data.images) && data.images.length) return data.images;
+      if (Array.isArray(data.images) && data.images.length) return data.images.filter(Boolean);
+      if (Array.isArray(data.gallery) && data.gallery.length) return data.gallery.filter(Boolean);
       if (data.imageUrl) return [data.imageUrl];
       if (data.image) return [data.image];
       return ['images/placeholder.jpg'];
@@ -2176,6 +2482,15 @@
       const tip3 = document.getElementById('tip-3');
       const chipVerified = document.getElementById('chip-verified');
       const chipInstant = document.getElementById('chip-instant');
+      const contactHostText = document.getElementById('contact-host-text');
+      const hostChatText = document.getElementById('host-chat-text');
+      const bookingChatText = document.getElementById('booking-chat-text');
+      const chatTitle = document.getElementById('chat-title');
+      const chatSubtitle = document.getElementById('chat-subtitle');
+      const chatEmptyTitle = document.getElementById('chat-empty-title');
+      const chatEmptySubtitle = document.getElementById('chat-empty-subtitle');
+      const chatNote = document.getElementById('chat-note');
+      const sendChatText = document.getElementById('send-chat-text');
 
       if (shareText) shareText.textContent = ar ? 'مشاركة' : 'Share';
       if (favBtnText) favBtnText.textContent = ar ? 'حفظ' : 'Save';
@@ -2203,13 +2518,10 @@
 
       if (highlight1Title) highlight1Title.textContent = ar ? 'موقع مناسب' : 'Great location';
       if (highlight1Desc) highlight1Desc.textContent = ar ? 'قريب من النقاط المهمة وسهل الوصول.' : 'Close to main points of interest and easy to reach.';
-
       if (highlight2Title) highlight2Title.textContent = ar ? 'راحة ونظافة' : 'Clean and comfortable';
       if (highlight2Desc) highlight2Desc.textContent = ar ? 'مهيأ لإقامة مريحة وتجربة سلسة.' : 'Prepared for a smooth and pleasant stay.';
-
       if (highlight3Title) highlight3Title.textContent = ar ? 'استجابة سريعة' : 'Responsive support';
       if (highlight3Desc) highlight3Desc.textContent = ar ? 'تواصل سريع قبل الإقامة وأثناءها.' : 'Fast communication before and during your stay.';
-
       if (highlight4Title) highlight4Title.textContent = ar ? 'إعلان موثوق' : 'Trusted listing';
       if (highlight4Desc) highlight4Desc.textContent = ar ? 'بيانات موثقة وتجربة حجز مستقرة.' : 'Managed with verified details and a consistent booking flow.';
 
@@ -2227,6 +2539,23 @@
 
       if (chipVerified) chipVerified.textContent = ar ? 'إعلان موثوق' : 'Verified listing';
       if (chipInstant) chipInstant.textContent = ar ? 'طلب حجز سريع' : 'Instant booking request';
+
+      if (contactHostText) contactHostText.textContent = ar ? 'تواصل مع المضيف' : 'Contact Host';
+      if (hostChatText) hostChatText.textContent = ar ? 'مراسلة المضيف' : 'Message Host';
+      if (bookingChatText) bookingChatText.textContent = ar ? 'اسأل عن هذا العقار' : 'Ask about this property';
+
+      if (chatTitle) chatTitle.textContent = ar ? 'دردشة الدعم' : 'Support Chat';
+      if (chatSubtitle) chatSubtitle.textContent = ar
+        ? 'اسأل عن هذا العقار أو التوفر أو تفاصيل الحجز.'
+        : 'Ask about this property, availability, or booking details.';
+      if (chatEmptyTitle) chatEmptyTitle.textContent = ar ? 'لا توجد رسائل بعد.' : 'No messages yet.';
+      if (chatEmptySubtitle) chatEmptySubtitle.textContent = ar
+        ? 'ابدأ المحادثة واذكر هذا العقار للتواصل مع الدعم.'
+        : 'Start the conversation and mention this property to contact support.';
+      if (chatNote) chatNote.textContent = ar
+        ? 'هذه الواجهة جاهزة للربط مع Firestore باستخدام معرف العقار الحالي.'
+        : 'This UI is ready to connect to Firestore conversations using the current property ID.';
+      if (sendChatText) sendChatText.textContent = ar ? 'إرسال الرسالة' : 'Send Message';
     }
 
     function renderPropertyData(data) {
@@ -2236,8 +2565,8 @@
       const title = getTitleText(data);
       const location = getLocationText(data);
       const description = getDescText(data);
-      const price = Number(data.price || data.pricePerNight || 0);
-      const rating = Number(data.rating || 4.8).toFixed(1);
+      const price = safeNumber(data.price || data.pricePerNight, 0);
+      const rating = safeNumber(data.rating, 4.8).toFixed(1);
       const features = getFeaturesArray(data);
       const images = getPropertyImages(data);
       const propType = getPropertyTypeText(data);
@@ -2285,10 +2614,10 @@
         });
       }
 
-      currentImages = images;
+      currentImages = images.length ? images : ['images/placeholder.jpg'];
       currentSlide = 0;
-      setupSlider(images);
-      setupThumbs(images);
+      setupSlider(currentImages);
+      setupThumbs(currentImages);
       updateFavButtonState();
 
       const lat = Number(data.lat ?? data.locationLat ?? data.latitude ?? null);
@@ -2299,6 +2628,9 @@
       if (bookNowLink && currentPropertyId) {
         bookNowLink.href = `booking.html?id=${encodeURIComponent(currentPropertyId)}`;
       }
+
+      const chatPropertyId = document.getElementById('chat-property-id');
+      if (chatPropertyId) chatPropertyId.value = currentPropertyId || '';
 
       showPropertyContent();
     }
@@ -2358,7 +2690,8 @@
 
       const track = document.getElementById('slider-track');
       if (track) {
-        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+        const direction = document.documentElement.dir === 'rtl' ? 1 : -1;
+        track.style.transform = `translateX(${direction * currentSlide * 100}%)`;
       }
 
       document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
@@ -2559,6 +2892,56 @@
       }
     }
 
+    function openChatModal() {
+      const modal = document.getElementById('chat-modal');
+      if (!modal) return;
+      document.getElementById('chat-property-id').value = currentPropertyId || '';
+      modal.classList.add('active');
+      document.body.classList.add('modal-open');
+      const badge = document.getElementById('chat-unread-badge');
+      if (badge) badge.textContent = '0';
+    }
+
+    function closeChatModal() {
+      const modal = document.getElementById('chat-modal');
+      if (!modal) return;
+      modal.classList.remove('active');
+      document.body.classList.remove('modal-open');
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-message-input');
+      const box = document.getElementById('chat-messages');
+      const empty = document.getElementById('chat-empty-state');
+      if (!input || !box) return;
+
+      const text = input.value.trim();
+      if (!text) return;
+
+      if (empty) empty.style.display = 'none';
+
+      const title = document.getElementById('prop-title')?.textContent || '';
+      const enrichedText = `${text}${title ? `\n\n[Property: ${title}]` : ''}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-message customer';
+      bubble.innerHTML = `
+        ${escapeHtml(enrichedText).replace(/\n/g, '<br>')}
+        <span class="chat-meta">${isArabic() ? 'أنت' : 'You'} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      `;
+
+      box.appendChild(bubble);
+      box.scrollTop = box.scrollHeight;
+      input.value = '';
+
+      if (window.showToast) {
+        window.showToast(
+          isArabic() ? 'تمت إضافة الرسالة في الواجهة. اربطها لاحقًا مع Firestore.' : 'Message added to UI. Connect it to Firestore next.',
+          'success'
+        );
+      }
+    }
+
     function bindEvents() {
       document.getElementById('share-btn')?.addEventListener('click', handleShare);
       document.getElementById('property-fav-btn')?.addEventListener('click', togglePropertyFavorite);
@@ -2571,6 +2954,19 @@
       document.getElementById('lightbox-prev-btn')?.addEventListener('click', prevSlide);
       document.getElementById('close-lightbox-btn')?.addEventListener('click', closeLightbox);
 
+      document.getElementById('open-chat-btn')?.addEventListener('click', openChatModal);
+      document.getElementById('chat-fab-btn')?.addEventListener('click', openChatModal);
+      document.getElementById('contact-host-btn')?.addEventListener('click', openChatModal);
+      document.getElementById('host-chat-btn')?.addEventListener('click', openChatModal);
+      document.getElementById('booking-chat-btn')?.addEventListener('click', openChatModal);
+      document.getElementById('close-chat-btn')?.addEventListener('click', closeChatModal);
+      document.getElementById('send-chat-btn')?.addEventListener('click', sendChatMessage);
+
+      const chatModal = document.getElementById('chat-modal');
+      chatModal?.addEventListener('click', (e) => {
+        if (e.target === chatModal) closeChatModal();
+      });
+
       const lightbox = document.getElementById('lightbox');
       const lightboxImg = document.getElementById('lightbox-img');
 
@@ -2582,9 +2978,24 @@
 
       document.addEventListener('keydown', function(e) {
         const lb = document.getElementById('lightbox');
+        const chat = document.getElementById('chat-modal');
+
+        if (e.key === 'Escape') {
+          if (lb?.classList.contains('active')) closeLightbox();
+          if (chat?.classList.contains('active')) closeChatModal();
+        }
+
         if (lb && lb.classList.contains('active')) {
           if (e.key === 'ArrowRight') nextSlide();
           if (e.key === 'ArrowLeft') prevSlide();
+        }
+
+        if (chat?.classList.contains('active') && e.key === 'Enter' && !e.shiftKey) {
+          const target = document.activeElement;
+          if (target && target.id === 'chat-message-input') {
+            e.preventDefault();
+            sendChatMessage();
+          }
         }
       });
 
@@ -2607,6 +3018,23 @@
         }
         isDragging = false;
       }, { passive: true });
+
+      const profileBtn = document.getElementById('open-auth-btn');
+      const profileDropdown = document.getElementById('profile-dropdown');
+      if (profileBtn && profileDropdown) {
+        profileBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const active = profileDropdown.classList.toggle('active');
+          profileBtn.setAttribute('aria-expanded', active ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!profileDropdown.contains(e.target) && !profileBtn.contains(e.target)) {
+            profileDropdown.classList.remove('active');
+            profileBtn.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
     }
 
     async function loadProperty() {
@@ -2626,8 +3054,14 @@
         bookNowLink.href = `booking.html?id=${encodeURIComponent(currentPropertyId)}`;
       }
 
+      const chatPropertyId = document.getElementById('chat-property-id');
+      if (chatPropertyId) chatPropertyId.value = currentPropertyId;
+
       try {
-        const doc = await db.collection('properties').doc(String(currentPropertyId)).get();
+        const dbRef = window.db || (window.firebase && firebase.firestore ? firebase.firestore() : null);
+        if (!dbRef) throw new Error('Firestore is not initialized');
+
+        const doc = await dbRef.collection('properties').doc(String(currentPropertyId)).get();
 
         if (doc.exists) {
           renderPropertyData({ id: doc.id, ...doc.data() });
@@ -2661,9 +3095,11 @@
     document.addEventListener('DOMContentLoaded', () => {
       loadProperty();
 
-      firebase.auth().onAuthStateChanged(() => {
-        updateFavButtonState();
-      });
+      if (window.firebase?.auth) {
+        firebase.auth().onAuthStateChanged(() => {
+          updateFavButtonState();
+        });
+      }
     });
   </script>
 </body>
