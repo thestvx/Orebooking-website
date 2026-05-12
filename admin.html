@@ -1,25 +1,57 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="لوحة تحكم OreBooking لإدارة العقارات والحجوزات." />
+  <meta name="theme-color" content="#435abf" />
   <title>لوحة التحكم - OreBooking</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <link rel="stylesheet" href="style.css">
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem("ore_theme") || "light";
+      if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+    })();
+  </script>
 
   <style>
     :root {
+      --primary: #435abf;
+      --primary-hover: #34459c;
+      --accent: #657be0;
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --surface-soft: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --info: #0ea5e9;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.05);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.08);
+      --shadow-card: 0 12px 32px rgba(15,23,42,.06);
+      --shadow-hover: 0 18px 36px rgba(67,90,191,.14);
+      --radius-sm: .75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.5rem;
+      --radius-2xl: 2rem;
+      --radius-full: 9999px;
+      --transition: all .3s cubic-bezier(.16,1,.3,1);
+
       --admin-bg: linear-gradient(180deg, #f8fbff 0%, #f6f8fc 100%);
       --admin-surface: rgba(255,255,255,0.92);
       --admin-surface-strong: #ffffff;
@@ -36,6 +68,34 @@
       --warning-bg: #fff7ed;
       --warning-border: #fdba74;
       --warning-text: #ea580c;
+    }
+
+    .preload-dark body,
+    .dark body,
+    body.dark {
+      --bg-color: #0f172a;
+      --surface-color: #1e293b;
+      --surface-soft: #17212f;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.2);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.4);
+      --shadow-card: 0 14px 40px rgba(0,0,0,.28);
+      --shadow-hover: 0 20px 40px rgba(67,90,191,.22);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "Tajawal", "Outfit", sans-serif;
+      color: var(--text-main);
+      background: var(--admin-bg);
+      transition: background-color .3s ease, color .3s ease;
+      overflow-x: hidden;
     }
 
     body.admin-body {
@@ -71,6 +131,11 @@
       left: -90px;
       background: rgba(67, 90, 191, 0.12);
     }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .hidden { display: none !important; }
 
     .admin-login-screen,
     .admin-layout {
@@ -119,6 +184,103 @@
       color: var(--text-muted);
       font-size: 0.83rem;
       line-height: 1.7;
+    }
+
+    .login-message {
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.7;
+    }
+
+    .login-message.show { display: flex; }
+    .login-message.error {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
+    }
+    .login-message.success {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+    }
+    .login-message.info {
+      background: rgba(14,165,233,.08);
+      color: var(--info);
+      border: 1px solid rgba(14,165,233,.18);
+    }
+
+    .logo-img {
+      height: 46px;
+      width: auto;
+      max-width: 170px;
+      object-fit: contain;
+    }
+
+    .font-bold { font-weight: 800; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 16px; }
+    .mt-4 { margin-top: 24px; }
+    .text-danger { color: var(--error); }
+    .text-primary { color: var(--primary); }
+
+    .primary-btn {
+      min-height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border: none;
+      font-family: inherit;
+      font-size: .96rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 22px;
+      box-shadow: 0 12px 26px rgba(67,90,191,0.18);
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 32px rgba(67,90,191,0.24);
+    }
+
+    .primary-btn:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .ghost-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.72);
+      color: var(--text-main);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .ghost-action:hover {
+      border-color: rgba(67,90,191,0.20);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
     }
 
     .admin-layout {
@@ -218,9 +380,7 @@
       box-shadow: 0 18px 30px rgba(67,90,191,0.18);
     }
 
-    .sidebar-nav .nav-item.active i {
-      color: #fff;
-    }
+    .sidebar-nav .nav-item.active i { color: #fff; }
 
     .sidebar-nav .nav-item.logout-item {
       margin-top: auto;
@@ -247,6 +407,28 @@
       gap: 20px;
     }
 
+    .admin-mobile-topbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .admin-mobile-toggle {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.85);
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+      color: var(--text-main);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
     .admin-header {
       display: flex;
       align-items: center;
@@ -270,6 +452,7 @@
       color: var(--text-muted);
       font-size: 0.92rem;
       margin: 0;
+      line-height: 1.7;
     }
 
     .admin-profile {
@@ -372,9 +555,7 @@
       animation: fadeIn 0.3s ease;
     }
 
-    .tab-pane.active {
-      display: block;
-    }
+    .tab-pane.active { display: block; }
 
     .pane-head {
       display: flex;
@@ -420,30 +601,6 @@
       font-family: inherit;
       color: var(--text-main);
       font-size: 0.92rem;
-    }
-
-    .ghost-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 48px;
-      padding: 0 16px;
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
-      background: rgba(255,255,255,0.72);
-      color: var(--text-main);
-      font-family: inherit;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      text-decoration: none;
-    }
-
-    .ghost-action:hover {
-      border-color: rgba(67,90,191,0.20);
-      color: var(--primary);
-      background: rgba(67,90,191,0.05);
     }
 
     .stats-chip-row {
@@ -614,9 +771,7 @@
       margin: 0 auto;
     }
 
-    .modern-section {
-      padding: 28px;
-    }
+    .modern-section { padding: 28px; }
 
     .modern-section-header {
       display: flex;
@@ -646,11 +801,11 @@
       margin: 0;
     }
 
-    .modern-section-sub {
-      margin-top: -12px;
-      margin-bottom: 18px;
+    .section-note {
+      margin-top: 2px;
       color: var(--text-muted);
-      font-size: 0.88rem;
+      font-size: 0.84rem;
+      line-height: 1.7;
     }
 
     .form-grid {
@@ -690,7 +845,9 @@
     .modern-form-wrapper .input-group select,
     .admin-form .input-group input,
     .admin-form .input-group textarea,
-    .admin-form .input-group select {
+    .admin-form .input-group select,
+    #admin-user,
+    #admin-pass {
       width: 100%;
       padding: 14px 16px;
       border-radius: 18px;
@@ -717,50 +874,12 @@
     .modern-form-wrapper .input-group select:focus,
     .admin-form .input-group input:focus,
     .admin-form .input-group textarea:focus,
-    .admin-form .input-group select:focus {
+    .admin-form .input-group select:focus,
+    #admin-user:focus,
+    #admin-pass:focus {
       border-color: var(--primary);
       box-shadow: var(--admin-ring);
       background-color: #fff;
-    }
-
-    .dark .admin-body {
-      background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
-    }
-
-    .dark .admin-login-card,
-    .dark .admin-sidebar,
-    .dark .admin-header,
-    .dark .admin-card,
-    .dark .modern-section,
-    .dark .stat-mini-card {
-      background: rgba(15,23,42,0.78);
-      border-color: rgba(51,65,85,0.82);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.28);
-    }
-
-    .dark .sidebar-top-note,
-    .dark .search-inline,
-    .dark .map-search-row input,
-    .dark .ghost-action,
-    .dark .upload-zone,
-    .dark .table-responsive,
-    .dark .admin-table thead th,
-    .dark .table-actions button,
-    .dark .table-actions a {
-      background: rgba(15,23,42,0.72);
-      border-color: rgba(51,65,85,0.95);
-    }
-
-    .dark .modern-form-wrapper .input-group input,
-    .dark .modern-form-wrapper .input-group textarea,
-    .dark .modern-form-wrapper .input-group select,
-    .dark .admin-form .input-group input,
-    .dark .admin-form .input-group textarea,
-    .dark .admin-form .input-group select,
-    .dark .coords-row input {
-      background-color: rgba(15,23,42,0.88);
-      border-color: rgba(51,65,85,0.95);
-      color: var(--text-main);
     }
 
     .upload-zone {
@@ -789,9 +908,7 @@
       pointer-events: none;
     }
 
-    .upload-zone:hover::before {
-      opacity: 1;
-    }
+    .upload-zone:hover::before { opacity: 1; }
 
     .upload-zone:hover {
       border-color: var(--primary);
@@ -835,9 +952,7 @@
       background: rgba(248,250,252,0.75);
     }
 
-    .upload-preview.visible {
-      display: flex;
-    }
+    .upload-preview.visible { display: flex; }
 
     .upload-preview img {
       width: 72px;
@@ -1130,11 +1245,29 @@
       transition: var(--transition);
     }
 
-    .btn-approve { background: var(--success-bg); color: var(--success-text); border: 1px solid #10b981; }
-    .btn-approve:hover:not(:disabled) { background: #10b981; color: white; transform: translateY(-1px); }
+    .btn-approve {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid #10b981;
+    }
 
-    .btn-reject { background: var(--danger-bg); color: var(--danger-text); border: 1px solid #ef4444; }
-    .btn-reject:hover:not(:disabled) { background: #ef4444; color: white; transform: translateY(-1px); }
+    .btn-approve:hover:not(:disabled) {
+      background: #10b981;
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .btn-reject {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid #ef4444;
+    }
+
+    .btn-reject:hover:not(:disabled) {
+      background: #ef4444;
+      color: white;
+      transform: translateY(-1px);
+    }
 
     .btn-approve:disabled,
     .btn-reject:disabled {
@@ -1173,9 +1306,7 @@
       z-index: 4000;
     }
 
-    .modal-overlay.active {
-      display: flex;
-    }
+    .modal-overlay.active { display: flex; }
 
     .modal-content.admin-card {
       width: 100%;
@@ -1232,51 +1363,97 @@
       flex-wrap: wrap;
     }
 
-    .section-note {
-      margin-top: 2px;
-      color: var(--text-muted);
-      font-size: 0.84rem;
-      line-height: 1.7;
+    .dark body.admin-body,
+    body.dark.admin-body {
+      background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
+    }
+
+    .dark .admin-login-card,
+    .dark .admin-sidebar,
+    .dark .admin-header,
+    .dark .admin-card,
+    .dark .modern-section,
+    .dark .stat-mini-card,
+    body.dark .admin-login-card,
+    body.dark .admin-sidebar,
+    body.dark .admin-header,
+    body.dark .admin-card,
+    body.dark .modern-section,
+    body.dark .stat-mini-card {
+      background: rgba(15,23,42,0.78);
+      border-color: rgba(51,65,85,0.82);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.28);
+    }
+
+    .dark .sidebar-top-note,
+    .dark .search-inline,
+    .dark .map-search-row input,
+    .dark .ghost-action,
+    .dark .upload-zone,
+    .dark .table-responsive,
+    .dark .admin-table thead th,
+    .dark .table-actions button,
+    .dark .table-actions a,
+    .dark .admin-mobile-toggle,
+    body.dark .sidebar-top-note,
+    body.dark .search-inline,
+    body.dark .map-search-row input,
+    body.dark .ghost-action,
+    body.dark .upload-zone,
+    body.dark .table-responsive,
+    body.dark .admin-table thead th,
+    body.dark .table-actions button,
+    body.dark .table-actions a,
+    body.dark .admin-mobile-toggle {
+      background: rgba(15,23,42,0.72);
+      border-color: rgba(51,65,85,0.95);
+    }
+
+    .dark .modern-form-wrapper .input-group input,
+    .dark .modern-form-wrapper .input-group textarea,
+    .dark .modern-form-wrapper .input-group select,
+    .dark .admin-form .input-group input,
+    .dark .admin-form .input-group textarea,
+    .dark .admin-form .input-group select,
+    .dark .coords-row input,
+    .dark #admin-user,
+    .dark #admin-pass,
+    body.dark .modern-form-wrapper .input-group input,
+    body.dark .modern-form-wrapper .input-group textarea,
+    body.dark .modern-form-wrapper .input-group select,
+    body.dark .admin-form .input-group input,
+    body.dark .admin-form .input-group textarea,
+    body.dark .admin-form .input-group select,
+    body.dark .coords-row input,
+    body.dark #admin-user,
+    body.dark #admin-pass {
+      background-color: rgba(15,23,42,0.88);
+      border-color: rgba(51,65,85,0.95);
+      color: var(--text-main);
     }
 
     .dark #admin-map-picker,
-    .dark #edit-map-picker {
+    .dark #edit-map-picker,
+    body.dark #admin-map-picker,
+    body.dark #edit-map-picker {
       border-color: rgba(51,65,85,0.95);
       filter: brightness(0.92) contrast(1.04);
     }
 
-    .admin-mobile-topbar {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    .admin-mobile-toggle {
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
-      background: rgba(255,255,255,0.85);
-      display: grid;
-      place-items: center;
-      font-size: 1.2rem;
-      color: var(--text-main);
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ph-spin { animation: spin 0.8s linear infinite; display: inline-block; }
 
     @media (max-width: 1280px) {
-      .dashboard-strip {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+      .dashboard-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 1100px) {
-      .admin-layout {
-        display: block;
-      }
+      .admin-layout { display: block; }
 
       .admin-sidebar {
         position: fixed;
@@ -1290,17 +1467,10 @@
         height: 100vh;
       }
 
-      .admin-sidebar.open {
-        transform: translateX(0);
-      }
+      .admin-sidebar.open { transform: translateX(0); }
 
-      .admin-main {
-        padding: 18px;
-      }
-
-      .admin-mobile-topbar {
-        display: flex;
-      }
+      .admin-main { padding: 18px; }
+      .admin-mobile-topbar { display: flex; }
     }
 
     @media (max-width: 900px) {
@@ -1347,9 +1517,7 @@
         border-radius: 22px;
       }
 
-      .dashboard-strip {
-        grid-template-columns: 1fr;
-      }
+      .dashboard-strip { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 600px) {
@@ -1358,9 +1526,7 @@
         grid-template-columns: 1fr !important;
       }
 
-      .admin-main {
-        padding: 14px;
-      }
+      .admin-main { padding: 14px; }
 
       .admin-profile {
         width: 100%;
@@ -1370,28 +1536,34 @@
   </style>
 </head>
 <body class="admin-body">
-
   <div id="admin-login-screen" class="admin-login-screen">
     <div class="admin-login-card">
       <div class="login-badge"><i class="ph-fill ph-shield-check"></i> بوابة الإدارة الآمنة</div>
-      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:58px; margin:0 auto 24px; display:block;">
+      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:58px; margin:0 auto 24px; display:block;" />
+
       <h2 class="font-bold" style="text-align:center; margin-bottom:8px; font-size:1.75rem;">تسجيل الدخول</h2>
       <p style="text-align:center; color:var(--text-muted); margin-bottom:24px; font-size:0.92rem; line-height:1.8;">
         لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات بشكل احترافي وآمن.
       </p>
-      <form id="admin-login-form">
+
+      <div id="admin-login-message" class="login-message" role="alert" aria-live="polite"></div>
+
+      <form id="admin-login-form" novalidate>
         <div class="input-group">
-          <label>اسم المستخدم</label>
-          <input type="text" id="admin-user" required placeholder="أدخل اسم المستخدم">
+          <label for="admin-user">اسم المستخدم</label>
+          <input type="text" id="admin-user" required placeholder="أدخل اسم المستخدم" autocomplete="username" />
         </div>
+
         <div class="input-group mt-3">
-          <label>كلمة المرور</label>
-          <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور">
+          <label for="admin-pass">كلمة المرور</label>
+          <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور" autocomplete="current-password" />
         </div>
-        <button type="submit" class="primary-btn mt-4" style="height:52px;">
+
+        <button type="submit" class="primary-btn mt-4" id="admin-login-btn" style="height:52px;">
           <i class="ph ph-sign-in" style="font-size:1.2rem;"></i> تسجيل الدخول
         </button>
       </form>
+
       <div class="login-help">
         <strong style="display:block; margin-bottom:4px; color:var(--text-main);">ملاحظة:</strong>
         يمكن استخدام نفس الصفحة لتسجيل دخول مدير النظام أو مالك العقار حسب بيانات الاعتماد المخصصة.
@@ -1402,7 +1574,7 @@
   <div class="admin-layout" id="admin-layout" style="display:none;">
     <aside class="admin-sidebar" id="admin-sidebar">
       <div class="sidebar-logo">
-        <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:42px;">
+        <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:42px;" />
       </div>
 
       <div class="sidebar-top-note">
@@ -1411,15 +1583,18 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="switchTab('manage-props')">
+        <button class="nav-item active" type="button" data-tab-target="manage-props">
           <i class="ph ph-buildings"></i> إدارة العقارات
         </button>
-        <button class="nav-item" id="nav-add-property" onclick="switchTab('add-property')">
+
+        <button class="nav-item" id="nav-add-property" type="button" data-tab-target="add-property">
           <i class="ph ph-plus-square"></i> إضافة عقار جديد
         </button>
-        <button class="nav-item" onclick="switchTab('bookings')">
+
+        <button class="nav-item" type="button" data-tab-target="bookings">
           <i class="ph ph-calendar-check"></i> الحجوزات
         </button>
+
         <button type="button" id="admin-logout-btn" class="nav-item logout-item">
           <i class="ph ph-sign-out"></i> تسجيل الخروج
         </button>
@@ -1428,17 +1603,18 @@
 
     <main class="admin-main">
       <div class="admin-mobile-topbar">
-        <button type="button" class="admin-mobile-toggle" id="admin-mobile-toggle">
+        <button type="button" class="admin-mobile-toggle" id="admin-mobile-toggle" aria-label="فتح القائمة">
           <i class="ph ph-list"></i>
         </button>
-        <img src="logos/orebooking.png" alt="Logo" style="height:30px; object-fit:contain;">
+        <img src="logos/orebooking.png" alt="Logo" style="height:30px; object-fit:contain;" />
       </div>
 
       <header class="admin-header">
         <div class="header-copy">
           <h2 id="page-title" class="font-bold" style="font-size:1.45rem; margin:0;">إدارة العقارات</h2>
-          <p>واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح.</p>
+          <p id="page-subtitle">واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح.</p>
         </div>
+
         <div class="admin-profile">
           <div style="text-align:left; line-height:1.25;">
             <span class="font-bold" id="admin-profile-name" style="display:block; font-size:0.96rem;">مدير النظام</span>
@@ -1455,43 +1631,47 @@
           <div class="stat-mini-icon"><i class="ph-fill ph-house-line"></i></div>
           <div class="stat-mini-meta">
             <span>إجمالي العقارات</span>
-            <strong id="stat-total-properties">--</strong>
+            <strong id="stat-total-properties">0</strong>
           </div>
         </div>
+
         <div class="stat-mini-card">
           <div class="stat-mini-icon"><i class="ph-fill ph-eye"></i></div>
           <div class="stat-mini-meta">
             <span>العقارات النشطة</span>
-            <strong id="stat-active-properties">--</strong>
+            <strong id="stat-active-properties">0</strong>
           </div>
         </div>
+
         <div class="stat-mini-card">
           <div class="stat-mini-icon"><i class="ph-fill ph-calendar-check"></i></div>
           <div class="stat-mini-meta">
             <span>إجمالي الحجوزات</span>
-            <strong id="stat-total-bookings">--</strong>
+            <strong id="stat-total-bookings">0</strong>
           </div>
         </div>
+
         <div class="stat-mini-card">
           <div class="stat-mini-icon"><i class="ph-fill ph-hourglass-medium"></i></div>
           <div class="stat-mini-meta">
             <span>الطلبات المعلقة</span>
-            <strong id="stat-pending-bookings">--</strong>
+            <strong id="stat-pending-bookings">0</strong>
           </div>
         </div>
       </section>
 
       <div class="admin-content">
-
         <div id="tab-manage-props" class="tab-pane active">
           <div class="admin-card">
             <div class="pane-head">
               <h3><i class="ph-fill ph-buildings" style="color:var(--primary);"></i> العقارات المضافة</h3>
+
               <div class="pane-tools">
                 <label class="search-inline">
                   <i class="ph ph-magnifying-glass" style="color:var(--text-muted);"></i>
-                  <input type="text" id="property-search-input" placeholder="ابحث باسم العقار أو الموقع...">
+                  <input type="text" id="property-search-input" placeholder="ابحث باسم العقار أو الموقع..." />
                 </label>
+
                 <button type="button" class="ghost-action" id="refresh-properties-btn">
                   <i class="ph ph-arrows-clockwise"></i> تحديث القائمة
                 </button>
@@ -1524,7 +1704,6 @@
 
         <div id="tab-add-property" class="tab-pane">
           <form id="add-property-form" class="modern-form-wrapper">
-
             <div class="modern-section">
               <div class="modern-section-header">
                 <i class="ph-fill ph-text-aa"></i>
@@ -1533,22 +1712,26 @@
                   <div class="section-note">أدخل البيانات التعريفية الرئيسية للعقار بلغتين بشكل منظم وواضح.</div>
                 </div>
               </div>
+
               <div class="form-grid">
                 <div class="input-group">
-                  <label>اسم العقار (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-ar" placeholder="مثال: شاليه الأحلام" required>
+                  <label for="prop-title-ar">اسم العقار (عربي) <span class="text-danger">*</span></label>
+                  <input type="text" id="prop-title-ar" placeholder="مثال: شاليه الأحلام" required />
                 </div>
+
                 <div class="input-group">
-                  <label>اسم العقار (إنجليزي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" required>
+                  <label for="prop-title-en">اسم العقار (إنجليزي) <span class="text-danger">*</span></label>
+                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" required />
                 </div>
+
                 <div class="input-group" style="grid-column:1/-1;">
-                  <label>وصف العقار (عربي) <span class="text-danger">*</span></label>
+                  <label for="prop-desc-ar">وصف العقار (عربي) <span class="text-danger">*</span></label>
                   <textarea id="prop-desc-ar" rows="4" placeholder="اكتب وصفاً جذاباً ومقنعاً للعقار بالعربية..." required></textarea>
                   <small>يفضل ذكر نوع الإقامة، المميزات، والأجواء المحيطة بالعقار.</small>
                 </div>
+
                 <div class="input-group" style="grid-column:1/-1;">
-                  <label>وصف العقار (إنجليزي) <span class="text-danger">*</span></label>
+                  <label for="prop-desc-en">وصف العقار (إنجليزي) <span class="text-danger">*</span></label>
                   <textarea id="prop-desc-en" rows="4" placeholder="Write a polished and attractive English description..." required></textarea>
                 </div>
               </div>
@@ -1562,9 +1745,10 @@
                   <div class="section-note">حدد نوع العقار، سعر الليلة، ثم أرفق صورة رئيسية احترافية واضحة.</div>
                 </div>
               </div>
+
               <div class="form-grid" style="align-items:start;">
                 <div class="input-group">
-                  <label>نوع العقار <span class="text-danger">*</span></label>
+                  <label for="prop-type">نوع العقار <span class="text-danger">*</span></label>
                   <select id="prop-type" required style="font-size:1.03rem; font-weight:800; color:var(--primary); min-height:52px;">
                     <option value="apartment">شقة (Apartment)</option>
                     <option value="villa">فيلا (Villa)</option>
@@ -1574,25 +1758,28 @@
                 </div>
 
                 <div class="input-group">
-                  <label>السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
-                  <input type="number" id="prop-price" placeholder="مثال: 15000" style="font-size:1.1rem; font-weight:800; color:var(--primary); min-height:52px;" required>
+                  <label for="prop-price">السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
+                  <input type="number" id="prop-price" placeholder="مثال: 15000" style="font-size:1.1rem; font-weight:800; color:var(--primary); min-height:52px;" required />
                 </div>
 
                 <div class="input-group" style="grid-column:1/-1; margin-top:4px;">
-                  <label>الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
+                  <label for="prop-image">الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
+
                   <div class="upload-zone">
                     <i class="ph ph-cloud-arrow-up"></i>
                     <span class="upload-zone-text">اضغط هنا أو اسحب الصورة</span>
                     <span class="upload-zone-sub">PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
-                    <input type="file" id="prop-image" accept="image/*" required>
+                    <input type="file" id="prop-image" accept="image/*" required />
                   </div>
+
                   <div class="upload-preview" id="upload-preview-box">
-                    <img id="upload-preview-img" alt="Preview">
+                    <img id="upload-preview-img" alt="Preview" />
                     <div class="upload-preview-meta">
                       <strong id="upload-preview-name">معاينة الصورة</strong>
                       <span id="upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
                     </div>
                   </div>
+
                   <small id="upload-status" class="text-primary mt-2" style="display:block; text-align:center; font-weight:700;"></small>
                 </div>
               </div>
@@ -1606,39 +1793,47 @@
                   <div class="section-note">حدد العنوان النصي بدقة ثم اختر الإحداثيات مباشرة من الخريطة أو عبر البحث الذكي.</div>
                 </div>
               </div>
+
               <div class="form-grid" style="margin-bottom:12px;">
                 <div class="input-group">
-                  <label>العنوان النصي (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-ar" placeholder="مثال: حي الرياض، الجزائر العاصمة" required>
+                  <label for="prop-loc-ar">العنوان النصي (عربي) <span class="text-danger">*</span></label>
+                  <input type="text" id="prop-loc-ar" placeholder="مثال: حي الرياض، الجزائر العاصمة" required />
                 </div>
+
                 <div class="input-group">
-                  <label>العنوان النصي (إنجليزي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" required>
+                  <label for="prop-loc-en">العنوان النصي (إنجليزي) <span class="text-danger">*</span></label>
+                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" required />
                 </div>
               </div>
+
               <div class="map-picker-wrapper">
                 <div class="map-search-row">
-                  <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة...">
-                  <button type="button" onclick="searchMapLocation()">
+                  <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة..." />
+                  <button type="button" id="map-search-btn">
                     <i class="ph ph-magnifying-glass"></i> بحث ذكي
                   </button>
                 </div>
+
                 <p class="map-picker-hint">
                   <i class="ph-fill ph-info"></i>
                   اسحب الخريطة وانقر بدقة لتحديد الإحداثيات الدقيقة للعقار، ثم تأكد من القيم الظاهرة في الحقول التالية.
                 </p>
+
                 <div id="admin-map-picker"></div>
+
                 <div class="map-picked-badge" id="map-picked-badge">
                   <i class="ph-fill ph-check-circle"></i> تم التقاط الإحداثيات بنجاح
                 </div>
+
                 <div class="coords-row">
                   <div class="input-group">
-                    <label>خط العرض (Latitude)</label>
-                    <input type="text" id="prop-lat" placeholder="سيتم تعبئته تلقائياً" readonly>
+                    <label for="prop-lat">خط العرض (Latitude)</label>
+                    <input type="text" id="prop-lat" placeholder="سيتم تعبئته تلقائياً" readonly />
                   </div>
+
                   <div class="input-group">
-                    <label>خط الطول (Longitude)</label>
-                    <input type="text" id="prop-lng" placeholder="سيتم تعبئته تلقائياً" readonly>
+                    <label for="prop-lng">خط الطول (Longitude)</label>
+                    <input type="text" id="prop-lng" placeholder="سيتم تعبئته تلقائياً" readonly />
                   </div>
                 </div>
               </div>
@@ -1652,17 +1847,20 @@
                   <div class="section-note">هذه التوصيات تساعد في إظهار العقار بشكل أقوى أمام الزوار ورفع جودة العرض.</div>
                 </div>
               </div>
+
               <div class="quick-tips">
                 <div class="tip-card">
                   <i class="ph ph-image"></i>
                   <strong>اختر صورة جذابة</strong>
                   <p>استخدم صورة مضيئة وواضحة بزاوية واسعة تعكس أفضل ما في العقار.</p>
                 </div>
+
                 <div class="tip-card">
                   <i class="ph ph-text-align-right"></i>
                   <strong>اكتب وصفاً مقنعاً</strong>
                   <p>اذكر المميزات الحقيقية، عدد الغرف، القرب من الخدمات، ونوع التجربة التي يقدمها المكان.</p>
                 </div>
+
                 <div class="tip-card">
                   <i class="ph ph-map-trifold"></i>
                   <strong>ثبت الموقع بدقة</strong>
@@ -1675,6 +1873,7 @@
               <button type="submit" class="primary-btn" id="submit-prop-btn" style="width:auto; padding:16px 40px; font-size:1.05rem; display:inline-flex; gap:10px; align-items:center;">
                 <i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة
               </button>
+
               <button type="button" class="ghost-action" id="reset-property-form-btn">
                 <i class="ph ph-eraser"></i> تفريغ الحقول
               </button>
@@ -1686,12 +1885,14 @@
           <div class="admin-card" style="background:transparent; border:none; box-shadow:none; padding:0;">
             <div class="pane-head">
               <h3><i class="ph-fill ph-calendar-check" style="color:var(--primary);"></i> طلبات الحجوزات</h3>
+
               <div class="pane-tools">
                 <button type="button" class="ghost-action" id="refresh-bookings-btn">
                   <i class="ph ph-arrows-clockwise"></i> تحديث الحجوزات
                 </button>
               </div>
             </div>
+
             <div id="bookings-container">
               <div class="empty-state">
                 <i class="ph ph-circle-notch ph-spin"></i>
@@ -1700,14 +1901,13 @@
             </div>
           </div>
         </div>
-
       </div>
     </main>
   </div>
 
   <div class="modal-overlay" id="edit-modal">
     <div class="modal-content admin-card">
-      <button class="close-modal-btn" onclick="closeEditModal()">
+      <button class="close-modal-btn" id="close-edit-modal-btn" type="button" aria-label="إغلاق">
         <i class="ph ph-x"></i>
       </button>
 
@@ -1716,24 +1916,26 @@
       </div>
 
       <form id="edit-property-form" class="admin-form">
-        <input type="hidden" id="edit-prop-id">
+        <input type="hidden" id="edit-prop-id" />
 
         <div class="form-grid">
           <div class="input-group">
-            <label>الاسم (عربي)</label>
-            <input type="text" id="edit-title-ar" required>
-          </div>
-          <div class="input-group">
-            <label>الاسم (إنجليزي)</label>
-            <input type="text" id="edit-title-en">
+            <label for="edit-title-ar">الاسم (عربي)</label>
+            <input type="text" id="edit-title-ar" required />
           </div>
 
           <div class="input-group">
-            <label>السعر (DZD)</label>
-            <input type="number" id="edit-price" required>
+            <label for="edit-title-en">الاسم (إنجليزي)</label>
+            <input type="text" id="edit-title-en" />
           </div>
+
           <div class="input-group">
-            <label>نوع العقار</label>
+            <label for="edit-price">السعر (DZD)</label>
+            <input type="number" id="edit-price" required />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-type">نوع العقار</label>
             <select id="edit-type" required>
               <option value="apartment">شقة (Apartment)</option>
               <option value="villa">فيلا (Villa)</option>
@@ -1743,34 +1945,36 @@
           </div>
 
           <div class="input-group">
-            <label>العنوان (عربي)</label>
-            <input type="text" id="edit-loc-ar">
+            <label for="edit-loc-ar">العنوان (عربي)</label>
+            <input type="text" id="edit-loc-ar" />
           </div>
+
           <div class="input-group">
-            <label>العنوان (إنجليزي)</label>
-            <input type="text" id="edit-loc-en">
+            <label for="edit-loc-en">العنوان (إنجليزي)</label>
+            <input type="text" id="edit-loc-en" />
           </div>
 
           <div class="input-group" style="grid-column:1/-1;">
-            <label>الوصف (عربي)</label>
+            <label for="edit-desc-ar">الوصف (عربي)</label>
             <textarea id="edit-desc-ar" rows="4" required></textarea>
           </div>
 
           <div class="input-group" style="grid-column:1/-1;">
-            <label>الوصف (إنجليزي)</label>
+            <label for="edit-desc-en">الوصف (إنجليزي)</label>
             <textarea id="edit-desc-en" rows="4"></textarea>
           </div>
 
           <div class="input-group" style="grid-column:1/-1;">
-            <label>تغيير الصورة الرئيسية</label>
+            <label for="edit-image">تغيير الصورة الرئيسية</label>
             <div class="upload-zone" style="padding:24px 16px;">
               <i class="ph ph-image-square"></i>
               <span class="upload-zone-text" id="edit-upload-zone-text">اختر صورة جديدة إن أردت استبدال الحالية</span>
               <span class="upload-zone-sub">اختياري — PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
-              <input type="file" id="edit-image" accept="image/*">
+              <input type="file" id="edit-image" accept="image/*" />
             </div>
+
             <div class="upload-preview" id="edit-upload-preview-box">
-              <img id="edit-upload-preview-img" alt="Preview">
+              <img id="edit-upload-preview-img" alt="Preview" />
               <div class="upload-preview-meta">
                 <strong id="edit-upload-preview-name">معاينة الصورة الجديدة</strong>
                 <span id="edit-upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
@@ -1784,19 +1988,23 @@
             <i class="ph-fill ph-map-pin" style="color:var(--primary); font-size:1.1rem;"></i>
             تعديل موقع العقار
           </label>
+
           <div class="map-picker-wrapper">
             <div id="edit-map-picker"></div>
+
             <div class="map-picked-badge" id="edit-map-picked-badge">
               <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع
             </div>
+
             <div class="coords-row">
               <div class="input-group">
-                <label>خط العرض</label>
-                <input type="text" id="edit-lat" readonly>
+                <label for="edit-lat">خط العرض</label>
+                <input type="text" id="edit-lat" readonly />
               </div>
+
               <div class="input-group">
-                <label>خط الطول</label>
-                <input type="text" id="edit-lng" readonly>
+                <label for="edit-lng">خط الطول</label>
+                <input type="text" id="edit-lng" readonly />
               </div>
             </div>
           </div>
@@ -1810,81 +2018,432 @@
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const sidebar = document.getElementById("admin-sidebar");
-      const mobileToggle = document.getElementById("admin-mobile-toggle");
-      const addForm = document.getElementById("add-property-form");
-      const resetBtn = document.getElementById("reset-property-form-btn");
-      const fileInput = document.getElementById("prop-image");
-      const editFileInput = document.getElementById("edit-image");
-      const propertySearchInput = document.getElementById("property-search-input");
+    const adminState = {
+      currentTab: "manage-props",
+      properties: [],
+      bookings: [],
+      addMap: null,
+      addMarker: null,
+      editMap: null,
+      editMarker: null,
+      selectedEditProperty: null
+    };
 
-      mobileToggle?.addEventListener("click", () => {
-        sidebar?.classList.toggle("open");
-      });
+    const pageMeta = {
+      "manage-props": {
+        title: "إدارة العقارات",
+        subtitle: "واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح."
+      },
+      "add-property": {
+        title: "إضافة عقار جديد",
+        subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
+      },
+      "bookings": {
+        title: "إدارة الحجوزات",
+        subtitle: "مراجعة طلبات الحجز، اعتمادها أو رفضها، ومتابعة الحالة الحالية بسهولة."
+      }
+    };
 
-      document.addEventListener("click", (e) => {
-        if (window.innerWidth > 1100) return;
-        if (!sidebar || !mobileToggle) return;
-        if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
-        sidebar.classList.remove("open");
-      });
+    const demoProperties = [
+      {
+        id: "prop_1",
+        titleAr: "شاليه الأحلام",
+        titleEn: "Dream Chalet",
+        descAr: "شاليه مريح بإطلالة جميلة وموقع ممتاز.",
+        descEn: "Comfortable chalet with a beautiful view and great location.",
+        locationAr: "حي الرياض، الجزائر العاصمة",
+        locationEn: "Riad District, Algiers",
+        type: "villa",
+        price: 15000,
+        visible: true,
+        image: "images/palm-garden-01.jpg",
+        lat: 36.7538,
+        lng: 3.0588
+      },
+      {
+        id: "prop_2",
+        titleAr: "منتجع الواحة",
+        titleEn: "Oasis Resort",
+        descAr: "منتجع هادئ للعائلات مع جلسات خارجية.",
+        descEn: "Quiet family resort with outdoor seating.",
+        locationAr: "تقرت، الجزائر",
+        locationEn: "Touggourt, Algeria",
+        type: "resort",
+        price: 22000,
+        visible: false,
+        image: "images/palmgarden01.jpg",
+        lat: 33.1053,
+        lng: 6.0635
+      }
+    ];
 
-      resetBtn?.addEventListener("click", () => {
-        addForm?.reset();
-        document.getElementById("map-picked-badge")?.classList.remove("visible");
-        const latEl = document.getElementById("prop-lat");
-        const lngEl = document.getElementById("prop-lng");
-        const uploadStatus = document.getElementById("upload-status");
-        if (latEl) latEl.value = "";
-        if (lngEl) lngEl.value = "";
-        if (uploadStatus) uploadStatus.textContent = "";
-        resetUploadPreview();
-        if (typeof window._resetAddMap === "function") window._resetAddMap();
-      });
+    const demoBookings = [
+      {
+        id: "bk_1001",
+        guestName: "أحمد محمد",
+        propertyName: "شاليه الأحلام",
+        checkIn: "2026-05-18",
+        checkOut: "2026-05-20",
+        guests: 4,
+        total: "30,000 DZD",
+        status: "pending"
+      },
+      {
+        id: "bk_1002",
+        guestName: "Sara Ali",
+        propertyName: "منتجع الواحة",
+        checkIn: "2026-05-22",
+        checkOut: "2026-05-25",
+        guests: 2,
+        total: "66,000 DZD",
+        status: "confirmed"
+      }
+    ];
 
-      fileInput?.addEventListener("change", function() {
-        updateUploadPreview(this.files?.[0] || null);
-      });
+    function qs(id) {
+      return document.getElementById(id);
+    }
 
-      editFileInput?.addEventListener("change", function() {
-        updateEditUploadPreview(this.files?.[0] || null);
-      });
+    function safeText(v, fallback = "—") {
+      return String(v ?? "").trim() || fallback;
+    }
 
-      propertySearchInput?.addEventListener("input", function() {
-        const q = this.value.trim().toLowerCase();
-        const rows = document.querySelectorAll("#properties-tbody tr");
-        rows.forEach(row => {
-          const txt = row.textContent.toLowerCase();
-          row.style.display = txt.includes(q) ? "" : "none";
-        });
-      });
+    function formatPrice(v) {
+      const n = Number(v || 0);
+      return `${n.toLocaleString("en-US")} DZD`;
+    }
 
-      document.getElementById("refresh-properties-btn")?.addEventListener("click", () => {
-        if (typeof window.fetchProperties === "function") window.fetchProperties();
-        else if (typeof window.loadProperties === "function") window.loadProperties();
-      });
+    function propertyTypeLabel(type) {
+      const map = {
+        apartment: "شقة",
+        villa: "فيلا",
+        resort: "منتجع",
+        pool: "مسبح"
+      };
+      return map[type] || "عقار";
+    }
 
-      document.getElementById("refresh-bookings-btn")?.addEventListener("click", () => {
-        if (typeof window.loadBookings === "function") window.loadBookings();
-      });
+    function loginMessage(type, text) {
+      const box = qs("admin-login-message");
+      if (!box) return;
+      box.className = `login-message ${type} show`;
+      box.innerHTML = `<i class="${type === "success" ? "ph ph-check-circle" : type === "info" ? "ph ph-info" : "ph ph-warning-circle"}"></i><span>${text}</span>`;
+    }
 
-      const checkInterval = setInterval(() => {
-        if (typeof updateAdminQuickStats === "function") {
-          clearInterval(checkInterval);
-          updateAdminQuickStats();
+    function clearLoginMessage() {
+      const box = qs("admin-login-message");
+      if (!box) return;
+      box.className = "login-message";
+      box.innerHTML = "";
+    }
+
+    function setThemeFromStorage() {
+      const theme = localStorage.getItem("ore_theme") || "light";
+      document.body.classList.toggle("dark", theme === "dark");
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }
+
+    function getStoredAdminSession() {
+      try {
+        return JSON.parse(sessionStorage.getItem("ore_admin_session") || localStorage.getItem("ore_admin_session") || "null");
+      } catch {
+        return null;
+      }
+    }
+
+    function storeAdminSession(data) {
+      sessionStorage.setItem("ore_admin_session", JSON.stringify(data));
+    }
+
+    function clearAdminSession() {
+      sessionStorage.removeItem("ore_admin_session");
+      localStorage.removeItem("ore_admin_session");
+    }
+
+    function tryLogin(username, password) {
+      const customUsers = window.OREBOOKING_ADMIN_USERS;
+      if (Array.isArray(customUsers) && customUsers.length) {
+        const found = customUsers.find(u => u.username === username && u.password === password);
+        if (found) {
+          return {
+            ok: true,
+            user: {
+              name: found.name || found.username,
+              role: found.role || "إدارة النظام"
+            }
+          };
         }
-      }, 300);
-    });
+      }
+
+      if (username === "admin" && password === "admin123") {
+        return {
+          ok: true,
+          user: {
+            name: "مدير النظام",
+            role: "بصلاحيات كاملة"
+          }
+        };
+      }
+
+      if (username === "owner" && password === "owner123") {
+        return {
+          ok: true,
+          user: {
+            name: "مالك العقار",
+            role: "إدارة العقارات الخاصة"
+          }
+        };
+      }
+
+      return { ok: false };
+    }
+
+    function setAdminProfile(user) {
+      qs("admin-profile-name").textContent = user?.name || "مدير النظام";
+      qs("admin-profile-role").textContent = user?.role || "بصلاحيات كاملة";
+    }
+
+    function showAdminLayout() {
+      qs("admin-login-screen").style.display = "none";
+      qs("admin-layout").style.display = "flex";
+    }
+
+    function showLoginScreen() {
+      qs("admin-login-screen").style.display = "grid";
+      qs("admin-layout").style.display = "none";
+    }
+
+    function handleAdminLogin(event) {
+      event.preventDefault();
+      clearLoginMessage();
+
+      const username = qs("admin-user").value.trim();
+      const password = qs("admin-pass").value.trim();
+      const btn = qs("admin-login-btn");
+
+      if (!username || !password) {
+        loginMessage("error", "يرجى إدخال اسم المستخدم وكلمة المرور.");
+        return;
+      }
+
+      btn.disabled = true;
+
+      const result = tryLogin(username, password);
+
+      setTimeout(() => {
+        btn.disabled = false;
+
+        if (!result.ok) {
+          loginMessage("error", "بيانات الدخول غير صحيحة.");
+          return;
+        }
+
+        storeAdminSession(result.user);
+        setAdminProfile(result.user);
+        loginMessage("success", "تم تسجيل الدخول بنجاح.");
+        showAdminLayout();
+        switchTab("manage-props");
+        loadProperties();
+        loadBookings();
+      }, 350);
+    }
+
+    function logoutAdmin() {
+      clearAdminSession();
+      showLoginScreen();
+      qs("admin-login-form").reset();
+      clearLoginMessage();
+      loginMessage("info", "تم تسجيل الخروج بنجاح.");
+    }
+
+    function switchTab(tab) {
+      adminState.currentTab = tab;
+      document.querySelectorAll(".tab-pane").forEach(pane => {
+        pane.classList.toggle("active", pane.id === `tab-${tab}`);
+      });
+
+      document.querySelectorAll("[data-tab-target]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tabTarget === tab);
+      });
+
+      const meta = pageMeta[tab] || pageMeta["manage-props"];
+      qs("page-title").textContent = meta.title;
+      qs("page-subtitle").textContent = meta.subtitle;
+
+      qs("admin-sidebar")?.classList.remove("open");
+
+      if (tab === "add-property") {
+        setTimeout(initAddMap, 180);
+      }
+
+      updateAdminQuickStats();
+    }
+
+    function renderPropertiesTable(items = adminState.properties) {
+      const tbody = qs("properties-tbody");
+      if (!tbody) return;
+
+      if (!items.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state" style="padding:28px;">
+                <i class="ph ph-house"></i>
+                لا توجد عقارات حالياً.
+              </div>
+            </td>
+          </tr>
+        `;
+        updateAdminQuickStats();
+        return;
+      }
+
+      tbody.innerHTML = items.map(prop => `
+        <tr data-id="${prop.id}">
+          <td><img class="prop-thumb" src="${prop.image || 'images/palmgarden01.jpg'}" alt="${safeText(prop.titleAr)}"></td>
+          <td>
+            <div class="prop-name-cell">
+              <strong>${safeText(prop.titleAr)}</strong>
+              <span>${safeText(prop.titleEn)}</span>
+            </div>
+          </td>
+          <td>${safeText(prop.locationAr)}</td>
+          <td><span class="price-pill">${formatPrice(prop.price)}</span></td>
+          <td>
+            <span class="status-badge ${prop.visible ? 'visible' : 'hidden'}">
+              ${prop.visible ? 'ظاهر' : 'مخفي'}
+            </span>
+          </td>
+          <td>
+            <div class="table-actions">
+              <button type="button" data-action="edit-property" data-id="${prop.id}">
+                <i class="ph ph-pencil-simple"></i> تعديل
+              </button>
+              <button type="button" data-action="toggle-property" data-id="${prop.id}">
+                <i class="ph ph-eye${prop.visible ? '-slash' : ''}"></i>
+                ${prop.visible ? 'إخفاء' : 'إظهار'}
+              </button>
+              <button type="button" data-action="delete-property" data-id="${prop.id}">
+                <i class="ph ph-trash"></i> حذف
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      updateAdminQuickStats();
+    }
+
+    function renderBookings(items = adminState.bookings) {
+      const container = qs("bookings-container");
+      if (!container) return;
+
+      if (!items.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="ph ph-calendar-blank"></i>
+            لا توجد طلبات حجز حالياً.
+          </div>
+        `;
+        updateAdminQuickStats();
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="bookings-grid">
+          ${items.map(booking => `
+            <article class="booking-card" data-booking-id="${booking.id}">
+              <div class="booking-head">
+                <div class="booking-title">
+                  <strong>${safeText(booking.guestName)}</strong>
+                  <span>${safeText(booking.propertyName)} • ${safeText(booking.id)}</span>
+                </div>
+                <span class="status-badge ${booking.status === "confirmed" ? "confirmed" : booking.status === "rejected" ? "rejected" : "pending"}">
+                  ${booking.status === "confirmed" ? "مؤكد" : booking.status === "rejected" ? "مرفوض" : "معلق"}
+                </span>
+              </div>
+
+              <div class="booking-meta-grid">
+                <div class="booking-meta-item">
+                  <label>تاريخ الدخول</label>
+                  <strong>${safeText(booking.checkIn)}</strong>
+                </div>
+                <div class="booking-meta-item">
+                  <label>تاريخ الخروج</label>
+                  <strong>${safeText(booking.checkOut)}</strong>
+                </div>
+                <div class="booking-meta-item">
+                  <label>عدد الضيوف</label>
+                  <span>${safeText(booking.guests)}</span>
+                </div>
+                <div class="booking-meta-item">
+                  <label>الإجمالي</label>
+                  <strong>${safeText(booking.total)}</strong>
+                </div>
+              </div>
+
+              <div class="booking-actions-row">
+                <button class="btn-approve" type="button" data-action="approve-booking" data-id="${booking.id}" ${booking.status === "confirmed" ? "disabled" : ""}>
+                  <i class="ph ph-check"></i> قبول
+                </button>
+                <button class="btn-reject" type="button" data-action="reject-booking" data-id="${booking.id}" ${booking.status === "rejected" ? "disabled" : ""}>
+                  <i class="ph ph-x"></i> رفض
+                </button>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      `;
+
+      updateAdminQuickStats();
+    }
+
+    function loadProperties() {
+      if (typeof window.fetchProperties === "function" && window.fetchProperties !== loadProperties) {
+        try {
+          window.fetchProperties();
+          return;
+        } catch {}
+      }
+
+      if (!adminState.properties.length) {
+        adminState.properties = [...demoProperties];
+      }
+      renderPropertiesTable(adminState.properties);
+    }
+
+    function loadBookings() {
+      if (typeof window.loadBookings === "function" && window.loadBookings !== loadBookings) {
+        try {
+          window.loadBookings();
+          return;
+        } catch {}
+      }
+
+      if (!adminState.bookings.length) {
+        adminState.bookings = [...demoBookings];
+      }
+      renderBookings(adminState.bookings);
+    }
+
+    function updateAdminQuickStats() {
+      const properties = adminState.properties || [];
+      const bookings = adminState.bookings || [];
+
+      qs("stat-total-properties").textContent = String(properties.length);
+      qs("stat-active-properties").textContent = String(properties.filter(p => p.visible).length);
+      qs("stat-total-bookings").textContent = String(bookings.length);
+      qs("stat-pending-bookings").textContent = String(bookings.filter(b => b.status === "pending").length);
+    }
 
     function updateUploadPreview(file) {
       const zoneText = document.querySelector(".upload-zone-text");
       const zoneIcon = document.querySelector(".upload-zone i");
-      const previewBox = document.getElementById("upload-preview-box");
-      const previewImg = document.getElementById("upload-preview-img");
-      const previewName = document.getElementById("upload-preview-name");
-      const previewSize = document.getElementById("upload-preview-size");
-      const uploadStatus = document.getElementById("upload-status");
+      const previewBox = qs("upload-preview-box");
+      const previewImg = qs("upload-preview-img");
+      const previewName = qs("upload-preview-name");
+      const previewSize = qs("upload-preview-size");
+      const uploadStatus = qs("upload-status");
 
       if (!file) {
         resetUploadPreview();
@@ -1905,7 +2464,7 @@
 
       if (file.type.startsWith("image/")) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = e => {
           if (previewImg) previewImg.src = e.target.result;
           previewBox?.classList.add("visible");
         };
@@ -1918,10 +2477,10 @@
     function resetUploadPreview() {
       const zoneText = document.querySelector(".upload-zone-text");
       const zoneIcon = document.querySelector(".upload-zone i");
-      const previewBox = document.getElementById("upload-preview-box");
-      const previewImg = document.getElementById("upload-preview-img");
-      const previewName = document.getElementById("upload-preview-name");
-      const previewSize = document.getElementById("upload-preview-size");
+      const previewBox = qs("upload-preview-box");
+      const previewImg = qs("upload-preview-img");
+      const previewName = qs("upload-preview-name");
+      const previewSize = qs("upload-preview-size");
 
       if (zoneText) {
         zoneText.textContent = "اضغط هنا أو اسحب الصورة";
@@ -1935,11 +2494,11 @@
     }
 
     function updateEditUploadPreview(file) {
-      const zoneText = document.getElementById("edit-upload-zone-text");
-      const previewBox = document.getElementById("edit-upload-preview-box");
-      const previewImg = document.getElementById("edit-upload-preview-img");
-      const previewName = document.getElementById("edit-upload-preview-name");
-      const previewSize = document.getElementById("edit-upload-preview-size");
+      const zoneText = qs("edit-upload-zone-text");
+      const previewBox = qs("edit-upload-preview-box");
+      const previewImg = qs("edit-upload-preview-img");
+      const previewName = qs("edit-upload-preview-name");
+      const previewSize = qs("edit-upload-preview-size");
 
       if (!file) {
         resetEditUploadPreview();
@@ -1954,7 +2513,7 @@
 
       if (file.type.startsWith("image/")) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = e => {
           if (previewImg) previewImg.src = e.target.result;
           previewBox?.classList.add("visible");
         };
@@ -1965,151 +2524,398 @@
     }
 
     function resetEditUploadPreview() {
-      const zoneText = document.getElementById("edit-upload-zone-text");
-      const previewBox = document.getElementById("edit-upload-preview-box");
-      const previewImg = document.getElementById("edit-upload-preview-img");
-      const previewName = document.getElementById("edit-upload-preview-name");
-      const previewSize = document.getElementById("edit-upload-preview-size");
+      const zoneText = qs("edit-upload-zone-text");
+      const previewBox = qs("edit-upload-preview-box");
+      const previewImg = qs("edit-upload-preview-img");
+      const previewName = qs("edit-upload-preview-name");
+      const previewSize = qs("edit-upload-preview-size");
+
       if (zoneText) zoneText.textContent = "اختر صورة جديدة إن أردت استبدال الحالية";
       if (previewImg) previewImg.removeAttribute("src");
       if (previewName) previewName.textContent = "معاينة الصورة الجديدة";
       if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
       previewBox?.classList.remove("visible");
     }
-  </script>
-
-  <script src="admin_bookings_addon.js" defer></script>
-  <script src="admin.js" defer></script>
-
-  <script>
-    let addMap = null, addMarker = null;
-    let editMap = null, editMarker = null;
 
     function initAddMap() {
-      if (addMap) {
-        addMap.invalidateSize();
+      if (!window.L || !qs("admin-map-picker")) return;
+
+      if (adminState.addMap) {
+        adminState.addMap.invalidateSize();
         return;
       }
-      addMap = L.map("admin-map-picker").setView([28.0, 3.0], 5);
+
+      adminState.addMap = L.map("admin-map-picker").setView([28.0, 3.0], 5);
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
         maxZoom: 19
-      }).addTo(addMap);
-      addMap.on("click", function(e) {
+      }).addTo(adminState.addMap);
+
+      adminState.addMap.on("click", e => {
         placeAddMarker(e.latlng.lat, e.latlng.lng);
       });
     }
 
     function placeAddMarker(lat, lng) {
-      if (addMarker) addMap.removeLayer(addMarker);
-      addMarker = L.marker([lat, lng]).addTo(addMap).bindPopup("📍 تم تحديد الموقع").openPopup();
-      document.getElementById("prop-lat").value = lat.toFixed(6);
-      document.getElementById("prop-lng").value = lng.toFixed(6);
-      document.getElementById("map-picked-badge").classList.add("visible");
+      if (!adminState.addMap) return;
+
+      if (adminState.addMarker) adminState.addMap.removeLayer(adminState.addMarker);
+      adminState.addMarker = L.marker([lat, lng]).addTo(adminState.addMap).bindPopup("📍 تم تحديد الموقع").openPopup();
+
+      qs("prop-lat").value = Number(lat).toFixed(6);
+      qs("prop-lng").value = Number(lng).toFixed(6);
+      qs("map-picked-badge").classList.add("visible");
     }
 
     async function searchMapLocation() {
-      const query = document.getElementById("map-search-input").value.trim();
-      if (!query) return;
+      const query = qs("map-search-input").value.trim();
+      if (!query || !adminState.addMap) return;
+
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
         const data = await res.json();
-        if (data.length > 0) {
+
+        if (Array.isArray(data) && data.length > 0) {
           const lat = parseFloat(data[0].lat);
           const lng = parseFloat(data[0].lon);
-          addMap.setView([lat, lng], 14);
+          adminState.addMap.setView([lat, lng], 14);
           placeAddMarker(lat, lng);
         } else {
           alert("لم يتم العثور على الموقع، جرب كتابة اسم الولاية أو المنطقة بشكل أوضح.");
         }
-      } catch(err) {
+      } catch {
         alert("حدث خطأ أثناء البحث عن الموقع.");
       }
     }
 
     function initEditMap(existingLat, existingLng) {
+      if (!window.L || !qs("edit-map-picker")) return;
+
       const hasCoords = existingLat !== null && existingLat !== undefined && existingLng !== null && existingLng !== undefined;
       const center = hasCoords ? [existingLat, existingLng] : [28.0, 3.0];
       const zoom = hasCoords ? 14 : 5;
 
-      if (!editMap) {
-        editMap = L.map("edit-map-picker").setView(center, zoom);
+      if (!adminState.editMap) {
+        adminState.editMap = L.map("edit-map-picker").setView(center, zoom);
+
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
           attribution: "© OpenStreetMap contributors"
-        }).addTo(editMap);
-        editMap.on("click", function(e) {
+        }).addTo(adminState.editMap);
+
+        adminState.editMap.on("click", e => {
           const { lat, lng } = e.latlng;
-          if (editMarker) editMap.removeLayer(editMarker);
-          editMarker = L.marker([lat, lng]).addTo(editMap).bindPopup("📍 الموقع الجديد").openPopup();
-          document.getElementById("edit-lat").value = lat.toFixed(6);
-          document.getElementById("edit-lng").value = lng.toFixed(6);
-          document.getElementById("edit-map-picked-badge").classList.add("visible");
+          if (adminState.editMarker) adminState.editMap.removeLayer(adminState.editMarker);
+          adminState.editMarker = L.marker([lat, lng]).addTo(adminState.editMap).bindPopup("📍 الموقع الجديد").openPopup();
+          qs("edit-lat").value = Number(lat).toFixed(6);
+          qs("edit-lng").value = Number(lng).toFixed(6);
+          qs("edit-map-picked-badge").classList.add("visible");
         });
       } else {
-        editMap.setView(center, zoom);
-        editMap.invalidateSize();
+        adminState.editMap.setView(center, zoom);
+        adminState.editMap.invalidateSize();
       }
 
       if (hasCoords) {
-        if (editMarker) editMap.removeLayer(editMarker);
-        editMarker = L.marker([existingLat, existingLng]).addTo(editMap).bindPopup("📍 الموقع الحالي").openPopup();
-        document.getElementById("edit-map-picked-badge").classList.add("visible");
+        if (adminState.editMarker) adminState.editMap.removeLayer(adminState.editMarker);
+        adminState.editMarker = L.marker([existingLat, existingLng]).addTo(adminState.editMap).bindPopup("📍 الموقع الحالي").openPopup();
+        qs("edit-map-picked-badge").classList.add("visible");
+        qs("edit-lat").value = Number(existingLat).toFixed(6);
+        qs("edit-lng").value = Number(existingLng).toFixed(6);
       } else {
-        document.getElementById("edit-map-picked-badge").classList.remove("visible");
+        qs("edit-map-picked-badge").classList.remove("visible");
+        qs("edit-lat").value = "";
+        qs("edit-lng").value = "";
       }
     }
 
-    function hookSwitchTab() {
-      if (typeof window.switchTab !== "function") return;
-      const _orig = window.switchTab;
-      window.switchTab = function(tab) {
-        _orig(tab);
-        document.getElementById("admin-sidebar")?.classList.remove("open");
-        if (tab === "add-property") setTimeout(initAddMap, 150);
-        setTimeout(() => {
-          if (typeof updateAdminQuickStats === "function") updateAdminQuickStats();
-        }, 350);
+    function resetAddMap() {
+      if (adminState.addMarker && adminState.addMap) {
+        adminState.addMap.removeLayer(adminState.addMarker);
+        adminState.addMarker = null;
+      }
+      if (adminState.addMap) adminState.addMap.setView([28.0, 3.0], 5);
+    }
+
+    function openEditModal(propertyId) {
+      const property = adminState.properties.find(p => p.id === propertyId);
+      if (!property) return;
+
+      adminState.selectedEditProperty = property;
+
+      qs("edit-prop-id").value = property.id;
+      qs("edit-title-ar").value = property.titleAr || "";
+      qs("edit-title-en").value = property.titleEn || "";
+      qs("edit-price").value = property.price || "";
+      qs("edit-type").value = property.type || "apartment";
+      qs("edit-loc-ar").value = property.locationAr || "";
+      qs("edit-loc-en").value = property.locationEn || "";
+      qs("edit-desc-ar").value = property.descAr || "";
+      qs("edit-desc-en").value = property.descEn || "";
+
+      resetEditUploadPreview();
+      qs("edit-image").value = "";
+      qs("edit-modal").classList.add("active");
+
+      setTimeout(() => {
+        initEditMap(property.lat ?? null, property.lng ?? null);
+        adminState.editMap?.invalidateSize();
+      }, 180);
+    }
+
+    function closeEditModal() {
+      qs("edit-modal").classList.remove("active");
+      adminState.selectedEditProperty = null;
+    }
+
+    function handleAddProperty(event) {
+      event.preventDefault();
+
+      const titleAr = qs("prop-title-ar").value.trim();
+      const titleEn = qs("prop-title-en").value.trim();
+      const descAr = qs("prop-desc-ar").value.trim();
+      const descEn = qs("prop-desc-en").value.trim();
+      const type = qs("prop-type").value;
+      const price = Number(qs("prop-price").value || 0);
+      const locationAr = qs("prop-loc-ar").value.trim();
+      const locationEn = qs("prop-loc-en").value.trim();
+      const lat = qs("prop-lat").value.trim();
+      const lng = qs("prop-lng").value.trim();
+      const imageFile = qs("prop-image").files?.[0] || null;
+
+      if (!titleAr || !titleEn || !descAr || !descEn || !locationAr || !locationEn || !price) {
+        alert("يرجى تعبئة جميع الحقول المطلوبة.");
+        return;
+      }
+
+      if (!lat || !lng) {
+        alert("يرجى تحديد موقع العقار على الخريطة.");
+        return;
+      }
+
+      if (!imageFile) {
+        alert("يرجى اختيار صورة رئيسية للعقار.");
+        return;
+      }
+
+      const newProperty = {
+        id: `prop_${Date.now()}`,
+        titleAr,
+        titleEn,
+        descAr,
+        descEn,
+        type,
+        price,
+        locationAr,
+        locationEn,
+        visible: true,
+        image: URL.createObjectURL(imageFile),
+        lat: Number(lat),
+        lng: Number(lng)
       };
+
+      adminState.properties.unshift(newProperty);
+      renderPropertiesTable();
+      updateAdminQuickStats();
+
+      event.target.reset();
+      qs("map-picked-badge").classList.remove("visible");
+      qs("prop-lat").value = "";
+      qs("prop-lng").value = "";
+      qs("upload-status").textContent = "";
+      resetUploadPreview();
+      resetAddMap();
+
+      alert("تمت إضافة العقار محلياً بنجاح.");
+      switchTab("manage-props");
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const checkInterval = setInterval(() => {
-        if (typeof window.switchTab === "function") {
-          clearInterval(checkInterval);
-          hookSwitchTab();
-        }
-      }, 100);
+    function handleEditPropertySubmit(event) {
+      event.preventDefault();
 
-      const addTab = document.getElementById("tab-add-property");
-      if (addTab && addTab.classList.contains("active")) {
-        setTimeout(initAddMap, 300);
+      const id = qs("edit-prop-id").value;
+      const item = adminState.properties.find(p => p.id === id);
+      if (!item) return;
+
+      item.titleAr = qs("edit-title-ar").value.trim();
+      item.titleEn = qs("edit-title-en").value.trim();
+      item.price = Number(qs("edit-price").value || 0);
+      item.type = qs("edit-type").value;
+      item.locationAr = qs("edit-loc-ar").value.trim();
+      item.locationEn = qs("edit-loc-en").value.trim();
+      item.descAr = qs("edit-desc-ar").value.trim();
+      item.descEn = qs("edit-desc-en").value.trim();
+
+      const newLat = qs("edit-lat").value.trim();
+      const newLng = qs("edit-lng").value.trim();
+      if (newLat && newLng) {
+        item.lat = Number(newLat);
+        item.lng = Number(newLng);
       }
 
-      const observer = new MutationObserver(() => {
-        if (typeof updateAdminQuickStats === "function") updateAdminQuickStats();
+      const file = qs("edit-image").files?.[0];
+      if (file && file.type.startsWith("image/")) {
+        item.image = URL.createObjectURL(file);
+      }
+
+      renderPropertiesTable();
+      closeEditModal();
+      alert("تم حفظ التعديلات بنجاح.");
+    }
+
+    function togglePropertyVisibility(id) {
+      const item = adminState.properties.find(p => p.id === id);
+      if (!item) return;
+      item.visible = !item.visible;
+      renderPropertiesTable();
+    }
+
+    function deleteProperty(id) {
+      const ok = confirm("هل أنت متأكد من حذف هذا العقار؟");
+      if (!ok) return;
+      adminState.properties = adminState.properties.filter(p => p.id !== id);
+      renderPropertiesTable();
+    }
+
+    function updateBookingStatus(id, status) {
+      const booking = adminState.bookings.find(b => b.id === id);
+      if (!booking) return;
+      booking.status = status;
+      renderBookings();
+    }
+
+    function filterPropertiesTable(query) {
+      const q = query.trim().toLowerCase();
+      const rows = document.querySelectorAll("#properties-tbody tr[data-id]");
+      rows.forEach(row => {
+        const txt = row.textContent.toLowerCase();
+        row.style.display = txt.includes(q) ? "" : "none";
+      });
+    }
+
+    function bindEvents() {
+      qs("admin-login-form")?.addEventListener("submit", handleAdminLogin);
+      qs("admin-logout-btn")?.addEventListener("click", logoutAdmin);
+
+      qs("admin-mobile-toggle")?.addEventListener("click", () => {
+        qs("admin-sidebar")?.classList.toggle("open");
       });
 
-      const propBody = document.getElementById("properties-tbody");
-      const bookingsContainer = document.getElementById("bookings-container");
-      if (propBody) observer.observe(propBody, { childList: true, subtree: true });
-      if (bookingsContainer) observer.observe(bookingsContainer, { childList: true, subtree: true });
-    });
+      document.addEventListener("click", e => {
+        if (window.innerWidth > 1100) return;
+        const sidebar = qs("admin-sidebar");
+        const mobileToggle = qs("admin-mobile-toggle");
+        if (!sidebar || !mobileToggle) return;
+        if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
+        sidebar.classList.remove("open");
+      });
 
+      document.querySelectorAll("[data-tab-target]").forEach(btn => {
+        btn.addEventListener("click", () => switchTab(btn.dataset.tabTarget));
+      });
+
+      qs("prop-image")?.addEventListener("change", function () {
+        updateUploadPreview(this.files?.[0] || null);
+      });
+
+      qs("edit-image")?.addEventListener("change", function () {
+        updateEditUploadPreview(this.files?.[0] || null);
+      });
+
+      qs("reset-property-form-btn")?.addEventListener("click", () => {
+        qs("add-property-form")?.reset();
+        qs("map-picked-badge")?.classList.remove("visible");
+        qs("prop-lat").value = "";
+        qs("prop-lng").value = "";
+        qs("upload-status").textContent = "";
+        resetUploadPreview();
+        resetAddMap();
+      });
+
+      qs("map-search-btn")?.addEventListener("click", searchMapLocation);
+      qs("map-search-input")?.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          searchMapLocation();
+        }
+      });
+
+      qs("property-search-input")?.addEventListener("input", function () {
+        filterPropertiesTable(this.value);
+      });
+
+      qs("refresh-properties-btn")?.addEventListener("click", () => {
+        loadProperties();
+      });
+
+      qs("refresh-bookings-btn")?.addEventListener("click", () => {
+        loadBookings();
+      });
+
+      qs("add-property-form")?.addEventListener("submit", handleAddProperty);
+      qs("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
+
+      qs("close-edit-modal-btn")?.addEventListener("click", closeEditModal);
+      qs("edit-modal")?.addEventListener("click", e => {
+        if (e.target.id === "edit-modal") closeEditModal();
+      });
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape") {
+          closeEditModal();
+          qs("admin-sidebar")?.classList.remove("open");
+        }
+      });
+
+      document.addEventListener("click", e => {
+        const actionEl = e.target.closest("[data-action]");
+        if (!actionEl) return;
+
+        const action = actionEl.dataset.action;
+        const id = actionEl.dataset.id;
+
+        if (action === "edit-property") openEditModal(id);
+        if (action === "toggle-property") togglePropertyVisibility(id);
+        if (action === "delete-property") deleteProperty(id);
+        if (action === "approve-booking") updateBookingStatus(id, "confirmed");
+        if (action === "reject-booking") updateBookingStatus(id, "rejected");
+      });
+    }
+
+    function initAdminSession() {
+      const session = getStoredAdminSession();
+      if (session) {
+        setAdminProfile(session);
+        showAdminLayout();
+        loadProperties();
+        loadBookings();
+        return;
+      }
+      showLoginScreen();
+    }
+
+    window.switchTab = switchTab;
+    window.closeEditModal = closeEditModal;
+    window.searchMapLocation = searchMapLocation;
+    window.loadBookings = loadBookings;
+    window.loadProperties = loadProperties;
+    window.fetchProperties = loadProperties;
+    window.updateAdminQuickStats = updateAdminQuickStats;
     window.initEditMapFromAdmin = function(lat, lng) {
       setTimeout(() => {
         initEditMap(lat || null, lng || null);
-        if (editMap) editMap.invalidateSize();
+        adminState.editMap?.invalidateSize();
       }, 200);
     };
+    window._resetAddMap = resetAddMap;
 
-    window._resetAddMap = function() {
-      if (addMarker && addMap) {
-        addMap.removeLayer(addMarker);
-        addMarker = null;
-      }
-      if (addMap) addMap.setView([28.0, 3.0], 5);
-    };
+    document.addEventListener("DOMContentLoaded", () => {
+      setThemeFromStorage();
+      bindEvents();
+      initAdminSession();
+      updateAdminQuickStats();
+    });
   </script>
 </body>
 </html>
