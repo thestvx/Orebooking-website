@@ -25,109 +25,39 @@
   <link rel="stylesheet" href="booking.css" />
 
   <style>
-    .preference-chips,
-    .feature-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
+    :root {
+      --primary: #435abf;
+      --primary-hover: #34459c;
+      --accent: #657be0;
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --info: #0ea5e9;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.05);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.08);
+      --radius-full: 9999px;
+      --transition: all .3s cubic-bezier(.16,1,.3,1);
     }
 
-    .chip-option {
-      position: relative;
+    body.dark,
+    .dark {
+      --bg-color: #0f172a;
+      --surface-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.2);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.4);
     }
 
-    .chip-option input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
+    * {
+      box-sizing: border-box;
     }
-
-    .chip-option span {
-      min-height: 42px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--border-color, #e2e8f0);
-      background: var(--surface-color, #fff);
-      color: var(--text-main, #0f172a);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: .88rem;
-      font-weight: 700;
-      transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
-      user-select: none;
-    }
-
-    .chip-option span i {
-      color: var(--primary, #435abf);
-      font-size: 1rem;
-    }
-
-    .chip-option input:checked + span {
-      background: rgba(67,90,191,0.08);
-      border-color: var(--primary, #435abf);
-      color: var(--primary, #435abf);
-      box-shadow: 0 0 0 3px rgba(67,90,191,0.1);
-      transform: translateY(-1px);
-    }
-
-    .section-divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border-color, #e2e8f0), transparent);
-      margin: 6px 0 22px;
-    }
-
-    .stagger-in {
-      animation: bookingStagger .45s ease both;
-    }
-
-    .stagger-in:nth-child(2) { animation-delay: .04s; }
-    .stagger-in:nth-child(3) { animation-delay: .08s; }
-    .stagger-in:nth-child(4) { animation-delay: .12s; }
-    .stagger-in:nth-child(5) { animation-delay: .16s; }
-    .stagger-in:nth-child(6) { animation-delay: .2s; }
-
-    @keyframes bookingStagger {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .summary-highlight {
-      margin-top: 16px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: rgba(16,185,129,0.08);
-      border: 1px solid rgba(16,185,129,0.16);
-      color: var(--success, #10b981);
-      font-size: .88rem;
-      font-weight: 700;
-      line-height: 1.7;
-    }
-
-    .review-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .review-tag {
-      padding: 7px 12px;
-      border-radius: 999px;
-      background: var(--surface-color, #fff);
-      border: 1px solid var(--border-color, #e2e8f0);
-      color: var(--text-main, #0f172a);
-      font-size: .82rem;
-      font-weight: 700;
-    }
-
-    .lang-hidden {
-      display: none !important;
-    }
-
-    /* ===== Layout / Navbar / RTL Fixes ===== */
 
     html,
     body {
@@ -136,6 +66,35 @@
 
     body {
       margin: 0;
+      background:
+        radial-gradient(circle at top center, rgba(67,90,191,.05) 0%, transparent 35%),
+        var(--bg-color);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color .3s ease, color .3s ease;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    html[dir="ltr"] body {
+      font-family: "Outfit", sans-serif;
+    }
+
+    html[dir="rtl"] body {
+      font-family: "Tajawal", sans-serif;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
     }
 
     .container {
@@ -155,15 +114,15 @@
       gap: 14px;
       flex-wrap: nowrap;
       padding: 12px 20px;
-      background: rgba(255,255,255,0.88);
+      background: rgba(255,255,255,.88);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color, #e2e8f0);
+      border-bottom: 1px solid var(--border-color);
     }
 
     body.dark .navbar,
     .dark .navbar {
-      background: rgba(15,23,42,0.84);
+      background: rgba(15,23,42,.84);
     }
 
     .logo {
@@ -173,7 +132,6 @@
     }
 
     .logo-img {
-      display: block;
       height: 46px;
       width: auto;
       max-width: 165px;
@@ -191,12 +149,68 @@
       max-width: 100%;
     }
 
-    .rewards-badge,
+    .rewards-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 42px;
+      padding: 8px 14px;
+      border-radius: var(--radius-full);
+      background: rgba(245,158,11,.1);
+      color: #d97706;
+      font-size: .85rem;
+      font-weight: 700;
+      border: 1px solid rgba(245,158,11,.18);
+      white-space: nowrap;
+    }
+
+    body.dark .rewards-badge,
+    .dark .rewards-badge {
+      color: #fbbf24;
+    }
+
     .lang-btn,
     .icon-btn,
     .back-home-btn,
     .profile-menu {
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      background: var(--surface-color);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      font-size: .92rem;
       flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .profile-menu {
+      width: 44px;
+      padding: 0;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .lang-btn:hover,
+    .icon-btn:hover,
+    .back-home-btn:hover,
+    .profile-menu:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary);
+    }
+
+    .back-home-btn {
+      font-weight: 700;
+      white-space: nowrap;
     }
 
     .profile-container {
@@ -213,171 +227,23 @@
       z-index: 1200;
     }
 
-    .booking-page {
-      padding: 24px 0 60px;
+    .lang-hidden {
+      display: none !important;
     }
 
-    .booking-hero {
-      margin-bottom: 20px;
+    .stagger-in {
+      animation: bookingStagger .45s ease both;
     }
 
-    .booking-hero-card {
-      position: relative;
-      overflow: hidden;
-      min-height: auto;
-    }
+    .stagger-in:nth-child(2) { animation-delay: .04s; }
+    .stagger-in:nth-child(3) { animation-delay: .08s; }
+    .stagger-in:nth-child(4) { animation-delay: .12s; }
+    .stagger-in:nth-child(5) { animation-delay: .16s; }
+    .stagger-in:nth-child(6) { animation-delay: .20s; }
 
-    .booking-hero-card::before {
-      content: "";
-      position: absolute;
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      top: -32px;
-      inset-inline-start: -32px;
-      inset-inline-end: auto;
-      background: radial-gradient(circle, rgba(101,123,224,.18), transparent 70%);
-      pointer-events: none;
-    }
-
-    .booking-hero-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 20px;
-      flex-wrap: wrap;
-      position: relative;
-      z-index: 1;
-    }
-
-    .booking-hero-card h1,
-    .booking-hero-card p {
-      position: relative;
-      z-index: 1;
-      max-width: 820px;
-    }
-
-    .hero-secure-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 44px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: var(--surface-color, #fff);
-      border: 1px solid var(--border-color, #e2e8f0);
-      box-shadow: 0 4px 12px rgba(15,23,42,0.05);
-      font-size: .86rem;
-      font-weight: 700;
-      color: var(--text-main, #0f172a);
-      white-space: nowrap;
-    }
-
-    .hero-badge i {
-      color: var(--primary, #435abf);
-      font-size: 1rem;
-    }
-
-    .booking-steps-header {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
-    }
-
-    .booking-wrapper {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 340px;
-      gap: 24px;
-      align-items: start;
-    }
-
-    .booking-main-card,
-    .booking-summary-sidebar,
-    .section-block,
-    .review-card,
-    .payment-details-box {
-      min-width: 0;
-      max-width: 100%;
-    }
-
-    .booking-summary-sidebar {
-      position: sticky;
-      top: 88px;
-      align-self: start;
-    }
-
-    .prop-mini-card,
-    .summary-row,
-    .summary-meta-item,
-    .bank-row,
-    .review-card-header {
-      min-width: 0;
-    }
-
-    .step-actions {
-      gap: 12px;
-    }
-
-    .step-actions .primary-btn,
-    .step-actions .ghost-btn {
-      max-width: 100%;
-    }
-
-    .selected-file {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: var(--bg-color, #f8fafc);
-      border: 1px solid var(--border-color, #e2e8f0);
-      color: var(--text-main, #0f172a);
-      word-break: break-word;
-    }
-
-    .summary-meta {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin: 18px 0;
-    }
-
-    .summary-meta-item {
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: var(--bg-color, #f8fafc);
-      border: 1px solid var(--border-color, #e2e8f0);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .summary-meta-item strong {
-      font-size: .78rem;
-      color: var(--text-muted, #64748b);
-    }
-
-    .summary-meta-item span {
-      font-size: .95rem;
-      font-weight: 700;
-      color: var(--text-main, #0f172a);
-    }
-
-    .sidebar-note {
-      margin-top: 16px;
-      font-size: .84rem;
-      line-height: 1.7;
-      color: var(--text-muted, #64748b);
+    @keyframes bookingStagger {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     html[dir="rtl"] .navbar {
@@ -393,39 +259,6 @@
     html[dir="rtl"] .profile-dropdown {
       inset-inline-start: 0;
       inset-inline-end: auto;
-    }
-
-    html[dir="rtl"] .booking-hero-card {
-      text-align: right;
-    }
-
-    html[dir="ltr"] .booking-hero-card {
-      text-align: left;
-    }
-
-    html[dir="rtl"] .booking-hero-card::before {
-      inset-inline-start: auto;
-      inset-inline-end: -32px;
-    }
-
-    html[dir="rtl"] .step-actions .ph-arrow-right,
-    html[dir="rtl"] .back-home-btn .ph-house {
-      transform: none;
-    }
-
-    @media (max-width: 1100px) {
-      .booking-wrapper {
-        grid-template-columns: 1fr;
-      }
-
-      .booking-summary-sidebar {
-        position: static;
-        order: 2;
-      }
-
-      .booking-main-card {
-        order: 1;
-      }
     }
 
     @media (max-width: 768px) {
@@ -467,53 +300,6 @@
         min-width: 40px;
         min-height: 40px;
       }
-
-      .booking-page {
-        padding: 18px 0 48px;
-      }
-
-      .booking-hero {
-        margin-bottom: 16px;
-      }
-
-      .hero-secure-badges {
-        gap: 8px;
-      }
-
-      .hero-badge {
-        white-space: normal;
-        border-radius: 16px;
-      }
-
-      .summary-meta,
-      .stay-stats,
-      .form-grid,
-      .review-grid,
-      .payment-methods-grid {
-        grid-template-columns: 1fr !important;
-      }
-
-      .step-header {
-        flex-direction: column;
-        align-items: flex-start;
-        text-align: start;
-      }
-
-      html[dir="rtl"] .step-header {
-        align-items: flex-end;
-        text-align: right;
-      }
-
-      .step-actions,
-      .step-actions-between {
-        flex-direction: column;
-      }
-
-      .step-actions .primary-btn,
-      .step-actions .ghost-btn {
-        width: 100%;
-        justify-content: center;
-      }
     }
 
     @media (max-width: 480px) {
@@ -524,15 +310,6 @@
       .lang-btn span,
       .back-home-btn span {
         display: none;
-      }
-
-      .booking-steps-header {
-        padding-inline: 14px;
-      }
-
-      .booking-hero-card::before {
-        width: 110px;
-        height: 110px;
       }
     }
   </style>
@@ -559,13 +336,13 @@
         <i class="ph ph-moon"></i>
       </button>
 
-      <a href="index.html" class="back-home-btn">
+      <a href="index.html" class="back-home-btn" aria-label="Back to home">
         <i class="ph ph-house"></i>
         <span data-i18n="backHome">Back to Home</span>
       </a>
 
       <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu" type="button" aria-label="Account">
+        <button id="open-auth-btn" class="profile-menu" type="button" aria-label="Account" aria-expanded="false">
           <i class="ph ph-user"></i>
         </button>
 
@@ -574,14 +351,17 @@
             <strong id="dropdown-user-name">Guest User</strong>
             <span id="dropdown-user-email">guest@example.com</span>
           </div>
+
           <button class="dropdown-item" id="my-bookings-btn" type="button">
             <i class="ph ph-suitcase-rolling"></i>
             <span data-i18n="myBookings">My Bookings</span>
           </button>
+
           <button class="dropdown-item" id="my-favorites-btn" type="button">
             <i class="ph ph-heart"></i>
             <span data-i18n="myFavorites">My Favorites</span>
           </button>
+
           <button class="dropdown-item" id="logout-btn" type="button">
             <i class="ph ph-sign-out"></i>
             <span data-i18n="logout">Log Out</span>
@@ -599,7 +379,7 @@
         </button>
 
         <div class="auth-header">
-          <img src="logos/logo-light.png" alt="OreBooking">
+          <img src="logos/logo-light.png" alt="OreBooking" id="modal-logo">
         </div>
 
         <div class="auth-content">
@@ -618,7 +398,9 @@
               <label for="login-password" data-i18n="password">Password</label>
               <div class="pass-wrapper">
                 <input type="password" id="login-password" data-i18n-placeholder="passwordPlaceholder" placeholder="Enter your password" required>
-                <button class="toggle-pass-btn" type="button"><i class="ph ph-eye"></i></button>
+                <button class="toggle-pass-btn" type="button" aria-label="Show password">
+                  <i class="ph ph-eye"></i>
+                </button>
               </div>
             </div>
 
@@ -628,6 +410,7 @@
                 <span class="auth-checkmark"></span>
                 <span data-i18n="rememberMe">Remember me</span>
               </label>
+
               <a href="#" id="go-to-forgot" class="forgot-link" data-i18n="forgotPass">Forgot password?</a>
             </div>
 
@@ -666,7 +449,9 @@
               <label for="reg-password" data-i18n="password">Password</label>
               <div class="pass-wrapper">
                 <input type="password" id="reg-password" data-i18n-placeholder="passwordCreatePlaceholder" placeholder="Create a password" required>
-                <button class="toggle-pass-btn" type="button"><i class="ph ph-eye"></i></button>
+                <button class="toggle-pass-btn" type="button" aria-label="Show password">
+                  <i class="ph ph-eye"></i>
+                </button>
               </div>
             </div>
 
@@ -735,10 +520,12 @@
                   <i class="ph ph-shield-check"></i>
                   <span data-i18n="secureReservation">Secure reservation</span>
                 </div>
+
                 <div class="hero-badge">
                   <i class="ph ph-translate"></i>
                   <span data-i18n="fullLangSupport">Full Arabic & English support</span>
                 </div>
+
                 <div class="hero-badge">
                   <i class="ph ph-sparkle"></i>
                   <span data-i18n="tailoredStay">Tailored stay preferences</span>
@@ -759,12 +546,16 @@
           <div class="step-num">1</div>
           <div class="step-label" data-i18n="stepDetails">Details</div>
         </div>
+
         <div class="step-connector" id="connector-1"></div>
+
         <div class="step-indicator" id="indicator-2" data-step="2">
           <div class="step-num">2</div>
           <div class="step-label" data-i18n="stepPayment">Payment</div>
         </div>
+
         <div class="step-connector" id="connector-2"></div>
+
         <div class="step-indicator" id="indicator-3" data-step="3">
           <div class="step-num">3</div>
           <div class="step-label" data-i18n="stepReview">Review</div>
@@ -780,6 +571,7 @@
             </div>
           </div>
 
+          <!-- STEP 1 -->
           <div class="booking-step active" id="step-1">
             <div class="step-header">
               <div class="step-header-icon"><i class="ph ph-user-circle"></i></div>
@@ -801,6 +593,7 @@
                     <span id="stat-checkin">—</span>
                   </div>
                 </div>
+
                 <div class="stay-stat">
                   <i class="ph ph-calendar-x"></i>
                   <div>
@@ -808,6 +601,7 @@
                     <span id="stat-checkout">—</span>
                   </div>
                 </div>
+
                 <div class="stay-stat">
                   <i class="ph ph-moon-stars"></i>
                   <div>
@@ -815,11 +609,12 @@
                     <span id="stat-nights">—</span>
                   </div>
                 </div>
+
                 <div class="stay-stat">
                   <i class="ph ph-users"></i>
                   <div>
                     <strong data-i18n="guests">Guests</strong>
-                    <span id="stat-guests">—</span>
+                    <span id="stat-guests">1</span>
                   </div>
                 </div>
               </div>
@@ -1111,6 +906,7 @@
             </div>
           </div>
 
+          <!-- STEP 2 -->
           <div class="booking-step" id="step-2">
             <div class="step-header">
               <div class="step-header-icon"><i class="ph ph-credit-card"></i></div>
@@ -1152,14 +948,17 @@
                     <span data-i18n="bankName">Bank Name</span>
                     <strong>CPA Algeria</strong>
                   </div>
+
                   <div class="bank-row">
                     <span data-i18n="accountName">Account Name</span>
                     <strong>OreBooking Travel Services</strong>
                   </div>
+
                   <div class="bank-row">
                     <span data-i18n="ibanLabel">IBAN</span>
                     <strong id="bank-iban">DZ00 0000 0000 0000 0000 0000</strong>
                   </div>
+
                   <div class="bank-row">
                     <span data-i18n="referenceCode">Reference Code</span>
                     <strong id="booking-reference-code">ORB-2026-4581</strong>
@@ -1181,13 +980,13 @@
                 <label class="file-upload-wrapper" for="payment-proof">
                   <div class="file-upload-icon"><i class="ph ph-upload-simple"></i></div>
                   <div class="file-upload-text" data-i18n="uploadReceipt">Upload transfer receipt</div>
-                  <div class="file-upload-hint" data-i18n="uploadReceiptHint">Accepted formats: JPG, PNG, PDF — max 5MB</div>
+                  <div class="file-upload-hint" data-i18n="uploadReceiptHint">Accepted formats JPG, PNG, PDF max 5MB</div>
                   <input class="file-upload-input" id="payment-proof" type="file" accept=".jpg,.jpeg,.png,.pdf">
                 </label>
 
                 <div class="selected-file" id="selected-file-box">
                   <i class="ph ph-file"></i>
-                  <span id="selected-file-name">—</span>
+                  <span id="selected-file-name">receipt.pdf</span>
                 </div>
               </div>
 
@@ -1219,6 +1018,7 @@
             </div>
           </div>
 
+          <!-- STEP 3 -->
           <div class="booking-step" id="step-3">
             <div class="step-header">
               <div class="step-header-icon"><i class="ph ph-check-circle"></i></div>
@@ -1238,19 +1038,23 @@
                       <span data-i18n="editBtn">Edit</span>
                     </button>
                   </div>
+
                   <div class="review-card-body">
                     <div class="review-data">
                       <span class="rd-label" data-i18n="fullName">Full Name</span>
                       <span class="rd-value" id="review-guest-name">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="email">Email Address</span>
                       <span class="rd-value" id="review-guest-email">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="phoneNumber">Phone Number</span>
                       <span class="rd-value" id="review-guest-phone">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="purposeStay">Purpose of Stay</span>
                       <span class="rd-value" id="review-guest-purpose">—</span>
@@ -1266,19 +1070,23 @@
                       <span data-i18n="editBtn">Edit</span>
                     </button>
                   </div>
+
                   <div class="review-card-body">
                     <div class="review-data">
                       <span class="rd-label" data-i18n="preferredView">Preferred View</span>
                       <span class="rd-value" id="review-room-view">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="bedType">Bed Type</span>
                       <span class="rd-value" id="review-bed-type">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="guestPriorities">Guest Priorities</span>
                       <div class="review-tags" id="review-priorities"></div>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="requestedFeatures">Requested Features</span>
                       <div class="review-tags" id="review-features"></div>
@@ -1294,11 +1102,13 @@
                       <span data-i18n="editBtn">Edit</span>
                     </button>
                   </div>
+
                   <div class="review-card-body">
                     <div class="review-data">
                       <span class="rd-label" data-i18n="selectedMethod">Selected Method</span>
                       <span class="rd-value" id="review-payment-method">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="uploadedReceipt">Uploaded Receipt</span>
                       <span class="rd-value" id="review-payment-proof">—</span>
@@ -1314,15 +1124,18 @@
                       <span data-i18n="editBtn">Edit</span>
                     </button>
                   </div>
+
                   <div class="review-card-body">
                     <div class="review-data">
                       <span class="rd-label" data-i18n="foodPreferences">Food Preferences or Dietary Notes</span>
                       <span class="rd-value" id="review-food-pref">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="specialRequests">Special Requests</span>
                       <span class="rd-value" id="review-special-requests">—</span>
                     </div>
+
                     <div class="review-data">
                       <span class="rd-label" data-i18n="companionNotes">Companion Notes</span>
                       <span class="rd-value" id="review-companion-notes">—</span>
@@ -1330,27 +1143,27 @@
                   </div>
                 </div>
               </div>
-
-              <div class="points-box">
-                <div class="points-icon"><i class="ph ph-gift"></i></div>
-                <div class="points-text">
-                  <span class="points-title" data-i18n="rewardNoticeTitle">Reward Points</span>
-                  <p data-i18n="rewardNoticeText">You may earn reward points after your booking is confirmed and completed successfully.</p>
-                </div>
-              </div>
-
-              <div class="policy-agreement">
-                <label class="checkbox-container">
-                  <input type="checkbox" id="agree-policy">
-                  <span class="checkmark"></span>
-                  <span class="agree-text">
-                    <span data-i18n="agreePolicyText1">I confirm that all reservation details are correct and I agree to the</span>
-                    <a href="#" data-i18n="termsConditions">Terms & Conditions</a>
-                    <span data-i18n="agreePolicyText2">and booking policies.</span>
-                  </span>
-                </label>
-              </div>
             </section>
+
+            <div class="points-box">
+              <div class="points-icon"><i class="ph ph-gift"></i></div>
+              <div class="points-text">
+                <span class="points-title" data-i18n="rewardNoticeTitle">Reward Points</span>
+                <p data-i18n="rewardNoticeText">You may earn reward points after your booking is confirmed and completed successfully.</p>
+              </div>
+            </div>
+
+            <div class="policy-agreement">
+              <label class="checkbox-container">
+                <input type="checkbox" id="agree-policy">
+                <span class="checkmark"></span>
+                <span class="agree-text">
+                  <span data-i18n="agreePolicyText1">I confirm that all reservation details are correct and I agree to the</span>
+                  <a href="#" data-i18n="termsConditions">Terms & Conditions</a>
+                  <span data-i18n="agreePolicyText2">and booking policies.</span>
+                </span>
+              </label>
+            </div>
 
             <div class="step-actions step-actions-between">
               <button type="button" id="back-step-2" class="ghost-btn">
@@ -1373,7 +1186,8 @@
           </h3>
 
           <div class="prop-mini-card">
-            <img src="images/palmgarden/01.jpg" alt="Property" class="prop-mini-img" id="summary-prop-img">
+            <img src="images/palmgarden01.jpg" alt="Property" class="prop-mini-img" id="summary-prop-img">
+
             <div class="prop-mini-details">
               <h4 id="summary-prop-title">Camp Palm Garden Resort</h4>
               <p id="summary-prop-location">
@@ -1389,14 +1203,17 @@
               <strong data-i18n="checkIn">Check-in</strong>
               <span id="summary-checkin">—</span>
             </div>
+
             <div class="summary-meta-item">
               <strong data-i18n="checkOut">Check-out</strong>
               <span id="summary-checkout">—</span>
             </div>
+
             <div class="summary-meta-item">
               <strong data-i18n="guests">Guests</strong>
-              <span id="summary-guests">—</span>
+              <span id="summary-guests">1</span>
             </div>
+
             <div class="summary-meta-item">
               <strong data-i18n="nights">Nights</strong>
               <span id="summary-nights">—</span>
@@ -1472,19 +1289,16 @@
         resetPassDesc: "Enter your email and we'll send you a reset link.",
         sendLink: "Send Reset Link",
         backToLogin: "Back to login",
-
         bookingHeroTitle: "Complete your booking",
         bookingHeroSubtitle: "Fill in every important guest, stay, preference, and payment detail so the host can prepare your reservation accurately.",
         secureReservation: "Secure reservation",
         fullLangSupport: "Full Arabic & English support",
         tailoredStay: "Tailored stay preferences",
-
         globalRequiredAlert: "Please complete all required information before continuing.",
         stepDetails: "Details",
         stepPayment: "Payment",
         stepReview: "Review",
         bookingInfoBanner: "Make sure all reservation details are correct before confirmation. Your selected property and price summary will appear on the side.",
-
         guestStayTitle: "Guest & Stay Details",
         guestStaySubtitle: "Enter the booking information required for your reservation.",
         reservationSnapshot: "Reservation Snapshot",
@@ -1493,7 +1307,6 @@
         checkOut: "Check-out",
         nights: "Nights",
         guests: "Guests",
-
         primaryGuest: "Primary Guest",
         phoneNumber: "Phone Number",
         phonePlaceholder: "+213 ...",
@@ -1504,7 +1317,6 @@
         purposeStay: "Purpose of Stay",
         arrivalTime: "Expected Arrival Time",
         specialOccasion: "Special Occasion",
-
         selectOption: "Select",
         none: "None",
         male: "Male",
@@ -1518,625 +1330,4 @@
         honeymoon: "Honeymoon",
         birthday: "Birthday",
         anniversary: "Anniversary",
-        familyTrip: "Family Trip",
-
-        stayPreferences: "Stay Preferences",
-        stayPreferencesNote: "Choose the preferences and experiences you want the host to consider for your reservation.",
-        preferredView: "Preferred View",
-        bedType: "Bed Type",
-        floorPreference: "Floor Preference",
-        smokingPreference: "Smoking Preference",
-        guestPriorities: "Guest Priorities",
-        requestedFeatures: "Requested Features",
-        foodPreferences: "Food Preferences or Dietary Notes",
-        foodPreferencesPlaceholder: "Vegetarian, no spicy food, kids meals, etc.",
-        specialRequests: "Special Requests",
-        specialRequestsPlaceholder: "Tell us anything important the host should know before arrival.",
-        specialRequestsHint: "Requests are subject to availability, but adding them helps the host prepare better.",
-
-        noPreference: "No preference",
-        seaView: "Sea view",
-        gardenView: "Garden view",
-        poolView: "Pool view",
-        cityView: "City view",
-        mountainView: "Mountain view",
-        kingBed: "King bed",
-        queenBed: "Queen bed",
-        twinBeds: "Twin beds",
-        familySetup: "Family setup",
-        lowerFloor: "Lower floor",
-        middleFloor: "Middle floor",
-        higherFloor: "Higher floor",
-        nonSmoking: "Non-smoking",
-        smokingAllowed: "Smoking allowed",
-
-        priorityQuiet: "Quiet room",
-        priorityFastCheckin: "Fast check-in",
-        priorityHighFloor: "High floor",
-        priorityPrivacy: "Extra privacy",
-        priorityFamilyFriendly: "Family-friendly setup",
-        priorityRomantic: "Romantic setup",
-
-        featureWifi: "Fast Wi‑Fi",
-        featureParking: "Parking",
-        featureBreakfast: "Breakfast",
-        featureExtraBed: "Extra bed",
-        featureLateCheckout: "Late check-out",
-        featureAirportPickup: "Airport pickup",
-        featureBabyBed: "Baby crib",
-        featureAccessible: "Accessible room",
-
-        companionsInfo: "Companions Information",
-        companionsNote: "Provide optional details about accompanying guests to help with room setup and hosting arrangements.",
-        adultCount: "Number of Adults",
-        childrenCount: "Number of Children",
-        infantsCount: "Number of Infants",
-        bagsCount: "Luggage / Bags",
-        companionNotes: "Companion Notes",
-        companionNotesPlaceholder: "Example: elderly guest, child needs crib, one guest arrives later, etc.",
-
-        continueToPayment: "Continue to Payment",
-        paymentTitle: "Payment Method",
-        paymentSubtitle: "Choose your preferred payment method and upload proof if needed.",
-        choosePayment: "Choose Payment Method",
-        bankTransfer: "Bank Transfer",
-        bankTransferDesc: "Transfer the amount to our official bank account and upload the receipt.",
-        cashOnArrival: "Cash on Arrival",
-        cashOnArrivalDesc: "Pay directly at check-in if this property allows cash settlement.",
-        cardRequest: "Card Request",
-        cardRequestDesc: "Submit your booking now and complete card payment after confirmation.",
-        bankName: "Bank Name",
-        accountName: "Account Name",
-        ibanLabel: "IBAN",
-        referenceCode: "Reference Code",
-        copyIban: "Copy IBAN",
-        copyReference: "Copy Reference",
-        uploadReceipt: "Upload transfer receipt",
-        uploadReceiptHint: "Accepted formats: JPG, PNG, PDF — max 5MB",
-        cashPolicyNote: "Cash payment is subject to property approval. Your booking will remain pending until reviewed.",
-        cardRequestNote: "A secure card payment link may be sent after your reservation details are reviewed and confirmed.",
-        backBtn: "Back",
-        continueToReview: "Continue to Review",
-
-        reviewTitle: "Review & Confirm",
-        reviewSubtitle: "Review all information carefully before sending your reservation request.",
-        reviewGuestInfo: "Guest Information",
-        reviewPreferences: "Preferences",
-        reviewPayment: "Payment",
-        reviewNotes: "Notes & Requests",
-        editBtn: "Edit",
-        selectedMethod: "Selected Method",
-        uploadedReceipt: "Uploaded Receipt",
-
-        rewardNoticeTitle: "Reward Points",
-        rewardNoticeText: "You may earn reward points after your booking is confirmed and completed successfully.",
-        agreePolicyText1: "I confirm that all reservation details are correct and I agree to the",
-        termsConditions: "Terms & Conditions",
-        agreePolicyText2: "and booking policies.",
-        confirmBooking: "Confirm Booking",
-
-        bookingSummary: "Booking Summary",
-        resortType: "Resort",
-        pricePerNight: "Price / night",
-        subtotal: "Subtotal",
-        serviceFee: "Service fee",
-        taxesFees: "Taxes & fees",
-        totalAmount: "Total",
-        summaryHighlight: "Your booking summary updates as you complete the steps.",
-        sidebarNote: "Reservation details may be reviewed by the host before final approval depending on payment method and availability."
-      },
-
-      ar: {
-        pageTitle: "إكمال الحجز — OreBooking",
-        rewardPoints: "نقطة",
-        backHome: "العودة للرئيسية",
-        myBookings: "حجوزاتي",
-        myFavorites: "مفضلتي",
-        logout: "تسجيل الخروج",
-        welcomeBack: "مرحباً بعودتك",
-        loginDesc: "أدخل بياناتك للوصول إلى حسابك.",
-        email: "البريد الإلكتروني",
-        emailPlaceholder: "name@example.com",
-        password: "كلمة المرور",
-        passwordPlaceholder: "أدخل كلمة المرور",
-        passwordCreatePlaceholder: "أنشئ كلمة مرور",
-        rememberMe: "تذكرني",
-        forgotPass: "نسيت كلمة المرور؟",
-        signIn: "تسجيل الدخول",
-        continueGoogle: "المتابعة عبر Google",
-        noAccount: "ليس لديك حساب؟",
-        signUp: "إنشاء حساب",
-        createAccount: "إنشاء حساب",
-        registerDesc: "انضم إلى OreBooking للاستفادة من المزايا الحصرية.",
-        fullName: "الاسم الكامل",
-        fullNamePlaceholder: "محمد أحمد",
-        signUpBtn: "إنشاء الحساب",
-        hasAccount: "لديك حساب بالفعل؟",
-        resetPassTitle: "استعادة كلمة المرور",
-        resetPassDesc: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
-        sendLink: "إرسال الرابط",
-        backToLogin: "العودة لتسجيل الدخول",
-
-        bookingHeroTitle: "أكمل حجزك",
-        bookingHeroSubtitle: "أدخل جميع بيانات الضيف والإقامة والتفضيلات والدفع حتى يتم تجهيز حجزك بدقة.",
-        secureReservation: "حجز آمن",
-        fullLangSupport: "دعم كامل للعربية والإنجليزية",
-        tailoredStay: "تفضيلات إقامة مخصصة",
-
-        globalRequiredAlert: "يرجى إكمال جميع البيانات المطلوبة قبل المتابعة.",
-        stepDetails: "البيانات",
-        stepPayment: "الدفع",
-        stepReview: "المراجعة",
-        bookingInfoBanner: "تأكد من صحة جميع تفاصيل الحجز قبل التأكيد. ستظهر بيانات العقار وملخص السعر في الجانب.",
-
-        guestStayTitle: "بيانات الضيف والإقامة",
-        guestStaySubtitle: "أدخل معلومات الحجز المطلوبة لإتمام طلب الحجز.",
-        reservationSnapshot: "ملخص الإقامة",
-        reservationSnapshotNote: "هذه التفاصيل السريعة تساعد الضيف على مراجعة الإقامة قبل المتابعة.",
-        checkIn: "تاريخ الدخول",
-        checkOut: "تاريخ الخروج",
-        nights: "عدد الليالي",
-        guests: "الضيوف",
-
-        primaryGuest: "الضيف الأساسي",
-        phoneNumber: "رقم الهاتف",
-        phonePlaceholder: "+213 ...",
-        whatsappNumber: "رقم واتساب",
-        nationality: "الجنسية",
-        nationalityPlaceholder: "جزائري",
-        gender: "الجنس",
-        purposeStay: "غرض الإقامة",
-        arrivalTime: "وقت الوصول المتوقع",
-        specialOccasion: "مناسبة خاصة",
-
-        selectOption: "اختر",
-        none: "لا يوجد",
-        male: "ذكر",
-        female: "أنثى",
-        tourism: "سياحة",
-        business: "عمل",
-        familyVisit: "زيارة عائلية",
-        event: "مناسبة",
-        medicalTrip: "رحلة علاجية",
-        other: "أخرى",
-        honeymoon: "شهر عسل",
-        birthday: "عيد ميلاد",
-        anniversary: "ذكرى",
-        familyTrip: "رحلة عائلية",
-
-        stayPreferences: "تفضيلات الإقامة",
-        stayPreferencesNote: "اختر التفضيلات والخدمات التي تريد من المضيف مراعاتها أثناء تجهيز الحجز.",
-        preferredView: "الإطلالة المفضلة",
-        bedType: "نوع السرير",
-        floorPreference: "تفضيل الطابق",
-        smokingPreference: "تفضيل التدخين",
-        guestPriorities: "أولويات الضيف",
-        requestedFeatures: "الميزات المطلوبة",
-        foodPreferences: "التفضيلات الغذائية أو ملاحظات الطعام",
-        foodPreferencesPlaceholder: "مثال: نباتي، بدون طعام حار، وجبات أطفال، إلخ.",
-        specialRequests: "طلبات خاصة",
-        specialRequestsPlaceholder: "أخبرنا بأي تفاصيل مهمة يجب أن يعرفها المضيف قبل الوصول.",
-        specialRequestsHint: "الطلبات حسب التوفر، لكن إضافتها تساعد المضيف على التجهيز بشكل أفضل.",
-
-        noPreference: "بدون تفضيل",
-        seaView: "إطلالة بحرية",
-        gardenView: "إطلالة على الحديقة",
-        poolView: "إطلالة على المسبح",
-        cityView: "إطلالة على المدينة",
-        mountainView: "إطلالة جبلية",
-        kingBed: "سرير كينغ",
-        queenBed: "سرير كوين",
-        twinBeds: "سريران منفصلان",
-        familySetup: "ترتيب عائلي",
-        lowerFloor: "طابق منخفض",
-        middleFloor: "طابق متوسط",
-        higherFloor: "طابق مرتفع",
-        nonSmoking: "غير مدخنين",
-        smokingAllowed: "يسمح بالتدخين",
-
-        priorityQuiet: "غرفة هادئة",
-        priorityFastCheckin: "تسجيل دخول سريع",
-        priorityHighFloor: "طابق مرتفع",
-        priorityPrivacy: "خصوصية إضافية",
-        priorityFamilyFriendly: "تجهيز مناسب للعائلة",
-        priorityRomantic: "تجهيز رومانسي",
-
-        featureWifi: "واي فاي سريع",
-        featureParking: "موقف سيارات",
-        featureBreakfast: "إفطار",
-        featureExtraBed: "سرير إضافي",
-        featureLateCheckout: "تأخير الخروج",
-        featureAirportPickup: "استقبال من المطار",
-        featureBabyBed: "سرير أطفال",
-        featureAccessible: "غرفة مهيأة لذوي الاحتياجات",
-
-        companionsInfo: "بيانات المرافقين",
-        companionsNote: "أدخل تفاصيل اختيارية عن المرافقين للمساعدة في تجهيز الغرفة وترتيبات الاستضافة.",
-        adultCount: "عدد البالغين",
-        childrenCount: "عدد الأطفال",
-        infantsCount: "عدد الرضع",
-        bagsCount: "عدد الحقائب",
-        companionNotes: "ملاحظات عن المرافقين",
-        companionNotesPlaceholder: "مثال: ضيف كبير سن، طفل يحتاج سرير، أحد المرافقين سيصل لاحقاً، إلخ.",
-
-        continueToPayment: "المتابعة إلى الدفع",
-        paymentTitle: "طريقة الدفع",
-        paymentSubtitle: "اختر طريقة الدفع المناسبة وارفع إثبات الدفع عند الحاجة.",
-        choosePayment: "اختر طريقة الدفع",
-        bankTransfer: "تحويل بنكي",
-        bankTransferDesc: "حوّل المبلغ إلى الحساب البنكي الرسمي ثم ارفع إيصال التحويل.",
-        cashOnArrival: "الدفع عند الوصول",
-        cashOnArrivalDesc: "ادفع مباشرة عند تسجيل الدخول إذا كان العقار يتيح هذا الخيار.",
-        cardRequest: "طلب دفع بالبطاقة",
-        cardRequestDesc: "أرسل الحجز الآن وأكمل الدفع بالبطاقة بعد التأكيد.",
-        bankName: "اسم البنك",
-        accountName: "اسم الحساب",
-        ibanLabel: "رقم الآيبان",
-        referenceCode: "رمز المرجع",
-        copyIban: "نسخ الآيبان",
-        copyReference: "نسخ المرجع",
-        uploadReceipt: "رفع إيصال التحويل",
-        uploadReceiptHint: "الصيغ المقبولة: JPG, PNG, PDF — الحد الأقصى 5MB",
-        cashPolicyNote: "الدفع النقدي يخضع لموافقة العقار. سيبقى الحجز قيد المراجعة حتى يتم اعتماده.",
-        cardRequestNote: "قد يتم إرسال رابط دفع آمن بالبطاقة بعد مراجعة بيانات الحجز وتأكيده.",
-        backBtn: "رجوع",
-        continueToReview: "المتابعة إلى المراجعة",
-
-        reviewTitle: "المراجعة والتأكيد",
-        reviewSubtitle: "راجع جميع البيانات بعناية قبل إرسال طلب الحجز.",
-        reviewGuestInfo: "بيانات الضيف",
-        reviewPreferences: "التفضيلات",
-        reviewPayment: "الدفع",
-        reviewNotes: "الملاحظات والطلبات",
-        editBtn: "تعديل",
-        selectedMethod: "الطريقة المختارة",
-        uploadedReceipt: "الإيصال المرفوع",
-
-        rewardNoticeTitle: "نقاط المكافآت",
-        rewardNoticeText: "قد تحصل على نقاط مكافآت بعد تأكيد الحجز وإتمام الإقامة بنجاح.",
-        agreePolicyText1: "أؤكد أن جميع تفاصيل الحجز صحيحة وأوافق على",
-        termsConditions: "الشروط والأحكام",
-        agreePolicyText2: "وسياسات الحجز.",
-        confirmBooking: "تأكيد الحجز",
-
-        bookingSummary: "ملخص الحجز",
-        resortType: "منتجع",
-        pricePerNight: "السعر / الليلة",
-        subtotal: "الإجمالي الفرعي",
-        serviceFee: "رسوم الخدمة",
-        taxesFees: "الضرائب والرسوم",
-        totalAmount: "الإجمالي",
-        summaryHighlight: "يتم تحديث ملخص الحجز أثناء إكمالك للخطوات.",
-        sidebarNote: "قد تتم مراجعة تفاصيل الحجز من قبل المضيف قبل الموافقة النهائية حسب طريقة الدفع والتوفر."
-      }
-    };
-
-    const bookingState = {
-      currentStep: 1,
-      lang: localStorage.getItem("ore_lang") || "en",
-      theme: localStorage.getItem("ore_theme") || "light"
-    };
-
-    const htmlEl = document.documentElement;
-    const bodyEl = document.body;
-
-    function setTheme(theme) {
-      bookingState.theme = theme;
-      localStorage.setItem("ore_theme", theme);
-      bodyEl.classList.toggle("dark", theme === "dark");
-      const themeBtn = document.getElementById("theme-toggle");
-      if (themeBtn) {
-        themeBtn.innerHTML = theme === "dark"
-          ? '<i class="ph ph-sun"></i>'
-          : '<i class="ph ph-moon"></i>';
-      }
-    }
-
-    function setLanguage(lang) {
-      bookingState.lang = lang;
-      localStorage.setItem("ore_lang", lang);
-      htmlEl.lang = lang;
-      htmlEl.dir = lang === "ar" ? "rtl" : "ltr";
-
-      const dict = bookingI18n[lang];
-
-      document.querySelectorAll("[data-i18n]").forEach(el => {
-        const key = el.getAttribute("data-i18n");
-        if (dict[key] !== undefined) el.textContent = dict[key];
-      });
-
-      document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-        const key = el.getAttribute("data-i18n-placeholder");
-        if (dict[key] !== undefined) el.setAttribute("placeholder", dict[key]);
-      });
-
-      document.querySelectorAll("[data-i18n-option]").forEach(el => {
-        const key = el.getAttribute("data-i18n-option");
-        if (dict[key] !== undefined) el.textContent = dict[key];
-      });
-
-      const langLabel = document.getElementById("lang-label");
-      if (langLabel) langLabel.textContent = lang === "ar" ? "EN" : "AR";
-
-      syncReview();
-      syncStaySummary();
-    }
-
-    function goToStep(step) {
-      bookingState.currentStep = step;
-
-      document.querySelectorAll(".booking-step").forEach((el, index) => {
-        el.classList.toggle("active", index + 1 === step);
-      });
-
-      [1, 2, 3].forEach((n) => {
-        const indicator = document.getElementById(`indicator-${n}`);
-        if (!indicator) return;
-        indicator.classList.remove("active", "completed");
-
-        if (n < step) indicator.classList.add("completed");
-        if (n === step) indicator.classList.add("active");
-      });
-
-      const c1 = document.getElementById("connector-1");
-      const c2 = document.getElementById("connector-2");
-      if (c1) c1.classList.toggle("completed", step > 1);
-      if (c2) c2.classList.toggle("completed", step > 2);
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      syncReview();
-    }
-
-    function getSelectedText(selectId) {
-      const select = document.getElementById(selectId);
-      if (!select) return "—";
-      const option = select.options[select.selectedIndex];
-      return option && option.textContent.trim() ? option.textContent.trim() : "—";
-    }
-
-    function getCheckedLabels(name) {
-      return [...document.querySelectorAll(`input[name="${name}"]:checked`)]
-        .map(input => input.closest(".chip-option")?.querySelector("span span")?.textContent?.trim())
-        .filter(Boolean);
-    }
-
-    function createReviewTags(containerId, values) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      if (!values.length) {
-        container.innerHTML = `<span class="review-tag">—</span>`;
-        return;
-      }
-      container.innerHTML = values.map(v => `<span class="review-tag">${v}</span>`).join("");
-    }
-
-    function setText(id, value) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = value && String(value).trim() ? value : "—";
-    }
-
-    function syncStaySummary() {
-      const todayFallback = "—";
-      const guests =
-        (Number(document.getElementById("adult-count")?.value || 1) || 0) +
-        (Number(document.getElementById("children-count")?.value || 0) || 0) +
-        (Number(document.getElementById("infants-count")?.value || 0) || 0);
-
-      const checkin = document.getElementById("summary-checkin")?.textContent?.trim() || todayFallback;
-      const checkout = document.getElementById("summary-checkout")?.textContent?.trim() || todayFallback;
-
-      setText("stat-checkin", checkin);
-      setText("stat-checkout", checkout);
-      setText("stat-guests", guests > 0 ? String(guests) : "—");
-      setText("summary-guests", guests > 0 ? String(guests) : "—");
-    }
-
-    function syncReview() {
-      setText("review-guest-name", document.getElementById("guest-name")?.value);
-      setText("review-guest-email", document.getElementById("guest-email")?.value);
-      setText("review-guest-phone", document.getElementById("guest-phone")?.value);
-      setText("review-guest-purpose", getSelectedText("guest-purpose"));
-      setText("review-room-view", getSelectedText("room-view"));
-      setText("review-bed-type", getSelectedText("bed-type"));
-      setText("review-food-pref", document.getElementById("food-preferences")?.value);
-      setText("review-special-requests", document.getElementById("special-requests")?.value);
-      setText("review-companion-notes", document.getElementById("companion-notes")?.value);
-
-      const selectedPayment = document.querySelector('input[name="payment-method"]:checked');
-      let paymentText = "—";
-      if (selectedPayment?.value === "bank-transfer") paymentText = bookingI18n[bookingState.lang].bankTransfer;
-      if (selectedPayment?.value === "cash") paymentText = bookingI18n[bookingState.lang].cashOnArrival;
-      if (selectedPayment?.value === "card") paymentText = bookingI18n[bookingState.lang].cardRequest;
-      setText("review-payment-method", paymentText);
-
-      const fileInput = document.getElementById("payment-proof");
-      const realFileName = fileInput?.files?.[0]?.name || "";
-      setText("review-payment-proof", realFileName || "—");
-
-      createReviewTags("review-priorities", getCheckedLabels("guest-priority"));
-      createReviewTags("review-features", getCheckedLabels("requested-feature"));
-      syncStaySummary();
-    }
-
-    function togglePaymentBoxes() {
-      const selected = document.querySelector('input[name="payment-method"]:checked')?.value;
-
-      document.querySelectorAll(".payment-method-card").forEach(card => {
-        const radio = card.querySelector('input[type="radio"]');
-        card.classList.toggle("selected", radio?.checked);
-      });
-
-      document.getElementById("bank-transfer-box")?.classList.toggle("active", selected === "bank-transfer");
-      document.getElementById("cash-box")?.classList.toggle("active", selected === "cash");
-      document.getElementById("card-box")?.classList.toggle("active", selected === "card");
-
-      syncReview();
-    }
-
-    function validateStep1() {
-      const requiredIds = ["guest-name", "guest-email", "guest-phone"];
-      for (const id of requiredIds) {
-        const input = document.getElementById(id);
-        if (!input || !input.value.trim()) {
-          document.getElementById("booking-global-alert")?.classList.remove("d-none");
-          input?.focus();
-          return false;
-        }
-      }
-      document.getElementById("booking-global-alert")?.classList.add("d-none");
-      return true;
-    }
-
-    function validateStep3() {
-      const agree = document.getElementById("agree-policy");
-      if (!agree?.checked) {
-        document.getElementById("booking-global-alert")?.classList.remove("d-none");
-        return false;
-      }
-      document.getElementById("booking-global-alert")?.classList.add("d-none");
-      return true;
-    }
-
-    function initBasicEvents() {
-      document.getElementById("lang-toggle")?.addEventListener("click", () => {
-        setLanguage(bookingState.lang === "ar" ? "en" : "ar");
-      });
-
-      document.getElementById("theme-toggle")?.addEventListener("click", () => {
-        setTheme(bookingState.theme === "dark" ? "light" : "dark");
-      });
-
-      document.getElementById("go-step-2")?.addEventListener("click", () => {
-        if (validateStep1()) goToStep(2);
-      });
-
-      document.getElementById("back-step-1")?.addEventListener("click", () => goToStep(1));
-      document.getElementById("go-step-3")?.addEventListener("click", () => goToStep(3));
-      document.getElementById("back-step-2")?.addEventListener("click", () => goToStep(2));
-
-      document.querySelectorAll("[data-edit-step]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const step = Number(btn.getAttribute("data-edit-step"));
-          goToStep(step);
-        });
-      });
-
-      document.querySelectorAll('input[name="payment-method"]').forEach(input => {
-        input.addEventListener("change", togglePaymentBoxes);
-      });
-
-      document.getElementById("payment-proof")?.addEventListener("change", (e) => {
-        const file = e.target.files?.[0];
-        const box = document.getElementById("selected-file-box");
-        const name = document.getElementById("selected-file-name");
-        if (box && name) {
-          if (file) {
-            name.textContent = file.name;
-            box.style.display = "flex";
-          } else {
-            name.textContent = "—";
-            box.style.display = "none";
-          }
-        }
-        syncReview();
-      });
-
-      [
-        "guest-name","guest-email","guest-phone","guest-purpose","room-view","bed-type",
-        "food-preferences","special-requests","companion-notes","adult-count","children-count","infants-count"
-      ].forEach(id => {
-        document.getElementById(id)?.addEventListener("input", syncReview);
-        document.getElementById(id)?.addEventListener("change", syncReview);
-      });
-
-      document.querySelectorAll('input[name="guest-priority"], input[name="requested-feature"]').forEach(el => {
-        el.addEventListener("change", syncReview);
-      });
-
-      document.getElementById("copy-iban-btn")?.addEventListener("click", async () => {
-        const iban = document.getElementById("bank-iban")?.textContent?.trim();
-        if (iban) await navigator.clipboard.writeText(iban);
-      });
-
-      document.getElementById("copy-reference-btn")?.addEventListener("click", async () => {
-        const ref = document.getElementById("booking-reference-code")?.textContent?.trim();
-        if (ref) await navigator.clipboard.writeText(ref);
-      });
-
-      document.getElementById("confirm-booking-btn")?.addEventListener("click", () => {
-        if (!validateStep3()) return;
-        if (typeof confetti === "function") {
-          confetti({ particleCount: 140, spread: 80, origin: { y: 0.7 } });
-        }
-      });
-
-      document.getElementById("go-to-register")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        document.getElementById("login-form")?.classList.remove("active");
-        document.getElementById("forgot-form")?.classList.remove("active");
-        document.getElementById("register-form")?.classList.add("active");
-      });
-
-      document.getElementById("go-to-login")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        document.getElementById("register-form")?.classList.remove("active");
-        document.getElementById("forgot-form")?.classList.remove("active");
-        document.getElementById("login-form")?.classList.add("active");
-      });
-
-      document.getElementById("go-to-forgot")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        document.getElementById("login-form")?.classList.remove("active");
-        document.getElementById("register-form")?.classList.remove("active");
-        document.getElementById("forgot-form")?.classList.add("active");
-      });
-
-      document.getElementById("back-to-login")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        document.getElementById("forgot-form")?.classList.remove("active");
-        document.getElementById("register-form")?.classList.remove("active");
-        document.getElementById("login-form")?.classList.add("active");
-      });
-
-      document.getElementById("open-auth-btn")?.addEventListener("click", () => {
-        document.getElementById("auth-modal")?.classList.add("active");
-        document.body.classList.add("modal-open");
-      });
-
-      document.getElementById("close-auth-btn")?.addEventListener("click", () => {
-        document.getElementById("auth-modal")?.classList.remove("active");
-        document.body.classList.remove("modal-open");
-      });
-
-      document.getElementById("auth-modal")?.addEventListener("click", (e) => {
-        if (e.target.id === "auth-modal") {
-          document.getElementById("auth-modal")?.classList.remove("active");
-          document.body.classList.remove("modal-open");
-        }
-      });
-
-      document.querySelectorAll(".toggle-pass-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const input = btn.parentElement?.querySelector("input");
-          if (!input) return;
-          const isPassword = input.type === "password";
-          input.type = isPassword ? "text" : "password";
-          btn.innerHTML = isPassword ? '<i class="ph ph-eye-slash"></i>' : '<i class="ph ph-eye"></i>';
-        });
-      });
-
-      document.getElementById("open-auth-btn")?.addEventListener("dblclick", () => {
-        document.getElementById("profile-dropdown")?.classList.toggle("active");
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      setTheme(bookingState.theme);
-      setLanguage(bookingState.lang);
-      initBasicEvents();
-      togglePaymentBoxes();
-      syncReview();
-    });
-  </script>
-</body>
-</html>
+        familyTrip: "Family
