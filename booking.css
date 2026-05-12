@@ -1,7 +1,6 @@
 /* =========================================================
-   booking.css — OreBooking v9.0
-   Synced with latest booking.html structure
-   Full RTL/LTR support, responsive layout, review & payment polish
+   booking.css — OreBooking v10.0
+   Refined, stabilized, responsive, RTL/LTR safe
    ========================================================= */
 
 /* ═══════════════════════════════════════════
@@ -587,6 +586,12 @@ body.dark .step-header-icon {
   box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
 }
 
+.form-control.invalid,
+.form-control[aria-invalid="true"] {
+  border-color: var(--error, #ef4444);
+  box-shadow: 0 0 0 4px rgba(239,68,68,.08);
+}
+
 textarea.form-control {
   min-height: 110px;
   resize: vertical;
@@ -785,6 +790,11 @@ select.form-control {
   box-shadow: 0 0 0 4px rgba(67,90,191,.14);
 }
 
+.payment-method-card:focus-within {
+  outline: 2px solid rgba(67,90,191,.18);
+  outline-offset: 2px;
+}
+
 .payment-method-icon {
   margin-bottom: 12px;
   color: var(--primary, #435abf);
@@ -941,6 +951,11 @@ select.form-control {
   font-weight: 700;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.selected-file.show,
+.selected-file.visible {
+  display: flex;
 }
 
 .selected-file i {
@@ -1463,6 +1478,20 @@ body.dark .review-card-header {
   animation: bk-shimmer 1.2s ease-in-out infinite;
 }
 
+.booking-focus-ring:focus-visible,
+.form-control:focus-visible,
+.chip-option input:focus-visible + span,
+.payment-method-card:focus-visible,
+.mini-btn:focus-visible,
+.primary-btn:focus-visible,
+.ghost-btn:focus-visible,
+.close-modal-btn:focus-visible,
+.edit-btn:focus-visible,
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--primary, #435abf);
+  outline-offset: 3px;
+}
+
 /* ═══════════════════════════════════════════
    Auth Modal
 ═══════════════════════════════════════════ */
@@ -1487,16 +1516,23 @@ body.dark .review-card-header {
   pointer-events: auto;
 }
 
-.modal-content {
+.auth-modal .modal-content {
   width: 100%;
   max-width: 460px;
-  overflow: hidden;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-xl, 1.5rem);
   background: var(--surface-color, #fff);
   box-shadow: 0 25px 60px rgba(0,0,0,0.2);
   transform: translateY(20px) scale(.96);
   transition: .35s cubic-bezier(.16, 1, .3, 1);
+  scrollbar-width: none;
+}
+
+.auth-modal .modal-content::-webkit-scrollbar {
+  display: none;
 }
 
 .auth-modal.active .modal-content {
@@ -1634,6 +1670,10 @@ body.dark .review-card-header {
   position: relative;
 }
 
+.pass-wrapper input {
+  padding-inline-end: 46px;
+}
+
 .toggle-pass-btn {
   position: absolute;
   inset-inline-end: 12px;
@@ -1654,6 +1694,10 @@ body.dark .review-card-header {
   display: none;
   margin-top: -4px;
   margin-bottom: 12px;
+}
+
+.password-strength.visible {
+  display: block;
 }
 
 .strength-bars {
@@ -1890,7 +1934,7 @@ body.dark .review-card-header {
   }
 
   .review-data.full-width {
-    flex-direction: column;
+    flex-direction: column !important;
     align-items: flex-start;
   }
 
@@ -1899,7 +1943,7 @@ body.dark .review-card-header {
   }
 
   .bank-row {
-    flex-direction: column;
+    flex-direction: column !important;
     align-items: flex-start;
     gap: 4px;
   }
@@ -1958,7 +2002,7 @@ body.dark .review-card-header {
 
   .points-box,
   .prop-mini-card {
-    flex-direction: column;
+    flex-direction: column !important;
   }
 
   .prop-mini-img {
@@ -2017,8 +2061,15 @@ body.dark .review-card-header {
     padding: 24px 18px 22px;
   }
 
-  .modal-content {
-    border-radius: 20px;
+  .auth-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .auth-modal .modal-content {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 95dvh;
   }
 
   .booking-main-card {
@@ -2035,5 +2086,9 @@ body.dark .review-card-header {
   .review-card-header,
   .review-card-body {
     padding-inline: 16px;
+  }
+
+  .booking-hero-card {
+    padding: 18px;
   }
 }
