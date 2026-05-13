@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="لوحة تحكم OreBooking لإدارة العقارات والحجوزات." />
+  <meta name="description" content="لوحة تحكم OreBooking لإدارة العقارات والحجوزات وحسابات الملاك." />
   <meta name="theme-color" content="#435abf" />
   <title>لوحة التحكم - OreBooking</title>
 
@@ -86,7 +86,6 @@
     }
 
     * { box-sizing: border-box; }
-
     html { scroll-behavior: smooth; }
 
     body {
@@ -134,7 +133,6 @@
 
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
-
     .hidden { display: none !important; }
 
     .admin-login-screen,
@@ -1363,6 +1361,24 @@
       flex-wrap: wrap;
     }
 
+    .owner-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .owner-note {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(67,90,191,0.06);
+      border: 1px solid rgba(67,90,191,0.1);
+      color: var(--text-muted);
+      line-height: 1.8;
+      font-size: .88rem;
+      margin-bottom: 18px;
+    }
+
     .dark body.admin-body,
     body.dark.admin-body {
       background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
@@ -1477,7 +1493,8 @@
       .form-grid,
       .coords-row,
       .quick-tips,
-      .booking-meta-grid {
+      .booking-meta-grid,
+      .owner-form-grid {
         grid-template-columns: 1fr;
       }
 
@@ -1543,7 +1560,7 @@
 
       <h2 class="font-bold" style="text-align:center; margin-bottom:8px; font-size:1.75rem;">تسجيل الدخول</h2>
       <p style="text-align:center; color:var(--text-muted); margin-bottom:24px; font-size:0.92rem; line-height:1.8;">
-        لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات بشكل احترافي وآمن.
+        لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات وحسابات الملاك بشكل احترافي وآمن.
       </p>
 
       <div id="admin-login-message" class="login-message" role="alert" aria-live="polite"></div>
@@ -1565,8 +1582,9 @@
       </form>
 
       <div class="login-help">
-        <strong style="display:block; margin-bottom:4px; color:var(--text-main);">ملاحظة:</strong>
-        يمكن استخدام نفس الصفحة لتسجيل دخول مدير النظام أو مالك العقار حسب بيانات الاعتماد المخصصة.
+        <strong style="display:block; margin-bottom:4px; color:var(--text-main);">بيانات الأدمن الرئيسية:</strong>
+        username: admin<br>
+        password: admin
       </div>
     </div>
   </div>
@@ -1579,7 +1597,7 @@
 
       <div class="sidebar-top-note">
         <strong>لوحة الإدارة الذكية</strong>
-        <span>إدارة أسرع للعقارات، مراجعة احترافية للحجوزات، وتجربة أكثر وضوحاً لأصحاب الصلاحيات.</span>
+        <span>إدارة أسرع للعقارات، مراجعة احترافية للحجوزات، وإنشاء حسابات لأصحاب العقارات من مكان واحد.</span>
       </div>
 
       <nav class="sidebar-nav">
@@ -1589,6 +1607,10 @@
 
         <button class="nav-item" id="nav-add-property" type="button" data-tab-target="add-property">
           <i class="ph ph-plus-square"></i> إضافة عقار جديد
+        </button>
+
+        <button class="nav-item" id="nav-owner-accounts" type="button" data-tab-target="owner-accounts">
+          <i class="ph ph-users-three"></i> حسابات الملاك
         </button>
 
         <button class="nav-item" type="button" data-tab-target="bookings">
@@ -1644,18 +1666,18 @@
         </div>
 
         <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-calendar-check"></i></div>
+          <div class="stat-mini-icon"><i class="ph-fill ph-users-three"></i></div>
           <div class="stat-mini-meta">
-            <span>إجمالي الحجوزات</span>
-            <strong id="stat-total-bookings">0</strong>
+            <span>حسابات الملاك</span>
+            <strong id="stat-owner-accounts">0</strong>
           </div>
         </div>
 
         <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-hourglass-medium"></i></div>
+          <div class="stat-mini-icon"><i class="ph-fill ph-calendar-check"></i></div>
           <div class="stat-mini-meta">
-            <span>الطلبات المعلقة</span>
-            <strong id="stat-pending-bookings">0</strong>
+            <span>إجمالي الحجوزات</span>
+            <strong id="stat-total-bookings">0</strong>
           </div>
         </div>
       </section>
@@ -1881,6 +1903,72 @@
           </form>
         </div>
 
+        <div id="tab-owner-accounts" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph-fill ph-users-three" style="color:var(--primary);"></i> حسابات ملاك العقارات</h3>
+
+              <div class="pane-tools">
+                <button type="button" class="ghost-action" id="refresh-owner-accounts-btn">
+                  <i class="ph ph-arrows-clockwise"></i> تحديث الحسابات
+                </button>
+              </div>
+            </div>
+
+            <div class="owner-note">
+              من هنا يستطيع الأدمن الرئيسي إنشاء حسابات خاصة بأصحاب العقارات، وتسليم كل مالك اسم مستخدم وكلمة مرور للدخول إلى لوحة التحكم الخاصة بعقاره فقط.
+            </div>
+
+            <form id="owner-account-form" class="admin-form">
+              <div class="owner-form-grid">
+                <div class="input-group">
+                  <label for="owner-full-name">اسم صاحب العقار <span class="text-danger">*</span></label>
+                  <input type="text" id="owner-full-name" placeholder="مثال: محمد علي" required />
+                </div>
+
+                <div class="input-group">
+                  <label for="owner-property-id">العقار المرتبط بالحساب <span class="text-danger">*</span></label>
+                  <select id="owner-property-id" required>
+                    <option value="">اختر العقار</option>
+                  </select>
+                </div>
+
+                <div class="input-group">
+                  <label for="owner-username">اسم المستخدم <span class="text-danger">*</span></label>
+                  <input type="text" id="owner-username" placeholder="مثال: owner_palm_01" required />
+                </div>
+
+                <div class="input-group">
+                  <label for="owner-password">كلمة المرور <span class="text-danger">*</span></label>
+                  <input type="text" id="owner-password" placeholder="مثال: 123456" required />
+                </div>
+              </div>
+
+              <div class="admin-footer-actions">
+                <button type="submit" class="primary-btn" id="create-owner-account-btn">
+                  <i class="ph ph-user-plus"></i> إنشاء حساب المالك
+                </button>
+              </div>
+            </form>
+
+            <div class="table-responsive" style="margin-top:24px;">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>اسم المالك</th>
+                    <th>اسم المستخدم</th>
+                    <th>كلمة المرور</th>
+                    <th>العقار</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="owner-accounts-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div id="tab-bookings" class="tab-pane">
           <div class="admin-card" style="background:transparent; border:none; box-shadow:none; padding:0;">
             <div class="pane-head">
@@ -2022,11 +2110,13 @@
       currentTab: "manage-props",
       properties: [],
       bookings: [],
+      ownerAccounts: [],
       addMap: null,
       addMarker: null,
       editMap: null,
       editMarker: null,
-      selectedEditProperty: null
+      selectedEditProperty: null,
+      currentUser: null
     };
 
     const pageMeta = {
@@ -2037,6 +2127,10 @@
       "add-property": {
         title: "إضافة عقار جديد",
         subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
+      },
+      "owner-accounts": {
+        title: "حسابات ملاك العقارات",
+        subtitle: "أنشئ حسابات خاصة لأصحاب العقارات وحدد من يمكنه الدخول إلى لوحة التحكم الخاصة بعقاره."
       },
       "bookings": {
         title: "إدارة الحجوزات",
@@ -2100,12 +2194,33 @@
       }
     ];
 
+    const demoOwnerAccounts = [
+      {
+        id: "owner_1",
+        fullName: "مالك شاليه الأحلام",
+        username: "owner_dream",
+        password: "123456",
+        propertyId: "prop_1",
+        propertyName: "شاليه الأحلام",
+        active: true
+      }
+    ];
+
     function qs(id) {
       return document.getElementById(id);
     }
 
     function safeText(v, fallback = "—") {
       return String(v ?? "").trim() || fallback;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     function formatPrice(v) {
@@ -2153,11 +2268,20 @@
 
     function storeAdminSession(data) {
       sessionStorage.setItem("ore_admin_session", JSON.stringify(data));
+      localStorage.setItem("ore_admin_session", JSON.stringify(data));
     }
 
     function clearAdminSession() {
       sessionStorage.removeItem("ore_admin_session");
       localStorage.removeItem("ore_admin_session");
+    }
+
+    function isSuperAdmin() {
+      return adminState.currentUser?.type === "superadmin";
+    }
+
+    function isOwnerUser() {
+      return adminState.currentUser?.type === "owner";
     }
 
     function tryLogin(username, password) {
@@ -2168,29 +2292,41 @@
           return {
             ok: true,
             user: {
+              type: found.type || "superadmin",
               name: found.name || found.username,
-              role: found.role || "إدارة النظام"
+              role: found.role || "إدارة النظام",
+              username: found.username || username
             }
           };
         }
       }
 
-      if (username === "admin" && password === "admin123") {
+      if (username === "admin" && password === "admin") {
         return {
           ok: true,
           user: {
+            type: "superadmin",
             name: "مدير النظام",
-            role: "بصلاحيات كاملة"
+            role: "بصلاحيات كاملة",
+            username: "admin"
           }
         };
       }
 
-      if (username === "owner" && password === "owner123") {
+      const owner = adminState.ownerAccounts.find(
+        item => item.username === username && item.password === password && item.active !== false
+      );
+
+      if (owner) {
         return {
           ok: true,
           user: {
-            name: "مالك العقار",
-            role: "إدارة العقارات الخاصة"
+            type: "owner",
+            name: owner.fullName || owner.username,
+            role: `مالك عقار: ${owner.propertyName || owner.propertyId || "عقار خاص"}`,
+            username: owner.username,
+            propertyId: owner.propertyId,
+            propertyName: owner.propertyName
           }
         };
       }
@@ -2201,6 +2337,19 @@
     function setAdminProfile(user) {
       qs("admin-profile-name").textContent = user?.name || "مدير النظام";
       qs("admin-profile-role").textContent = user?.role || "بصلاحيات كاملة";
+    }
+
+    function setNavVisibilityByRole() {
+      const addPropertyNav = qs("nav-add-property");
+      const ownerAccountsNav = qs("nav-owner-accounts");
+
+      if (isSuperAdmin()) {
+        if (addPropertyNav) addPropertyNav.style.display = "";
+        if (ownerAccountsNav) ownerAccountsNav.style.display = "";
+      } else {
+        if (addPropertyNav) addPropertyNav.style.display = "none";
+        if (ownerAccountsNav) ownerAccountsNav.style.display = "none";
+      }
     }
 
     function showAdminLayout() {
@@ -2227,7 +2376,6 @@
       }
 
       btn.disabled = true;
-
       const result = tryLogin(username, password);
 
       setTimeout(() => {
@@ -2238,18 +2386,28 @@
           return;
         }
 
+        adminState.currentUser = result.user;
         storeAdminSession(result.user);
         setAdminProfile(result.user);
+        setNavVisibilityByRole();
         loginMessage("success", "تم تسجيل الدخول بنجاح.");
         showAdminLayout();
-        switchTab("manage-props");
+
+        if (isOwnerUser()) {
+          switchTab("manage-props");
+        } else {
+          switchTab("manage-props");
+        }
+
         loadProperties();
+        loadOwnerAccounts();
         loadBookings();
       }, 350);
     }
 
     function logoutAdmin() {
       clearAdminSession();
+      adminState.currentUser = null;
       showLoginScreen();
       qs("admin-login-form").reset();
       clearLoginMessage();
@@ -2257,7 +2415,12 @@
     }
 
     function switchTab(tab) {
+      if ((tab === "add-property" || tab === "owner-accounts") && !isSuperAdmin()) {
+        tab = "manage-props";
+      }
+
       adminState.currentTab = tab;
+
       document.querySelectorAll(".tab-pane").forEach(pane => {
         pane.classList.toggle("active", pane.id === `tab-${tab}`);
       });
@@ -2276,10 +2439,39 @@
         setTimeout(initAddMap, 180);
       }
 
+      if (tab === "owner-accounts") {
+        renderOwnerPropertyOptions();
+        renderOwnerAccountsTable();
+      }
+
       updateAdminQuickStats();
     }
 
-    function renderPropertiesTable(items = adminState.properties) {
+    function getVisiblePropertiesForCurrentUser() {
+      if (isSuperAdmin()) return adminState.properties;
+
+      if (isOwnerUser()) {
+        return adminState.properties.filter(
+          prop => prop.id === adminState.currentUser?.propertyId
+        );
+      }
+
+      return adminState.properties;
+    }
+
+    function getVisibleBookingsForCurrentUser() {
+      if (isSuperAdmin()) return adminState.bookings;
+
+      if (isOwnerUser()) {
+        return adminState.bookings.filter(
+          booking => booking.propertyName === adminState.currentUser?.propertyName
+        );
+      }
+
+      return adminState.bookings;
+    }
+
+    function renderPropertiesTable(items = getVisiblePropertiesForCurrentUser()) {
       const tbody = qs("properties-tbody");
       if (!tbody) return;
 
@@ -2300,14 +2492,14 @@
 
       tbody.innerHTML = items.map(prop => `
         <tr data-id="${prop.id}">
-          <td><img class="prop-thumb" src="${prop.image || 'images/palmgarden01.jpg'}" alt="${safeText(prop.titleAr)}"></td>
+          <td><img class="prop-thumb" src="${prop.image || 'images/palmgarden01.jpg'}" alt="${escapeHtml(safeText(prop.titleAr))}"></td>
           <td>
             <div class="prop-name-cell">
-              <strong>${safeText(prop.titleAr)}</strong>
-              <span>${safeText(prop.titleEn)}</span>
+              <strong>${escapeHtml(safeText(prop.titleAr))}</strong>
+              <span>${escapeHtml(safeText(prop.titleEn))}</span>
             </div>
           </td>
-          <td>${safeText(prop.locationAr)}</td>
+          <td>${escapeHtml(safeText(prop.locationAr))}</td>
           <td><span class="price-pill">${formatPrice(prop.price)}</span></td>
           <td>
             <span class="status-badge ${prop.visible ? 'visible' : 'hidden'}">
@@ -2334,7 +2526,7 @@
       updateAdminQuickStats();
     }
 
-    function renderBookings(items = adminState.bookings) {
+    function renderBookings(items = getVisibleBookingsForCurrentUser()) {
       const container = qs("bookings-container");
       if (!container) return;
 
@@ -2355,8 +2547,8 @@
             <article class="booking-card" data-booking-id="${booking.id}">
               <div class="booking-head">
                 <div class="booking-title">
-                  <strong>${safeText(booking.guestName)}</strong>
-                  <span>${safeText(booking.propertyName)} • ${safeText(booking.id)}</span>
+                  <strong>${escapeHtml(safeText(booking.guestName))}</strong>
+                  <span>${escapeHtml(safeText(booking.propertyName))} • ${escapeHtml(safeText(booking.id))}</span>
                 </div>
                 <span class="status-badge ${booking.status === "confirmed" ? "confirmed" : booking.status === "rejected" ? "rejected" : "pending"}">
                   ${booking.status === "confirmed" ? "مؤكد" : booking.status === "rejected" ? "مرفوض" : "معلق"}
@@ -2366,19 +2558,19 @@
               <div class="booking-meta-grid">
                 <div class="booking-meta-item">
                   <label>تاريخ الدخول</label>
-                  <strong>${safeText(booking.checkIn)}</strong>
+                  <strong>${escapeHtml(safeText(booking.checkIn))}</strong>
                 </div>
                 <div class="booking-meta-item">
                   <label>تاريخ الخروج</label>
-                  <strong>${safeText(booking.checkOut)}</strong>
+                  <strong>${escapeHtml(safeText(booking.checkOut))}</strong>
                 </div>
                 <div class="booking-meta-item">
                   <label>عدد الضيوف</label>
-                  <span>${safeText(booking.guests)}</span>
+                  <span>${escapeHtml(safeText(booking.guests))}</span>
                 </div>
                 <div class="booking-meta-item">
                   <label>الإجمالي</label>
-                  <strong>${safeText(booking.total)}</strong>
+                  <strong>${escapeHtml(safeText(booking.total))}</strong>
                 </div>
               </div>
 
@@ -2398,42 +2590,99 @@
       updateAdminQuickStats();
     }
 
-    function loadProperties() {
-      if (typeof window.fetchProperties === "function" && window.fetchProperties !== loadProperties) {
-        try {
-          window.fetchProperties();
-          return;
-        } catch {}
+    function renderOwnerPropertyOptions() {
+      const select = qs("owner-property-id");
+      if (!select) return;
+
+      const items = adminState.properties || [];
+      const currentValue = select.value;
+
+      select.innerHTML = `<option value="">اختر العقار</option>` + items.map(prop => `
+        <option value="${prop.id}">${escapeHtml(safeText(prop.titleAr))}</option>
+      `).join("");
+
+      if (currentValue && items.some(item => item.id === currentValue)) {
+        select.value = currentValue;
+      }
+    }
+
+    function renderOwnerAccountsTable(items = adminState.ownerAccounts) {
+      const tbody = qs("owner-accounts-tbody");
+      if (!tbody) return;
+
+      if (!items.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state" style="padding:28px;">
+                <i class="ph ph-users-three"></i>
+                لا توجد حسابات ملاك حالياً.
+              </div>
+            </td>
+          </tr>
+        `;
+        updateAdminQuickStats();
+        return;
       }
 
+      tbody.innerHTML = items.map(account => `
+        <tr data-owner-id="${account.id}">
+          <td>${escapeHtml(safeText(account.fullName))}</td>
+          <td>${escapeHtml(safeText(account.username))}</td>
+          <td>${escapeHtml(safeText(account.password))}</td>
+          <td>${escapeHtml(safeText(account.propertyName))}</td>
+          <td>
+            <span class="status-badge ${account.active !== false ? 'visible' : 'hidden'}">
+              ${account.active !== false ? 'نشط' : 'معطل'}
+            </span>
+          </td>
+          <td>
+            <div class="table-actions">
+              <button type="button" data-action="toggle-owner-account" data-id="${account.id}">
+                <i class="ph ph-power"></i>
+                ${account.active !== false ? 'تعطيل' : 'تفعيل'}
+              </button>
+              <button type="button" data-action="delete-owner-account" data-id="${account.id}">
+                <i class="ph ph-trash"></i> حذف
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      updateAdminQuickStats();
+    }
+
+    function loadProperties() {
       if (!adminState.properties.length) {
         adminState.properties = [...demoProperties];
       }
-      renderPropertiesTable(adminState.properties);
+      renderPropertiesTable();
+      renderOwnerPropertyOptions();
+    }
+
+    function loadOwnerAccounts() {
+      if (!adminState.ownerAccounts.length) {
+        adminState.ownerAccounts = [...demoOwnerAccounts];
+      }
+      renderOwnerAccountsTable();
     }
 
     function loadBookings() {
-      if (typeof window.loadBookings === "function" && window.loadBookings !== loadBookings) {
-        try {
-          window.loadBookings();
-          return;
-        } catch {}
-      }
-
       if (!adminState.bookings.length) {
         adminState.bookings = [...demoBookings];
       }
-      renderBookings(adminState.bookings);
+      renderBookings();
     }
 
     function updateAdminQuickStats() {
-      const properties = adminState.properties || [];
-      const bookings = adminState.bookings || [];
+      const visibleProps = getVisiblePropertiesForCurrentUser();
+      const visibleBookings = getVisibleBookingsForCurrentUser();
 
-      qs("stat-total-properties").textContent = String(properties.length);
-      qs("stat-active-properties").textContent = String(properties.filter(p => p.visible).length);
-      qs("stat-total-bookings").textContent = String(bookings.length);
-      qs("stat-pending-bookings").textContent = String(bookings.filter(b => b.status === "pending").length);
+      qs("stat-total-properties").textContent = String(visibleProps.length);
+      qs("stat-active-properties").textContent = String(visibleProps.filter(p => p.visible).length);
+      qs("stat-total-bookings").textContent = String(visibleBookings.length);
+      qs("stat-owner-accounts").textContent = String(adminState.ownerAccounts.length);
     }
 
     function updateUploadPreview(file) {
@@ -2639,7 +2888,8 @@
     }
 
     function openEditModal(propertyId) {
-      const property = adminState.properties.find(p => p.id === propertyId);
+      const allowedProperties = getVisiblePropertiesForCurrentUser();
+      const property = allowedProperties.find(p => p.id === propertyId);
       if (!property) return;
 
       adminState.selectedEditProperty = property;
@@ -2671,6 +2921,11 @@
 
     function handleAddProperty(event) {
       event.preventDefault();
+
+      if (!isSuperAdmin()) {
+        alert("فقط الأدمن الرئيسي يمكنه إضافة عقارات جديدة.");
+        return;
+      }
 
       const titleAr = qs("prop-title-ar").value.trim();
       const titleEn = qs("prop-title-en").value.trim();
@@ -2717,6 +2972,7 @@
 
       adminState.properties.unshift(newProperty);
       renderPropertiesTable();
+      renderOwnerPropertyOptions();
       updateAdminQuickStats();
 
       event.target.reset();
@@ -2737,6 +2993,11 @@
       const id = qs("edit-prop-id").value;
       const item = adminState.properties.find(p => p.id === id);
       if (!item) return;
+
+      if (isOwnerUser() && item.id !== adminState.currentUser?.propertyId) {
+        alert("لا يمكنك تعديل هذا العقار.");
+        return;
+      }
 
       item.titleAr = qs("edit-title-ar").value.trim();
       item.titleEn = qs("edit-title-en").value.trim();
@@ -2767,20 +3028,40 @@
     function togglePropertyVisibility(id) {
       const item = adminState.properties.find(p => p.id === id);
       if (!item) return;
+
+      if (isOwnerUser() && item.id !== adminState.currentUser?.propertyId) {
+        alert("لا يمكنك تعديل هذا العقار.");
+        return;
+      }
+
       item.visible = !item.visible;
       renderPropertiesTable();
     }
 
     function deleteProperty(id) {
+      if (!isSuperAdmin()) {
+        alert("فقط الأدمن الرئيسي يمكنه حذف العقارات.");
+        return;
+      }
+
       const ok = confirm("هل أنت متأكد من حذف هذا العقار؟");
       if (!ok) return;
       adminState.properties = adminState.properties.filter(p => p.id !== id);
+      adminState.ownerAccounts = adminState.ownerAccounts.filter(acc => acc.propertyId !== id);
       renderPropertiesTable();
+      renderOwnerAccountsTable();
+      renderOwnerPropertyOptions();
     }
 
     function updateBookingStatus(id, status) {
       const booking = adminState.bookings.find(b => b.id === id);
       if (!booking) return;
+
+      if (isOwnerUser() && booking.propertyName !== adminState.currentUser?.propertyName) {
+        alert("لا يمكنك تعديل هذا الحجز.");
+        return;
+      }
+
       booking.status = status;
       renderBookings();
     }
@@ -2792,6 +3073,75 @@
         const txt = row.textContent.toLowerCase();
         row.style.display = txt.includes(q) ? "" : "none";
       });
+    }
+
+    function handleCreateOwnerAccount(event) {
+      event.preventDefault();
+
+      if (!isSuperAdmin()) {
+        alert("فقط الأدمن الرئيسي يمكنه إنشاء حسابات ملاك.");
+        return;
+      }
+
+      const fullName = qs("owner-full-name").value.trim();
+      const propertyId = qs("owner-property-id").value.trim();
+      const username = qs("owner-username").value.trim();
+      const password = qs("owner-password").value.trim();
+
+      if (!fullName || !propertyId || !username || !password) {
+        alert("يرجى تعبئة جميع الحقول المطلوبة.");
+        return;
+      }
+
+      const property = adminState.properties.find(item => item.id === propertyId);
+      if (!property) {
+        alert("العقار المحدد غير موجود.");
+        return;
+      }
+
+      const usernameExists = adminState.ownerAccounts.some(item => item.username === username);
+      if (usernameExists) {
+        alert("اسم المستخدم مستخدم مسبقاً، اختر اسماً آخر.");
+        return;
+      }
+
+      const newAccount = {
+        id: `owner_${Date.now()}`,
+        fullName,
+        username,
+        password,
+        propertyId,
+        propertyName: property.titleAr || property.titleEn || property.id,
+        active: true
+      };
+
+      adminState.ownerAccounts.unshift(newAccount);
+      renderOwnerAccountsTable();
+      updateAdminQuickStats();
+      qs("owner-account-form").reset();
+
+      alert("تم إنشاء حساب المالك بنجاح.");
+    }
+
+    function toggleOwnerAccount(id) {
+      const account = adminState.ownerAccounts.find(item => item.id === id);
+      if (!account) return;
+      account.active = account.active === false ? true : false;
+      renderOwnerAccountsTable();
+    }
+
+    function deleteOwnerAccount(id) {
+      if (!isSuperAdmin()) {
+        alert("فقط الأدمن الرئيسي يمكنه حذف حسابات الملاك.");
+        return;
+      }
+
+      const ok = confirm("هل تريد حذف حساب المالك؟");
+      if (!ok) return;
+
+      adminState.ownerAccounts = adminState.ownerAccounts.filter(item => item.id !== id);
+      renderOwnerAccountsTable();
+      updateAdminQuickStats();
     }
 
     function bindEvents() {
@@ -2853,8 +3203,13 @@
         loadBookings();
       });
 
+      qs("refresh-owner-accounts-btn")?.addEventListener("click", () => {
+        loadOwnerAccounts();
+      });
+
       qs("add-property-form")?.addEventListener("submit", handleAddProperty);
       qs("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
+      qs("owner-account-form")?.addEventListener("submit", handleCreateOwnerAccount);
 
       qs("close-edit-modal-btn")?.addEventListener("click", closeEditModal);
       qs("edit-modal")?.addEventListener("click", e => {
@@ -2880,18 +3235,28 @@
         if (action === "delete-property") deleteProperty(id);
         if (action === "approve-booking") updateBookingStatus(id, "confirmed");
         if (action === "reject-booking") updateBookingStatus(id, "rejected");
+        if (action === "toggle-owner-account") toggleOwnerAccount(id);
+        if (action === "delete-owner-account") deleteOwnerAccount(id);
       });
     }
 
     function initAdminSession() {
+      adminState.properties = [...demoProperties];
+      adminState.bookings = [...demoBookings];
+      adminState.ownerAccounts = [...demoOwnerAccounts];
+
       const session = getStoredAdminSession();
       if (session) {
+        adminState.currentUser = session;
         setAdminProfile(session);
+        setNavVisibilityByRole();
         showAdminLayout();
         loadProperties();
+        loadOwnerAccounts();
         loadBookings();
         return;
       }
+
       showLoginScreen();
     }
 
@@ -2900,6 +3265,7 @@
     window.searchMapLocation = searchMapLocation;
     window.loadBookings = loadBookings;
     window.loadProperties = loadProperties;
+    window.loadOwnerAccounts = loadOwnerAccounts;
     window.fetchProperties = loadProperties;
     window.updateAdminQuickStats = updateAdminQuickStats;
     window.initEditMapFromAdmin = function(lat, lng) {
