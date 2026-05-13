@@ -1,6 +1,6 @@
 // =========================================
-//   OreBooking Admin Panel Logic — Enhanced
-//   Updated with booking chat system for owners/admins
+//   OreBooking Admin Panel Logic — Refined
+//   Stable session / properties / bookings / chat
 // =========================================
 
 const firebaseConfig = {
@@ -21,22 +21,28 @@ const db = firebase.firestore();
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
-
-const loginScreen = document.getElementById("admin-login-screen");
-const adminLayout = document.getElementById("admin-layout");
-const loginForm = document.getElementById("admin-login-form");
-const addForm = document.getElementById("add-property-form");
-const submitBtn = document.getElementById("submit-prop-btn");
-const uploadStatus = document.getElementById("upload-status");
-const editForm = document.getElementById("edit-property-form");
-const submitEditBtn = document.getElementById("submit-edit-btn");
-const editModalEl = document.getElementById("edit-modal");
+const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
 
 const SESSION_KEYS = {
   role: "adminRole",
   ownerPropId: "ownerPropId",
   ownerPropName: "ownerPropName",
   loginAt: "adminLoginAt"
+};
+
+const DOM = {
+  loginScreen: document.getElementById("admin-login-screen"),
+  adminLayout: document.getElementById("admin-layout"),
+  loginForm: document.getElementById("admin-login-form"),
+  addForm: document.getElementById("add-property-form"),
+  submitBtn: document.getElementById("submit-prop-btn"),
+  uploadStatus: document.getElementById("upload-status"),
+  editForm: document.getElementById("edit-property-form"),
+  submitEditBtn: document.getElementById("submit-edit-btn"),
+  editModalEl: document.getElementById("edit-modal"),
+  pageTitle: document.getElementById("page-title"),
+  propertiesTbody: document.getElementById("properties-tbody"),
+  bookingsContainer: document.getElementById("bookings-container")
 };
 
 const CHAT_STATE = {
@@ -54,45 +60,27 @@ const CHAT_STATE = {
   modalReady: false
 };
 
-function getIsSuperAdmin() {
-  return !localStorage.getItem(SESSION_KEYS.ownerPropId);
+const FIELD_CANDIDATES = {
+  bookingPropertyId: ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"],
+  bookingGuestId: ["guestId", "userId", "customerId", "clientId", "uid"],
+  bookingGuestName: ["guestName", "fullName", "name", "billingName"],
+  bookingPhone: ["guestPhone", "phone", "guestWhatsapp", "billingPhone", "contactPhone"],
+  bookingEmail: ["guestEmail", "email", "billingEmail", "contactEmail"],
+  bookingCheckIn: ["checkInDate", "checkIn", "arrivalDate", "arrival_date"],
+  bookingCheckOut: ["checkOutDate", "checkOut", "departureDate", "departure_date"],
+  bookingPropertyTitle: ["propertyTitle", "propertyName", "listingTitle"],
+  bookingPropertyImage: ["propertyImage", "propertyImageUrl", "imageUrl", "image"],
+  bookingReceipt: ["receiptUrl", "paymentReceiptUrl", "transferReceiptUrl"],
+  bookingPrice: ["totalPrice", "finalTotal", "amount", "price"],
+  bookingNights: ["nights", "nightCount"]
+};
+
+function qs(selector, root = document) {
+  return root.querySelector(selector);
 }
 
-function getOwnerPropId() {
-  return (localStorage.getItem(SESSION_KEYS.ownerPropId) || "").trim();
-}
-
-function getOwnerPropName() {
-  return (localStorage.getItem(SESSION_KEYS.ownerPropName) || "").trim();
-}
-
-function getSessionRole() {
-  return (localStorage.getItem(SESSION_KEYS.role) || "").trim() || (getIsSuperAdmin() ? "superadmin" : "owner");
-}
-
-function getAdminActorId() {
-  return getIsSuperAdmin() ? "superadmin" : getOwnerPropId();
-}
-
-function getAdminActorName() {
-  return getIsSuperAdmin() ? "إدارة OreBooking" : (getOwnerPropName() || "صاحب العقار");
-}
-
-function setAdminSession(role = "superadmin", ownerPropId = "", ownerPropName = "") {
-  localStorage.setItem(SESSION_KEYS.role, role);
-  localStorage.setItem(SESSION_KEYS.loginAt, String(Date.now()));
-
-  if (role === "owner" && ownerPropId) {
-    localStorage.setItem(SESSION_KEYS.ownerPropId, ownerPropId);
-    localStorage.setItem(SESSION_KEYS.ownerPropName, ownerPropName || "");
-  } else {
-    localStorage.removeItem(SESSION_KEYS.ownerPropId);
-    localStorage.removeItem(SESSION_KEYS.ownerPropName);
-  }
-}
-
-function clearAdminSession() {
-  Object.values(SESSION_KEYS).forEach(key => localStorage.removeItem(key));
+function qsa(selector, root = document) {
+  return Array.from(root.querySelectorAll(selector));
 }
 
 function escapeHtml(value) {
@@ -131,9 +119,7 @@ function safeDateMs(value) {
 function formatDate(value) {
   if (!value) return "—";
   if (typeof value === "string") return value;
-  if (typeof value?.toDate === "function") {
-    return value.toDate().toLocaleDateString("ar-DZ");
-  }
+  if (typeof value?.toDate === "function") return value.toDate().toLocaleDateString("ar-DZ");
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("ar-DZ");
 }
@@ -177,6 +163,15 @@ function getStatusMeta(status) {
   }[status] || { label: status || "—", cls: "pending", icon: "ph-info" };
 }
 
+function getField(data, candidates = [], fallback = "") {
+  for (const key of candidates) {
+    if (data?.[key] !== undefined && data?.[key] !== null && String(data[key]).trim() !== "") {
+      return data[key];
+    }
+  }
+  return fallback;
+}
+
 function setButtonLoading(btn, loading, htmlWhenLoading, htmlWhenIdle) {
   if (!btn) return;
   if (loading) {
@@ -187,6 +182,61 @@ function setButtonLoading(btn, loading, htmlWhenLoading, htmlWhenIdle) {
     btn.disabled = false;
     btn.innerHTML = htmlWhenIdle || btn.dataset.originalHtml || btn.innerHTML;
   }
+}
+
+function ensureValidSession() {
+  const loginAt = Number(localStorage.getItem(SESSION_KEYS.loginAt) || 0);
+  if (!loginAt) return false;
+  if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
+    clearAdminSession();
+    return false;
+  }
+  return true;
+}
+
+function getIsSuperAdmin() {
+  return !localStorage.getItem(SESSION_KEYS.ownerPropId);
+}
+
+function getOwnerPropId() {
+  return normalizeText(localStorage.getItem(SESSION_KEYS.ownerPropId) || "");
+}
+
+function getOwnerPropName() {
+  return normalizeText(localStorage.getItem(SESSION_KEYS.ownerPropName) || "");
+}
+
+function getSessionRole() {
+  return normalizeText(localStorage.getItem(SESSION_KEYS.role) || "") || (getIsSuperAdmin() ? "superadmin" : "owner");
+}
+
+function getAdminActorId() {
+  return getIsSuperAdmin() ? "superadmin" : getOwnerPropId();
+}
+
+function getAdminActorName() {
+  return getIsSuperAdmin() ? "إدارة OreBooking" : (getOwnerPropName() || "صاحب العقار");
+}
+
+function setAdminSession(role = "superadmin", ownerPropId = "", ownerPropName = "") {
+  localStorage.setItem(SESSION_KEYS.role, role);
+  localStorage.setItem(SESSION_KEYS.loginAt, String(Date.now()));
+  if (role === "owner" && ownerPropId) {
+    localStorage.setItem(SESSION_KEYS.ownerPropId, ownerPropId);
+    localStorage.setItem(SESSION_KEYS.ownerPropName, ownerPropName || "");
+  } else {
+    localStorage.removeItem(SESSION_KEYS.ownerPropId);
+    localStorage.removeItem(SESSION_KEYS.ownerPropName);
+  }
+}
+
+function clearAdminSession() {
+  Object.values(SESSION_KEYS).forEach(key => localStorage.removeItem(key));
+}
+
+function canAccessProperty(propertyId) {
+  if (getIsSuperAdmin()) return true;
+  return normalizeText(propertyId) === getOwnerPropId();
 }
 
 function showToast(message, type = "success") {
@@ -219,7 +269,7 @@ function showToast(message, type = "success") {
 }
 
 function showLoginError(msg) {
-  const old = loginForm ? loginForm.querySelector(".auth-message") : null;
+  const old = DOM.loginForm ? DOM.loginForm.querySelector(".auth-message") : null;
   if (old) old.remove();
 
   const div = document.createElement("div");
@@ -233,13 +283,12 @@ function showLoginError(msg) {
   div.style.border = "1px solid #fecaca";
   div.style.color = "#b91c1c";
   div.style.fontWeight = "700";
-  if (loginForm) loginForm.prepend(div);
+  DOM.loginForm?.prepend(div);
 
   setTimeout(() => div.remove(), 4000);
 }
 
 function updateAdminHeaderForRole() {
-  const pageTitle = document.getElementById("page-title");
   const ownerBadgeId = "owner-session-badge";
   let badge = document.getElementById(ownerBadgeId);
 
@@ -247,7 +296,7 @@ function updateAdminHeaderForRole() {
     badge = document.createElement("div");
     badge.id = ownerBadgeId;
     badge.style.cssText = "margin-top:8px;font-size:.88rem;font-weight:800;color:var(--text-muted);";
-    if (pageTitle?.parentElement) pageTitle.parentElement.appendChild(badge);
+    DOM.pageTitle?.parentElement?.appendChild(badge);
   }
 
   if (getIsSuperAdmin()) {
@@ -264,17 +313,8 @@ function updateQuickStats() {
   const bookingCards = Array.from(document.querySelectorAll("#bookings-container .booking-card"));
 
   const totalProperties = propertyRows.length;
-  let activeProperties = 0;
-  propertyRows.forEach(row => {
-    const status = row.getAttribute("data-visible");
-    if (status === "true") activeProperties += 1;
-  });
-
-  let pendingBookings = 0;
-  bookingCards.forEach(card => {
-    const st = card.getAttribute("data-status");
-    if (st === "pending") pendingBookings += 1;
-  });
+  const activeProperties = propertyRows.filter(row => row.getAttribute("data-visible") === "true").length;
+  const pendingBookings = bookingCards.filter(card => card.getAttribute("data-status") === "pending").length;
 
   const map = {
     "stat-total-properties": totalProperties,
@@ -287,16 +327,11 @@ function updateQuickStats() {
     const el = document.getElementById(id);
     if (el) el.textContent = String(val);
   });
-
-  if (typeof window.updateAdminQuickStats === "function" && window.updateAdminQuickStats !== updateQuickStats) {
-    try { window.updateAdminQuickStats(); } catch (_) {}
-  }
 }
 
 function renderPropertiesEmpty(message, isError = false) {
-  const tbody = document.getElementById("properties-tbody");
-  if (!tbody) return;
-  tbody.innerHTML = `
+  if (!DOM.propertiesTbody) return;
+  DOM.propertiesTbody.innerHTML = `
     <tr>
       <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
         <i class="ph ${isError ? "ph-warning-circle" : "ph-house-line"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
@@ -320,14 +355,14 @@ function renderBookingsEmpty(container, message, extraHtml = "") {
 }
 
 function showAdminLayout() {
-  if (loginScreen) loginScreen.style.display = "none";
-  if (adminLayout) adminLayout.style.display = "flex";
+  if (DOM.loginScreen) DOM.loginScreen.style.display = "none";
+  if (DOM.adminLayout) DOM.adminLayout.style.display = "flex";
   updateAdminHeaderForRole();
 }
 
 function showLoginLayout() {
-  if (loginScreen) loginScreen.style.display = "block";
-  if (adminLayout) adminLayout.style.display = "none";
+  if (DOM.loginScreen) DOM.loginScreen.style.display = "block";
+  if (DOM.adminLayout) DOM.adminLayout.style.display = "none";
 }
 
 function normalizePropertyPayload(source = {}) {
@@ -351,38 +386,22 @@ function validatePropertyPayload(payload, { requireImage = false, requireMap = t
   if (!payload.titleAr) return "يرجى إدخال اسم العقار بالعربية.";
   if (!payload.locationAr) return "يرجى إدخال موقع العقار بالعربية.";
   if (!payload.price || payload.price <= 0) return "يرجى إدخال سعر صحيح أكبر من 0.";
-  if (requireMap) {
-    if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
-  }
+  if (requireMap && (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng))) return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
   if (requireImage && !payload.imageUrl) return "الصورة الرئيسية للعقار مطلوبة.";
   return "";
 }
 
-function getBookingField(data, candidates = [], fallback = "") {
-  for (const key of candidates) {
-    if (data[key] !== undefined && data[key] !== null && String(data[key]).trim() !== "") {
-      return data[key];
-    }
-  }
-  return fallback;
-}
-
 function getBookingPropertyId(data = {}) {
-  return normalizeText(
-    getBookingField(data, ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"], "")
-  );
+  return normalizeText(getField(data, FIELD_CANDIDATES.bookingPropertyId, ""));
 }
 
 function getBookingGuestId(data = {}) {
-  return normalizeText(
-    getBookingField(data, ["guestId", "userId", "customerId", "clientId", "uid"], "")
-  );
+  return normalizeText(getField(data, FIELD_CANDIDATES.bookingGuestId, ""));
 }
 
 function getBookingGuestName(data = {}) {
-  const direct = normalizeText(getBookingField(data, ["guestName", "fullName", "name", "billingName"], ""));
+  const direct = normalizeText(getField(data, FIELD_CANDIDATES.bookingGuestName, ""));
   if (direct) return direct;
-
   const first = normalizeText(data.guestNameFirst || data.firstName || data.givenName || "");
   const father = normalizeText(data.guestFatherName || data.fatherName || "");
   const family = normalizeText(data.guestFamilyName || data.lastName || data.familyName || "");
@@ -390,29 +409,25 @@ function getBookingGuestName(data = {}) {
 }
 
 function getBookingPhone(data = {}) {
-  return normalizeText(
-    getBookingField(data, ["guestPhone", "phone", "guestWhatsapp", "billingPhone", "contactPhone"], "—")
-  );
+  return normalizeText(getField(data, FIELD_CANDIDATES.bookingPhone, "—"));
 }
 
 function getBookingEmail(data = {}) {
-  return normalizeText(
-    getBookingField(data, ["guestEmail", "email", "billingEmail", "contactEmail"], "—")
-  );
+  return normalizeText(getField(data, FIELD_CANDIDATES.bookingEmail, "—"));
 }
 
 function getBookingCheckIn(data = {}) {
-  return getBookingField(data, ["checkInDate", "checkIn", "arrivalDate", "arrival_date"], null);
+  return getField(data, FIELD_CANDIDATES.bookingCheckIn, null);
 }
 
 function getBookingCheckOut(data = {}) {
-  return getBookingField(data, ["checkOutDate", "checkOut", "departureDate", "departure_date"], null);
+  return getField(data, FIELD_CANDIDATES.bookingCheckOut, null);
 }
 
 function getBookingNotes(data = {}) {
-  const special = normalizeText(getBookingField(data, ["specialRequests", "notes", "addonNotes", "medicalNotes"], ""));
-  const arrival = normalizeText(getBookingField(data, ["arrivalTime", "arrival_time", "expectedArrivalTime"], ""));
-  const additionalGuests = normalizeText(getBookingField(data, ["additionalGuests", "additionalGuestNames"], ""));
+  const special = normalizeText(getField(data, ["specialRequests", "notes", "addonNotes", "medicalNotes"], ""));
+  const arrival = normalizeText(getField(data, ["arrivalTime", "arrival_time", "expectedArrivalTime"], ""));
+  const additionalGuests = normalizeText(getField(data, ["additionalGuests", "additionalGuestNames"], ""));
   const bits = [];
   if (arrival) bits.push(`وقت الوصول: ${arrival}`);
   if (special) bits.push(`ملاحظات: ${special}`);
@@ -439,7 +454,6 @@ function getBookingAddons(data = {}) {
   };
 
   let addons = [];
-
   if (Array.isArray(data.selectedAddons)) {
     addons = data.selectedAddons;
   } else if (data.addons && typeof data.addons === "object") {
@@ -464,11 +478,11 @@ function getBookingAddons(data = {}) {
 }
 
 function getBookingGuestsMeta(data = {}) {
-  const adults = toNumber(getBookingField(data, ["adults", "guestAdults"], 0), 0);
-  const children = toNumber(getBookingField(data, ["children", "guestChildren"], 0), 0);
-  const infants = toNumber(getBookingField(data, ["infants", "guestInfants"], 0), 0);
-  const rooms = toNumber(getBookingField(data, ["rooms", "roomCount"], 0), 0);
-  const guests = toNumber(getBookingField(data, ["guests", "guestCount"], adults + children + infants || 1), 1);
+  const adults = toNumber(getField(data, ["adults", "guestAdults"], 0), 0);
+  const children = toNumber(getField(data, ["children", "guestChildren"], 0), 0);
+  const infants = toNumber(getField(data, ["infants", "guestInfants"], 0), 0);
+  const rooms = toNumber(getField(data, ["rooms", "roomCount"], 0), 0);
+  const guests = toNumber(getField(data, ["guests", "guestCount"], adults + children + infants || 1), 1);
   return { adults, children, infants, rooms, guests };
 }
 
@@ -479,356 +493,12 @@ function setNavVisibilityByRole() {
   if (!getIsSuperAdmin()) {
     if (addTabBtn) addTabBtn.style.display = "none";
     if (addTabPane) addTabPane.style.display = "none";
-
     const activePane = document.querySelector(".tab-pane.active");
-    if (activePane?.id === "tab-add-property") {
-      switchTab("manage-props");
-    }
+    if (activePane?.id === "tab-add-property") switchTab("manage-props");
   } else {
     if (addTabBtn) addTabBtn.style.display = "";
     if (addTabPane) addTabPane.style.display = "";
   }
-}
-
-function ensureAdminChatModal() {
-  if (CHAT_STATE.modalReady) return;
-
-  const existing = document.getElementById("admin-chat-overlay");
-  if (existing) {
-    CHAT_STATE.modalReady = true;
-    return;
-  }
-
-  const style = document.createElement("style");
-  style.id = "admin-chat-inline-style";
-  style.textContent = `
-    .admin-chat-overlay{
-      position:fixed; inset:0; background:rgba(15,23,42,.45);
-      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-      z-index:4500; display:none; align-items:center; justify-content:center; padding:18px;
-    }
-    .admin-chat-overlay.active{ display:flex; }
-    .admin-chat-shell{
-      width:min(980px,96vw); height:min(88vh,760px);
-      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.98));
-      border:1px solid rgba(255,255,255,.72); border-radius:28px;
-      box-shadow:0 35px 80px rgba(15,23,42,.22); overflow:hidden;
-      display:grid; grid-template-rows:auto 1fr auto;
-    }
-    .dark .admin-chat-shell{
-      background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(11,18,32,.98));
-      border-color:rgba(51,65,85,.85);
-    }
-    .admin-chat-topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:14px;
-      padding:18px 20px; border-bottom:1px solid rgba(226,232,240,.9);
-      background:linear-gradient(135deg, rgba(67,90,191,.08), rgba(101,123,224,.06));
-    }
-    .admin-chat-head{
-      display:flex; align-items:center; gap:14px; min-width:0;
-    }
-    .admin-chat-property-thumb{
-      width:58px; height:58px; border-radius:18px; object-fit:cover;
-      border:1px solid rgba(203,213,225,.9); background:#f1f5f9; flex-shrink:0;
-    }
-    .admin-chat-head-meta{
-      display:grid; gap:4px; min-width:0;
-    }
-    .admin-chat-head-meta strong{
-      font-size:1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .admin-chat-head-meta span{
-      color:var(--text-muted); font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .admin-verified-badge{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:22px; height:22px; border-radius:999px;
-      background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:.78rem;
-      box-shadow:0 8px 18px rgba(59,130,246,.28);
-    }
-    .admin-chat-top-actions{
-      display:flex; align-items:center; gap:10px; flex-shrink:0;
-    }
-    .admin-chat-status-chip{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:10px 14px; border-radius:999px; font-size:.8rem; font-weight:800;
-      background:rgba(67,90,191,.08); color:var(--primary); border:1px solid rgba(67,90,191,.1);
-    }
-    .admin-chat-close{
-      width:44px; height:44px; border:none; border-radius:14px;
-      background:rgba(255,255,255,.85); color:var(--text-main); cursor:pointer;
-      display:grid; place-items:center; font-size:1.15rem; border:1px solid rgba(203,213,225,.95);
-    }
-    .admin-chat-body{
-      display:grid; grid-template-columns: minmax(0,1fr) 300px; min-height:0;
-      background:
-        radial-gradient(circle at top, rgba(67,90,191,.08), transparent 28%),
-        linear-gradient(180deg, rgba(248,250,252,.72), rgba(255,255,255,.92));
-    }
-    .dark .admin-chat-body{
-      background:
-        radial-gradient(circle at top, rgba(67,90,191,.10), transparent 28%),
-        linear-gradient(180deg, rgba(15,23,42,.76), rgba(2,6,23,.9));
-    }
-    .admin-chat-main{
-      min-width:0; min-height:0; display:grid; grid-template-rows: 1fr;
-      border-inline-end:1px solid rgba(226,232,240,.85);
-    }
-    .admin-chat-messages{
-      overflow:auto; padding:20px; display:flex; flex-direction:column; gap:12px;
-      scroll-behavior:smooth;
-    }
-    .admin-chat-empty{
-      margin:auto; max-width:420px; text-align:center; color:var(--text-muted);
-      line-height:1.8; font-weight:700;
-    }
-    .admin-chat-message{
-      max-width:min(78%, 620px); display:grid; gap:6px;
-    }
-    .admin-chat-message.mine{ align-self:flex-end; }
-    .admin-chat-message.theirs{ align-self:flex-start; }
-    .admin-chat-bubble{
-      padding:14px 16px; border-radius:22px; box-shadow:0 10px 28px rgba(15,23,42,.08);
-      line-height:1.8; word-break:break-word; font-size:.95rem;
-      border:1px solid rgba(226,232,240,.9); background:#fff; color:var(--text-main);
-    }
-    .admin-chat-message.mine .admin-chat-bubble{
-      background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; border-color:transparent;
-      box-shadow:0 18px 34px rgba(67,90,191,.22);
-      border-bottom-left-radius:22px; border-bottom-right-radius:8px;
-    }
-    .admin-chat-message.theirs .admin-chat-bubble{
-      border-bottom-right-radius:22px; border-bottom-left-radius:8px;
-      background:rgba(255,255,255,.95);
-    }
-    .dark .admin-chat-message.theirs .admin-chat-bubble{
-      background:rgba(15,23,42,.82); border-color:rgba(51,65,85,.9);
-    }
-    .admin-chat-meta{
-      font-size:.74rem; color:var(--text-muted); font-weight:700;
-      padding-inline:6px; display:flex; align-items:center; gap:6px;
-    }
-    .admin-chat-message.mine .admin-chat-meta{ justify-content:flex-end; }
-    .admin-chat-image{
-      width:min(280px, 100%); max-width:100%; border-radius:18px; display:block;
-      border:1px solid rgba(226,232,240,.9); cursor:zoom-in; background:#fff;
-    }
-    .admin-chat-side{
-      padding:18px; display:grid; gap:14px; align-content:start;
-      background:rgba(248,250,252,.7);
-    }
-    .dark .admin-chat-side{
-      background:rgba(2,6,23,.45);
-    }
-    .admin-chat-side-card{
-      padding:16px; border-radius:20px; border:1px solid var(--border-color);
-      background:rgba(255,255,255,.82); box-shadow:0 12px 28px rgba(15,23,42,.05);
-      display:grid; gap:10px;
-    }
-    .dark .admin-chat-side-card{
-      background:rgba(15,23,42,.72); border-color:rgba(51,65,85,.88);
-    }
-    .admin-chat-side-card label{
-      font-size:.74rem; color:var(--text-muted); font-weight:800;
-    }
-    .admin-chat-side-card strong,
-    .admin-chat-side-card span{
-      color:var(--text-main); line-height:1.7; word-break:break-word;
-    }
-    .admin-chat-composer{
-      border-top:1px solid rgba(226,232,240,.9); padding:16px 18px;
-      background:rgba(255,255,255,.9); display:grid; gap:12px;
-    }
-    .dark .admin-chat-composer{
-      background:rgba(15,23,42,.84); border-color:rgba(51,65,85,.88);
-    }
-    .admin-chat-preview{
-      display:none; align-items:center; justify-content:space-between; gap:14px;
-      padding:12px 14px; border-radius:16px; border:1px solid var(--border-color);
-      background:rgba(248,250,252,.86);
-    }
-    .admin-chat-preview.visible{ display:flex; }
-    .admin-chat-preview-main{
-      display:flex; align-items:center; gap:12px; min-width:0;
-    }
-    .admin-chat-preview img{
-      width:58px; height:46px; object-fit:cover; border-radius:12px;
-      border:1px solid rgba(203,213,225,.9); background:#fff; flex-shrink:0;
-    }
-    .admin-chat-preview-meta{
-      display:grid; gap:4px; min-width:0;
-    }
-    .admin-chat-preview-meta strong{
-      font-size:.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .admin-chat-preview-meta span{
-      font-size:.76rem; color:var(--text-muted);
-    }
-    .admin-chat-preview-remove{
-      width:36px; height:36px; border:none; border-radius:12px; cursor:pointer;
-      background:#fff; color:#e11d48; border:1px solid #fecdd3;
-    }
-    .admin-chat-input-row{
-      display:flex; align-items:flex-end; gap:12px;
-    }
-    .admin-chat-attach{
-      width:52px; height:52px; border-radius:16px; border:1px solid var(--border-color);
-      background:rgba(248,250,252,.92); color:var(--primary); cursor:pointer;
-      display:grid; place-items:center; font-size:1.3rem; flex-shrink:0;
-    }
-    .admin-chat-textarea{
-      flex:1; min-height:54px; max-height:160px; resize:none; padding:15px 16px;
-      border-radius:18px; border:1px solid var(--border-color); outline:none;
-      background:rgba(248,250,252,.92); color:var(--text-main); font-family:inherit; font-size:.95rem;
-      line-height:1.7;
-    }
-    .admin-chat-textarea:focus{
-      border-color:var(--primary); box-shadow:0 0 0 4px rgba(67,90,191,.1); background:#fff;
-    }
-    .admin-chat-send{
-      min-width:148px; height:54px; border:none; border-radius:18px;
-      background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff;
-      font-weight:800; font-family:inherit; cursor:pointer; display:inline-flex;
-      align-items:center; justify-content:center; gap:8px; box-shadow:0 16px 28px rgba(67,90,191,.2);
-    }
-    .admin-chat-send:disabled,
-    .admin-chat-attach:disabled,
-    .admin-chat-close:disabled{
-      opacity:.6; cursor:not-allowed;
-    }
-    .admin-chat-upload-hint{
-      font-size:.76rem; color:var(--text-muted); font-weight:700;
-      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-    }
-    @media (max-width: 980px){
-      .admin-chat-shell{ width:min(100vw, 100vw); height:min(100vh,100vh); border-radius:0; }
-      .admin-chat-body{ grid-template-columns:1fr; }
-      .admin-chat-main{ border-inline-end:none; border-bottom:1px solid rgba(226,232,240,.85); }
-      .admin-chat-side{ grid-template-columns:1fr 1fr; }
-    }
-    @media (max-width: 700px){
-      .admin-chat-topbar{ padding:14px; align-items:flex-start; flex-direction:column; }
-      .admin-chat-top-actions{ width:100%; justify-content:space-between; }
-      .admin-chat-side{ grid-template-columns:1fr; }
-      .admin-chat-input-row{ flex-wrap:wrap; }
-      .admin-chat-send{ width:100%; }
-      .admin-chat-textarea{ width:100%; }
-      .admin-chat-message{ max-width:92%; }
-    }
-  `;
-  document.head.appendChild(style);
-
-  const overlay = document.createElement("div");
-  overlay.className = "admin-chat-overlay";
-  overlay.id = "admin-chat-overlay";
-  overlay.innerHTML = `
-    <div class="admin-chat-shell">
-      <div class="admin-chat-topbar">
-        <div class="admin-chat-head">
-          <img id="admin-chat-property-image" class="admin-chat-property-thumb" src="images/placeholder.jpg" alt="Property">
-          <div class="admin-chat-head-meta">
-            <strong id="admin-chat-property-title">محادثة العقار <span class="admin-verified-badge"><i class="ph-fill ph-check"></i></span></strong>
-            <span id="admin-chat-guest-line">جاري تحميل بيانات العميل...</span>
-            <span id="admin-chat-booking-line">—</span>
-          </div>
-        </div>
-        <div class="admin-chat-top-actions">
-          <div id="admin-chat-status-chip" class="admin-chat-status-chip"><i class="ph ph-chat-circle-text"></i> محادثة مباشرة</div>
-          <button type="button" id="admin-chat-close-btn" class="admin-chat-close" aria-label="إغلاق">
-            <i class="ph ph-x"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="admin-chat-body">
-        <div class="admin-chat-main">
-          <div id="admin-chat-messages" class="admin-chat-messages">
-            <div class="admin-chat-empty">
-              <i class="ph ph-chat-circle-dots" style="font-size:2.6rem;color:var(--primary);display:block;margin-bottom:10px;"></i>
-              هذه بداية المحادثة. أرسل أول رسالة للعميل من هنا.
-            </div>
-          </div>
-        </div>
-
-        <aside class="admin-chat-side">
-          <div class="admin-chat-side-card">
-            <label>اسم العميل</label>
-            <strong id="admin-chat-side-guest-name">—</strong>
-            <label>رقم الهاتف</label>
-            <span id="admin-chat-side-phone">—</span>
-            <label>البريد الإلكتروني</label>
-            <span id="admin-chat-side-email">—</span>
-          </div>
-          <div class="admin-chat-side-card">
-            <label>العقار</label>
-            <strong id="admin-chat-side-property">—</strong>
-            <label>الحجز</label>
-            <span id="admin-chat-side-booking-id">—</span>
-            <label>آخر تحديث</label>
-            <span id="admin-chat-side-updated">—</span>
-          </div>
-        </aside>
-      </div>
-
-      <div class="admin-chat-composer">
-        <div id="admin-chat-preview" class="admin-chat-preview">
-          <div class="admin-chat-preview-main">
-            <img id="admin-chat-preview-img" src="" alt="Preview">
-            <div class="admin-chat-preview-meta">
-              <strong id="admin-chat-preview-name">image.jpg</strong>
-              <span id="admin-chat-preview-size">0 KB</span>
-            </div>
-          </div>
-          <button type="button" id="admin-chat-preview-remove" class="admin-chat-preview-remove" aria-label="حذف الصورة">
-            <i class="ph ph-x"></i>
-          </button>
-        </div>
-
-        <div class="admin-chat-input-row">
-          <input type="file" id="admin-chat-file-input" accept="image/*" hidden>
-          <button type="button" id="admin-chat-attach-btn" class="admin-chat-attach" title="إرفاق صورة">
-            <i class="ph ph-image"></i>
-          </button>
-          <textarea id="admin-chat-textarea" class="admin-chat-textarea" placeholder="اكتب رسالة احترافية للعميل..." rows="1"></textarea>
-          <button type="button" id="admin-chat-send-btn" class="admin-chat-send">
-            <i class="ph-fill ph-paper-plane-tilt"></i> إرسال
-          </button>
-        </div>
-
-        <div class="admin-chat-upload-hint">
-          <i class="ph ph-info"></i>
-          يمكنك إرسال نص أو صورة أو الاثنين معًا. الحد الأقصى للصورة 5MB.
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeAdminChatModal();
-  });
-
-  document.getElementById("admin-chat-close-btn")?.addEventListener("click", closeAdminChatModal);
-  document.getElementById("admin-chat-attach-btn")?.addEventListener("click", () => {
-    document.getElementById("admin-chat-file-input")?.click();
-  });
-  document.getElementById("admin-chat-file-input")?.addEventListener("change", handleAdminChatFileSelect);
-  document.getElementById("admin-chat-preview-remove")?.addEventListener("click", clearAdminChatFilePreview);
-  document.getElementById("admin-chat-send-btn")?.addEventListener("click", sendAdminChatMessage);
-
-  const textarea = document.getElementById("admin-chat-textarea");
-  if (textarea) {
-    textarea.addEventListener("input", autoResizeAdminChatTextarea);
-    textarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendAdminChatMessage();
-      }
-    });
-  }
-
-  CHAT_STATE.modalReady = true;
 }
 
 function autoResizeAdminChatTextarea() {
@@ -932,6 +602,187 @@ function closeAdminChatModal() {
   }
 }
 
+function ensureAdminChatModal() {
+  if (CHAT_STATE.modalReady) return;
+
+  const existing = document.getElementById("admin-chat-overlay");
+  if (existing) {
+    CHAT_STATE.modalReady = true;
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = "admin-chat-inline-style";
+  style.textContent = `
+    .admin-chat-overlay{position:fixed; inset:0; background:rgba(15,23,42,.45);backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);z-index:4500; display:none; align-items:center; justify-content:center; padding:18px;}
+    .admin-chat-overlay.active{ display:flex; }
+    .admin-chat-shell{width:min(980px,96vw); height:min(88vh,760px);background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.98));border:1px solid rgba(255,255,255,.72); border-radius:28px;box-shadow:0 35px 80px rgba(15,23,42,.22); overflow:hidden;display:grid; grid-template-rows:auto 1fr auto;}
+    .dark .admin-chat-shell{background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(11,18,32,.98));border-color:rgba(51,65,85,.85);}
+    .admin-chat-topbar{display:flex; align-items:center; justify-content:space-between; gap:14px;padding:18px 20px; border-bottom:1px solid rgba(226,232,240,.9);background:linear-gradient(135deg, rgba(67,90,191,.08), rgba(101,123,224,.06));}
+    .admin-chat-head{display:flex; align-items:center; gap:14px; min-width:0;}
+    .admin-chat-property-thumb{width:58px; height:58px; border-radius:18px; object-fit:cover;border:1px solid rgba(203,213,225,.9); background:#f1f5f9; flex-shrink:0;}
+    .admin-chat-head-meta{display:grid; gap:4px; min-width:0;}
+    .admin-chat-head-meta strong{font-size:1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .admin-chat-head-meta span{color:var(--text-muted); font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .admin-verified-badge{display:inline-flex; align-items:center; justify-content:center;width:22px; height:22px; border-radius:999px;background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:.78rem;box-shadow:0 8px 18px rgba(59,130,246,.28);}
+    .admin-chat-top-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+    .admin-chat-status-chip{display:inline-flex; align-items:center; gap:8px;padding:10px 14px; border-radius:999px; font-size:.8rem; font-weight:800;background:rgba(67,90,191,.08); color:var(--primary); border:1px solid rgba(67,90,191,.1);}
+    .admin-chat-close{width:44px; height:44px; border:none; border-radius:14px;background:rgba(255,255,255,.85); color:var(--text-main); cursor:pointer;display:grid; place-items:center; font-size:1.15rem; border:1px solid rgba(203,213,225,.95);}
+    .admin-chat-body{display:grid; grid-template-columns:minmax(0,1fr) 300px; min-height:0;background:radial-gradient(circle at top, rgba(67,90,191,.08), transparent 28%),linear-gradient(180deg, rgba(248,250,252,.72), rgba(255,255,255,.92));}
+    .dark .admin-chat-body{background:radial-gradient(circle at top, rgba(67,90,191,.10), transparent 28%),linear-gradient(180deg, rgba(15,23,42,.76), rgba(2,6,23,.9));}
+    .admin-chat-main{min-width:0; min-height:0; display:grid; grid-template-rows:1fr;border-inline-end:1px solid rgba(226,232,240,.85);}
+    .admin-chat-messages{overflow:auto; padding:20px; display:flex; flex-direction:column; gap:12px;scroll-behavior:smooth;}
+    .admin-chat-empty{margin:auto; max-width:420px; text-align:center; color:var(--text-muted);line-height:1.8; font-weight:700;}
+    .admin-chat-message{max-width:min(78%, 620px); display:grid; gap:6px;}
+    .admin-chat-message.mine{align-self:flex-end;}
+    .admin-chat-message.theirs{align-self:flex-start;}
+    .admin-chat-bubble{padding:14px 16px; border-radius:22px; box-shadow:0 10px 28px rgba(15,23,42,.08);line-height:1.8; word-break:break-word; font-size:.95rem;border:1px solid rgba(226,232,240,.9); background:#fff; color:var(--text-main);}
+    .admin-chat-message.mine .admin-chat-bubble{background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; border-color:transparent;box-shadow:0 18px 34px rgba(67,90,191,.22);border-bottom-left-radius:22px; border-bottom-right-radius:8px;}
+    .admin-chat-message.theirs .admin-chat-bubble{border-bottom-right-radius:22px; border-bottom-left-radius:8px;background:rgba(255,255,255,.95);}
+    .dark .admin-chat-message.theirs .admin-chat-bubble{background:rgba(15,23,42,.82); border-color:rgba(51,65,85,.9);}
+    .admin-chat-meta{font-size:.74rem; color:var(--text-muted); font-weight:700;padding-inline:6px; display:flex; align-items:center; gap:6px;}
+    .admin-chat-message.mine .admin-chat-meta{justify-content:flex-end;}
+    .admin-chat-image{width:min(280px,100%); max-width:100%; border-radius:18px; display:block;border:1px solid rgba(226,232,240,.9); cursor:zoom-in; background:#fff;}
+    .admin-chat-side{padding:18px; display:grid; gap:14px; align-content:start;background:rgba(248,250,252,.7);}
+    .dark .admin-chat-side{background:rgba(2,6,23,.45);}
+    .admin-chat-side-card{padding:16px; border-radius:20px; border:1px solid var(--border-color);background:rgba(255,255,255,.82); box-shadow:0 12px 28px rgba(15,23,42,.05);display:grid; gap:10px;}
+    .dark .admin-chat-side-card{background:rgba(15,23,42,.72); border-color:rgba(51,65,85,.88);}
+    .admin-chat-side-card label{font-size:.74rem; color:var(--text-muted); font-weight:800;}
+    .admin-chat-side-card strong,.admin-chat-side-card span{color:var(--text-main); line-height:1.7; word-break:break-word;}
+    .admin-chat-composer{border-top:1px solid rgba(226,232,240,.9); padding:16px 18px;background:rgba(255,255,255,.9); display:grid; gap:12px;}
+    .dark .admin-chat-composer{background:rgba(15,23,42,.84); border-color:rgba(51,65,85,.88);}
+    .admin-chat-preview{display:none; align-items:center; justify-content:space-between; gap:14px;padding:12px 14px; border-radius:16px; border:1px solid var(--border-color);background:rgba(248,250,252,.86);}
+    .admin-chat-preview.visible{display:flex;}
+    .admin-chat-preview-main{display:flex; align-items:center; gap:12px; min-width:0;}
+    .admin-chat-preview img{width:58px; height:46px; object-fit:cover; border-radius:12px;border:1px solid rgba(203,213,225,.9); background:#fff; flex-shrink:0;}
+    .admin-chat-preview-meta{display:grid; gap:4px; min-width:0;}
+    .admin-chat-preview-meta strong{font-size:.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .admin-chat-preview-meta span{font-size:.76rem; color:var(--text-muted);}
+    .admin-chat-preview-remove{width:36px; height:36px; border:none; border-radius:12px; cursor:pointer;background:#fff; color:#e11d48; border:1px solid #fecdd3;}
+    .admin-chat-input-row{display:flex; align-items:flex-end; gap:12px;}
+    .admin-chat-attach{width:52px; height:52px; border-radius:16px; border:1px solid var(--border-color);background:rgba(248,250,252,.92); color:var(--primary); cursor:pointer;display:grid; place-items:center; font-size:1.3rem; flex-shrink:0;}
+    .admin-chat-textarea{flex:1; min-height:54px; max-height:160px; resize:none; padding:15px 16px;border-radius:18px; border:1px solid var(--border-color); outline:none;background:rgba(248,250,252,.92); color:var(--text-main); font-family:inherit; font-size:.95rem;line-height:1.7;}
+    .admin-chat-textarea:focus{border-color:var(--primary); box-shadow:0 0 0 4px rgba(67,90,191,.1); background:#fff;}
+    .admin-chat-send{min-width:148px; height:54px; border:none; border-radius:18px;background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff;font-weight:800; font-family:inherit; cursor:pointer; display:inline-flex;align-items:center; justify-content:center; gap:8px; box-shadow:0 16px 28px rgba(67,90,191,.2);}
+    .admin-chat-send:disabled,.admin-chat-attach:disabled,.admin-chat-close:disabled{opacity:.6; cursor:not-allowed;}
+    .admin-chat-upload-hint{font-size:.76rem; color:var(--text-muted); font-weight:700;display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+    @media (max-width:980px){.admin-chat-shell{width:min(100vw,100vw); height:min(100vh,100vh); border-radius:0;}.admin-chat-body{grid-template-columns:1fr;}.admin-chat-main{border-inline-end:none; border-bottom:1px solid rgba(226,232,240,.85);}.admin-chat-side{grid-template-columns:1fr 1fr;}}
+    @media (max-width:700px){.admin-chat-topbar{padding:14px; align-items:flex-start; flex-direction:column;}.admin-chat-top-actions{width:100%; justify-content:space-between;}.admin-chat-side{grid-template-columns:1fr;}.admin-chat-input-row{flex-wrap:wrap;}.admin-chat-send{width:100%;}.admin-chat-textarea{width:100%;}.admin-chat-message{max-width:92%;}}
+  `;
+  document.head.appendChild(style);
+
+  const overlay = document.createElement("div");
+  overlay.className = "admin-chat-overlay";
+  overlay.id = "admin-chat-overlay";
+  overlay.innerHTML = `
+    <div class="admin-chat-shell">
+      <div class="admin-chat-topbar">
+        <div class="admin-chat-head">
+          <img id="admin-chat-property-image" class="admin-chat-property-thumb" src="images/placeholder.jpg" alt="Property">
+          <div class="admin-chat-head-meta">
+            <strong id="admin-chat-property-title">محادثة العقار <span class="admin-verified-badge"><i class="ph-fill ph-check"></i></span></strong>
+            <span id="admin-chat-guest-line">جاري تحميل بيانات العميل...</span>
+            <span id="admin-chat-booking-line">—</span>
+          </div>
+        </div>
+        <div class="admin-chat-top-actions">
+          <div id="admin-chat-status-chip" class="admin-chat-status-chip"><i class="ph ph-chat-circle-text"></i> محادثة مباشرة</div>
+          <button type="button" id="admin-chat-close-btn" class="admin-chat-close" aria-label="إغلاق">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-chat-body">
+        <div class="admin-chat-main">
+          <div id="admin-chat-messages" class="admin-chat-messages">
+            <div class="admin-chat-empty">
+              <i class="ph ph-chat-circle-dots" style="font-size:2.6rem;color:var(--primary);display:block;margin-bottom:10px;"></i>
+              هذه بداية المحادثة. أرسل أول رسالة للعميل من هنا.
+            </div>
+          </div>
+        </div>
+
+        <aside class="admin-chat-side">
+          <div class="admin-chat-side-card">
+            <label>اسم العميل</label>
+            <strong id="admin-chat-side-guest-name">—</strong>
+            <label>رقم الهاتف</label>
+            <span id="admin-chat-side-phone">—</span>
+            <label>البريد الإلكتروني</label>
+            <span id="admin-chat-side-email">—</span>
+          </div>
+          <div class="admin-chat-side-card">
+            <label>العقار</label>
+            <strong id="admin-chat-side-property">—</strong>
+            <label>الحجز</label>
+            <span id="admin-chat-side-booking-id">—</span>
+            <label>آخر تحديث</label>
+            <span id="admin-chat-side-updated">—</span>
+          </div>
+        </aside>
+      </div>
+
+      <div class="admin-chat-composer">
+        <div id="admin-chat-preview" class="admin-chat-preview">
+          <div class="admin-chat-preview-main">
+            <img id="admin-chat-preview-img" src="" alt="Preview">
+            <div class="admin-chat-preview-meta">
+              <strong id="admin-chat-preview-name">image.jpg</strong>
+              <span id="admin-chat-preview-size">0 KB</span>
+            </div>
+          </div>
+          <button type="button" id="admin-chat-preview-remove" class="admin-chat-preview-remove" aria-label="حذف الصورة">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <div class="admin-chat-input-row">
+          <input type="file" id="admin-chat-file-input" accept="image/*" hidden>
+          <button type="button" id="admin-chat-attach-btn" class="admin-chat-attach" title="إرفاق صورة">
+            <i class="ph ph-image"></i>
+          </button>
+          <textarea id="admin-chat-textarea" class="admin-chat-textarea" placeholder="اكتب رسالة احترافية للعميل..." rows="1"></textarea>
+          <button type="button" id="admin-chat-send-btn" class="admin-chat-send">
+            <i class="ph-fill ph-paper-plane-tilt"></i> إرسال
+          </button>
+        </div>
+
+        <div class="admin-chat-upload-hint">
+          <i class="ph ph-info"></i>
+          يمكنك إرسال نص أو صورة أو الاثنين معًا. الحد الأقصى للصورة 5MB.
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) closeAdminChatModal();
+  });
+
+  document.getElementById("admin-chat-close-btn")?.addEventListener("click", closeAdminChatModal);
+  document.getElementById("admin-chat-attach-btn")?.addEventListener("click", () => {
+    document.getElementById("admin-chat-file-input")?.click();
+  });
+  document.getElementById("admin-chat-file-input")?.addEventListener("change", handleAdminChatFileSelect);
+  document.getElementById("admin-chat-preview-remove")?.addEventListener("click", clearAdminChatFilePreview);
+  document.getElementById("admin-chat-send-btn")?.addEventListener("click", sendAdminChatMessage);
+
+  const textarea = document.getElementById("admin-chat-textarea");
+  if (textarea) {
+    textarea.addEventListener("input", autoResizeAdminChatTextarea);
+    textarea.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminChatMessage();
+      }
+    });
+  }
+
+  CHAT_STATE.modalReady = true;
+}
+
 function buildChatId(bookingId, propertyId, guestId) {
   const b = normalizeText(bookingId || "");
   const p = normalizeText(propertyId || "");
@@ -1012,9 +863,7 @@ function setAdminChatHeader(data = {}) {
   const sideProperty = document.getElementById("admin-chat-side-property");
   const sideBooking = document.getElementById("admin-chat-side-booking-id");
 
-  if (titleEl) {
-    titleEl.innerHTML = `${escapeHtml(propertyTitle)} <span class="admin-verified-badge"><i class="ph-fill ph-check"></i></span>`;
-  }
+  if (titleEl) titleEl.innerHTML = `${escapeHtml(propertyTitle)} <span class="admin-verified-badge"><i class="ph-fill ph-check"></i></span>`;
   if (guestLineEl) guestLineEl.textContent = `محادثة مع: ${guestName}`;
   if (bookingLineEl) bookingLineEl.textContent = bookingId ? `رقم الحجز: #${bookingId.slice(0, 8).toUpperCase()}` : "حجز مباشر";
   if (imageEl) imageEl.src = propertyImage || "images/placeholder.jpg";
@@ -1097,7 +946,7 @@ function bindAdminChatStreams(chatId) {
     try { CHAT_STATE.chatUnsub(); } catch (_) {}
   }
 
-  CHAT_STATE.chatUnsub = db.collection("chats").doc(chatId).onSnapshot((snap) => {
+  CHAT_STATE.chatUnsub = db.collection("chats").doc(chatId).onSnapshot(snap => {
     if (!snap.exists) return;
     const data = snap.data() || {};
     CHAT_STATE.currentBookingStatus = normalizeText(data.status || CHAT_STATE.currentBookingStatus);
@@ -1111,17 +960,17 @@ function bindAdminChatStreams(chatId) {
     if (sideUpdated) sideUpdated.textContent = data.lastMessageAt ? formatDateTime(data.lastMessageAt) : "—";
 
     markChatAsSeenByOwner(chatId);
-  }, (err) => {
+  }, err => {
     console.error("chat snapshot error:", err);
   });
 
   CHAT_STATE.messagesUnsub = db.collection("chats").doc(chatId)
     .collection("messages")
     .orderBy("createdAt", "asc")
-    .onSnapshot((snap) => {
+    .onSnapshot(snap => {
       renderAdminChatMessages(snap.docs);
       markChatAsSeenByOwner(chatId);
-    }, (err) => {
+    }, err => {
       console.error("messages snapshot error:", err);
       showToast(`تعذر تحميل رسائل المحادثة: ${err.message}`, "error");
     });
@@ -1142,7 +991,8 @@ async function openBookingChat(bookingId) {
 
     const bookingData = bookingSnap.data() || {};
     const bookingPropId = getBookingPropertyId(bookingData);
-    if (!getIsSuperAdmin() && bookingPropId !== getOwnerPropId()) {
+
+    if (!canAccessProperty(bookingPropId)) {
       throw new Error("غير مسموح لك بفتح محادثة لهذا الحجز");
     }
 
@@ -1150,8 +1000,8 @@ async function openBookingChat(bookingId) {
     const guestName = getBookingGuestName(bookingData);
     const guestEmail = getBookingEmail(bookingData);
     const guestPhone = getBookingPhone(bookingData);
-    const propertyTitle = normalizeText(getBookingField(bookingData, ["propertyTitle", "propertyName", "listingTitle"], getOwnerPropName() || "العقار"));
-    let propertyImage = normalizeText(getBookingField(bookingData, ["propertyImage", "propertyImageUrl", "imageUrl", "image"], ""));
+    const propertyTitle = normalizeText(getField(bookingData, FIELD_CANDIDATES.bookingPropertyTitle, getOwnerPropName() || "العقار"));
+    let propertyImage = normalizeText(getField(bookingData, FIELD_CANDIDATES.bookingPropertyImage, ""));
 
     if (!propertyImage && bookingPropId) {
       try {
@@ -1208,6 +1058,25 @@ async function openBookingChat(bookingId) {
     showToast(err.message || "تعذر فتح المحادثة", "error");
     closeAdminChatModal();
   }
+}
+
+async function uploadToCloudinary(file) {
+  const CLOUD_NAME = "dy9bqizhm";
+  const UPLOAD_PRESET = "orebooking";
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!res.ok) throw new Error("فشل الاتصال بخادم رفع الصور");
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("لم يتم استلام رابط الصورة من Cloudinary");
+  return data.secure_url;
 }
 
 async function sendAdminChatMessage() {
@@ -1364,82 +1233,6 @@ async function tryOwnerLogin(username, password) {
   return { success: false };
 }
 
-if (loginForm) {
-  loginForm.addEventListener("submit", async function(e) {
-    e.preventDefault();
-
-    const user = document.getElementById("admin-user")?.value.trim() || "";
-    const pass = document.getElementById("admin-pass")?.value.trim() || "";
-    const loginBtn = loginForm.querySelector('button[type="submit"]');
-
-    if (!user || !pass) {
-      showLoginError("يرجى إدخال اسم المستخدم وكلمة المرور.");
-      return;
-    }
-
-    setButtonLoading(
-      loginBtn,
-      true,
-      `<i class="ph ph-circle-notch ph-spin"></i> جارٍ تسجيل الدخول...`
-    );
-
-    try {
-      if (user === ADMIN_USER && pass === ADMIN_PASS) {
-        setAdminSession("superadmin");
-        showAdminLayout();
-        setNavVisibilityByRole();
-        showToast("تم تسجيل الدخول كمدير عام بنجاح", "success");
-        await loadProperties();
-        await loadBookings();
-        return;
-      }
-
-      const ownerLogin = await tryOwnerLogin(user, pass);
-      if (ownerLogin.success) {
-        setAdminSession("owner", ownerLogin.docId, ownerLogin.propName);
-        showAdminLayout();
-        setNavVisibilityByRole();
-        showToast(`تم تسجيل الدخول كمالك: ${ownerLogin.propName}`, "success");
-        await loadProperties();
-        await loadBookings();
-        return;
-      }
-
-      showLoginError("اسم المستخدم أو كلمة المرور غير صحيحة");
-    } catch (err) {
-      console.error("login error:", err);
-      showLoginError("تعذر تسجيل الدخول حالياً، حاول مرة أخرى.");
-    } finally {
-      setButtonLoading(loginBtn, false, null, `<i class="ph ph-sign-in"></i> تسجيل الدخول`);
-    }
-  });
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-  ensureAdminChatModal();
-
-  const hasSession = !!localStorage.getItem(SESSION_KEYS.role) || !!localStorage.getItem(SESSION_KEYS.ownerPropId);
-  if (hasSession) {
-    showAdminLayout();
-    setNavVisibilityByRole();
-    await loadProperties();
-    await loadBookings();
-  } else {
-    showLoginLayout();
-  }
-
-  const logoutBtn = document.getElementById("admin-logout-btn");
-  if (logoutBtn && !logoutBtn.dataset.bound) {
-    logoutBtn.dataset.bound = "1";
-    logoutBtn.addEventListener("click", () => {
-      if (!confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
-      clearAdminSession();
-      showToast("تم تسجيل الخروج بنجاح", "success");
-      setTimeout(() => window.location.reload(), 350);
-    });
-  }
-});
-
 function switchTab(tabId) {
   if (tabId === "add-property" && !getIsSuperAdmin()) {
     showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
@@ -1461,8 +1254,7 @@ function switchTab(tabId) {
     bookings: "الحجوزات"
   };
 
-  const pageTitle = document.getElementById("page-title");
-  if (pageTitle) pageTitle.textContent = titles[tabId] || "لوحة التحكم";
+  if (DOM.pageTitle) DOM.pageTitle.textContent = titles[tabId] || "لوحة التحكم";
   updateAdminHeaderForRole();
 
   if (tabId === "bookings") loadBookings();
@@ -1475,10 +1267,9 @@ function switchTab(tabId) {
 }
 
 async function loadProperties() {
-  const tbody = document.getElementById("properties-tbody");
-  if (!tbody) return;
+  if (!DOM.propertiesTbody) return;
 
-  tbody.innerHTML = `
+  DOM.propertiesTbody.innerHTML = `
     <tr>
       <td colspan="6" style="text-align:center; padding:36px; color:var(--text-muted);">
         <i class="ph ph-circle-notch ph-spin" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
@@ -1521,9 +1312,8 @@ async function loadProperties() {
 }
 
 function renderPropertiesTable(docsArray) {
-  const tbody = document.getElementById("properties-tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+  if (!DOM.propertiesTbody) return;
+  DOM.propertiesTbody.innerHTML = "";
 
   docsArray.forEach(doc => {
     const p = normalizePropertyPayload(doc.data() || {});
@@ -1544,8 +1334,8 @@ function renderPropertiesTable(docsArray) {
     tr.innerHTML = `
       <td>
         <img class="prop-thumb"
-             src="${escapeHtml(p.imageUrl || "images/placeholder.jpg")}" 
-             alt="${escapeHtml(p.titleAr || "Property")}" 
+             src="${escapeHtml(p.imageUrl || "images/placeholder.jpg")}"
+             alt="${escapeHtml(p.titleAr || "Property")}"
              onerror="this.src='images/placeholder.jpg'">
       </td>
       <td>
@@ -1587,7 +1377,7 @@ function renderPropertiesTable(docsArray) {
             </button>` : ""}
         </div>
       </td>`;
-    tbody.appendChild(tr);
+    DOM.propertiesTbody.appendChild(tr);
   });
 
   updateQuickStats();
@@ -1596,10 +1386,7 @@ function renderPropertiesTable(docsArray) {
 async function toggleVisibility(docId, isVisible, checkboxEl) {
   try {
     if (checkboxEl) checkboxEl.disabled = true;
-
-    if (!getIsSuperAdmin() && getOwnerPropId() !== docId) {
-      throw new Error("غير مسموح لك بتعديل هذا العقار");
-    }
+    if (!canAccessProperty(docId)) throw new Error("غير مسموح لك بتعديل هذا العقار");
 
     await db.collection("properties").doc(docId).update({
       visible: isVisible,
@@ -1617,130 +1404,12 @@ async function toggleVisibility(docId, isVisible, checkboxEl) {
   }
 }
 
-if (addForm) {
-  addForm.addEventListener("submit", async function(e) {
-    e.preventDefault();
-
-    if (!getIsSuperAdmin()) {
-      showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
-      return;
-    }
-
-    const latVal = document.getElementById("prop-lat")?.value.trim() || "";
-    const lngVal = document.getElementById("prop-lng")?.value.trim() || "";
-    const imageFile = document.getElementById("prop-image")?.files?.[0];
-    const propType = document.getElementById("prop-type")?.value || "apartment";
-
-    if (!latVal || !lngVal) {
-      showToast("يرجى تحديد موقع العقار على الخريطة قبل النشر.", "error");
-      return;
-    }
-
-    if (!imageFile) {
-      showToast("يرجى اختيار الصورة الرئيسية للعقار.", "error");
-      return;
-    }
-
-    if (imageFile.size > 5 * 1024 * 1024) {
-      showToast("حجم الصورة يتجاوز 5 ميجابايت. اختر صورة أصغر.", "error");
-      return;
-    }
-
-    setButtonLoading(
-      submitBtn,
-      true,
-      `<i class="ph ph-circle-notch ph-spin"></i> جاري النشر والرفع...`
-    );
-
-    if (uploadStatus) {
-      uploadStatus.textContent = "جارٍ رفع الصورة إلى الخادم...";
-      uploadStatus.style.color = "var(--primary)";
-    }
-
-    try {
-      const imageUrl = await uploadToCloudinary(imageFile);
-      if (uploadStatus) {
-        uploadStatus.textContent = "✅ اكتمل رفع الصورة";
-        uploadStatus.style.color = "#10b981";
-      }
-
-      const newProperty = normalizePropertyPayload({
-        titleAr: document.getElementById("prop-title-ar")?.value,
-        titleEn: document.getElementById("prop-title-en")?.value,
-        locationAr: document.getElementById("prop-loc-ar")?.value,
-        locationEn: document.getElementById("prop-loc-en")?.value,
-        price: document.getElementById("prop-price")?.value,
-        type: propType,
-        descAr: document.getElementById("prop-desc-ar")?.value,
-        descEn: document.getElementById("prop-desc-en")?.value,
-        imageUrl,
-        lat: latVal,
-        lng: lngVal,
-        visible: true
-      });
-
-      const validationError = validatePropertyPayload(newProperty, { requireImage: true, requireMap: true });
-      if (validationError) throw new Error(validationError);
-
-      await db.collection("properties").add({
-        ...newProperty,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      addForm.reset();
-      if (uploadStatus) uploadStatus.textContent = "";
-      document.getElementById("map-picked-badge")?.classList.remove("visible");
-
-      const latEl = document.getElementById("prop-lat");
-      const lngEl = document.getElementById("prop-lng");
-      if (latEl) latEl.value = "";
-      if (lngEl) lngEl.value = "";
-
-      if (typeof window.resetUploadPreview === "function") window.resetUploadPreview();
-      if (typeof window._resetAddMap === "function") window._resetAddMap();
-
-      showToast("تمت إضافة العقار بنجاح إلى منصة OreBooking", "success");
-      switchTab("manage-props");
-      loadProperties();
-    } catch (err) {
-      console.error("addProperty error:", err);
-      showToast(`حدث خطأ أثناء إضافة العقار: ${err.message}`, "error");
-      if (uploadStatus) {
-        uploadStatus.textContent = "❌ فشل الرفع، يرجى المحاولة لاحقاً";
-        uploadStatus.style.color = "#e11d48";
-      }
-    } finally {
-      setButtonLoading(submitBtn, false, null, `<i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة`);
-    }
-  });
-}
-
-async function uploadToCloudinary(file) {
-  const CLOUD_NAME = "dy9bqizhm";
-  const UPLOAD_PRESET = "orebooking";
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", UPLOAD_PRESET);
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-    method: "POST",
-    body: formData
-  });
-
-  if (!res.ok) throw new Error("فشل الاتصال بخادم رفع الصور");
-  const data = await res.json();
-  if (!data.secure_url) throw new Error("لم يتم استلام رابط الصورة من Cloudinary");
-  return data.secure_url;
-}
-
 async function openEditModal(docId) {
   const editModal = document.getElementById("edit-modal");
   if (!editModal) return;
 
   try {
-    if (!getIsSuperAdmin() && getOwnerPropId() !== docId) {
+    if (!canAccessProperty(docId)) {
       showToast("غير مسموح لك بتعديل هذا العقار", "error");
       return;
     }
@@ -1752,33 +1421,32 @@ async function openEditModal(docId) {
     }
 
     const p = normalizePropertyPayload(doc.data() || {});
+    qs("#edit-prop-id").value = docId;
+    qs("#edit-title-ar").value = p.titleAr || "";
+    qs("#edit-price").value = p.price || "";
+    qs("#edit-desc-ar").value = p.descAr || "";
 
-    document.getElementById("edit-prop-id").value = docId;
-    document.getElementById("edit-title-ar").value = p.titleAr || "";
-    document.getElementById("edit-price").value = p.price || "";
-    document.getElementById("edit-desc-ar").value = p.descAr || "";
-
-    const editTitleEn = document.getElementById("edit-title-en");
-    const editLocAr = document.getElementById("edit-loc-ar");
-    const editLocEn = document.getElementById("edit-loc-en");
-    const editDescEn = document.getElementById("edit-desc-en");
+    const editTitleEn = qs("#edit-title-en");
+    const editLocAr = qs("#edit-loc-ar");
+    const editLocEn = qs("#edit-loc-en");
+    const editDescEn = qs("#edit-desc-en");
     if (editTitleEn) editTitleEn.value = p.titleEn || "";
     if (editLocAr) editLocAr.value = p.locationAr || "";
     if (editLocEn) editLocEn.value = p.locationEn || "";
     if (editDescEn) editDescEn.value = p.descEn || "";
 
-    const editTypeEl = document.getElementById("edit-type");
+    const editTypeEl = qs("#edit-type");
     if (editTypeEl) editTypeEl.value = p.type || "apartment";
 
     const existingLat = Number.isFinite(p.lat) ? parseFloat(p.lat) : null;
     const existingLng = Number.isFinite(p.lng) ? parseFloat(p.lng) : null;
 
-    const editLatEl = document.getElementById("edit-lat");
-    const editLngEl = document.getElementById("edit-lng");
+    const editLatEl = qs("#edit-lat");
+    const editLngEl = qs("#edit-lng");
     if (editLatEl) editLatEl.value = existingLat ?? "";
     if (editLngEl) editLngEl.value = existingLng ?? "";
 
-    document.getElementById("edit-map-picked-badge")?.classList.toggle("visible", !!(existingLat !== null && existingLng !== null));
+    qs("#edit-map-picked-badge")?.classList.toggle("visible", !!(existingLat !== null && existingLng !== null));
 
     editModal.classList.add("active");
     document.body.classList.add("modal-open");
@@ -1798,102 +1466,6 @@ function closeEditModal() {
   document.body.classList.remove("modal-open");
 }
 
-if (editModalEl) {
-  editModalEl.addEventListener("click", function(e) {
-    if (e.target === this) closeEditModal();
-  });
-}
-
-document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape") {
-    const overlay = document.getElementById("admin-chat-overlay");
-    if (overlay?.classList.contains("active")) {
-      closeAdminChatModal();
-      return;
-    }
-    closeEditModal();
-  }
-});
-
-if (editForm) {
-  editForm.addEventListener("submit", async function(e) {
-    e.preventDefault();
-
-    const docId = document.getElementById("edit-prop-id")?.value;
-    const imageFile = document.getElementById("edit-image")?.files?.[0];
-
-    if (!docId) {
-      showToast("معرّف العقار غير صالح", "error");
-      return;
-    }
-
-    if (!getIsSuperAdmin() && getOwnerPropId() !== docId) {
-      showToast("غير مسموح لك بتعديل هذا العقار", "error");
-      return;
-    }
-
-    setButtonLoading(
-      submitEditBtn,
-      true,
-      `<i class="ph ph-circle-notch ph-spin"></i> جارٍ الحفظ...`
-    );
-
-    try {
-      const payload = normalizePropertyPayload({
-        titleAr: document.getElementById("edit-title-ar")?.value,
-        titleEn: document.getElementById("edit-title-en")?.value,
-        locationAr: document.getElementById("edit-loc-ar")?.value,
-        locationEn: document.getElementById("edit-loc-en")?.value,
-        price: document.getElementById("edit-price")?.value,
-        descAr: document.getElementById("edit-desc-ar")?.value,
-        descEn: document.getElementById("edit-desc-en")?.value,
-        type: document.getElementById("edit-type")?.value || "apartment",
-        lat: document.getElementById("edit-lat")?.value,
-        lng: document.getElementById("edit-lng")?.value
-      });
-
-      const validationError = validatePropertyPayload(payload, { requireImage: false, requireMap: true });
-      if (validationError) {
-        showToast(validationError, "error");
-        return;
-      }
-
-      const updateData = {
-        titleAr: payload.titleAr,
-        titleEn: payload.titleEn,
-        locationAr: payload.locationAr,
-        locationEn: payload.locationEn,
-        price: payload.price,
-        descAr: payload.descAr,
-        descEn: payload.descEn,
-        type: payload.type,
-        lat: payload.lat,
-        lng: payload.lng,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      if (imageFile) {
-        if (imageFile.size > 5 * 1024 * 1024) {
-          showToast("حجم الصورة الجديدة يتجاوز 5 ميجابايت", "error");
-          return;
-        }
-        const newImageUrl = await uploadToCloudinary(imageFile);
-        updateData.imageUrl = newImageUrl;
-      }
-
-      await db.collection("properties").doc(docId).update(updateData);
-      closeEditModal();
-      await loadProperties();
-      showToast("تم حفظ التعديلات بنجاح", "success");
-    } catch (err) {
-      console.error("editProperty error:", err);
-      showToast(`حدث خطأ أثناء الحفظ: ${err.message}`, "error");
-    } finally {
-      setButtonLoading(submitEditBtn, false, null, `حفظ التعديلات <i class="ph ph-floppy-disk"></i>`);
-    }
-  });
-}
-
 async function deleteProperty(docId) {
   if (!getIsSuperAdmin()) {
     showToast("غير مسموح لك بحذف العقار من هذه الجلسة", "error");
@@ -1906,11 +1478,7 @@ async function deleteProperty(docId) {
     const bookingsSnap = await db.collection("bookings").get().catch(() => null);
 
     if (bookingsSnap && !bookingsSnap.empty) {
-      const related = bookingsSnap.docs.filter(d => {
-        const data = d.data() || {};
-        return getBookingPropertyId(data) === docId;
-      });
-
+      const related = bookingsSnap.docs.filter(d => getBookingPropertyId(d.data() || {}) === docId);
       if (related.length) {
         const proceed = confirm(`يوجد ${related.length} حجز/حجوزات مرتبطة بهذا العقار.\nسيتم حذف العقار فقط وقد تبقى الحجوزات يتيمة.\nهل تريد المتابعة؟`);
         if (!proceed) return;
@@ -1927,7 +1495,7 @@ async function deleteProperty(docId) {
 }
 
 async function loadBookings() {
-  const container = document.getElementById("bookings-container");
+  const container = DOM.bookingsContainer;
   if (!container) return;
 
   container.innerHTML = `
@@ -1950,10 +1518,9 @@ async function loadBookings() {
         docs = snap.docs;
       }
     } else {
-      const FIELD_CANDIDATES = ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"];
       let matched = false;
 
-      for (const field of FIELD_CANDIDATES) {
+      for (const field of FIELD_CANDIDATES.bookingPropertyId) {
         try {
           const snap = await db.collection("bookings").where(field, "==", ownerPropId).get();
           if (!snap.empty) {
@@ -1995,15 +1562,15 @@ async function loadBookings() {
       const email = getBookingEmail(b);
       const guestId = getBookingGuestId(b);
       const propertyId = getBookingPropertyId(b);
-      const propertyTitle = normalizeText(getBookingField(b, ["propertyTitle", "propertyName", "listingTitle"], "—"));
-      const totalPrice = toNumber(getBookingField(b, ["totalPrice", "finalTotal", "amount", "price"], 0), 0);
-      const nights = toNumber(getBookingField(b, ["nights", "nightCount"], 0), 0);
-      const paymentMethodRaw = normalizeText(getBookingField(b, ["paymentMethod", "payment_method"], "cash")).toLowerCase();
+      const propertyTitle = normalizeText(getField(b, FIELD_CANDIDATES.bookingPropertyTitle, "—"));
+      const totalPrice = toNumber(getField(b, FIELD_CANDIDATES.bookingPrice, 0), 0);
+      const nights = toNumber(getField(b, FIELD_CANDIDATES.bookingNights, 0), 0);
+      const paymentMethodRaw = normalizeText(getField(b, ["paymentMethod", "payment_method"], "cash")).toLowerCase();
       const paymentMethod = paymentMethodRaw === "transfer" || paymentMethodRaw === "ccp"
         ? `<span class="pill-soft" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;"><i class="ph ph-bank"></i> تحويل بنكي</span>`
         : `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph ph-money"></i> الدفع عند الوصول</span>`;
 
-      const receiptUrl = normalizeText(getBookingField(b, ["receiptUrl", "paymentReceiptUrl", "transferReceiptUrl"], ""));
+      const receiptUrl = normalizeText(getField(b, FIELD_CANDIDATES.bookingReceipt, ""));
       const receipt = (paymentMethodRaw === "transfer" || paymentMethodRaw === "ccp")
         ? (receiptUrl
             ? `<a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener noreferrer" class="ghost-action" style="min-height:40px;padding:0 14px;font-size:.82rem;"><i class="ph ph-receipt"></i> عرض الإيصال</a>`
@@ -2160,15 +1727,12 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
   try {
     const bookingRef = db.collection("bookings").doc(docId);
     const snap = await bookingRef.get();
-
-    if (!snap.exists) {
-      throw new Error("الحجز غير موجود");
-    }
+    if (!snap.exists) throw new Error("الحجز غير موجود");
 
     const bookingData = snap.data() || {};
     const bookingPropId = getBookingPropertyId(bookingData);
 
-    if (!getIsSuperAdmin() && bookingPropId !== getOwnerPropId()) {
+    if (!canAccessProperty(bookingPropId)) {
       throw new Error("غير مسموح لك بتحديث هذا الحجز");
     }
 
@@ -2181,6 +1745,7 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
     const chatId = buildChatId(docId, bookingPropId, guestId);
     const chatRef = db.collection("chats").doc(chatId);
     const chatSnap = await chatRef.get().catch(() => null);
+
     if (chatSnap?.exists) {
       await chatRef.set({
         status: newStatus,
@@ -2200,6 +1765,263 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
   }
 };
 
+if (DOM.addForm) {
+  DOM.addForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    if (!getIsSuperAdmin()) {
+      showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
+      return;
+    }
+
+    const latVal = qs("#prop-lat")?.value.trim() || "";
+    const lngVal = qs("#prop-lng")?.value.trim() || "";
+    const imageFile = qs("#prop-image")?.files?.[0];
+    const propType = qs("#prop-type")?.value || "apartment";
+
+    if (!latVal || !lngVal) {
+      showToast("يرجى تحديد موقع العقار على الخريطة قبل النشر.", "error");
+      return;
+    }
+
+    if (!imageFile) {
+      showToast("يرجى اختيار الصورة الرئيسية للعقار.", "error");
+      return;
+    }
+
+    if (imageFile.size > 5 * 1024 * 1024) {
+      showToast("حجم الصورة يتجاوز 5 ميجابايت. اختر صورة أصغر.", "error");
+      return;
+    }
+
+    setButtonLoading(DOM.submitBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جاري النشر والرفع...`);
+
+    if (DOM.uploadStatus) {
+      DOM.uploadStatus.textContent = "جارٍ رفع الصورة إلى الخادم...";
+      DOM.uploadStatus.style.color = "var(--primary)";
+    }
+
+    try {
+      const imageUrl = await uploadToCloudinary(imageFile);
+
+      if (DOM.uploadStatus) {
+        DOM.uploadStatus.textContent = "✅ اكتمل رفع الصورة";
+        DOM.uploadStatus.style.color = "#10b981";
+      }
+
+      const newProperty = normalizePropertyPayload({
+        titleAr: qs("#prop-title-ar")?.value,
+        titleEn: qs("#prop-title-en")?.value,
+        locationAr: qs("#prop-loc-ar")?.value,
+        locationEn: qs("#prop-loc-en")?.value,
+        price: qs("#prop-price")?.value,
+        type: propType,
+        descAr: qs("#prop-desc-ar")?.value,
+        descEn: qs("#prop-desc-en")?.value,
+        imageUrl,
+        lat: latVal,
+        lng: lngVal,
+        visible: true
+      });
+
+      const validationError = validatePropertyPayload(newProperty, { requireImage: true, requireMap: true });
+      if (validationError) throw new Error(validationError);
+
+      await db.collection("properties").add({
+        ...newProperty,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      DOM.addForm.reset();
+      if (DOM.uploadStatus) DOM.uploadStatus.textContent = "";
+      qs("#map-picked-badge")?.classList.remove("visible");
+      if (qs("#prop-lat")) qs("#prop-lat").value = "";
+      if (qs("#prop-lng")) qs("#prop-lng").value = "";
+
+      if (typeof window.resetUploadPreview === "function") window.resetUploadPreview();
+      if (typeof window._resetAddMap === "function") window._resetAddMap();
+
+      showToast("تمت إضافة العقار بنجاح إلى منصة OreBooking", "success");
+      switchTab("manage-props");
+      loadProperties();
+    } catch (err) {
+      console.error("addProperty error:", err);
+      showToast(`حدث خطأ أثناء إضافة العقار: ${err.message}`, "error");
+      if (DOM.uploadStatus) {
+        DOM.uploadStatus.textContent = "❌ فشل الرفع، يرجى المحاولة لاحقاً";
+        DOM.uploadStatus.style.color = "#e11d48";
+      }
+    } finally {
+      setButtonLoading(DOM.submitBtn, false, null, `<i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة`);
+    }
+  });
+}
+
+if (DOM.editModalEl) {
+  DOM.editModalEl.addEventListener("click", function(e) {
+    if (e.target === this) closeEditModal();
+  });
+}
+
+if (DOM.editForm) {
+  DOM.editForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const docId = qs("#edit-prop-id")?.value;
+    const imageFile = qs("#edit-image")?.files?.[0];
+
+    if (!docId) {
+      showToast("معرّف العقار غير صالح", "error");
+      return;
+    }
+
+    if (!canAccessProperty(docId)) {
+      showToast("غير مسموح لك بتعديل هذا العقار", "error");
+      return;
+    }
+
+    setButtonLoading(DOM.submitEditBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ الحفظ...`);
+
+    try {
+      const payload = normalizePropertyPayload({
+        titleAr: qs("#edit-title-ar")?.value,
+        titleEn: qs("#edit-title-en")?.value,
+        locationAr: qs("#edit-loc-ar")?.value,
+        locationEn: qs("#edit-loc-en")?.value,
+        price: qs("#edit-price")?.value,
+        descAr: qs("#edit-desc-ar")?.value,
+        descEn: qs("#edit-desc-en")?.value,
+        type: qs("#edit-type")?.value || "apartment",
+        lat: qs("#edit-lat")?.value,
+        lng: qs("#edit-lng")?.value
+      });
+
+      const validationError = validatePropertyPayload(payload, { requireImage: false, requireMap: true });
+      if (validationError) {
+        showToast(validationError, "error");
+        return;
+      }
+
+      const updateData = {
+        titleAr: payload.titleAr,
+        titleEn: payload.titleEn,
+        locationAr: payload.locationAr,
+        locationEn: payload.locationEn,
+        price: payload.price,
+        descAr: payload.descAr,
+        descEn: payload.descEn,
+        type: payload.type,
+        lat: payload.lat,
+        lng: payload.lng,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      if (imageFile) {
+        if (imageFile.size > 5 * 1024 * 1024) {
+          showToast("حجم الصورة الجديدة يتجاوز 5 ميجابايت", "error");
+          return;
+        }
+        updateData.imageUrl = await uploadToCloudinary(imageFile);
+      }
+
+      await db.collection("properties").doc(docId).update(updateData);
+      closeEditModal();
+      await loadProperties();
+      showToast("تم حفظ التعديلات بنجاح", "success");
+    } catch (err) {
+      console.error("editProperty error:", err);
+      showToast(`حدث خطأ أثناء الحفظ: ${err.message}`, "error");
+    } finally {
+      setButtonLoading(DOM.submitEditBtn, false, null, `حفظ التعديلات <i class="ph ph-floppy-disk"></i>`);
+    }
+  });
+}
+
+if (DOM.loginForm) {
+  DOM.loginForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const user = qs("#admin-user")?.value.trim() || "";
+    const pass = qs("#admin-pass")?.value.trim() || "";
+    const loginBtn = DOM.loginForm.querySelector('button[type="submit"]');
+
+    if (!user || !pass) {
+      showLoginError("يرجى إدخال اسم المستخدم وكلمة المرور.");
+      return;
+    }
+
+    setButtonLoading(loginBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ تسجيل الدخول...`);
+
+    try {
+      if (user === ADMIN_USER && pass === ADMIN_PASS) {
+        setAdminSession("superadmin");
+        showAdminLayout();
+        setNavVisibilityByRole();
+        showToast("تم تسجيل الدخول كمدير عام بنجاح", "success");
+        await loadProperties();
+        await loadBookings();
+        return;
+      }
+
+      const ownerLogin = await tryOwnerLogin(user, pass);
+      if (ownerLogin.success) {
+        setAdminSession("owner", ownerLogin.docId, ownerLogin.propName);
+        showAdminLayout();
+        setNavVisibilityByRole();
+        showToast(`تم تسجيل الدخول كمالك: ${ownerLogin.propName}`, "success");
+        await loadProperties();
+        await loadBookings();
+        return;
+      }
+
+      showLoginError("اسم المستخدم أو كلمة المرور غير صحيحة");
+    } catch (err) {
+      console.error("login error:", err);
+      showLoginError("تعذر تسجيل الدخول حالياً، حاول مرة أخرى.");
+    } finally {
+      setButtonLoading(loginBtn, false, null, `<i class="ph ph-sign-in"></i> تسجيل الدخول`);
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  ensureAdminChatModal();
+
+  const hasSession = (!!localStorage.getItem(SESSION_KEYS.role) || !!localStorage.getItem(SESSION_KEYS.ownerPropId)) && ensureValidSession();
+  if (hasSession) {
+    showAdminLayout();
+    setNavVisibilityByRole();
+    await loadProperties();
+    await loadBookings();
+  } else {
+    clearAdminSession();
+    showLoginLayout();
+  }
+
+  const logoutBtn = document.getElementById("admin-logout-btn");
+  if (logoutBtn && !logoutBtn.dataset.bound) {
+    logoutBtn.dataset.bound = "1";
+    logoutBtn.addEventListener("click", () => {
+      if (!confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
+      clearAdminSession();
+      showToast("تم تسجيل الخروج بنجاح", "success");
+      setTimeout(() => window.location.reload(), 350);
+    });
+  }
+});
+
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") {
+    const overlay = document.getElementById("admin-chat-overlay");
+    if (overlay?.classList.contains("active")) {
+      closeAdminChatModal();
+      return;
+    }
+    closeEditModal();
+  }
+});
+
 window.fetchProperties = loadProperties;
 window.loadProperties = loadProperties;
 window.loadBookings = loadBookings;
@@ -2211,3 +2033,28 @@ window.toggleVisibility = toggleVisibility;
 window.updateAdminQuickStats = updateQuickStats;
 window.adminLogout = clearAdminSession;
 window.openBookingChat = openBookingChat;
+window.buildChatId = buildChatId;
+window.getIsSuperAdmin = getIsSuperAdmin;
+window.getOwnerPropId = getOwnerPropId;
+window.getOwnerPropName = getOwnerPropName;
+window.getSessionRole = getSessionRole;
+window.getAdminActorId = getAdminActorId;
+window.getAdminActorName = getAdminActorName;
+window.normalizeText = normalizeText;
+window.escapeHtml = escapeHtml;
+window.toNumber = toNumber;
+window.formatDate = formatDate;
+window.formatDateTime = formatDateTime;
+window.getRelativeTime = getRelativeTime;
+window.getStatusMeta = getStatusMeta;
+window.getBookingPropertyId = getBookingPropertyId;
+window.getBookingGuestId = getBookingGuestId;
+window.getBookingGuestName = getBookingGuestName;
+window.getBookingPhone = getBookingPhone;
+window.getBookingEmail = getBookingEmail;
+window.getBookingCheckIn = getBookingCheckIn;
+window.getBookingCheckOut = getBookingCheckOut;
+window.getBookingNotes = getBookingNotes;
+window.getBookingAddons = getBookingAddons;
+window.getBookingGuestsMeta = getBookingGuestsMeta;
+window.uploadToCloudinary = uploadToCloudinary;
