@@ -1,6 +1,7 @@
 // =========================================
 //   OreBooking Admin Panel Logic — Refined
 //   Stable session / properties / bookings / chat
+//   Updated with owner accounts management
 // =========================================
 
 const firebaseConfig = {
@@ -27,8 +28,12 @@ const SESSION_KEYS = {
   role: "adminRole",
   ownerPropId: "ownerPropId",
   ownerPropName: "ownerPropName",
+  ownerAccountId: "ownerAccountId",
+  ownerUsername: "ownerUsername",
   loginAt: "adminLoginAt"
 };
+
+const OWNER_ACCOUNTS_COLLECTION = "ownerAccounts";
 
 const DOM = {
   loginScreen: document.getElementById("admin-login-screen"),
@@ -42,7 +47,10 @@ const DOM = {
   editModalEl: document.getElementById("edit-modal"),
   pageTitle: document.getElementById("page-title"),
   propertiesTbody: document.getElementById("properties-tbody"),
-  bookingsContainer: document.getElementById("bookings-container")
+  bookingsContainer: document.getElementById("bookings-container"),
+  ownerAccountsTbody: document.getElementById("owner-accounts-tbody"),
+  ownerAccountForm: document.getElementById("owner-account-form"),
+  ownerPropertySelect: document.getElementById("owner-property-id")
 };
 
 const CHAT_STATE = {
@@ -206,27 +214,40 @@ function getOwnerPropName() {
   return normalizeText(localStorage.getItem(SESSION_KEYS.ownerPropName) || "");
 }
 
+function getOwnerAccountId() {
+  return normalizeText(localStorage.getItem(SESSION_KEYS.ownerAccountId) || "");
+}
+
+function getOwnerUsername() {
+  return normalizeText(localStorage.getItem(SESSION_KEYS.ownerUsername) || "");
+}
+
 function getSessionRole() {
   return normalizeText(localStorage.getItem(SESSION_KEYS.role) || "") || (getIsSuperAdmin() ? "superadmin" : "owner");
 }
 
 function getAdminActorId() {
-  return getIsSuperAdmin() ? "superadmin" : getOwnerPropId();
+  return getIsSuperAdmin() ? "superadmin" : (getOwnerAccountId() || getOwnerPropId());
 }
 
 function getAdminActorName() {
   return getIsSuperAdmin() ? "إدارة OreBooking" : (getOwnerPropName() || "صاحب العقار");
 }
 
-function setAdminSession(role = "superadmin", ownerPropId = "", ownerPropName = "") {
+function setAdminSession(role = "superadmin", ownerPropId = "", ownerPropName = "", ownerAccountId = "", ownerUsername = "") {
   localStorage.setItem(SESSION_KEYS.role, role);
   localStorage.setItem(SESSION_KEYS.loginAt, String(Date.now()));
+
   if (role === "owner" && ownerPropId) {
     localStorage.setItem(SESSION_KEYS.ownerPropId, ownerPropId);
     localStorage.setItem(SESSION_KEYS.ownerPropName, ownerPropName || "");
+    localStorage.setItem(SESSION_KEYS.ownerAccountId, ownerAccountId || "");
+    localStorage.setItem(SESSION_KEYS.ownerUsername, ownerUsername || "");
   } else {
     localStorage.removeItem(SESSION_KEYS.ownerPropId);
     localStorage.removeItem(SESSION_KEYS.ownerPropName);
+    localStorage.removeItem(SESSION_KEYS.ownerAccountId);
+    localStorage.removeItem(SESSION_KEYS.ownerUsername);
   }
 }
 
@@ -304,23 +325,27 @@ function updateAdminHeaderForRole() {
   } else {
     const ownerPropName = getOwnerPropName();
     const ownerPropId = getOwnerPropId();
-    badge.textContent = `وضع المالك${ownerPropName ? ` — ${ownerPropName}` : ""}${ownerPropId ? ` (${ownerPropId})` : ""}`;
+    const ownerUsername = getOwnerUsername();
+    badge.textContent = `وضع المالك${ownerPropName ? ` — ${ownerPropName}` : ""}${ownerUsername ? ` • ${ownerUsername}` : ""}${ownerPropId ? ` (${ownerPropId})` : ""}`;
   }
 }
 
 function updateQuickStats() {
   const propertyRows = Array.from(document.querySelectorAll("#properties-tbody tr[data-prop-id]"));
   const bookingCards = Array.from(document.querySelectorAll("#bookings-container .booking-card"));
+  const ownerRows = Array.from(document.querySelectorAll("#owner-accounts-tbody tr[data-owner-id]"));
 
   const totalProperties = propertyRows.length;
   const activeProperties = propertyRows.filter(row => row.getAttribute("data-visible") === "true").length;
   const pendingBookings = bookingCards.filter(card => card.getAttribute("data-status") === "pending").length;
+  const totalOwnerAccounts = ownerRows.length;
 
   const map = {
     "stat-total-properties": totalProperties,
     "stat-active-properties": activeProperties,
     "stat-total-bookings": bookingCards.length,
-    "stat-pending-bookings": pendingBookings
+    "stat-pending-bookings": pendingBookings,
+    "stat-owner-accounts": totalOwnerAccounts
   };
 
   Object.entries(map).forEach(([id, val]) => {
@@ -335,6 +360,18 @@ function renderPropertiesEmpty(message, isError = false) {
     <tr>
       <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
         <i class="ph ${isError ? "ph-warning-circle" : "ph-house-line"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+        ${escapeHtml(message)}
+      </td>
+    </tr>`;
+  updateQuickStats();
+}
+
+function renderOwnerAccountsEmpty(message, isError = false) {
+  if (!DOM.ownerAccountsTbody) return;
+  DOM.ownerAccountsTbody.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
+        <i class="ph ${isError ? "ph-warning-circle" : "ph-users-three"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
         ${escapeHtml(message)}
       </td>
     </tr>`;
@@ -388,6 +425,28 @@ function validatePropertyPayload(payload, { requireImage = false, requireMap = t
   if (!payload.price || payload.price <= 0) return "يرجى إدخال سعر صحيح أكبر من 0.";
   if (requireMap && (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng))) return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
   if (requireImage && !payload.imageUrl) return "الصورة الرئيسية للعقار مطلوبة.";
+  return "";
+}
+
+function normalizeOwnerAccountPayload(source = {}) {
+  return {
+    fullName: normalizeText(source.fullName || source.name),
+    username: normalizeText(source.username),
+    password: normalizeText(source.password),
+    propertyId: normalizeText(source.propertyId || source.propId),
+    propertyName: normalizeText(source.propertyName || source.propName),
+    role: "owner",
+    active: source.active !== false
+  };
+}
+
+function validateOwnerAccountPayload(payload) {
+  if (!payload.fullName) return "يرجى إدخال اسم صاحب العقار.";
+  if (!payload.propertyId) return "يرجى اختيار العقار المرتبط بالحساب.";
+  if (!payload.username) return "يرجى إدخال اسم المستخدم.";
+  if (!payload.password) return "يرجى إدخال كلمة المرور.";
+  if (payload.username.length < 3) return "اسم المستخدم يجب أن يكون 3 أحرف على الأقل.";
+  if (payload.password.length < 3) return "كلمة المرور يجب أن تكون 3 أحرف على الأقل.";
   return "";
 }
 
@@ -487,17 +546,233 @@ function getBookingGuestsMeta(data = {}) {
 }
 
 function setNavVisibilityByRole() {
-  const addTabBtn = document.querySelector(`[onclick="switchTab('add-property')"]`);
+  const addTabBtn = document.querySelector('[data-tab-target="add-property"]') || document.querySelector(`[onclick="switchTab('add-property')"]`);
+  const ownerAccountsBtn = document.querySelector('[data-tab-target="owner-accounts"]') || document.querySelector(`[onclick="switchTab('owner-accounts')"]`);
   const addTabPane = document.getElementById("tab-add-property");
+  const ownerAccountsPane = document.getElementById("tab-owner-accounts");
 
   if (!getIsSuperAdmin()) {
     if (addTabBtn) addTabBtn.style.display = "none";
+    if (ownerAccountsBtn) ownerAccountsBtn.style.display = "none";
     if (addTabPane) addTabPane.style.display = "none";
+    if (ownerAccountsPane) ownerAccountsPane.style.display = "none";
     const activePane = document.querySelector(".tab-pane.active");
-    if (activePane?.id === "tab-add-property") switchTab("manage-props");
+    if (activePane?.id === "tab-add-property" || activePane?.id === "tab-owner-accounts") switchTab("manage-props");
   } else {
     if (addTabBtn) addTabBtn.style.display = "";
+    if (ownerAccountsBtn) ownerAccountsBtn.style.display = "";
     if (addTabPane) addTabPane.style.display = "";
+    if (ownerAccountsPane) ownerAccountsPane.style.display = "";
+  }
+}
+
+async function loadPropertiesForSelect() {
+  if (!DOM.ownerPropertySelect) return;
+
+  const previous = DOM.ownerPropertySelect.value;
+  DOM.ownerPropertySelect.innerHTML = `<option value="">جارٍ تحميل العقارات...</option>`;
+
+  try {
+    const snapshot = await db.collection("properties").orderBy("createdAt", "desc").get().catch(async () => {
+      return await db.collection("properties").get();
+    });
+
+    if (snapshot.empty) {
+      DOM.ownerPropertySelect.innerHTML = `<option value="">لا توجد عقارات</option>`;
+      return;
+    }
+
+    DOM.ownerPropertySelect.innerHTML = `<option value="">اختر العقار</option>`;
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+      const title = normalizeText(data.titleAr || data.titleEn || doc.id);
+      const option = document.createElement("option");
+      option.value = doc.id;
+      option.textContent = title;
+      option.dataset.title = title;
+      DOM.ownerPropertySelect.appendChild(option);
+    });
+
+    if (previous && DOM.ownerPropertySelect.querySelector(`option[value="${CSS.escape(previous)}"]`)) {
+      DOM.ownerPropertySelect.value = previous;
+    }
+  } catch (err) {
+    console.error("loadPropertiesForSelect error:", err);
+    DOM.ownerPropertySelect.innerHTML = `<option value="">تعذر تحميل العقارات</option>`;
+  }
+}
+
+async function loadOwnerAccounts() {
+  if (!DOM.ownerAccountsTbody) return;
+
+  if (!getIsSuperAdmin()) {
+    renderOwnerAccountsEmpty("إدارة حسابات الملاك متاحة للمدير العام فقط.");
+    return;
+  }
+
+  DOM.ownerAccountsTbody.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align:center; padding:36px; color:var(--text-muted);">
+        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+        جارٍ تحميل حسابات الملاك...
+      </td>
+    </tr>`;
+
+  try {
+    const snapshot = await db.collection(OWNER_ACCOUNTS_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
+      return await db.collection(OWNER_ACCOUNTS_COLLECTION).get();
+    });
+
+    if (snapshot.empty) {
+      renderOwnerAccountsEmpty("لا توجد حسابات ملاك مضافة بعد.");
+      return;
+    }
+
+    renderOwnerAccountsTable(snapshot.docs);
+  } catch (err) {
+    console.error("loadOwnerAccounts error:", err);
+    renderOwnerAccountsEmpty(`حدث خطأ أثناء تحميل الحسابات: ${err.message}`, true);
+  }
+}
+
+function renderOwnerAccountsTable(docsArray) {
+  if (!DOM.ownerAccountsTbody) return;
+
+  DOM.ownerAccountsTbody.innerHTML = "";
+
+  docsArray.forEach(doc => {
+    const data = normalizeOwnerAccountPayload(doc.data() || {});
+    const isActive = data.active !== false;
+
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-owner-id", doc.id);
+    tr.setAttribute("data-active", String(isActive));
+    tr.innerHTML = `
+      <td>${escapeHtml(data.fullName || "—")}</td>
+      <td>${escapeHtml(data.username || "—")}</td>
+      <td>${escapeHtml(data.password || "—")}</td>
+      <td>${escapeHtml(data.propertyName || data.propertyId || "—")}</td>
+      <td>
+        <span class="status-badge ${isActive ? "visible" : "hidden"}">
+          <i class="ph ${isActive ? "ph-check-circle" : "ph-x-circle"}"></i>
+          ${isActive ? "نشط" : "معطل"}
+        </span>
+      </td>
+      <td>
+        <div class="table-actions">
+          <button type="button" onclick="toggleOwnerAccount('${doc.id}', ${!isActive}, this)">
+            <i class="ph ph-power"></i> ${isActive ? "تعطيل" : "تفعيل"}
+          </button>
+          <button type="button" onclick="deleteOwnerAccount('${doc.id}')" style="color:#e11d48;">
+            <i class="ph ph-trash"></i> حذف
+          </button>
+        </div>
+      </td>
+    `;
+    DOM.ownerAccountsTbody.appendChild(tr);
+  });
+
+  updateQuickStats();
+}
+
+async function createOwnerAccountFromForm(e) {
+  e.preventDefault();
+
+  if (!getIsSuperAdmin()) {
+    showToast("فقط المدير العام يمكنه إنشاء حسابات الملاك", "error");
+    return;
+  }
+
+  const submitBtn = DOM.ownerAccountForm?.querySelector('button[type="submit"]');
+  const selectedOption = DOM.ownerPropertySelect?.selectedOptions?.[0] || null;
+
+  const payload = normalizeOwnerAccountPayload({
+    fullName: qs("#owner-full-name")?.value,
+    username: qs("#owner-username")?.value,
+    password: qs("#owner-password")?.value,
+    propertyId: qs("#owner-property-id")?.value,
+    propertyName: selectedOption?.dataset?.title || selectedOption?.textContent || ""
+  });
+
+  const validationError = validateOwnerAccountPayload(payload);
+  if (validationError) {
+    showToast(validationError, "error");
+    return;
+  }
+
+  setButtonLoading(submitBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ إنشاء الحساب...`);
+
+  try {
+    const propertySnap = await db.collection("properties").doc(payload.propertyId).get();
+    if (!propertySnap.exists) {
+      throw new Error("العقار المحدد غير موجود");
+    }
+
+    const duplicateSnap = await db.collection(OWNER_ACCOUNTS_COLLECTION)
+      .where("username", "==", payload.username)
+      .limit(1)
+      .get();
+
+    if (!duplicateSnap.empty) {
+      throw new Error("اسم المستخدم مستخدم مسبقاً");
+    }
+
+    await db.collection(OWNER_ACCOUNTS_COLLECTION).add({
+      ...payload,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    DOM.ownerAccountForm?.reset();
+    showToast("تم إنشاء حساب المالك بنجاح", "success");
+    await loadOwnerAccounts();
+  } catch (err) {
+    console.error("createOwnerAccountFromForm error:", err);
+    showToast(`تعذر إنشاء الحساب: ${err.message}`, "error");
+  } finally {
+    setButtonLoading(submitBtn, false, null, `<i class="ph ph-user-plus"></i> إنشاء حساب المالك`);
+  }
+}
+
+async function toggleOwnerAccount(docId, newState, clickedBtn = null) {
+  if (!getIsSuperAdmin()) {
+    showToast("فقط المدير العام يمكنه تعديل حسابات الملاك", "error");
+    return;
+  }
+
+  try {
+    if (clickedBtn) clickedBtn.disabled = true;
+
+    await db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).update({
+      active: !!newState,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showToast(`تم ${newState ? "تفعيل" : "تعطيل"} الحساب بنجاح`, "success");
+    await loadOwnerAccounts();
+  } catch (err) {
+    console.error("toggleOwnerAccount error:", err);
+    showToast(`تعذر تحديث حالة الحساب: ${err.message}`, "error");
+  } finally {
+    if (clickedBtn) clickedBtn.disabled = false;
+  }
+}
+
+async function deleteOwnerAccount(docId) {
+  if (!getIsSuperAdmin()) {
+    showToast("فقط المدير العام يمكنه حذف حسابات الملاك", "error");
+    return;
+  }
+
+  if (!confirm("هل أنت متأكد من حذف حساب المالك نهائياً؟")) return;
+
+  try {
+    await db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).delete();
+    showToast("تم حذف حساب المالك بنجاح", "success");
+    await loadOwnerAccounts();
+  } catch (err) {
+    console.error("deleteOwnerAccount error:", err);
+    showToast(`تعذر حذف الحساب: ${err.message}`, "error");
   }
 }
 
@@ -1180,62 +1455,58 @@ async function tryOwnerLogin(username, password) {
   const user = normalizeText(username);
   const pass = normalizeText(password);
 
-  const candidates = [
-    { userField: "username", passField: "password" },
-    { userField: "ownerUser", passField: "ownerPass" },
-    { userField: "loginUser", passField: "loginPass" },
-    { userField: "adminUser", passField: "adminPass" }
-  ];
+  try {
+    const snap = await db.collection(OWNER_ACCOUNTS_COLLECTION)
+      .where("username", "==", user)
+      .where("password", "==", pass)
+      .where("active", "==", true)
+      .limit(1)
+      .get();
 
-  for (const c of candidates) {
-    try {
-      const snap = await db.collection("properties")
-        .where(c.userField, "==", user)
-        .where(c.passField, "==", pass)
-        .limit(1)
-        .get();
-
-      if (!snap.empty) {
-        const doc = snap.docs[0];
-        const data = doc.data() || {};
-        return {
-          success: true,
-          docId: doc.id,
-          propName: normalizeText(data.titleAr || data.titleEn || "عقار المالك")
-        };
-      }
-    } catch (_) {}
+    if (!snap.empty) {
+      const doc = snap.docs[0];
+      const data = doc.data() || {};
+      return {
+        success: true,
+        accountId: doc.id,
+        docId: normalizeText(data.propertyId || ""),
+        propName: normalizeText(data.propertyName || "عقار المالك"),
+        username: normalizeText(data.username || user)
+      };
+    }
+  } catch (err) {
+    console.warn("tryOwnerLogin direct query failed:", err.message);
   }
 
   try {
-    const snap = await db.collection("properties").get();
+    const snap = await db.collection(OWNER_ACCOUNTS_COLLECTION).get();
     const match = snap.docs.find(doc => {
       const d = doc.data() || {};
-      const pairs = [
-        [d.username, d.password],
-        [d.ownerUser, d.ownerPass],
-        [d.loginUser, d.loginPass],
-        [d.adminUser, d.adminPass]
-      ];
-      return pairs.some(([u, p]) => normalizeText(u) === user && normalizeText(p) === pass);
+      return normalizeText(d.username) === user &&
+             normalizeText(d.password) === pass &&
+             d.active !== false;
     });
 
     if (match) {
       const data = match.data() || {};
       return {
         success: true,
-        docId: match.id,
-        propName: normalizeText(data.titleAr || data.titleEn || "عقار المالك")
+        accountId: match.id,
+        docId: normalizeText(data.propertyId || ""),
+        propName: normalizeText(data.propertyName || "عقار المالك"),
+        username: normalizeText(data.username || user)
       };
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn("tryOwnerLogin fallback failed:", err.message);
+  }
 
   return { success: false };
 }
 
 function switchTab(tabId) {
-  if (tabId === "add-property" && !getIsSuperAdmin()) {
-    showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
+  if ((tabId === "add-property" || tabId === "owner-accounts") && !getIsSuperAdmin()) {
+    showToast("هذا القسم متاح للمدير العام فقط", "error");
     return;
   }
 
@@ -1245,12 +1516,15 @@ function switchTab(tabId) {
   const targetTab = document.getElementById(`tab-${tabId}`);
   if (targetTab) targetTab.classList.add("active");
 
-  const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
+  const activeBtn =
+    document.querySelector(`[data-tab-target="${tabId}"]`) ||
+    document.querySelector(`[onclick="switchTab('${tabId}')"]`);
   if (activeBtn) activeBtn.classList.add("active");
 
   const titles = {
     "manage-props": "إدارة العقارات",
     "add-property": "إضافة عقار جديد",
+    "owner-accounts": "حسابات الملاك",
     bookings: "الحجوزات"
   };
 
@@ -1259,6 +1533,10 @@ function switchTab(tabId) {
 
   if (tabId === "bookings") loadBookings();
   if (tabId === "manage-props") loadProperties();
+  if (tabId === "owner-accounts") {
+    loadPropertiesForSelect();
+    loadOwnerAccounts();
+  }
   if (tabId === "add-property") {
     setTimeout(() => {
       if (typeof initAddMap === "function") initAddMap();
@@ -1485,9 +1763,22 @@ async function deleteProperty(docId) {
       }
     }
 
+    const ownerAccountsSnap = await db.collection(OWNER_ACCOUNTS_COLLECTION)
+      .where("propertyId", "==", docId)
+      .get()
+      .catch(() => null);
+
+    if (ownerAccountsSnap && !ownerAccountsSnap.empty) {
+      const batch = db.batch();
+      ownerAccountsSnap.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
     await db.collection("properties").doc(docId).delete();
     showToast("تم حذف العقار بنجاح", "success");
     loadProperties();
+    loadOwnerAccounts();
+    loadPropertiesForSelect();
   } catch (err) {
     console.error("deleteProperty error:", err);
     showToast(`حدث خطأ أثناء الحذف: ${err.message}`, "error");
@@ -1845,6 +2136,7 @@ if (DOM.addForm) {
       showToast("تمت إضافة العقار بنجاح إلى منصة OreBooking", "success");
       switchTab("manage-props");
       loadProperties();
+      loadPropertiesForSelect();
     } catch (err) {
       console.error("addProperty error:", err);
       showToast(`حدث خطأ أثناء إضافة العقار: ${err.message}`, "error");
@@ -1928,6 +2220,7 @@ if (DOM.editForm) {
       await db.collection("properties").doc(docId).update(updateData);
       closeEditModal();
       await loadProperties();
+      await loadPropertiesForSelect();
       showToast("تم حفظ التعديلات بنجاح", "success");
     } catch (err) {
       console.error("editProperty error:", err);
@@ -1936,6 +2229,10 @@ if (DOM.editForm) {
       setButtonLoading(DOM.submitEditBtn, false, null, `حفظ التعديلات <i class="ph ph-floppy-disk"></i>`);
     }
   });
+}
+
+if (DOM.ownerAccountForm) {
+  DOM.ownerAccountForm.addEventListener("submit", createOwnerAccountFromForm);
 }
 
 if (DOM.loginForm) {
@@ -1961,12 +2258,14 @@ if (DOM.loginForm) {
         showToast("تم تسجيل الدخول كمدير عام بنجاح", "success");
         await loadProperties();
         await loadBookings();
+        await loadOwnerAccounts();
+        await loadPropertiesForSelect();
         return;
       }
 
       const ownerLogin = await tryOwnerLogin(user, pass);
       if (ownerLogin.success) {
-        setAdminSession("owner", ownerLogin.docId, ownerLogin.propName);
+        setAdminSession("owner", ownerLogin.docId, ownerLogin.propName, ownerLogin.accountId, ownerLogin.username);
         showAdminLayout();
         setNavVisibilityByRole();
         showToast(`تم تسجيل الدخول كمالك: ${ownerLogin.propName}`, "success");
@@ -1994,6 +2293,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     setNavVisibilityByRole();
     await loadProperties();
     await loadBookings();
+    if (getIsSuperAdmin()) {
+      await loadOwnerAccounts();
+      await loadPropertiesForSelect();
+    }
   } else {
     clearAdminSession();
     showLoginLayout();
@@ -2007,6 +2310,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       clearAdminSession();
       showToast("تم تسجيل الخروج بنجاح", "success");
       setTimeout(() => window.location.reload(), 350);
+    });
+  }
+
+  const refreshOwnersBtn = document.getElementById("refresh-owner-accounts-btn");
+  if (refreshOwnersBtn && !refreshOwnersBtn.dataset.bound) {
+    refreshOwnersBtn.dataset.bound = "1";
+    refreshOwnersBtn.addEventListener("click", async () => {
+      await loadOwnerAccounts();
+      await loadPropertiesForSelect();
+    });
+  }
+
+  const refreshPropsBtn = document.getElementById("refresh-properties-btn");
+  if (refreshPropsBtn && !refreshPropsBtn.dataset.bound) {
+    refreshPropsBtn.dataset.bound = "1";
+    refreshPropsBtn.addEventListener("click", async () => {
+      await loadProperties();
+      if (getIsSuperAdmin()) await loadPropertiesForSelect();
+    });
+  }
+
+  const refreshBookingsBtn = document.getElementById("refresh-bookings-btn");
+  if (refreshBookingsBtn && !refreshBookingsBtn.dataset.bound) {
+    refreshBookingsBtn.dataset.bound = "1";
+    refreshBookingsBtn.addEventListener("click", async () => {
+      await loadBookings();
     });
   }
 });
@@ -2025,10 +2354,14 @@ document.addEventListener("keydown", function(e) {
 window.fetchProperties = loadProperties;
 window.loadProperties = loadProperties;
 window.loadBookings = loadBookings;
+window.loadOwnerAccounts = loadOwnerAccounts;
+window.loadPropertiesForSelect = loadPropertiesForSelect;
 window.switchTab = switchTab;
 window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
 window.deleteProperty = deleteProperty;
+window.deleteOwnerAccount = deleteOwnerAccount;
+window.toggleOwnerAccount = toggleOwnerAccount;
 window.toggleVisibility = toggleVisibility;
 window.updateAdminQuickStats = updateQuickStats;
 window.adminLogout = clearAdminSession;
