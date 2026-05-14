@@ -2,12 +2,13 @@
 //   admin_bookings_addon.js
 //   Utilities + Enhanced Booking Status Logic
 //   Safe addon layer for admin.js
+//   Fixed and hardened version
 // =========================================
 
 (function () {
   "use strict";
 
-  const g = window;
+  const g = typeof globalThis !== "undefined" ? globalThis : window;
 
   const BOOKING_STATUS_META = {
     pending: {
@@ -59,6 +60,21 @@
     bedConfig: ["bedConfig", "bedType", "preferredBed"]
   };
 
+  function getDbSafe() {
+    return g.db || null;
+  }
+
+  function getFirebaseSafe() {
+    return g.firebase || null;
+  }
+
+  function getServerTimestamp() {
+    const firebaseObj = getFirebaseSafe();
+    return firebaseObj?.firestore?.FieldValue?.serverTimestamp
+      ? firebaseObj.firestore.FieldValue.serverTimestamp()
+      : new Date();
+  }
+
   function normalizeText(value) {
     if (typeof g.normalizeText === "function" && g.normalizeText !== normalizeText) {
       return g.normalizeText(value);
@@ -101,7 +117,7 @@
     const raw = normalizeText(value);
     if (!raw) return "";
     try {
-      const url = new URL(raw, window.location.origin);
+      const url = new URL(raw, g.location?.origin || "http://localhost");
       if (url.protocol === "http:" || url.protocol === "https:") return url.href;
     } catch (_) {}
     return "";
@@ -235,14 +251,14 @@
   }
 
   function getBookingPropertyId(booking) {
-    if (typeof g.getBookingPropertyId === "function") {
+    if (typeof g.getBookingPropertyId === "function" && g.getBookingPropertyId !== getBookingPropertyId) {
       return normalizeText(g.getBookingPropertyId(booking));
     }
     return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.propertyId, ""));
   }
 
   function getBookingGuestName(booking) {
-    if (typeof g.getBookingGuestName === "function") {
+    if (typeof g.getBookingGuestName === "function" && g.getBookingGuestName !== getBookingGuestName) {
       return normalizeText(g.getBookingGuestName(booking));
     }
     const direct = normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestName, ""));
@@ -254,14 +270,14 @@
   }
 
   function getBookingEmail(booking) {
-    if (typeof g.getBookingEmail === "function") {
+    if (typeof g.getBookingEmail === "function" && g.getBookingEmail !== getBookingEmail) {
       return normalizeText(g.getBookingEmail(booking));
     }
     return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestEmail, ""));
   }
 
   function getBookingPhone(booking) {
-    if (typeof g.getBookingPhone === "function") {
+    if (typeof g.getBookingPhone === "function" && g.getBookingPhone !== getBookingPhone) {
       return normalizeText(g.getBookingPhone(booking));
     }
     return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestPhone, ""));
@@ -379,15 +395,18 @@
   }
 
   async function syncChatStatusForBooking(docId, booking, newStatus) {
-    if (typeof db === "undefined") return;
+    const db = getDbSafe();
+    if (!db) return;
 
     const propertyId = getBookingPropertyId(booking);
     const guestId = getBookingGuestId(booking);
 
-    const candidateIds = [
+    const candidateIds = Array.from(new Set([
       buildChatIdSafe(docId, propertyId, guestId),
       normalizeText(booking?.chatId || "")
-    ].filter(Boolean);
+    ].filter(Boolean)));
+
+    if (!candidateIds.length) return;
 
     const updates = candidateIds.map(async chatId => {
       try {
@@ -396,7 +415,7 @@
         if (!snap.exists) return false;
         await ref.set({
           status: newStatus,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: getServerTimestamp()
         }, { merge: true });
         return true;
       } catch (_) {
@@ -404,19 +423,22 @@
       }
     });
 
-    await Promise.all(updates);
+    await Promise.allSettled(updates);
   }
 
   async function applyStatusOnly(bookingRef, booking, docId, newStatus) {
     await bookingRef.update({
       status: newStatus,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: getServerTimestamp()
     });
 
     await syncChatStatusForBooking(docId, booking, newStatus);
   }
 
   async function applyConfirmWithPoints(bookingRef, booking, docId) {
+    const db = getDbSafe();
+    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+
     const guestId = getBookingGuestId(booking);
     const guestEmail = normalizeText(getBookingEmail(booking));
     const earnedPoints = calculateLoyaltyPoints(booking);
@@ -424,7 +446,7 @@
     if (!guestId || guestId === "guest") {
       await bookingRef.update({
         status: "confirmed",
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: getServerTimestamp()
       });
 
       await syncChatStatusForBooking(docId, booking, "confirmed");
@@ -437,12 +459,10 @@
     }
 
     const userRef = db.collection("users").doc(guestId);
-
     let pointsAddedNow = 0;
-    await db.runTransaction(async transaction => {
-      const userDoc = await transaction.get(userRef);
-      const bookingSnapshot = await transaction.get(bookingRef);
 
+    await db.runTransaction(async transaction => {
+      const bookingSnapshot = await transaction.get(bookingRef);
       if (!bookingSnapshot.exists) throw new Error("الحجز غير موجود");
 
       const freshBooking = bookingSnapshot.data() || {};
@@ -456,19 +476,21 @@
 
       const bookingUpdate = {
         status: "confirmed",
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: getServerTimestamp()
       };
 
       if (shouldAwardPoints) {
         bookingUpdate.pointsAwarded = earnedPoints;
-        bookingUpdate.pointsAwardedAt = firebase.firestore.FieldValue.serverTimestamp();
+        bookingUpdate.pointsAwardedAt = getServerTimestamp();
         pointsAddedNow = earnedPoints;
       }
+
+      const userDoc = await transaction.get(userRef);
 
       if (userDoc.exists) {
         const currentPoints = safeNumber(userDoc.data()?.points, 0);
         const userUpdate = {
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: getServerTimestamp()
         };
         if (shouldAwardPoints) userUpdate.points = currentPoints + earnedPoints;
         transaction.set(userRef, userUpdate, { merge: true });
@@ -476,8 +498,8 @@
         transaction.set(userRef, {
           email: guestEmail || "",
           points: shouldAwardPoints ? earnedPoints : 0,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          createdAt: getServerTimestamp(),
+          updatedAt: getServerTimestamp()
         }, { merge: true });
       }
 
@@ -500,15 +522,20 @@
     if (!docId || !allowedStatuses.includes(newStatus)) return;
     if (BOOKING_STATUS_LOCKS.has(docId)) return;
 
-    if (typeof db === "undefined" || typeof firebase === "undefined") {
+    const db = getDbSafe();
+    const firebaseObj = getFirebaseSafe();
+
+    if (!db || !firebaseObj?.firestore) {
       showAddonToast("Firebase غير متاح داخل الصفحة حالياً.", "error");
       return;
     }
 
     const isConfirm = newStatus === "confirmed";
+    const normalizedTargetStatus = newStatus === "rejected" ? "cancelled" : newStatus;
+
     const confirmMsg = isConfirm
       ? "تأكيد الحجز؟ سيتم اعتماد الحجز، وتسجيل نقاط الولاء للعميل إن كان لديه حساب."
-      : newStatus === "cancelled" || newStatus === "rejected"
+      : normalizedTargetStatus === "cancelled"
         ? "هل أنت متأكد من رفض وإلغاء هذا الحجز؟"
         : "هل تريد إعادة الحجز إلى حالة الانتظار؟";
 
@@ -531,7 +558,7 @@
         throw new Error("غير مسموح لك بتحديث هذا الحجز");
       }
 
-      if (currentStatus === newStatus) {
+      if (currentStatus === normalizedTargetStatus) {
         showAddonToast("هذه الحالة مطبقة بالفعل على الحجز.", "info");
         return;
       }
@@ -539,11 +566,10 @@
       if (isConfirm) {
         await applyConfirmWithPoints(bookingRef, booking, docId);
       } else {
-        const targetStatus = newStatus === "rejected" ? "cancelled" : newStatus;
-        await applyStatusOnly(bookingRef, booking, docId, targetStatus);
+        await applyStatusOnly(bookingRef, booking, docId, normalizedTargetStatus);
 
         showAddonToast(
-          targetStatus === "cancelled"
+          normalizedTargetStatus === "cancelled"
             ? "تم إلغاء الحجز بنجاح."
             : "تمت إعادة الحجز إلى حالة الانتظار بنجاح.",
           "success"
@@ -578,6 +604,10 @@
   g.translateBed = g.translateBed || translateBed;
   g.getStatusMeta = g.getStatusMeta || getStatusMeta;
   g.getBookingGuestId = g.getBookingGuestId || getBookingGuestId;
+  g.getBookingPropertyId = g.getBookingPropertyId || getBookingPropertyId;
+  g.getBookingGuestName = g.getBookingGuestName || getBookingGuestName;
+  g.getBookingEmail = g.getBookingEmail || getBookingEmail;
+  g.getBookingPhone = g.getBookingPhone || getBookingPhone;
   g.calculateLoyaltyPoints = g.calculateLoyaltyPoints || calculateLoyaltyPoints;
   g.getBookingAddonsList = g.getBookingAddonsList || getBookingAddonsList;
   g.buildBookingSummaryMeta = g.buildBookingSummaryMeta || buildBookingSummaryMeta;
