@@ -1,8 +1,7 @@
 // =========================================
-//   admin_bookings_addon.js
-//   Utilities + Enhanced Booking Status Logic
-//   Safe addon layer for admin.js
-//   Fixed and hardened version
+// admin_bookings_addon.js
+// Production-ready addon for admin.js
+// Real Firestore data + hardened booking status logic
 // =========================================
 
 (function () {
@@ -10,7 +9,13 @@
 
   const g = typeof globalThis !== "undefined" ? globalThis : window;
 
-  const BOOKING_STATUS_META = {
+  const COLLECTIONS = {
+    bookings: "bookings",
+    chats: "chats",
+    users: "users"
+  };
+
+  const STATUS_META = {
     pending: {
       label: "قيد الانتظار",
       className: "pending",
@@ -41,15 +46,17 @@
     }
   };
 
-  const BOOKING_STATUS_LOCKS = g.BOOKING_STATUS_LOCKS instanceof Set ? g.BOOKING_STATUS_LOCKS : new Set();
+  const BOOKING_STATUS_LOCKS =
+    g.BOOKING_STATUS_LOCKS instanceof Set ? g.BOOKING_STATUS_LOCKS : new Set();
 
-  const BOOKING_FIELD_CANDIDATES = {
+  const FIELD_CANDIDATES = {
     guestId: ["guestId", "userId", "uid", "customerId", "clientId"],
     guestName: ["guestName", "customerName", "fullName", "name", "billingName"],
     guestEmail: ["guestEmail", "email", "billingEmail", "contactEmail"],
     guestPhone: ["guestPhone", "phone", "guestWhatsapp", "billingPhone", "contactPhone"],
     propertyId: ["propertyId", "propId", "propertyDocId", "property_id", "listingId", "listing_id"],
     propertyTitle: ["propertyTitle", "propertyName", "listingTitle", "title"],
+    propertyImage: ["propertyImage", "propertyImageUrl", "imageUrl", "image"],
     checkIn: ["checkInDate", "checkIn", "arrivalDate", "arrival_date"],
     checkOut: ["checkOutDate", "checkOut", "departureDate", "departure_date"],
     totalPrice: ["totalPrice", "finalTotal", "amount", "price", "basePrice"],
@@ -57,7 +64,13 @@
     paymentMethod: ["paymentMethod", "payment_method"],
     notes: ["specialRequests", "notes", "addonNotes", "medicalNotes"],
     arrivalTime: ["arrivalTime", "arrival_time", "expectedArrivalTime"],
-    bedConfig: ["bedConfig", "bedType", "preferredBed"]
+    bedConfig: ["bedConfig", "bedType", "preferredBed"],
+    nights: ["nights", "nightCount"],
+    adults: ["adults", "guestAdults"],
+    children: ["children", "guestChildren"],
+    infants: ["infants", "guestInfants"],
+    rooms: ["rooms", "roomCount"],
+    guests: ["guests", "guestCount"]
   };
 
   function getDbSafe() {
@@ -68,19 +81,25 @@
     return g.firebase || null;
   }
 
-  function getServerTimestamp() {
+  function serverTimestamp() {
     const firebaseObj = getFirebaseSafe();
     return firebaseObj?.firestore?.FieldValue?.serverTimestamp
       ? firebaseObj.firestore.FieldValue.serverTimestamp()
       : new Date();
   }
 
+  function incrementBy(value) {
+    const firebaseObj = getFirebaseSafe();
+    return firebaseObj?.firestore?.FieldValue?.increment
+      ? firebaseObj.firestore.FieldValue.increment(value)
+      : value;
+  }
+
   function normalizeText(value) {
     if (typeof g.normalizeText === "function" && g.normalizeText !== normalizeText) {
       return g.normalizeText(value);
     }
-    if (value === null || value === undefined) return "";
-    return String(value).trim();
+    return String(value ?? "").trim();
   }
 
   function escapeHtml(value) {
@@ -93,15 +112,15 @@
         "<": "&lt;",
         ">": "&gt;",
         '"': "&quot;",
-        "'": "&#39;"
+        "'": "&#039;"
       };
       return map[ch];
     });
   }
 
   function safeText(value, fallback = "—") {
-    const text = normalizeText(value);
-    return text ? escapeHtml(text) : fallback;
+    const txt = normalizeText(value);
+    return txt ? escapeHtml(txt) : fallback;
   }
 
   function safeNumber(value, fallback = 0) {
@@ -142,6 +161,13 @@
   }
 
   function formatDateField(dateField) {
+    if (typeof g.formatDate === "function") {
+      try {
+        const out = g.formatDate(dateField);
+        if (out) return escapeHtml(out);
+      } catch (_) {}
+    }
+
     try {
       if (!dateField) return "—";
       if (typeof dateField === "string") {
@@ -166,6 +192,13 @@
   }
 
   function formatDateTimeField(dateField) {
+    if (typeof g.formatDateTime === "function") {
+      try {
+        const out = g.formatDateTime(dateField);
+        if (out) return escapeHtml(out);
+      } catch (_) {}
+    }
+
     try {
       if (!dateField) return "—";
       let d = null;
@@ -173,26 +206,36 @@
       else if (dateField instanceof Date) d = dateField;
       else if (typeof dateField === "number" || typeof dateField === "string") d = new Date(dateField);
       if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "—";
-      return `${d.toLocaleDateString("ar-DZ")} ${d.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })}`;
+      return `${d.toLocaleDateString("ar-DZ")} ${d.toLocaleTimeString("ar-DZ", {
+        hour: "2-digit",
+        minute: "2-digit"
+      })}`;
     } catch (_) {
       return "—";
     }
   }
 
   function formatMoney(value, suffix = "DZD") {
+    if (typeof g.formatCurrency === "function") {
+      try {
+        return g.formatCurrency(value);
+      } catch (_) {}
+    }
     return `${safeNumber(value, 0).toLocaleString("en-US")} ${suffix}`;
   }
 
-  function getField(booking, candidates = [], fallback = "") {
+  function getField(source, candidates = [], fallback = "") {
     for (const key of candidates) {
-      const val = booking?.[key];
-      if (val !== undefined && val !== null && String(val).trim() !== "") return val;
+      const value = source?.[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return value;
+      }
     }
     return fallback;
   }
 
   function translateAddon(key) {
-    const dic = {
+    const dict = {
       wifi: "واي فاي",
       parking: "موقف سيارات",
       airportTransfer: "نقل مطار",
@@ -208,33 +251,37 @@
       accessibleRoom: "غرفة مهيأة",
       earlyCheckin: "دخول مبكر"
     };
-    return dic[key] || normalizeText(key) || "غير محدد";
+    return dict[key] || normalizeText(key) || "غير محدد";
   }
 
   function translatePlan(plan) {
-    const dic = {
+    const dict = {
       breakfast: "إفطار",
       halfboard: "نصف إقامة",
       fullboard: "إقامة كاملة"
     };
-    return dic[plan] || normalizeText(plan) || "غير محددة";
+    return dict[plan] || normalizeText(plan) || "غير محددة";
   }
 
   function translateBed(bed) {
-    const dic = {
+    const dict = {
       double: "مزدوج",
       twin: "سريران",
       king: "كينج",
       single: "فردي"
     };
-    return dic[bed] || normalizeText(bed) || "غير محدد";
+    return dict[bed] || normalizeText(bed) || "غير محدد";
   }
 
   function getStatusMeta(status) {
     if (typeof g.getStatusMeta === "function" && g.getStatusMeta !== getStatusMeta) {
-      return g.getStatusMeta(status);
+      try {
+        const external = g.getStatusMeta(status);
+        if (external && typeof external === "object") return external;
+      } catch (_) {}
     }
-    return BOOKING_STATUS_META[status] || {
+
+    return STATUS_META[status] || {
       label: normalizeText(status) || "غير معروف",
       className: "pending",
       bg: "#e2e8f0",
@@ -247,22 +294,24 @@
     if (typeof g.getBookingGuestId === "function" && g.getBookingGuestId !== getBookingGuestId) {
       return normalizeText(g.getBookingGuestId(booking));
     }
-    return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestId, ""));
+    return normalizeText(getField(booking, FIELD_CANDIDATES.guestId, ""));
   }
 
   function getBookingPropertyId(booking) {
     if (typeof g.getBookingPropertyId === "function" && g.getBookingPropertyId !== getBookingPropertyId) {
       return normalizeText(g.getBookingPropertyId(booking));
     }
-    return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.propertyId, ""));
+    return normalizeText(getField(booking, FIELD_CANDIDATES.propertyId, ""));
   }
 
   function getBookingGuestName(booking) {
     if (typeof g.getBookingGuestName === "function" && g.getBookingGuestName !== getBookingGuestName) {
       return normalizeText(g.getBookingGuestName(booking));
     }
-    const direct = normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestName, ""));
+
+    const direct = normalizeText(getField(booking, FIELD_CANDIDATES.guestName, ""));
     if (direct) return direct;
+
     const first = normalizeText(booking?.guestNameFirst || booking?.firstName || booking?.givenName || "");
     const father = normalizeText(booking?.guestFatherName || booking?.fatherName || "");
     const family = normalizeText(booking?.guestFamilyName || booking?.lastName || booking?.familyName || "");
@@ -273,20 +322,29 @@
     if (typeof g.getBookingEmail === "function" && g.getBookingEmail !== getBookingEmail) {
       return normalizeText(g.getBookingEmail(booking));
     }
-    return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestEmail, ""));
+    return normalizeText(getField(booking, FIELD_CANDIDATES.guestEmail, ""));
   }
 
   function getBookingPhone(booking) {
     if (typeof g.getBookingPhone === "function" && g.getBookingPhone !== getBookingPhone) {
       return normalizeText(g.getBookingPhone(booking));
     }
-    return normalizeText(getField(booking, BOOKING_FIELD_CANDIDATES.guestPhone, ""));
+    return normalizeText(getField(booking, FIELD_CANDIDATES.guestPhone, ""));
   }
 
   function getBookingAddonsList(booking) {
+    if (typeof g.getBookingAddons === "function") {
+      try {
+        const ext = g.getBookingAddons(booking);
+        if (Array.isArray(ext)) return ext;
+      } catch (_) {}
+    }
+
     if (typeof g.getBookingAddonsList === "function" && g.getBookingAddonsList !== getBookingAddonsList) {
-      const external = g.getBookingAddonsList(booking);
-      return Array.isArray(external) ? external : [];
+      try {
+        const ext = g.getBookingAddonsList(booking);
+        if (Array.isArray(ext)) return ext;
+      } catch (_) {}
     }
 
     if (Array.isArray(booking?.selectedAddons)) return booking.selectedAddons;
@@ -310,10 +368,18 @@
   }
 
   function calculateLoyaltyPoints(booking) {
+    if (typeof g.calculateLoyaltyPoints === "function" && g.calculateLoyaltyPoints !== calculateLoyaltyPoints) {
+      try {
+        const points = Number(g.calculateLoyaltyPoints(booking));
+        if (Number.isFinite(points)) return Math.max(0, Math.floor(points));
+      } catch (_) {}
+    }
+
     const totalPrice = safeNumber(
-      getField(booking, BOOKING_FIELD_CANDIDATES.totalPrice, booking?.basePrice),
+      getField(booking, FIELD_CANDIDATES.totalPrice, booking?.basePrice),
       0
     );
+
     return Math.max(0, Math.floor(totalPrice / 500));
   }
 
@@ -332,21 +398,27 @@
       guestName: safeText(getBookingGuestName(booking) || "غير معروف"),
       guestEmail: safeText(getBookingEmail(booking)),
       guestPhone: safeText(getBookingPhone(booking)),
-      propertyTitle: safeText(getField(booking, BOOKING_FIELD_CANDIDATES.propertyTitle)),
-      totalPriceText: formatMoney(getField(booking, BOOKING_FIELD_CANDIDATES.totalPrice, 0)),
-      checkInText: formatDateField(getField(booking, BOOKING_FIELD_CANDIDATES.checkIn)),
-      checkOutText: formatDateField(getField(booking, BOOKING_FIELD_CANDIDATES.checkOut)),
+      propertyTitle: safeText(getField(booking, FIELD_CANDIDATES.propertyTitle)),
+      propertyImage: safeUrl(getField(booking, FIELD_CANDIDATES.propertyImage)),
+      totalPriceText: formatMoney(getField(booking, FIELD_CANDIDATES.totalPrice, 0)),
+      checkInText: formatDateField(getField(booking, FIELD_CANDIDATES.checkIn)),
+      checkOutText: formatDateField(getField(booking, FIELD_CANDIDATES.checkOut)),
       createdAtText: formatDateTimeField(booking?.createdAt),
+      updatedAtText: formatDateTimeField(booking?.updatedAt),
       status: getStatusMeta(booking?.status),
       addonsText: addons.join("، "),
-      arrivalTime: safeText(getField(booking, BOOKING_FIELD_CANDIDATES.arrivalTime)),
-      notes: safeText(getField(booking, BOOKING_FIELD_CANDIDATES.notes)),
-      bedText: translateBed(getField(booking, BOOKING_FIELD_CANDIDATES.bedConfig)),
-      nights: safeNumber(booking?.nights || booking?.nightCount, 0),
-      adults: safeNumber(booking?.adults || booking?.guestAdults, 0),
-      children: safeNumber(booking?.children || booking?.guestChildren, 0),
-      rooms: safeNumber(booking?.rooms || booking?.roomCount, 0),
-      receiptUrl: safeUrl(getField(booking, BOOKING_FIELD_CANDIDATES.receiptUrl))
+      arrivalTime: safeText(getField(booking, FIELD_CANDIDATES.arrivalTime)),
+      notes: safeText(getField(booking, FIELD_CANDIDATES.notes)),
+      bedText: translateBed(getField(booking, FIELD_CANDIDATES.bedConfig)),
+      nights: safeNumber(getField(booking, FIELD_CANDIDATES.nights, 0), 0),
+      adults: safeNumber(getField(booking, FIELD_CANDIDATES.adults, 0), 0),
+      children: safeNumber(getField(booking, FIELD_CANDIDATES.children, 0), 0),
+      infants: safeNumber(getField(booking, FIELD_CANDIDATES.infants, 0), 0),
+      rooms: safeNumber(getField(booking, FIELD_CANDIDATES.rooms, 0), 0),
+      guests: safeNumber(getField(booking, FIELD_CANDIDATES.guests, 0), 0),
+      receiptUrl: safeUrl(getField(booking, FIELD_CANDIDATES.receiptUrl)),
+      paymentMethod: safeText(getField(booking, FIELD_CANDIDATES.paymentMethod, "cash")),
+      loyaltyPoints: calculateLoyaltyPoints(booking)
     };
   }
 
@@ -364,7 +436,7 @@
       : document.querySelectorAll(".btn-approve, .btn-reject");
 
     buttons.forEach(btn => {
-      btn.disabled = disabled;
+      btn.disabled = !!disabled;
       btn.style.opacity = disabled ? "0.55" : "1";
       btn.style.cursor = disabled ? "not-allowed" : "pointer";
     });
@@ -380,18 +452,56 @@
     return normalizeText(localStorage.getItem("ownerPropId") || "");
   }
 
+  function getOwnerAccountIdSafe() {
+    if (typeof g.getOwnerAccountId === "function") return normalizeText(g.getOwnerAccountId());
+    return normalizeText(localStorage.getItem("ownerAccountId") || "");
+  }
+
+  function getSessionRoleSafe() {
+    if (typeof g.getSessionRole === "function") return normalizeText(g.getSessionRole());
+    return getIsSuperAdminSafe() ? "superadmin" : "owner";
+  }
+
+  function getAdminActorIdSafe() {
+    if (typeof g.getAdminActorId === "function") return normalizeText(g.getAdminActorId());
+    return getIsSuperAdminSafe() ? "superadmin" : (getOwnerAccountIdSafe() || getOwnerPropIdSafe());
+  }
+
+  function getAdminActorNameSafe() {
+    if (typeof g.getAdminActorName === "function") return normalizeText(g.getAdminActorName());
+    return getIsSuperAdminSafe() ? "إدارة OreBooking" : "صاحب العقار";
+  }
+
   function canAccessBooking(booking) {
     if (getIsSuperAdminSafe()) return true;
     return getBookingPropertyId(booking) === getOwnerPropIdSafe();
   }
 
   function buildChatIdSafe(bookingId, propertyId, guestId) {
-    if (typeof g.buildChatId === "function") return g.buildChatId(bookingId, propertyId, guestId);
+    if (typeof g.buildChatId === "function") {
+      try {
+        return g.buildChatId(bookingId, propertyId, guestId);
+      } catch (_) {}
+    }
+
     const b = normalizeText(bookingId || "");
     const p = normalizeText(propertyId || "");
     const gu = normalizeText(guestId || "");
     if (b) return `booking_${b}`;
     return `chat_${[p || "property", gu || "guest", Date.now()].join("_")}`;
+  }
+
+  async function getPropertyImageFallback(propertyId) {
+    const db = getDbSafe();
+    if (!db || !propertyId) return "";
+    try {
+      const snap = await db.collection("properties").doc(propertyId).get();
+      if (!snap.exists) return "";
+      const data = snap.data() || {};
+      return normalizeText(data.imageUrl || data.image || "");
+    } catch (_) {
+      return "";
+    }
   }
 
   async function syncChatStatusForBooking(docId, booking, newStatus) {
@@ -408,15 +518,32 @@
 
     if (!candidateIds.length) return;
 
+    const payload = {
+      status: newStatus,
+      propertyId,
+      propertyTitle: normalizeText(getField(booking, FIELD_CANDIDATES.propertyTitle, "")),
+      guestId,
+      guestName: getBookingGuestName(booking),
+      guestEmail: getBookingEmail(booking),
+      guestPhone: getBookingPhone(booking),
+      ownerId: getAdminActorIdSafe(),
+      ownerName: getAdminActorNameSafe(),
+      ownerRole: getSessionRoleSafe(),
+      updatedAt: serverTimestamp()
+    };
+
+    const propertyImage =
+      normalizeText(getField(booking, FIELD_CANDIDATES.propertyImage, "")) ||
+      (await getPropertyImageFallback(propertyId));
+
+    if (propertyImage) payload.propertyImage = propertyImage;
+
     const updates = candidateIds.map(async chatId => {
       try {
-        const ref = db.collection("chats").doc(chatId);
+        const ref = db.collection(COLLECTIONS.chats).doc(chatId);
         const snap = await ref.get();
         if (!snap.exists) return false;
-        await ref.set({
-          status: newStatus,
-          updatedAt: getServerTimestamp()
-        }, { merge: true });
+        await ref.set(payload, { merge: true });
         return true;
       } catch (_) {
         return false;
@@ -426,13 +553,59 @@
     await Promise.allSettled(updates);
   }
 
+  async function addSystemChatMessageIfPossible(docId, booking, newStatus) {
+    const db = getDbSafe();
+    if (!db) return;
+
+    const propertyId = getBookingPropertyId(booking);
+    const guestId = getBookingGuestId(booking);
+    const chatId = normalizeText(booking?.chatId || "") || buildChatIdSafe(docId, propertyId, guestId);
+    if (!chatId) return;
+
+    try {
+      const chatRef = db.collection(COLLECTIONS.chats).doc(chatId);
+      const chatSnap = await chatRef.get();
+      if (!chatSnap.exists) return;
+
+      const statusMeta = getStatusMeta(newStatus);
+      const text = `تم تحديث حالة الحجز إلى: ${statusMeta.label}`;
+
+      await chatRef.collection("messages").add({
+        bookingId: normalizeText(docId),
+        propertyId,
+        senderId: getAdminActorIdSafe(),
+        senderName: getAdminActorNameSafe(),
+        senderRole: "system",
+        type: "system",
+        text,
+        createdAt: serverTimestamp(),
+        seenByGuest: false,
+        seenByOwner: true
+      });
+
+      await chatRef.set({
+        lastMessage: text,
+        lastMessageType: "system",
+        lastSenderId: getAdminActorIdSafe(),
+        lastSenderRole: "system",
+        lastMessageAt: serverTimestamp(),
+        unreadCountGuest: incrementBy(1),
+        unreadCountOwner: 0,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (_) {
+      // silent on purpose
+    }
+  }
+
   async function applyStatusOnly(bookingRef, booking, docId, newStatus) {
     await bookingRef.update({
       status: newStatus,
-      updatedAt: getServerTimestamp()
+      updatedAt: serverTimestamp()
     });
 
     await syncChatStatusForBooking(docId, booking, newStatus);
+    await addSystemChatMessageIfPossible(docId, booking, newStatus);
   }
 
   async function applyConfirmWithPoints(bookingRef, booking, docId) {
@@ -446,19 +619,20 @@
     if (!guestId || guestId === "guest") {
       await bookingRef.update({
         status: "confirmed",
-        updatedAt: getServerTimestamp()
+        updatedAt: serverTimestamp()
       });
 
       await syncChatStatusForBooking(docId, booking, "confirmed");
+      await addSystemChatMessageIfPossible(docId, booking, "confirmed");
 
       showAddonToast(
-        "تم تأكيد الحجز بنجاح. هذا الحجز لضيف زائر لذلك لم تُضف نقاط ولاء.",
+        "تم تأكيد الحجز بنجاح. هذا الحجز لضيف زائر لذلك لم تتم إضافة نقاط ولاء.",
         "success"
       );
       return;
     }
 
-    const userRef = db.collection("users").doc(guestId);
+    const userRef = db.collection(COLLECTIONS.users).doc(guestId);
     let pointsAddedNow = 0;
 
     await db.runTransaction(async transaction => {
@@ -467,7 +641,10 @@
 
       const freshBooking = bookingSnapshot.data() || {};
       const freshStatus = normalizeText(freshBooking.status || "pending");
-      const alreadyAwarded = safeNumber(freshBooking.pointsAwarded, 0);
+      const alreadyAwarded = safeNumber(
+        freshBooking.pointsAwarded ?? freshBooking.loyaltyPointsAwarded ?? 0,
+        0
+      );
 
       const shouldAwardPoints =
         freshStatus !== "confirmed" &&
@@ -476,12 +653,12 @@
 
       const bookingUpdate = {
         status: "confirmed",
-        updatedAt: getServerTimestamp()
+        updatedAt: serverTimestamp()
       };
 
       if (shouldAwardPoints) {
         bookingUpdate.pointsAwarded = earnedPoints;
-        bookingUpdate.pointsAwardedAt = getServerTimestamp();
+        bookingUpdate.pointsAwardedAt = serverTimestamp();
         pointsAddedNow = earnedPoints;
       }
 
@@ -490,16 +667,21 @@
       if (userDoc.exists) {
         const currentPoints = safeNumber(userDoc.data()?.points, 0);
         const userUpdate = {
-          updatedAt: getServerTimestamp()
+          email: guestEmail || userDoc.data()?.email || "",
+          updatedAt: serverTimestamp()
         };
-        if (shouldAwardPoints) userUpdate.points = currentPoints + earnedPoints;
+
+        if (shouldAwardPoints) {
+          userUpdate.points = currentPoints + earnedPoints;
+        }
+
         transaction.set(userRef, userUpdate, { merge: true });
       } else {
         transaction.set(userRef, {
           email: guestEmail || "",
           points: shouldAwardPoints ? earnedPoints : 0,
-          createdAt: getServerTimestamp(),
-          updatedAt: getServerTimestamp()
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         }, { merge: true });
       }
 
@@ -507,13 +689,27 @@
     });
 
     await syncChatStatusForBooking(docId, booking, "confirmed");
+    await addSystemChatMessageIfPossible(docId, booking, "confirmed");
 
     if (pointsAddedNow > 0) {
       showAddonToast(`تم تأكيد الحجز بنجاح، وتمت إضافة ${pointsAddedNow} نقطة ولاء للعميل.`, "success");
     } else if (earnedPoints > 0) {
       showAddonToast("تم تأكيد الحجز بنجاح. نقاط الولاء كانت مضافة مسبقًا لهذا الحجز.", "info");
     } else {
-      showAddonToast("تم تأكيد الحجز بنجاح، ولا توجد نقاط مضافة لأن قيمة الحجز لا تولد نقاطاً.", "success");
+      showAddonToast("تم تأكيد الحجز بنجاح، ولا توجد نقاط مضافة لأن قيمة الحجز لا تولّد نقاطًا.", "success");
+    }
+  }
+
+  async function refreshAdminViews() {
+    if (typeof g.loadBookings === "function") {
+      await g.loadBookings();
+    }
+    if (typeof g.updateAdminQuickStats === "function") {
+      g.updateAdminQuickStats();
+      return;
+    }
+    if (typeof g.updateQuickStats === "function") {
+      g.updateQuickStats();
     }
   }
 
@@ -530,11 +726,11 @@
       return;
     }
 
-    const isConfirm = newStatus === "confirmed";
     const normalizedTargetStatus = newStatus === "rejected" ? "cancelled" : newStatus;
+    const isConfirm = normalizedTargetStatus === "confirmed";
 
     const confirmMsg = isConfirm
-      ? "تأكيد الحجز؟ سيتم اعتماد الحجز، وتسجيل نقاط الولاء للعميل إن كان لديه حساب."
+      ? "تأكيد الحجز؟ سيتم اعتماد الحجز وإضافة نقاط الولاء إن كان العميل يملك حساباً."
       : normalizedTargetStatus === "cancelled"
         ? "هل أنت متأكد من رفض وإلغاء هذا الحجز؟"
         : "هل تريد إعادة الحجز إلى حالة الانتظار؟";
@@ -546,10 +742,12 @@
     setBookingActionButtonsDisabled(true, actionRow);
 
     try {
-      const bookingRef = db.collection("bookings").doc(docId);
+      const bookingRef = db.collection(COLLECTIONS.bookings).doc(docId);
       const bookingDoc = await bookingRef.get();
 
-      if (!bookingDoc.exists) throw new Error("الحجز غير موجود أو تم حذفه");
+      if (!bookingDoc.exists) {
+        throw new Error("الحجز غير موجود أو تم حذفه");
+      }
 
       const booking = bookingDoc.data() || {};
       const currentStatus = normalizeText(booking.status || "pending");
@@ -576,18 +774,20 @@
         );
       }
 
-      if (typeof g.loadBookings === "function") await g.loadBookings();
-      if (typeof g.updateAdminQuickStats === "function") g.updateAdminQuickStats();
+      await refreshAdminViews();
     } catch (err) {
-      console.error("[updateBookingStatus:addon]", err);
-      showAddonToast("حدث خطأ أثناء تحديث الحجز: " + (err?.message || "Unknown error"), "error");
+      console.error("[admin_bookings_addon:updateBookingStatus]", err);
+      showAddonToast(
+        "حدث خطأ أثناء تحديث الحجز: " + (err?.message || "Unknown error"),
+        "error"
+      );
     } finally {
       BOOKING_STATUS_LOCKS.delete(docId);
       setBookingActionButtonsDisabled(false, actionRow);
     }
   };
 
-  g.BOOKING_STATUS_META = BOOKING_STATUS_META;
+  g.BOOKING_STATUS_META = STATUS_META;
   g.BOOKING_STATUS_LOCKS = BOOKING_STATUS_LOCKS;
   g.normalizeText = g.normalizeText || normalizeText;
   g.escapeHtml = g.escapeHtml || escapeHtml;
