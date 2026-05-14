@@ -1,7 +1,6 @@
 // =========================================
-//   OreBooking Admin Panel Logic — Refined
-//   Stable session / properties / bookings / chat
-//   Updated with owner accounts management
+// OreBooking Admin Panel Logic — Production Ready
+// Synced with final admin.html structure
 // =========================================
 
 const firebaseConfig = {
@@ -23,6 +22,10 @@ const db = firebase.firestore();
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
+const OWNER_ACCOUNTS_COLLECTION = "ownerAccounts";
+const PROPERTIES_COLLECTION = "properties";
+const BOOKINGS_COLLECTION = "bookings";
+const CHATS_COLLECTION = "chats";
 
 const SESSION_KEYS = {
   role: "adminRole",
@@ -33,24 +36,44 @@ const SESSION_KEYS = {
   loginAt: "adminLoginAt"
 };
 
-const OWNER_ACCOUNTS_COLLECTION = "ownerAccounts";
-
 const DOM = {
   loginScreen: document.getElementById("admin-login-screen"),
   adminLayout: document.getElementById("admin-layout"),
   loginForm: document.getElementById("admin-login-form"),
+  loginBtn: document.getElementById("admin-login-btn"),
+  loginMessage: document.getElementById("admin-login-message"),
+
   addForm: document.getElementById("add-property-form"),
   submitBtn: document.getElementById("submit-prop-btn"),
   uploadStatus: document.getElementById("upload-status"),
+
   editForm: document.getElementById("edit-property-form"),
   submitEditBtn: document.getElementById("submit-edit-btn"),
   editModalEl: document.getElementById("edit-modal"),
+
   pageTitle: document.getElementById("page-title"),
+  pageSubtitle: document.getElementById("page-subtitle"),
+  adminProfileName: document.getElementById("admin-profile-name"),
+  adminProfileRole: document.getElementById("admin-profile-role"),
+
   propertiesTbody: document.getElementById("properties-tbody"),
   bookingsContainer: document.getElementById("bookings-container"),
   ownerAccountsTbody: document.getElementById("owner-accounts-tbody"),
   ownerAccountForm: document.getElementById("owner-account-form"),
-  ownerPropertySelect: document.getElementById("owner-property-id")
+  ownerPropertySelect: document.getElementById("owner-property-id"),
+  propertySearchInput: document.getElementById("property-search-input"),
+
+  refreshPropertiesBtn: document.getElementById("refresh-properties-btn"),
+  refreshBookingsBtn: document.getElementById("refresh-bookings-btn"),
+  refreshOwnerAccountsBtn: document.getElementById("refresh-owner-accounts-btn"),
+  logoutBtn: document.getElementById("admin-logout-btn")
+};
+
+const APP_STATE = {
+  propertiesDocs: [],
+  ownerAccountDocs: [],
+  bookingDocs: [],
+  currentPropertyFilter: ""
 };
 
 const CHAT_STATE = {
@@ -66,6 +89,25 @@ const CHAT_STATE = {
   chatUnsub: null,
   sending: false,
   modalReady: false
+};
+
+const PAGE_META = {
+  "manage-props": {
+    title: "إدارة العقارات",
+    subtitle: "واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح."
+  },
+  "add-property": {
+    title: "إضافة عقار جديد",
+    subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
+  },
+  "owner-accounts": {
+    title: "حسابات ملاك العقارات",
+    subtitle: "أنشئ حسابات خاصة لأصحاب العقارات وحدد من يمكنه الدخول إلى لوحة التحكم الخاصة بعقاره."
+  },
+  "bookings": {
+    title: "إدارة الحجوزات",
+    subtitle: "مراجعة طلبات الحجز، اعتمادها أو رفضها، ومتابعة الحالة الحالية بسهولة."
+  }
 };
 
 const FIELD_CANDIDATES = {
@@ -192,6 +234,52 @@ function setButtonLoading(btn, loading, htmlWhenLoading, htmlWhenIdle) {
   }
 }
 
+function showLoginMessage(message, type = "error") {
+  if (!DOM.loginMessage) return;
+  const iconMap = {
+    error: "ph-warning-circle",
+    success: "ph-check-circle",
+    info: "ph-info"
+  };
+  DOM.loginMessage.className = `login-message ${type} show`;
+  DOM.loginMessage.innerHTML = `<i class="ph ${iconMap[type] || iconMap.info}"></i><span>${escapeHtml(message)}</span>`;
+}
+
+function clearLoginMessage() {
+  if (!DOM.loginMessage) return;
+  DOM.loginMessage.className = "login-message";
+  DOM.loginMessage.innerHTML = "";
+}
+
+function showToast(message, type = "success") {
+  let host = document.getElementById("admin-toast-host");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "admin-toast-host";
+    host.style.cssText = "position:fixed;top:20px;left:20px;z-index:5000;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,380px);";
+    document.body.appendChild(host);
+  }
+
+  const colors = {
+    success: { bg: "#ecfdf5", border: "#10b981", text: "#047857", icon: "ph-check-circle" },
+    error: { bg: "#fef2f2", border: "#ef4444", text: "#b91c1c", icon: "ph-warning-circle" },
+    info: { bg: "#eff6ff", border: "#3b82f6", text: "#1d4ed8", icon: "ph-info" }
+  };
+
+  const cfg = colors[type] || colors.info;
+  const toast = document.createElement("div");
+  toast.style.cssText = `background:${cfg.bg};border:1px solid ${cfg.border};color:${cfg.text};padding:14px 16px;border-radius:16px;box-shadow:0 14px 30px rgba(15,23,42,.12);font-weight:700;font-family:inherit;display:flex;align-items:flex-start;gap:10px;line-height:1.6;`;
+  toast.innerHTML = `<i class="ph ${cfg.icon}" style="font-size:1.2rem;flex-shrink:0;margin-top:2px;"></i><span>${escapeHtml(message)}</span>`;
+  host.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "all .25s ease";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-6px)";
+    setTimeout(() => toast.remove(), 250);
+  }, 3500);
+}
+
 function ensureValidSession() {
   const loginAt = Number(localStorage.getItem(SESSION_KEYS.loginAt) || 0);
   if (!loginAt) return false;
@@ -260,137 +348,6 @@ function canAccessProperty(propertyId) {
   return normalizeText(propertyId) === getOwnerPropId();
 }
 
-function showToast(message, type = "success") {
-  let host = document.getElementById("admin-toast-host");
-  if (!host) {
-    host = document.createElement("div");
-    host.id = "admin-toast-host";
-    host.style.cssText = "position:fixed;top:20px;left:20px;z-index:5000;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,380px);";
-    document.body.appendChild(host);
-  }
-
-  const colors = {
-    success: { bg: "#ecfdf5", border: "#10b981", text: "#047857", icon: "ph-check-circle" },
-    error: { bg: "#fef2f2", border: "#ef4444", text: "#b91c1c", icon: "ph-warning-circle" },
-    info: { bg: "#eff6ff", border: "#3b82f6", text: "#1d4ed8", icon: "ph-info" }
-  };
-
-  const cfg = colors[type] || colors.info;
-  const toast = document.createElement("div");
-  toast.style.cssText = `background:${cfg.bg};border:1px solid ${cfg.border};color:${cfg.text};padding:14px 16px;border-radius:16px;box-shadow:0 14px 30px rgba(15,23,42,.12);font-weight:700;font-family:inherit;display:flex;align-items:flex-start;gap:10px;line-height:1.6;`;
-  toast.innerHTML = `<i class="ph ${cfg.icon}" style="font-size:1.2rem;flex-shrink:0;margin-top:2px;"></i><span>${escapeHtml(message)}</span>`;
-  host.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.transition = "all .25s ease";
-    toast.style.opacity = "0";
-    toast.style.transform = "translateY(-6px)";
-    setTimeout(() => toast.remove(), 250);
-  }, 3500);
-}
-
-function showLoginError(msg) {
-  const old = DOM.loginForm ? DOM.loginForm.querySelector(".auth-message") : null;
-  if (old) old.remove();
-
-  const div = document.createElement("div");
-  div.className = "auth-message error";
-  div.textContent = msg;
-  div.style.display = "block";
-  div.style.marginBottom = "20px";
-  div.style.padding = "12px 14px";
-  div.style.borderRadius = "14px";
-  div.style.background = "#fef2f2";
-  div.style.border = "1px solid #fecaca";
-  div.style.color = "#b91c1c";
-  div.style.fontWeight = "700";
-  DOM.loginForm?.prepend(div);
-
-  setTimeout(() => div.remove(), 4000);
-}
-
-function updateAdminHeaderForRole() {
-  const ownerBadgeId = "owner-session-badge";
-  let badge = document.getElementById(ownerBadgeId);
-
-  if (!badge) {
-    badge = document.createElement("div");
-    badge.id = ownerBadgeId;
-    badge.style.cssText = "margin-top:8px;font-size:.88rem;font-weight:800;color:var(--text-muted);";
-    DOM.pageTitle?.parentElement?.appendChild(badge);
-  }
-
-  if (getIsSuperAdmin()) {
-    badge.textContent = "وضع المدير العام";
-  } else {
-    const ownerPropName = getOwnerPropName();
-    const ownerPropId = getOwnerPropId();
-    const ownerUsername = getOwnerUsername();
-    badge.textContent = `وضع المالك${ownerPropName ? ` — ${ownerPropName}` : ""}${ownerUsername ? ` • ${ownerUsername}` : ""}${ownerPropId ? ` (${ownerPropId})` : ""}`;
-  }
-}
-
-function updateQuickStats() {
-  const propertyRows = Array.from(document.querySelectorAll("#properties-tbody tr[data-prop-id]"));
-  const bookingCards = Array.from(document.querySelectorAll("#bookings-container .booking-card"));
-  const ownerRows = Array.from(document.querySelectorAll("#owner-accounts-tbody tr[data-owner-id]"));
-
-  const totalProperties = propertyRows.length;
-  const activeProperties = propertyRows.filter(row => row.getAttribute("data-visible") === "true").length;
-  const pendingBookings = bookingCards.filter(card => card.getAttribute("data-status") === "pending").length;
-  const totalOwnerAccounts = ownerRows.length;
-
-  const map = {
-    "stat-total-properties": totalProperties,
-    "stat-active-properties": activeProperties,
-    "stat-total-bookings": bookingCards.length,
-    "stat-pending-bookings": pendingBookings,
-    "stat-owner-accounts": totalOwnerAccounts
-  };
-
-  Object.entries(map).forEach(([id, val]) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = String(val);
-  });
-}
-
-function renderPropertiesEmpty(message, isError = false) {
-  if (!DOM.propertiesTbody) return;
-  DOM.propertiesTbody.innerHTML = `
-    <tr>
-      <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
-        <i class="ph ${isError ? "ph-warning-circle" : "ph-house-line"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
-        ${escapeHtml(message)}
-      </td>
-    </tr>`;
-  updateQuickStats();
-}
-
-function renderOwnerAccountsEmpty(message, isError = false) {
-  if (!DOM.ownerAccountsTbody) return;
-  DOM.ownerAccountsTbody.innerHTML = `
-    <tr>
-      <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
-        <i class="ph ${isError ? "ph-warning-circle" : "ph-users-three"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
-        ${escapeHtml(message)}
-      </td>
-    </tr>`;
-  updateQuickStats();
-}
-
-function renderBookingsEmpty(container, message, extraHtml = "") {
-  if (!container) return;
-  container.innerHTML = `
-    <div class="empty-state">
-      <i class="ph ph-calendar-blank"></i>
-      <div style="font-size:1.05rem; font-weight:800; color:var(--text-main); margin-bottom:8px;">
-        ${escapeHtml(message)}
-      </div>
-      ${extraHtml}
-    </div>`;
-  updateQuickStats();
-}
-
 function showAdminLayout() {
   if (DOM.loginScreen) DOM.loginScreen.style.display = "none";
   if (DOM.adminLayout) DOM.adminLayout.style.display = "flex";
@@ -398,8 +355,46 @@ function showAdminLayout() {
 }
 
 function showLoginLayout() {
-  if (DOM.loginScreen) DOM.loginScreen.style.display = "block";
+  if (DOM.loginScreen) DOM.loginScreen.style.display = "grid";
   if (DOM.adminLayout) DOM.adminLayout.style.display = "none";
+}
+
+function updateAdminHeaderForRole() {
+  if (DOM.adminProfileName && DOM.adminProfileRole) {
+    if (getIsSuperAdmin()) {
+      DOM.adminProfileName.textContent = "مدير النظام";
+      DOM.adminProfileRole.textContent = "بصلاحيات كاملة";
+    } else {
+      DOM.adminProfileName.textContent = getOwnerPropName() || "صاحب العقار";
+      DOM.adminProfileRole.textContent = getOwnerUsername() ? `حساب مالك • ${getOwnerUsername()}` : "حساب مالك";
+    }
+  }
+
+  let badge = document.getElementById("owner-session-badge");
+  if (!badge && DOM.pageTitle?.parentElement) {
+    badge = document.createElement("div");
+    badge.id = "owner-session-badge";
+    badge.style.cssText = "margin-top:8px;font-size:.88rem;font-weight:800;color:var(--text-muted);";
+    DOM.pageTitle.parentElement.appendChild(badge);
+  }
+
+  if (badge) {
+    if (getIsSuperAdmin()) {
+      badge.textContent = "وضع المدير العام";
+    } else {
+      const ownerPropName = getOwnerPropName();
+      const ownerPropId = getOwnerPropId();
+      const ownerUsername = getOwnerUsername();
+      badge.textContent = `وضع المالك${ownerPropName ? ` — ${ownerPropName}` : ""}${ownerUsername ? ` • ${ownerUsername}` : ""}${ownerPropId ? ` (${ownerPropId})` : ""}`;
+    }
+  }
+}
+
+function updatePageMeta(tabId) {
+  const meta = PAGE_META[tabId] || PAGE_META["manage-props"];
+  if (DOM.pageTitle) DOM.pageTitle.textContent = meta.title;
+  if (DOM.pageSubtitle) DOM.pageSubtitle.textContent = meta.subtitle;
+  updateAdminHeaderForRole();
 }
 
 function normalizePropertyPayload(source = {}) {
@@ -421,7 +416,11 @@ function normalizePropertyPayload(source = {}) {
 
 function validatePropertyPayload(payload, { requireImage = false, requireMap = true } = {}) {
   if (!payload.titleAr) return "يرجى إدخال اسم العقار بالعربية.";
+  if (!payload.titleEn) return "يرجى إدخال اسم العقار بالإنجليزية.";
+  if (!payload.descAr) return "يرجى إدخال وصف العقار بالعربية.";
+  if (!payload.descEn) return "يرجى إدخال وصف العقار بالإنجليزية.";
   if (!payload.locationAr) return "يرجى إدخال موقع العقار بالعربية.";
+  if (!payload.locationEn) return "يرجى إدخال موقع العقار بالإنجليزية.";
   if (!payload.price || payload.price <= 0) return "يرجى إدخال سعر صحيح أكبر من 0.";
   if (requireMap && (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng))) return "يرجى تحديد موقع صحيح للعقار على الخريطة.";
   if (requireImage && !payload.imageUrl) return "الصورة الرئيسية للعقار مطلوبة.";
@@ -546,8 +545,8 @@ function getBookingGuestsMeta(data = {}) {
 }
 
 function setNavVisibilityByRole() {
-  const addTabBtn = document.querySelector('[data-tab-target="add-property"]') || document.querySelector(`[onclick="switchTab('add-property')"]`);
-  const ownerAccountsBtn = document.querySelector('[data-tab-target="owner-accounts"]') || document.querySelector(`[onclick="switchTab('owner-accounts')"]`);
+  const addTabBtn = document.querySelector('[data-tab-target="add-property"]');
+  const ownerAccountsBtn = document.querySelector('[data-tab-target="owner-accounts"]');
   const addTabPane = document.getElementById("tab-add-property");
   const ownerAccountsPane = document.getElementById("tab-owner-accounts");
 
@@ -566,6 +565,88 @@ function setNavVisibilityByRole() {
   }
 }
 
+function renderPropertiesEmpty(message, isError = false) {
+  if (!DOM.propertiesTbody) return;
+  DOM.propertiesTbody.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
+        <i class="ph ${isError ? "ph-warning-circle" : "ph-house-line"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+        ${escapeHtml(message)}
+      </td>
+    </tr>`;
+  updateQuickStats();
+}
+
+function renderOwnerAccountsEmpty(message, isError = false) {
+  if (!DOM.ownerAccountsTbody) return;
+  DOM.ownerAccountsTbody.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align:center; padding:36px; color:${isError ? "#e11d48" : "var(--text-muted)"};">
+        <i class="ph ${isError ? "ph-warning-circle" : "ph-users-three"}" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+        ${escapeHtml(message)}
+      </td>
+    </tr>`;
+  updateQuickStats();
+}
+
+function renderBookingsEmpty(container, message, extraHtml = "") {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="empty-state">
+      <i class="ph ph-calendar-blank"></i>
+      <div style="font-size:1.05rem; font-weight:800; color:var(--text-main); margin-bottom:8px;">
+        ${escapeHtml(message)}
+      </div>
+      ${extraHtml}
+    </div>`;
+  updateQuickStats();
+}
+
+function getFilteredPropertyDocs() {
+  const term = normalizeText(APP_STATE.currentPropertyFilter).toLowerCase();
+  if (!term) return [...APP_STATE.propertiesDocs];
+
+  return APP_STATE.propertiesDocs.filter(doc => {
+    const p = normalizePropertyPayload(doc.data() || {});
+    const haystack = [
+      doc.id,
+      p.titleAr,
+      p.titleEn,
+      p.locationAr,
+      p.locationEn,
+      p.descAr,
+      p.descEn,
+      getPropertyTypeLabel(p.type)
+    ].join(" ").toLowerCase();
+    return haystack.includes(term);
+  });
+}
+
+function updateQuickStats() {
+  const filteredProps = getFilteredPropertyDocs();
+  const visibleProps = filteredProps.filter(doc => {
+    const p = normalizePropertyPayload(doc.data() || {});
+    return p.visible !== false;
+  });
+
+  const totalProperties = filteredProps.length;
+  const activeProperties = visibleProps.length;
+  const totalOwnerAccounts = APP_STATE.ownerAccountDocs.length;
+  const totalBookings = APP_STATE.bookingDocs.length;
+
+  const map = {
+    "stat-total-properties": totalProperties,
+    "stat-active-properties": activeProperties,
+    "stat-total-bookings": totalBookings,
+    "stat-owner-accounts": totalOwnerAccounts
+  };
+
+  Object.entries(map).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(val);
+  });
+}
+
 async function loadPropertiesForSelect() {
   if (!DOM.ownerPropertySelect) return;
 
@@ -573,8 +654,8 @@ async function loadPropertiesForSelect() {
   DOM.ownerPropertySelect.innerHTML = `<option value="">جارٍ تحميل العقارات...</option>`;
 
   try {
-    const snapshot = await db.collection("properties").orderBy("createdAt", "desc").get().catch(async () => {
-      return await db.collection("properties").get();
+    const snapshot = await db.collection(PROPERTIES_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
+      return await db.collection(PROPERTIES_COLLECTION).get();
     });
 
     if (snapshot.empty) {
@@ -593,8 +674,9 @@ async function loadPropertiesForSelect() {
       DOM.ownerPropertySelect.appendChild(option);
     });
 
-    if (previous && DOM.ownerPropertySelect.querySelector(`option[value="${CSS.escape(previous)}"]`)) {
-      DOM.ownerPropertySelect.value = previous;
+    if (previous) {
+      const target = Array.from(DOM.ownerPropertySelect.options).find(opt => opt.value === previous);
+      if (target) DOM.ownerPropertySelect.value = previous;
     }
   } catch (err) {
     console.error("loadPropertiesForSelect error:", err);
@@ -602,10 +684,246 @@ async function loadPropertiesForSelect() {
   }
 }
 
+function renderPropertiesTable(docsArray) {
+  if (!DOM.propertiesTbody) return;
+
+  const visibleDocs = docsArray.filter(doc => {
+    if (getIsSuperAdmin()) return true;
+    return doc.id === getOwnerPropId();
+  });
+
+  if (!visibleDocs.length) {
+    renderPropertiesEmpty("لا توجد نتائج مطابقة حالياً.");
+    return;
+  }
+
+  DOM.propertiesTbody.innerHTML = "";
+
+  visibleDocs.forEach(doc => {
+    const p = normalizePropertyPayload(doc.data() || {});
+    const isVisible = p.visible !== false;
+    const hasLoc = Number.isFinite(p.lat) && Number.isFinite(p.lng);
+    const typeLabel = getPropertyTypeLabel(p.type);
+
+    const mapBadge = hasLoc
+      ? `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph-fill ph-map-pin"></i> موقع محدد</span>`
+      : `<span class="pill-soft" style="background:#f8fafc;color:var(--text-muted);border:1px solid var(--border-color);"><i class="ph ph-map-pin-slash"></i> بدون خريطة</span>`;
+
+    const statusBadge = isVisible
+      ? `<span class="status-badge visible"><i class="ph ph-eye"></i> ظاهر</span>`
+      : `<span class="status-badge hidden"><i class="ph ph-eye-slash"></i> مخفي</span>`;
+
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-prop-id", doc.id);
+    tr.setAttribute("data-visible", String(isVisible));
+
+    tr.innerHTML = `
+      <td>
+        <img class="prop-thumb"
+             src="${escapeHtml(p.imageUrl || "images/placeholder.jpg")}"
+             alt="${escapeHtml(p.titleAr || "Property")}"
+             onerror="this.src='images/placeholder.jpg'">
+      </td>
+      <td>
+        <div class="prop-name-cell">
+          <strong>${escapeHtml(p.titleAr || "—")}</strong>
+          <span>${escapeHtml(p.titleEn || "")}</span>
+          <span class="pill-soft" style="width:max-content;background:rgba(67,90,191,.08);color:var(--primary);border:1px solid rgba(67,90,191,.1);">${escapeHtml(typeLabel)}</span>
+        </div>
+      </td>
+      <td>
+        <div style="display:grid; gap:8px;">
+          <div style="font-weight:600;">${escapeHtml(p.locationAr || "—")}</div>
+          <div>${mapBadge}</div>
+        </div>
+      </td>
+      <td>
+        <span class="price-pill">${formatCurrency(p.price)}</span>
+      </td>
+      <td>
+        <div style="display:grid; gap:10px;">
+          ${statusBadge}
+          <label class="switch" style="width:max-content;">
+            <input type="checkbox" ${isVisible ? "checked" : ""} onchange="toggleVisibility('${doc.id}', this.checked, this)">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </td>
+      <td>
+        <div class="table-actions">
+          <button type="button" onclick="window.open('property.html?id=${doc.id}','_blank')" title="معاينة">
+            <i class="ph ph-eye"></i> معاينة
+          </button>
+          <button type="button" onclick="openEditModal('${doc.id}')" title="تعديل">
+            <i class="ph ph-pencil-simple"></i> تعديل
+          </button>
+          ${getIsSuperAdmin() ? `
+            <button type="button" onclick="deleteProperty('${doc.id}')" title="حذف" style="color:#e11d48;">
+              <i class="ph ph-trash"></i> حذف
+            </button>` : ""}
+        </div>
+      </td>
+    `;
+    DOM.propertiesTbody.appendChild(tr);
+  });
+
+  updateQuickStats();
+}
+
+async function loadProperties() {
+  if (!DOM.propertiesTbody) return;
+
+  DOM.propertiesTbody.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align:center; padding:36px; color:var(--text-muted);">
+        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+        جارٍ تحميل العقارات...
+      </td>
+    </tr>`;
+
+  try {
+    if (!getIsSuperAdmin()) {
+      const ownerPropId = getOwnerPropId();
+      if (!ownerPropId) {
+        APP_STATE.propertiesDocs = [];
+        renderPropertiesEmpty("لم يتم العثور على معرّف العقار الخاص بهذا المالك.", true);
+        return;
+      }
+
+      const doc = await db.collection(PROPERTIES_COLLECTION).doc(ownerPropId).get();
+      if (!doc.exists) {
+        APP_STATE.propertiesDocs = [];
+        renderPropertiesEmpty("عقارك غير موجود أو تم حذفه.");
+        return;
+      }
+
+      APP_STATE.propertiesDocs = [doc];
+      renderPropertiesTable(getFilteredPropertyDocs());
+      return;
+    }
+
+    const snapshot = await db.collection(PROPERTIES_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
+      return await db.collection(PROPERTIES_COLLECTION).get();
+    });
+
+    if (snapshot.empty) {
+      APP_STATE.propertiesDocs = [];
+      renderPropertiesEmpty("لا توجد عقارات مضافة بعد.");
+      return;
+    }
+
+    APP_STATE.propertiesDocs = snapshot.docs;
+    renderPropertiesTable(getFilteredPropertyDocs());
+  } catch (err) {
+    console.error("loadProperties error:", err);
+    APP_STATE.propertiesDocs = [];
+    renderPropertiesEmpty(`حدث خطأ أثناء تحميل العقارات: ${err.message}`, true);
+  }
+}
+
+async function toggleVisibility(docId, isVisible, checkboxEl) {
+  try {
+    if (checkboxEl) checkboxEl.disabled = true;
+    if (!canAccessProperty(docId)) throw new Error("غير مسموح لك بتعديل هذا العقار");
+
+    await db.collection(PROPERTIES_COLLECTION).doc(docId).update({
+      visible: isVisible,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showToast(`تم ${isVisible ? "إظهار" : "إخفاء"} العقار بنجاح`, "success");
+    await loadProperties();
+  } catch (err) {
+    console.error("toggleVisibility error:", err);
+    if (checkboxEl) checkboxEl.checked = !isVisible;
+    showToast(err.message || "حدث خطأ أثناء تحديث حالة الظهور", "error");
+  } finally {
+    if (checkboxEl) checkboxEl.disabled = false;
+  }
+}
+
+async function openEditModal(docId) {
+  const editModal = document.getElementById("edit-modal");
+  if (!editModal) return;
+
+  try {
+    if (!canAccessProperty(docId)) {
+      showToast("غير مسموح لك بتعديل هذا العقار", "error");
+      return;
+    }
+
+    const doc = await db.collection(PROPERTIES_COLLECTION).doc(docId).get();
+    if (!doc.exists) {
+      showToast("العقار غير موجود", "error");
+      return;
+    }
+
+    const p = normalizePropertyPayload(doc.data() || {});
+    qs("#edit-prop-id").value = docId;
+    qs("#edit-title-ar").value = p.titleAr || "";
+    qs("#edit-title-en").value = p.titleEn || "";
+    qs("#edit-price").value = p.price || "";
+    qs("#edit-desc-ar").value = p.descAr || "";
+    qs("#edit-desc-en").value = p.descEn || "";
+    qs("#edit-loc-ar").value = p.locationAr || "";
+    qs("#edit-loc-en").value = p.locationEn || "";
+    qs("#edit-type").value = p.type || "apartment";
+
+    const existingLat = Number.isFinite(p.lat) ? parseFloat(p.lat) : null;
+    const existingLng = Number.isFinite(p.lng) ? parseFloat(p.lng) : null;
+
+    qs("#edit-lat").value = existingLat ?? "";
+    qs("#edit-lng").value = existingLng ?? "";
+
+    const pickedBadge = qs("#edit-map-picked-badge");
+    if (pickedBadge) pickedBadge.classList.toggle("visible", !!(existingLat !== null && existingLng !== null));
+
+    const fileInput = qs("#edit-image");
+    if (fileInput) fileInput.value = "";
+    resetEditUploadPreview();
+
+    editModal.classList.add("active");
+    document.body.classList.add("modal-open");
+
+    if (typeof window.initEditMapFromAdmin === "function") {
+      window.initEditMapFromAdmin(existingLat, existingLng);
+    }
+  } catch (err) {
+    console.error("openEditModal error:", err);
+    showToast("تعذر تحميل بيانات العقار من السيرفر", "error");
+  }
+}
+
+function closeEditModal() {
+  const editModal = document.getElementById("edit-modal");
+  if (editModal) editModal.classList.remove("active");
+  document.body.classList.remove("modal-open");
+}
+
+async function deleteProperty(docId) {
+  if (!getIsSuperAdmin()) {
+    showToast("غير مسموح لك بحذف العقار من هذه الجلسة", "error");
+    return;
+  }
+
+  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟")) return;
+
+  try {
+    await db.collection(PROPERTIES_COLLECTION).doc(docId).delete();
+    showToast("تم حذف العقار بنجاح", "success");
+    await loadProperties();
+    await loadPropertiesForSelect();
+  } catch (err) {
+    console.error("deleteProperty error:", err);
+    showToast(`تعذر حذف العقار: ${err.message}`, "error");
+  }
+}
+
 async function loadOwnerAccounts() {
   if (!DOM.ownerAccountsTbody) return;
 
   if (!getIsSuperAdmin()) {
+    APP_STATE.ownerAccountDocs = [];
     renderOwnerAccountsEmpty("إدارة حسابات الملاك متاحة للمدير العام فقط.");
     return;
   }
@@ -624,13 +942,16 @@ async function loadOwnerAccounts() {
     });
 
     if (snapshot.empty) {
+      APP_STATE.ownerAccountDocs = [];
       renderOwnerAccountsEmpty("لا توجد حسابات ملاك مضافة بعد.");
       return;
     }
 
+    APP_STATE.ownerAccountDocs = snapshot.docs;
     renderOwnerAccountsTable(snapshot.docs);
   } catch (err) {
     console.error("loadOwnerAccounts error:", err);
+    APP_STATE.ownerAccountDocs = [];
     renderOwnerAccountsEmpty(`حدث خطأ أثناء تحميل الحسابات: ${err.message}`, true);
   }
 }
@@ -703,7 +1024,7 @@ async function createOwnerAccountFromForm(e) {
   setButtonLoading(submitBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ إنشاء الحساب...`);
 
   try {
-    const propertySnap = await db.collection("properties").doc(payload.propertyId).get();
+    const propertySnap = await db.collection(PROPERTIES_COLLECTION).doc(payload.propertyId).get();
     if (!propertySnap.exists) {
       throw new Error("العقار المحدد غير موجود");
     }
@@ -886,65 +1207,67 @@ function ensureAdminChatModal() {
     return;
   }
 
-  const style = document.createElement("style");
-  style.id = "admin-chat-inline-style";
-  style.textContent = `
-    .admin-chat-overlay{position:fixed; inset:0; background:rgba(15,23,42,.45);backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);z-index:4500; display:none; align-items:center; justify-content:center; padding:18px;}
-    .admin-chat-overlay.active{ display:flex; }
-    .admin-chat-shell{width:min(980px,96vw); height:min(88vh,760px);background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.98));border:1px solid rgba(255,255,255,.72); border-radius:28px;box-shadow:0 35px 80px rgba(15,23,42,.22); overflow:hidden;display:grid; grid-template-rows:auto 1fr auto;}
-    .dark .admin-chat-shell{background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(11,18,32,.98));border-color:rgba(51,65,85,.85);}
-    .admin-chat-topbar{display:flex; align-items:center; justify-content:space-between; gap:14px;padding:18px 20px; border-bottom:1px solid rgba(226,232,240,.9);background:linear-gradient(135deg, rgba(67,90,191,.08), rgba(101,123,224,.06));}
-    .admin-chat-head{display:flex; align-items:center; gap:14px; min-width:0;}
-    .admin-chat-property-thumb{width:58px; height:58px; border-radius:18px; object-fit:cover;border:1px solid rgba(203,213,225,.9); background:#f1f5f9; flex-shrink:0;}
-    .admin-chat-head-meta{display:grid; gap:4px; min-width:0;}
-    .admin-chat-head-meta strong{font-size:1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .admin-chat-head-meta span{color:var(--text-muted); font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .admin-verified-badge{display:inline-flex; align-items:center; justify-content:center;width:22px; height:22px; border-radius:999px;background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:.78rem;box-shadow:0 8px 18px rgba(59,130,246,.28);}
-    .admin-chat-top-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
-    .admin-chat-status-chip{display:inline-flex; align-items:center; gap:8px;padding:10px 14px; border-radius:999px; font-size:.8rem; font-weight:800;background:rgba(67,90,191,.08); color:var(--primary); border:1px solid rgba(67,90,191,.1);}
-    .admin-chat-close{width:44px; height:44px; border:none; border-radius:14px;background:rgba(255,255,255,.85); color:var(--text-main); cursor:pointer;display:grid; place-items:center; font-size:1.15rem; border:1px solid rgba(203,213,225,.95);}
-    .admin-chat-body{display:grid; grid-template-columns:minmax(0,1fr) 300px; min-height:0;background:radial-gradient(circle at top, rgba(67,90,191,.08), transparent 28%),linear-gradient(180deg, rgba(248,250,252,.72), rgba(255,255,255,.92));}
-    .dark .admin-chat-body{background:radial-gradient(circle at top, rgba(67,90,191,.10), transparent 28%),linear-gradient(180deg, rgba(15,23,42,.76), rgba(2,6,23,.9));}
-    .admin-chat-main{min-width:0; min-height:0; display:grid; grid-template-rows:1fr;border-inline-end:1px solid rgba(226,232,240,.85);}
-    .admin-chat-messages{overflow:auto; padding:20px; display:flex; flex-direction:column; gap:12px;scroll-behavior:smooth;}
-    .admin-chat-empty{margin:auto; max-width:420px; text-align:center; color:var(--text-muted);line-height:1.8; font-weight:700;}
-    .admin-chat-message{max-width:min(78%, 620px); display:grid; gap:6px;}
-    .admin-chat-message.mine{align-self:flex-end;}
-    .admin-chat-message.theirs{align-self:flex-start;}
-    .admin-chat-bubble{padding:14px 16px; border-radius:22px; box-shadow:0 10px 28px rgba(15,23,42,.08);line-height:1.8; word-break:break-word; font-size:.95rem;border:1px solid rgba(226,232,240,.9); background:#fff; color:var(--text-main);}
-    .admin-chat-message.mine .admin-chat-bubble{background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; border-color:transparent;box-shadow:0 18px 34px rgba(67,90,191,.22);border-bottom-left-radius:22px; border-bottom-right-radius:8px;}
-    .admin-chat-message.theirs .admin-chat-bubble{border-bottom-right-radius:22px; border-bottom-left-radius:8px;background:rgba(255,255,255,.95);}
-    .dark .admin-chat-message.theirs .admin-chat-bubble{background:rgba(15,23,42,.82); border-color:rgba(51,65,85,.9);}
-    .admin-chat-meta{font-size:.74rem; color:var(--text-muted); font-weight:700;padding-inline:6px; display:flex; align-items:center; gap:6px;}
-    .admin-chat-message.mine .admin-chat-meta{justify-content:flex-end;}
-    .admin-chat-image{width:min(280px,100%); max-width:100%; border-radius:18px; display:block;border:1px solid rgba(226,232,240,.9); cursor:zoom-in; background:#fff;}
-    .admin-chat-side{padding:18px; display:grid; gap:14px; align-content:start;background:rgba(248,250,252,.7);}
-    .dark .admin-chat-side{background:rgba(2,6,23,.45);}
-    .admin-chat-side-card{padding:16px; border-radius:20px; border:1px solid var(--border-color);background:rgba(255,255,255,.82); box-shadow:0 12px 28px rgba(15,23,42,.05);display:grid; gap:10px;}
-    .dark .admin-chat-side-card{background:rgba(15,23,42,.72); border-color:rgba(51,65,85,.88);}
-    .admin-chat-side-card label{font-size:.74rem; color:var(--text-muted); font-weight:800;}
-    .admin-chat-side-card strong,.admin-chat-side-card span{color:var(--text-main); line-height:1.7; word-break:break-word;}
-    .admin-chat-composer{border-top:1px solid rgba(226,232,240,.9); padding:16px 18px;background:rgba(255,255,255,.9); display:grid; gap:12px;}
-    .dark .admin-chat-composer{background:rgba(15,23,42,.84); border-color:rgba(51,65,85,.88);}
-    .admin-chat-preview{display:none; align-items:center; justify-content:space-between; gap:14px;padding:12px 14px; border-radius:16px; border:1px solid var(--border-color);background:rgba(248,250,252,.86);}
-    .admin-chat-preview.visible{display:flex;}
-    .admin-chat-preview-main{display:flex; align-items:center; gap:12px; min-width:0;}
-    .admin-chat-preview img{width:58px; height:46px; object-fit:cover; border-radius:12px;border:1px solid rgba(203,213,225,.9); background:#fff; flex-shrink:0;}
-    .admin-chat-preview-meta{display:grid; gap:4px; min-width:0;}
-    .admin-chat-preview-meta strong{font-size:.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .admin-chat-preview-meta span{font-size:.76rem; color:var(--text-muted);}
-    .admin-chat-preview-remove{width:36px; height:36px; border:none; border-radius:12px; cursor:pointer;background:#fff; color:#e11d48; border:1px solid #fecdd3;}
-    .admin-chat-input-row{display:flex; align-items:flex-end; gap:12px;}
-    .admin-chat-attach{width:52px; height:52px; border-radius:16px; border:1px solid var(--border-color);background:rgba(248,250,252,.92); color:var(--primary); cursor:pointer;display:grid; place-items:center; font-size:1.3rem; flex-shrink:0;}
-    .admin-chat-textarea{flex:1; min-height:54px; max-height:160px; resize:none; padding:15px 16px;border-radius:18px; border:1px solid var(--border-color); outline:none;background:rgba(248,250,252,.92); color:var(--text-main); font-family:inherit; font-size:.95rem;line-height:1.7;}
-    .admin-chat-textarea:focus{border-color:var(--primary); box-shadow:0 0 0 4px rgba(67,90,191,.1); background:#fff;}
-    .admin-chat-send{min-width:148px; height:54px; border:none; border-radius:18px;background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff;font-weight:800; font-family:inherit; cursor:pointer; display:inline-flex;align-items:center; justify-content:center; gap:8px; box-shadow:0 16px 28px rgba(67,90,191,.2);}
-    .admin-chat-send:disabled,.admin-chat-attach:disabled,.admin-chat-close:disabled{opacity:.6; cursor:not-allowed;}
-    .admin-chat-upload-hint{font-size:.76rem; color:var(--text-muted); font-weight:700;display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-    @media (max-width:980px){.admin-chat-shell{width:min(100vw,100vw); height:min(100vh,100vh); border-radius:0;}.admin-chat-body{grid-template-columns:1fr;}.admin-chat-main{border-inline-end:none; border-bottom:1px solid rgba(226,232,240,.85);}.admin-chat-side{grid-template-columns:1fr 1fr;}}
-    @media (max-width:700px){.admin-chat-topbar{padding:14px; align-items:flex-start; flex-direction:column;}.admin-chat-top-actions{width:100%; justify-content:space-between;}.admin-chat-side{grid-template-columns:1fr;}.admin-chat-input-row{flex-wrap:wrap;}.admin-chat-send{width:100%;}.admin-chat-textarea{width:100%;}.admin-chat-message{max-width:92%;}}
-  `;
-  document.head.appendChild(style);
+  if (!document.getElementById("admin-chat-inline-style")) {
+    const style = document.createElement("style");
+    style.id = "admin-chat-inline-style";
+    style.textContent = `
+      .admin-chat-overlay{position:fixed; inset:0; background:rgba(15,23,42,.45);backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);z-index:4500; display:none; align-items:center; justify-content:center; padding:18px;}
+      .admin-chat-overlay.active{ display:flex; }
+      .admin-chat-shell{width:min(980px,96vw); height:min(88vh,760px);background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.98));border:1px solid rgba(255,255,255,.72); border-radius:28px;box-shadow:0 35px 80px rgba(15,23,42,.22); overflow:hidden;display:grid; grid-template-rows:auto 1fr auto;}
+      .dark .admin-chat-shell, body.dark .admin-chat-shell{background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(11,18,32,.98));border-color:rgba(51,65,85,.85);}
+      .admin-chat-topbar{display:flex; align-items:center; justify-content:space-between; gap:14px;padding:18px 20px; border-bottom:1px solid rgba(226,232,240,.9);background:linear-gradient(135deg, rgba(67,90,191,.08), rgba(101,123,224,.06));}
+      .admin-chat-head{display:flex; align-items:center; gap:14px; min-width:0;}
+      .admin-chat-property-thumb{width:58px; height:58px; border-radius:18px; object-fit:cover;border:1px solid rgba(203,213,225,.9); background:#f1f5f9; flex-shrink:0;}
+      .admin-chat-head-meta{display:grid; gap:4px; min-width:0;}
+      .admin-chat-head-meta strong{font-size:1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+      .admin-chat-head-meta span{color:var(--text-muted); font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+      .admin-verified-badge{display:inline-flex; align-items:center; justify-content:center;width:22px; height:22px; border-radius:999px;background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:.78rem;box-shadow:0 8px 18px rgba(59,130,246,.28);}
+      .admin-chat-top-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+      .admin-chat-status-chip{display:inline-flex; align-items:center; gap:8px;padding:10px 14px; border-radius:999px; font-size:.8rem; font-weight:800;background:rgba(67,90,191,.08); color:var(--primary); border:1px solid rgba(67,90,191,.1);}
+      .admin-chat-close{width:44px; height:44px; border:none; border-radius:14px;background:rgba(255,255,255,.85); color:var(--text-main); cursor:pointer;display:grid; place-items:center; font-size:1.15rem; border:1px solid rgba(203,213,225,.95);}
+      .admin-chat-body{display:grid; grid-template-columns:minmax(0,1fr) 300px; min-height:0;background:radial-gradient(circle at top, rgba(67,90,191,.08), transparent 28%),linear-gradient(180deg, rgba(248,250,252,.72), rgba(255,255,255,.92));}
+      .dark .admin-chat-body, body.dark .admin-chat-body{background:radial-gradient(circle at top, rgba(67,90,191,.10), transparent 28%),linear-gradient(180deg, rgba(15,23,42,.76), rgba(2,6,23,.9));}
+      .admin-chat-main{min-width:0; min-height:0; display:grid; grid-template-rows:1fr;border-inline-end:1px solid rgba(226,232,240,.85);}
+      .admin-chat-messages{overflow:auto; padding:20px; display:flex; flex-direction:column; gap:12px;scroll-behavior:smooth;}
+      .admin-chat-empty{margin:auto; max-width:420px; text-align:center; color:var(--text-muted);line-height:1.8; font-weight:700;}
+      .admin-chat-message{max-width:min(78%, 620px); display:grid; gap:6px;}
+      .admin-chat-message.mine{align-self:flex-end;}
+      .admin-chat-message.theirs{align-self:flex-start;}
+      .admin-chat-bubble{padding:14px 16px; border-radius:22px; box-shadow:0 10px 28px rgba(15,23,42,.08);line-height:1.8; word-break:break-word; font-size:.95rem;border:1px solid rgba(226,232,240,.9); background:#fff; color:var(--text-main);}
+      .admin-chat-message.mine .admin-chat-bubble{background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; border-color:transparent;box-shadow:0 18px 34px rgba(67,90,191,.22);border-bottom-left-radius:22px; border-bottom-right-radius:8px;}
+      .admin-chat-message.theirs .admin-chat-bubble{border-bottom-right-radius:22px; border-bottom-left-radius:8px;background:rgba(255,255,255,.95);}
+      .dark .admin-chat-message.theirs .admin-chat-bubble, body.dark .admin-chat-message.theirs .admin-chat-bubble{background:rgba(15,23,42,.82); border-color:rgba(51,65,85,.9);}
+      .admin-chat-meta{font-size:.74rem; color:var(--text-muted); font-weight:700;padding-inline:6px; display:flex; align-items:center; gap:6px;}
+      .admin-chat-message.mine .admin-chat-meta{justify-content:flex-end;}
+      .admin-chat-image{width:min(280px,100%); max-width:100%; border-radius:18px; display:block;border:1px solid rgba(226,232,240,.9); cursor:zoom-in; background:#fff;}
+      .admin-chat-side{padding:18px; display:grid; gap:14px; align-content:start;background:rgba(248,250,252,.7);}
+      .dark .admin-chat-side, body.dark .admin-chat-side{background:rgba(2,6,23,.45);}
+      .admin-chat-side-card{padding:16px; border-radius:20px; border:1px solid var(--border-color);background:rgba(255,255,255,.82); box-shadow:0 12px 28px rgba(15,23,42,.05);display:grid; gap:10px;}
+      .dark .admin-chat-side-card, body.dark .admin-chat-side-card{background:rgba(15,23,42,.72); border-color:rgba(51,65,85,.88);}
+      .admin-chat-side-card label{font-size:.74rem; color:var(--text-muted); font-weight:800;}
+      .admin-chat-side-card strong,.admin-chat-side-card span{color:var(--text-main); line-height:1.7; word-break:break-word;}
+      .admin-chat-composer{border-top:1px solid rgba(226,232,240,.9); padding:16px 18px;background:rgba(255,255,255,.9); display:grid; gap:12px;}
+      .dark .admin-chat-composer, body.dark .admin-chat-composer{background:rgba(15,23,42,.84); border-color:rgba(51,65,85,.88);}
+      .admin-chat-preview{display:none; align-items:center; justify-content:space-between; gap:14px;padding:12px 14px; border-radius:16px; border:1px solid var(--border-color);background:rgba(248,250,252,.86);}
+      .admin-chat-preview.visible{display:flex;}
+      .admin-chat-preview-main{display:flex; align-items:center; gap:12px; min-width:0;}
+      .admin-chat-preview img{width:58px; height:46px; object-fit:cover; border-radius:12px;border:1px solid rgba(203,213,225,.9); background:#fff; flex-shrink:0;}
+      .admin-chat-preview-meta{display:grid; gap:4px; min-width:0;}
+      .admin-chat-preview-meta strong{font-size:.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+      .admin-chat-preview-meta span{font-size:.76rem; color:var(--text-muted);}
+      .admin-chat-preview-remove{width:36px; height:36px; border:none; border-radius:12px; cursor:pointer;background:#fff; color:#e11d48; border:1px solid #fecdd3;}
+      .admin-chat-input-row{display:flex; align-items:flex-end; gap:12px;}
+      .admin-chat-attach{width:52px; height:52px; border-radius:16px; border:1px solid var(--border-color);background:rgba(248,250,252,.92); color:var(--primary); cursor:pointer;display:grid; place-items:center; font-size:1.3rem; flex-shrink:0;}
+      .admin-chat-textarea{flex:1; min-height:54px; max-height:160px; resize:none; padding:15px 16px;border-radius:18px; border:1px solid var(--border-color); outline:none;background:rgba(248,250,252,.92); color:var(--text-main); font-family:inherit; font-size:.95rem;line-height:1.7;}
+      .admin-chat-textarea:focus{border-color:var(--primary); box-shadow:0 0 0 4px rgba(67,90,191,.1); background:#fff;}
+      .admin-chat-send{min-width:148px; height:54px; border:none; border-radius:18px;background:linear-gradient(135deg, var(--primary), var(--accent)); color:#fff;font-weight:800; font-family:inherit; cursor:pointer; display:inline-flex;align-items:center; justify-content:center; gap:8px; box-shadow:0 16px 28px rgba(67,90,191,.2);}
+      .admin-chat-send:disabled,.admin-chat-attach:disabled,.admin-chat-close:disabled{opacity:.6; cursor:not-allowed;}
+      .admin-chat-upload-hint{font-size:.76rem; color:var(--text-muted); font-weight:700;display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+      @media (max-width:980px){.admin-chat-shell{width:min(100vw,100vw); height:min(100vh,100vh); border-radius:0;}.admin-chat-body{grid-template-columns:1fr;}.admin-chat-main{border-inline-end:none; border-bottom:1px solid rgba(226,232,240,.85);}.admin-chat-side{grid-template-columns:1fr 1fr;}}
+      @media (max-width:700px){.admin-chat-topbar{padding:14px; align-items:flex-start; flex-direction:column;}.admin-chat-top-actions{width:100%; justify-content:space-between;}.admin-chat-side{grid-template-columns:1fr;}.admin-chat-input-row{flex-wrap:wrap;}.admin-chat-send{width:100%;}.admin-chat-textarea{width:100%;}.admin-chat-message{max-width:92%;}}
+    `;
+    document.head.appendChild(style);
+  }
 
   const overlay = document.createElement("div");
   overlay.className = "admin-chat-overlay";
@@ -1078,7 +1401,7 @@ async function ensureChatForBooking({
   guestPhone
 }) {
   const chatId = buildChatId(bookingId, propertyId, guestId);
-  const chatRef = db.collection("chats").doc(chatId);
+  const chatRef = db.collection(CHATS_COLLECTION).doc(chatId);
   const existing = await chatRef.get();
 
   const basePayload = {
@@ -1203,7 +1526,7 @@ function renderAdminChatMessages(docs = []) {
 async function markChatAsSeenByOwner(chatId) {
   if (!chatId) return;
   try {
-    await db.collection("chats").doc(chatId).set({
+    await db.collection(CHATS_COLLECTION).doc(chatId).set({
       unreadCountOwner: 0,
       ownerLastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1221,7 +1544,7 @@ function bindAdminChatStreams(chatId) {
     try { CHAT_STATE.chatUnsub(); } catch (_) {}
   }
 
-  CHAT_STATE.chatUnsub = db.collection("chats").doc(chatId).onSnapshot(snap => {
+  CHAT_STATE.chatUnsub = db.collection(CHATS_COLLECTION).doc(chatId).onSnapshot(snap => {
     if (!snap.exists) return;
     const data = snap.data() || {};
     CHAT_STATE.currentBookingStatus = normalizeText(data.status || CHAT_STATE.currentBookingStatus);
@@ -1239,7 +1562,7 @@ function bindAdminChatStreams(chatId) {
     console.error("chat snapshot error:", err);
   });
 
-  CHAT_STATE.messagesUnsub = db.collection("chats").doc(chatId)
+  CHAT_STATE.messagesUnsub = db.collection(CHATS_COLLECTION).doc(chatId)
     .collection("messages")
     .orderBy("createdAt", "asc")
     .onSnapshot(snap => {
@@ -1261,7 +1584,7 @@ async function openBookingChat(bookingId) {
   }
 
   try {
-    const bookingSnap = await db.collection("bookings").doc(bookingId).get();
+    const bookingSnap = await db.collection(BOOKINGS_COLLECTION).doc(bookingId).get();
     if (!bookingSnap.exists) throw new Error("الحجز غير موجود");
 
     const bookingData = bookingSnap.data() || {};
@@ -1280,7 +1603,7 @@ async function openBookingChat(bookingId) {
 
     if (!propertyImage && bookingPropId) {
       try {
-        const propSnap = await db.collection("properties").doc(bookingPropId).get();
+        const propSnap = await db.collection(PROPERTIES_COLLECTION).doc(bookingPropId).get();
         if (propSnap.exists) {
           const propData = propSnap.data() || {};
           propertyImage = normalizeText(propData.imageUrl || propData.image || "");
@@ -1405,12 +1728,12 @@ async function sendAdminChatMessage() {
       seenByOwner: true
     };
 
-    await db.collection("chats")
+    await db.collection(CHATS_COLLECTION)
       .doc(CHAT_STATE.currentChatId)
       .collection("messages")
       .add(msgPayload);
 
-    await db.collection("chats").doc(CHAT_STATE.currentChatId).set({
+    await db.collection(CHATS_COLLECTION).doc(CHAT_STATE.currentChatId).set({
       bookingId: CHAT_STATE.currentBookingId,
       propertyId: CHAT_STATE.currentPropertyId,
       propertyTitle: CHAT_STATE.currentPropertyTitle,
@@ -1516,20 +1839,10 @@ function switchTab(tabId) {
   const targetTab = document.getElementById(`tab-${tabId}`);
   if (targetTab) targetTab.classList.add("active");
 
-  const activeBtn =
-    document.querySelector(`[data-tab-target="${tabId}"]`) ||
-    document.querySelector(`[onclick="switchTab('${tabId}')"]`);
+  const activeBtn = document.querySelector(`[data-tab-target="${tabId}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 
-  const titles = {
-    "manage-props": "إدارة العقارات",
-    "add-property": "إضافة عقار جديد",
-    "owner-accounts": "حسابات الملاك",
-    bookings: "الحجوزات"
-  };
-
-  if (DOM.pageTitle) DOM.pageTitle.textContent = titles[tabId] || "لوحة التحكم";
-  updateAdminHeaderForRole();
+  updatePageMeta(tabId);
 
   if (tabId === "bookings") loadBookings();
   if (tabId === "manage-props") loadProperties();
@@ -1542,247 +1855,129 @@ function switchTab(tabId) {
       if (typeof initAddMap === "function") initAddMap();
     }, 150);
   }
+
+  document.getElementById("admin-sidebar")?.classList.remove("open");
 }
 
-async function loadProperties() {
-  if (!DOM.propertiesTbody) return;
+function buildBookingCard(doc) {
+  const b = doc.data() || {};
+  const propertyId = getBookingPropertyId(b);
 
-  DOM.propertiesTbody.innerHTML = `
-    <tr>
-      <td colspan="6" style="text-align:center; padding:36px; color:var(--text-muted);">
-        <i class="ph ph-circle-notch ph-spin" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
-        جارٍ تحميل العقارات...
-      </td>
-    </tr>`;
-
-  try {
-    if (!getIsSuperAdmin()) {
-      const ownerPropId = getOwnerPropId();
-      if (!ownerPropId) {
-        renderPropertiesEmpty("لم يتم العثور على معرّف العقار الخاص بهذا المالك.", true);
-        return;
-      }
-
-      const doc = await db.collection("properties").doc(ownerPropId).get();
-      if (!doc.exists) {
-        renderPropertiesEmpty("عقارك غير موجود أو تم حذفه.");
-        return;
-      }
-
-      renderPropertiesTable([doc]);
-      return;
-    }
-
-    const snapshot = await db.collection("properties").orderBy("createdAt", "desc").get().catch(async () => {
-      return await db.collection("properties").get();
-    });
-
-    if (snapshot.empty) {
-      renderPropertiesEmpty("لا توجد عقارات مضافة بعد.");
-      return;
-    }
-
-    renderPropertiesTable(snapshot.docs);
-  } catch (err) {
-    console.error("loadProperties error:", err);
-    renderPropertiesEmpty(`حدث خطأ أثناء تحميل العقارات: ${err.message}`, true);
+  if (!getIsSuperAdmin() && !canAccessProperty(propertyId)) {
+    return "";
   }
-}
 
-function renderPropertiesTable(docsArray) {
-  if (!DOM.propertiesTbody) return;
-  DOM.propertiesTbody.innerHTML = "";
+  const propertyTitle = normalizeText(getField(b, FIELD_CANDIDATES.bookingPropertyTitle, "العقار"));
+  const propertyImage = normalizeText(getField(b, FIELD_CANDIDATES.bookingPropertyImage, "images/placeholder.jpg"));
+  const guestName = getBookingGuestName(b);
+  const phone = getBookingPhone(b);
+  const email = getBookingEmail(b);
+  const ci = formatDate(getBookingCheckIn(b));
+  const co = formatDate(getBookingCheckOut(b));
+  const totalPrice = toNumber(getField(b, FIELD_CANDIDATES.bookingPrice, 0), 0);
+  const nights = toNumber(getField(b, FIELD_CANDIDATES.bookingNights, 0), 0) || 1;
+  const statusMeta = getStatusMeta(b.status || "pending");
+  const guestsMeta = getBookingGuestsMeta(b);
+  const addons = getBookingAddons(b);
+  const notes = getBookingNotes(b);
+  const receiptUrl = normalizeText(getField(b, FIELD_CANDIDATES.bookingReceipt, ""));
+  const createdAt = b.createdAt || b.updatedAt || null;
 
-  docsArray.forEach(doc => {
-    const p = normalizePropertyPayload(doc.data() || {});
-    const isVisible = p.visible !== false;
-    const hasLoc = Number.isFinite(p.lat) && Number.isFinite(p.lng);
-    const typeLabel = getPropertyTypeLabel(p.type);
-    const mapBadge = hasLoc
-      ? `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph-fill ph-map-pin"></i> موقع محدد</span>`
-      : `<span class="pill-soft" style="background:#f8fafc;color:var(--text-muted);border:1px solid var(--border-color);"><i class="ph ph-map-pin-slash"></i> بدون خريطة</span>`;
+  const occupancy = `
+    <div class="booking-meta-item">
+      <label>الضيوف</label>
+      <strong>${guestsMeta.guests} ضيف</strong>
+      <span>${guestsMeta.adults || 0} بالغ • ${guestsMeta.children || 0} طفل • ${guestsMeta.infants || 0} رضيع</span>
+    </div>`;
 
-    const statusBadge = isVisible
-      ? `<span class="status-badge visible"><i class="ph ph-eye"></i> ظاهر</span>`
-      : `<span class="status-badge hidden"><i class="ph ph-eye-slash"></i> مخفي</span>`;
+  const addonsHtml = addons.length ? `
+    <div class="booking-meta-item">
+      <label>الإضافات</label>
+      <strong>${escapeHtml(addons.join("، "))}</strong>
+      <span>الخدمات المختارة</span>
+    </div>` : "";
 
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-prop-id", doc.id);
-    tr.setAttribute("data-visible", String(isVisible));
-    tr.innerHTML = `
-      <td>
-        <img class="prop-thumb"
-             src="${escapeHtml(p.imageUrl || "images/placeholder.jpg")}"
-             alt="${escapeHtml(p.titleAr || "Property")}"
-             onerror="this.src='images/placeholder.jpg'">
-      </td>
-      <td>
-        <div class="prop-name-cell">
-          <strong>${escapeHtml(p.titleAr || "—")}</strong>
-          <span>${escapeHtml(p.titleEn || "")}</span>
-          <span class="pill-soft" style="width:max-content;background:rgba(67,90,191,.08);color:var(--primary);border:1px solid rgba(67,90,191,.1);">${escapeHtml(typeLabel)}</span>
+  const notesHtml = notes ? `
+    <div class="booking-meta-item" style="grid-column:1/-1;">
+      <label>ملاحظات</label>
+      <strong>${escapeHtml(notes)}</strong>
+      <span>تفاصيل إضافية من العميل</span>
+    </div>` : "";
+
+  const receipt = receiptUrl
+    ? `<a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener noreferrer" class="ghost-action" style="min-height:40px;"><i class="ph ph-receipt"></i> إيصال الدفع</a>`
+    : `<span class="pill-soft" style="background:#f8fafc;color:var(--text-muted);border:1px solid var(--border-color);"><i class="ph ph-receipt"></i> لا يوجد إيصال</span>`;
+
+  const chatBtn = `
+    <button type="button" class="ghost-action" onclick="openBookingChat('${doc.id}')" style="min-height:40px;">
+      <i class="ph ph-chat-circle-text"></i> محادثة
+    </button>`;
+
+  return `
+    <div class="booking-card" data-status="${escapeHtml(normalizeText(b.status || "pending"))}" data-booking-id="${doc.id}">
+      <div class="booking-head">
+        <div class="booking-title">
+          <strong>${escapeHtml(guestName)}</strong>
+          <span>${escapeHtml(propertyTitle)} • #${escapeHtml(doc.id.slice(0, 8).toUpperCase())}</span>
         </div>
-      </td>
-      <td>
-        <div style="display:grid; gap:8px;">
-          <div style="font-weight:600;">${escapeHtml(p.locationAr || "—")}</div>
-          <div>${mapBadge}</div>
+        <span class="status-badge ${statusMeta.cls}">
+          <i class="ph ${statusMeta.icon}"></i> ${escapeHtml(statusMeta.label)}
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <img src="${escapeHtml(propertyImage || "images/placeholder.jpg")}" alt="${escapeHtml(propertyTitle)}" class="prop-thumb" onerror="this.src='images/placeholder.jpg'">
+        <div style="display:grid; gap:4px;">
+          <strong style="font-size:.95rem;">${escapeHtml(propertyTitle)}</strong>
+          <span style="font-size:.8rem; color:var(--text-muted);">تاريخ الطلب: ${escapeHtml(formatDateTime(createdAt))}</span>
         </div>
-      </td>
-      <td>
-        <span class="price-pill">${formatCurrency(p.price)}</span>
-      </td>
-      <td>
-        <div style="display:grid; gap:10px;">
-          ${statusBadge}
-          <label class="switch" style="width:max-content;">
-            <input type="checkbox" ${isVisible ? "checked" : ""} onchange="toggleVisibility('${doc.id}', this.checked, this)">
-            <span class="slider round"></span>
-          </label>
+      </div>
+
+      <div class="booking-meta-grid">
+        <div class="booking-meta-item">
+          <label>تاريخ الإقامة</label>
+          <strong>${ci} ← ${co}</strong>
+          <span>${nights} ليالٍ</span>
         </div>
-      </td>
-      <td>
-        <div class="table-actions">
-          <button type="button" onclick="window.open('property.html?id=${doc.id}','_blank')" title="معاينة">
-            <i class="ph ph-eye"></i> معاينة
+        ${occupancy}
+        <div class="booking-meta-item">
+          <label>الهاتف</label>
+          <strong dir="ltr">${escapeHtml(phone || "—")}</strong>
+          <span>رقم التواصل</span>
+        </div>
+        <div class="booking-meta-item">
+          <label>البريد الإلكتروني</label>
+          <strong dir="ltr">${escapeHtml(email || "—")}</strong>
+          <span>بيانات العميل</span>
+        </div>
+        ${addonsHtml}
+        ${notesHtml}
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px dashed var(--border-color); padding-top:14px;">
+        <div>${receipt}</div>
+        <div style="text-align:end;">
+          <div style="font-size:.73rem; color:var(--text-muted); font-weight:800;">الإجمالي</div>
+          <div style="font-size:1.18rem; color:var(--primary); font-weight:800;">${formatCurrency(totalPrice)}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:4px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          ${chatBtn}
+        </div>
+      </div>
+
+      ${(b.status || "pending") === "pending" ? `
+        <div class="booking-actions-row">
+          <button class="btn-approve" onclick="updateBookingStatus('${doc.id}', 'confirmed', this)">
+            <i class="ph-fill ph-check-circle"></i> قبول الحجز
           </button>
-          <button type="button" onclick="openEditModal('${doc.id}')" title="تعديل">
-            <i class="ph ph-pencil-simple"></i> تعديل
+          <button class="btn-reject" onclick="updateBookingStatus('${doc.id}', 'cancelled', this)">
+            <i class="ph-fill ph-x-circle"></i> رفض الحجز
           </button>
-          ${getIsSuperAdmin() ? `
-            <button type="button" onclick="deleteProperty('${doc.id}')" title="حذف" style="color:#e11d48;">
-              <i class="ph ph-trash"></i> حذف
-            </button>` : ""}
-        </div>
-      </td>`;
-    DOM.propertiesTbody.appendChild(tr);
-  });
-
-  updateQuickStats();
-}
-
-async function toggleVisibility(docId, isVisible, checkboxEl) {
-  try {
-    if (checkboxEl) checkboxEl.disabled = true;
-    if (!canAccessProperty(docId)) throw new Error("غير مسموح لك بتعديل هذا العقار");
-
-    await db.collection("properties").doc(docId).update({
-      visible: isVisible,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    showToast(`تم ${isVisible ? "إظهار" : "إخفاء"} العقار بنجاح`, "success");
-    await loadProperties();
-  } catch (err) {
-    console.error("toggleVisibility error:", err);
-    if (checkboxEl) checkboxEl.checked = !isVisible;
-    showToast(err.message || "حدث خطأ أثناء تحديث حالة الظهور", "error");
-  } finally {
-    if (checkboxEl) checkboxEl.disabled = false;
-  }
-}
-
-async function openEditModal(docId) {
-  const editModal = document.getElementById("edit-modal");
-  if (!editModal) return;
-
-  try {
-    if (!canAccessProperty(docId)) {
-      showToast("غير مسموح لك بتعديل هذا العقار", "error");
-      return;
-    }
-
-    const doc = await db.collection("properties").doc(docId).get();
-    if (!doc.exists) {
-      showToast("العقار غير موجود", "error");
-      return;
-    }
-
-    const p = normalizePropertyPayload(doc.data() || {});
-    qs("#edit-prop-id").value = docId;
-    qs("#edit-title-ar").value = p.titleAr || "";
-    qs("#edit-price").value = p.price || "";
-    qs("#edit-desc-ar").value = p.descAr || "";
-
-    const editTitleEn = qs("#edit-title-en");
-    const editLocAr = qs("#edit-loc-ar");
-    const editLocEn = qs("#edit-loc-en");
-    const editDescEn = qs("#edit-desc-en");
-    if (editTitleEn) editTitleEn.value = p.titleEn || "";
-    if (editLocAr) editLocAr.value = p.locationAr || "";
-    if (editLocEn) editLocEn.value = p.locationEn || "";
-    if (editDescEn) editDescEn.value = p.descEn || "";
-
-    const editTypeEl = qs("#edit-type");
-    if (editTypeEl) editTypeEl.value = p.type || "apartment";
-
-    const existingLat = Number.isFinite(p.lat) ? parseFloat(p.lat) : null;
-    const existingLng = Number.isFinite(p.lng) ? parseFloat(p.lng) : null;
-
-    const editLatEl = qs("#edit-lat");
-    const editLngEl = qs("#edit-lng");
-    if (editLatEl) editLatEl.value = existingLat ?? "";
-    if (editLngEl) editLngEl.value = existingLng ?? "";
-
-    qs("#edit-map-picked-badge")?.classList.toggle("visible", !!(existingLat !== null && existingLng !== null));
-
-    editModal.classList.add("active");
-    document.body.classList.add("modal-open");
-
-    if (typeof window.initEditMapFromAdmin === "function") {
-      window.initEditMapFromAdmin(existingLat, existingLng);
-    }
-  } catch (err) {
-    console.error("openEditModal error:", err);
-    showToast("تعذر تحميل بيانات العقار من السيرفر", "error");
-  }
-}
-
-function closeEditModal() {
-  const editModal = document.getElementById("edit-modal");
-  if (editModal) editModal.classList.remove("active");
-  document.body.classList.remove("modal-open");
-}
-
-async function deleteProperty(docId) {
-  if (!getIsSuperAdmin()) {
-    showToast("غير مسموح لك بحذف العقار من هذه الجلسة", "error");
-    return;
-  }
-
-  if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟\nسيتم مسحه من المنصة ولا يمكن التراجع.")) return;
-
-  try {
-    const bookingsSnap = await db.collection("bookings").get().catch(() => null);
-
-    if (bookingsSnap && !bookingsSnap.empty) {
-      const related = bookingsSnap.docs.filter(d => getBookingPropertyId(d.data() || {}) === docId);
-      if (related.length) {
-        const proceed = confirm(`يوجد ${related.length} حجز/حجوزات مرتبطة بهذا العقار.\nسيتم حذف العقار فقط وقد تبقى الحجوزات يتيمة.\nهل تريد المتابعة؟`);
-        if (!proceed) return;
-      }
-    }
-
-    const ownerAccountsSnap = await db.collection(OWNER_ACCOUNTS_COLLECTION)
-      .where("propertyId", "==", docId)
-      .get()
-      .catch(() => null);
-
-    if (ownerAccountsSnap && !ownerAccountsSnap.empty) {
-      const batch = db.batch();
-      ownerAccountsSnap.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-    }
-
-    await db.collection("properties").doc(docId).delete();
-    showToast("تم حذف العقار بنجاح", "success");
-    loadProperties();
-    loadOwnerAccounts();
-    loadPropertiesForSelect();
-  } catch (err) {
-    console.error("deleteProperty error:", err);
-    showToast(`حدث خطأ أثناء الحذف: ${err.message}`, "error");
-  }
+        </div>` : ""}
+    </div>`;
 }
 
 async function loadBookings() {
@@ -1792,188 +1987,41 @@ async function loadBookings() {
   container.innerHTML = `
     <div class="empty-state">
       <i class="ph ph-circle-notch ph-spin"></i>
-      جارٍ جلب الحجوزات...
+      جارٍ تحميل بيانات الحجوزات...
     </div>`;
 
   try {
-    const ownerPropId = getOwnerPropId();
-    const isSuperAdmin = !ownerPropId;
-    let docs = [];
-
-    if (isSuperAdmin) {
-      try {
-        const snap = await db.collection("bookings").orderBy("createdAt", "desc").get();
-        docs = snap.docs;
-      } catch (_) {
-        const snap = await db.collection("bookings").get();
-        docs = snap.docs;
-      }
-    } else {
-      let matched = false;
-
-      for (const field of FIELD_CANDIDATES.bookingPropertyId) {
-        try {
-          const snap = await db.collection("bookings").where(field, "==", ownerPropId).get();
-          if (!snap.empty) {
-            docs = snap.docs;
-            matched = true;
-            break;
-          }
-        } catch (fieldErr) {
-          console.warn(`[loadBookings] field ${field} failed:`, fieldErr.message);
-        }
-      }
-
-      if (!matched) {
-        const allSnap = await db.collection("bookings").get();
-        docs = allSnap.docs.filter(d => getBookingPropertyId(d.data() || {}) === ownerPropId);
-      }
+    let snapshot;
+    try {
+      snapshot = await db.collection(BOOKINGS_COLLECTION).orderBy("createdAt", "desc").get();
+    } catch (_) {
+      snapshot = await db.collection(BOOKINGS_COLLECTION).get();
     }
 
-    docs.sort((a, b) => safeDateMs((b.data() || {}).createdAt) - safeDateMs((a.data() || {}).createdAt));
-
-    if (!docs.length) {
-      renderBookingsEmpty(
-        container,
-        isSuperAdmin ? "لا توجد حجوزات مسجلة حتى الآن." : "لا توجد حجوزات لعقارك حتى الآن.",
-        !isSuperAdmin ? `<div style="font-size:.8rem; color:var(--text-muted); font-family:monospace;">Property ID: ${escapeHtml(ownerPropId)}</div>` : ""
-      );
+    if (snapshot.empty) {
+      APP_STATE.bookingDocs = [];
+      renderBookingsEmpty(container, "لا توجد طلبات حجز حالياً.");
       return;
     }
 
-    const cards = docs.map(doc => {
-      const b = doc.data() || {};
-      const meta = getStatusMeta(b.status || "pending");
-      const ci = formatDate(getBookingCheckIn(b));
-      const co = formatDate(getBookingCheckOut(b));
-      const createdAtStr = formatDateTime(b.createdAt);
-      const docIdShort = doc.id.slice(0, 8).toUpperCase();
-      const guestName = getBookingGuestName(b);
-      const phone = getBookingPhone(b);
-      const email = getBookingEmail(b);
-      const guestId = getBookingGuestId(b);
-      const propertyId = getBookingPropertyId(b);
-      const propertyTitle = normalizeText(getField(b, FIELD_CANDIDATES.bookingPropertyTitle, "—"));
-      const totalPrice = toNumber(getField(b, FIELD_CANDIDATES.bookingPrice, 0), 0);
-      const nights = toNumber(getField(b, FIELD_CANDIDATES.bookingNights, 0), 0);
-      const paymentMethodRaw = normalizeText(getField(b, ["paymentMethod", "payment_method"], "cash")).toLowerCase();
-      const paymentMethod = paymentMethodRaw === "transfer" || paymentMethodRaw === "ccp"
-        ? `<span class="pill-soft" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;"><i class="ph ph-bank"></i> تحويل بنكي</span>`
-        : `<span class="pill-soft" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"><i class="ph ph-money"></i> الدفع عند الوصول</span>`;
+    let docs = snapshot.docs;
+    if (!getIsSuperAdmin()) {
+      docs = docs.filter(doc => canAccessProperty(getBookingPropertyId(doc.data() || {})));
+    }
 
-      const receiptUrl = normalizeText(getField(b, FIELD_CANDIDATES.bookingReceipt, ""));
-      const receipt = (paymentMethodRaw === "transfer" || paymentMethodRaw === "ccp")
-        ? (receiptUrl
-            ? `<a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener noreferrer" class="ghost-action" style="min-height:40px;padding:0 14px;font-size:.82rem;"><i class="ph ph-receipt"></i> عرض الإيصال</a>`
-            : `<span class="pill-soft" style="background:#fef2f2;color:#e11d48;border:1px solid #fecdd3;"><i class="ph ph-warning-circle"></i> الإيصال مفقود</span>`)
-        : "";
+    APP_STATE.bookingDocs = docs;
 
-      const addons = getBookingAddons(b);
-      const notes = getBookingNotes(b);
-      const { adults, children, infants, rooms, guests } = getBookingGuestsMeta(b);
+    if (!docs.length) {
+      renderBookingsEmpty(container, "لا توجد طلبات حجز مرتبطة بهذا العقار.");
+      return;
+    }
 
-      const occupancy = rooms
-        ? `
-          <div class="booking-meta-item">
-            <label>الإقامة</label>
-            <strong>${rooms} غرف</strong>
-            <span>${adults} بالغين${children > 0 ? ` + ${children} أطفال` : ""}${infants > 0 ? ` + ${infants} رضع` : ""}</span>
-          </div>`
-        : `
-          <div class="booking-meta-item">
-            <label>الضيوف</label>
-            <strong>${guests} ضيف</strong>
-            <span>إجمالي عدد المسافرين</span>
-          </div>`;
+    const cards = docs.map(buildBookingCard).filter(Boolean).join("");
 
-      const addonsHtml = addons.length
-        ? `<div class="booking-meta-item" style="grid-column:1/-1;">
-            <label>الإضافات المختارة</label>
-            <span>${escapeHtml(addons.join("، "))}</span>
-          </div>`
-        : "";
-
-      const notesHtml = notes
-        ? `<div class="booking-meta-item" style="grid-column:1/-1;">
-            <label>ملاحظات الحجز</label>
-            <span>${escapeHtml(notes)}</span>
-          </div>`
-        : "";
-
-      const canChat = !!propertyId;
-      const chatBtn = canChat
-        ? `
-          <button class="ghost-action" type="button" onclick="openBookingChat('${doc.id}')" style="min-height:46px;padding:0 16px;border-radius:14px;font-size:.88rem;background:rgba(67,90,191,.08);color:var(--primary);border:1px solid rgba(67,90,191,.12);font-weight:800;">
-            <i class="ph-fill ph-chat-circle-dots"></i> مراسلة العميل
-          </button>`
-        : `
-          <span class="pill-soft" style="background:#f8fafc;color:var(--text-muted);border:1px solid var(--border-color);">
-            <i class="ph ph-chat-circle-slash"></i> لا يمكن فتح المحادثة
-          </span>`;
-
-      return `
-        <div class="booking-card" data-status="${escapeHtml(b.status || "pending")}" data-booking-id="${escapeHtml(doc.id)}" data-guest-id="${escapeHtml(guestId)}" data-property-id="${escapeHtml(propertyId)}">
-          <div class="booking-head">
-            <div class="booking-title">
-              <strong>${escapeHtml(guestName)}</strong>
-              <span>#${docIdShort} · ${createdAtStr}</span>
-            </div>
-            <span class="status-badge ${meta.cls}"><i class="ph ${meta.icon}"></i> ${meta.label}</span>
-          </div>
-
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-            <div class="pill-soft" style="background:rgba(67,90,191,.08);color:var(--primary);border:1px solid rgba(67,90,191,.1);">
-              <i class="ph ph-buildings"></i> ${escapeHtml(propertyTitle)}
-            </div>
-            ${paymentMethod}
-          </div>
-
-          <div class="booking-meta-grid">
-            <div class="booking-meta-item">
-              <label>تاريخ الإقامة</label>
-              <strong>${ci} ← ${co}</strong>
-              <span>${nights} ليالٍ</span>
-            </div>
-            ${occupancy}
-            <div class="booking-meta-item">
-              <label>الهاتف</label>
-              <strong dir="ltr">${escapeHtml(phone || "—")}</strong>
-              <span>رقم التواصل</span>
-            </div>
-            <div class="booking-meta-item">
-              <label>البريد الإلكتروني</label>
-              <strong dir="ltr">${escapeHtml(email || "—")}</strong>
-              <span>بيانات العميل</span>
-            </div>
-            ${addonsHtml}
-            ${notesHtml}
-          </div>
-
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px dashed var(--border-color); padding-top:14px;">
-            <div>${receipt}</div>
-            <div style="text-align:end;">
-              <div style="font-size:.73rem; color:var(--text-muted); font-weight:800;">الإجمالي</div>
-              <div style="font-size:1.18rem; color:var(--primary); font-weight:800;">${formatCurrency(totalPrice)}</div>
-            </div>
-          </div>
-
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:4px;">
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              ${chatBtn}
-            </div>
-          </div>
-
-          ${(b.status || "pending") === "pending" ? `
-            <div class="booking-actions-row">
-              <button class="btn-approve" onclick="updateBookingStatus('${doc.id}', 'confirmed', this)">
-                <i class="ph-fill ph-check-circle"></i> قبول الحجز
-              </button>
-              <button class="btn-reject" onclick="updateBookingStatus('${doc.id}', 'cancelled', this)">
-                <i class="ph-fill ph-x-circle"></i> رفض الحجز
-              </button>
-            </div>` : ""}
-        </div>`;
-    }).join("");
+    if (!cards) {
+      renderBookingsEmpty(container, "لا توجد طلبات حجز قابلة للعرض حالياً.");
+      return;
+    }
 
     container.innerHTML = `<div class="bookings-grid">${cards}</div>`;
     updateQuickStats();
@@ -1995,6 +2043,7 @@ async function loadBookings() {
           خطأ في تحميل الحجوزات: ${escapeHtml(err.message)}
         </div>`;
     }
+    APP_STATE.bookingDocs = [];
     updateQuickStats();
   }
 }
@@ -2016,7 +2065,7 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
   });
 
   try {
-    const bookingRef = db.collection("bookings").doc(docId);
+    const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(docId);
     const snap = await bookingRef.get();
     if (!snap.exists) throw new Error("الحجز غير موجود");
 
@@ -2034,7 +2083,7 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
 
     const guestId = getBookingGuestId(bookingData);
     const chatId = buildChatId(docId, bookingPropId, guestId);
-    const chatRef = db.collection("chats").doc(chatId);
+    const chatRef = db.collection(CHATS_COLLECTION).doc(chatId);
     const chatSnap = await chatRef.get().catch(() => null);
 
     if (chatSnap?.exists) {
@@ -2055,6 +2104,106 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
     });
   }
 };
+
+function updateUploadPreview(file) {
+  const zoneText = document.querySelector(".upload-zone-text");
+  const zoneIcon = document.querySelector(".upload-zone i");
+  const previewBox = qs("#upload-preview-box");
+  const previewImg = qs("#upload-preview-img");
+  const previewName = qs("#upload-preview-name");
+  const previewSize = qs("#upload-preview-size");
+
+  if (!file) {
+    resetUploadPreview();
+    if (DOM.uploadStatus) DOM.uploadStatus.textContent = "";
+    return;
+  }
+
+  if (zoneText) {
+    zoneText.textContent = "✅ " + file.name;
+    zoneText.style.color = "var(--primary)";
+  }
+  if (zoneIcon) zoneIcon.className = "ph-fill ph-check-circle";
+
+  const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
+  if (previewName) previewName.textContent = file.name;
+  if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
+  if (DOM.uploadStatus) DOM.uploadStatus.textContent = "تم اختيار ملف الصورة بنجاح";
+
+  if (file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (previewImg) previewImg.src = e.target.result;
+      previewBox?.classList.add("visible");
+    };
+    reader.readAsDataURL(file);
+  } else {
+    previewBox?.classList.remove("visible");
+  }
+}
+
+function resetUploadPreview() {
+  const zoneText = document.querySelector(".upload-zone-text");
+  const zoneIcon = document.querySelector(".upload-zone i");
+  const previewBox = qs("#upload-preview-box");
+  const previewImg = qs("#upload-preview-img");
+  const previewName = qs("#upload-preview-name");
+  const previewSize = qs("#upload-preview-size");
+
+  if (zoneText) {
+    zoneText.textContent = "اضغط هنا أو اسحب الصورة";
+    zoneText.style.color = "";
+  }
+  if (zoneIcon) zoneIcon.className = "ph ph-cloud-arrow-up";
+  if (previewImg) previewImg.removeAttribute("src");
+  if (previewName) previewName.textContent = "معاينة الصورة";
+  if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
+  previewBox?.classList.remove("visible");
+}
+
+function updateEditUploadPreview(file) {
+  const zoneText = qs("#edit-upload-zone-text");
+  const previewBox = qs("#edit-upload-preview-box");
+  const previewImg = qs("#edit-upload-preview-img");
+  const previewName = qs("#edit-upload-preview-name");
+  const previewSize = qs("#edit-upload-preview-size");
+
+  if (!file) {
+    resetEditUploadPreview();
+    return;
+  }
+
+  if (zoneText) zoneText.textContent = "✅ " + file.name;
+
+  const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
+  if (previewName) previewName.textContent = file.name;
+  if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
+
+  if (file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (previewImg) previewImg.src = e.target.result;
+      previewBox?.classList.add("visible");
+    };
+    reader.readAsDataURL(file);
+  } else {
+    previewBox?.classList.remove("visible");
+  }
+}
+
+function resetEditUploadPreview() {
+  const zoneText = qs("#edit-upload-zone-text");
+  const previewBox = qs("#edit-upload-preview-box");
+  const previewImg = qs("#edit-upload-preview-img");
+  const previewName = qs("#edit-upload-preview-name");
+  const previewSize = qs("#edit-upload-preview-size");
+
+  if (zoneText) zoneText.textContent = "اختر صورة جديدة إن أردت استبدال الحالية";
+  if (previewImg) previewImg.removeAttribute("src");
+  if (previewName) previewName.textContent = "معاينة الصورة الجديدة";
+  if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
+  previewBox?.classList.remove("visible");
+}
 
 if (DOM.addForm) {
   DOM.addForm.addEventListener("submit", async function(e) {
@@ -2118,7 +2267,7 @@ if (DOM.addForm) {
       const validationError = validatePropertyPayload(newProperty, { requireImage: true, requireMap: true });
       if (validationError) throw new Error(validationError);
 
-      await db.collection("properties").add({
+      await db.collection(PROPERTIES_COLLECTION).add({
         ...newProperty,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2130,13 +2279,13 @@ if (DOM.addForm) {
       if (qs("#prop-lat")) qs("#prop-lat").value = "";
       if (qs("#prop-lng")) qs("#prop-lng").value = "";
 
-      if (typeof window.resetUploadPreview === "function") window.resetUploadPreview();
+      resetUploadPreview();
       if (typeof window._resetAddMap === "function") window._resetAddMap();
 
       showToast("تمت إضافة العقار بنجاح إلى منصة OreBooking", "success");
       switchTab("manage-props");
-      loadProperties();
-      loadPropertiesForSelect();
+      await loadProperties();
+      await loadPropertiesForSelect();
     } catch (err) {
       console.error("addProperty error:", err);
       showToast(`حدث خطأ أثناء إضافة العقار: ${err.message}`, "error");
@@ -2217,7 +2366,7 @@ if (DOM.editForm) {
         updateData.imageUrl = await uploadToCloudinary(imageFile);
       }
 
-      await db.collection("properties").doc(docId).update(updateData);
+      await db.collection(PROPERTIES_COLLECTION).doc(docId).update(updateData);
       closeEditModal();
       await loadProperties();
       await loadPropertiesForSelect();
@@ -2239,22 +2388,24 @@ if (DOM.loginForm) {
   DOM.loginForm.addEventListener("submit", async function(e) {
     e.preventDefault();
 
+    clearLoginMessage();
+
     const user = qs("#admin-user")?.value.trim() || "";
     const pass = qs("#admin-pass")?.value.trim() || "";
-    const loginBtn = DOM.loginForm.querySelector('button[type="submit"]');
 
     if (!user || !pass) {
-      showLoginError("يرجى إدخال اسم المستخدم وكلمة المرور.");
+      showLoginMessage("يرجى إدخال اسم المستخدم وكلمة المرور.", "error");
       return;
     }
 
-    setButtonLoading(loginBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ تسجيل الدخول...`);
+    setButtonLoading(DOM.loginBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ تسجيل الدخول...`);
 
     try {
       if (user === ADMIN_USER && pass === ADMIN_PASS) {
         setAdminSession("superadmin");
         showAdminLayout();
         setNavVisibilityByRole();
+        showLoginMessage("تم تسجيل الدخول بنجاح.", "success");
         showToast("تم تسجيل الدخول كمدير عام بنجاح", "success");
         await loadProperties();
         await loadBookings();
@@ -2268,26 +2419,114 @@ if (DOM.loginForm) {
         setAdminSession("owner", ownerLogin.docId, ownerLogin.propName, ownerLogin.accountId, ownerLogin.username);
         showAdminLayout();
         setNavVisibilityByRole();
+        showLoginMessage("تم تسجيل الدخول بنجاح.", "success");
         showToast(`تم تسجيل الدخول كمالك: ${ownerLogin.propName}`, "success");
         await loadProperties();
         await loadBookings();
         return;
       }
 
-      showLoginError("اسم المستخدم أو كلمة المرور غير صحيحة");
+      showLoginMessage("اسم المستخدم أو كلمة المرور غير صحيحة", "error");
     } catch (err) {
       console.error("login error:", err);
-      showLoginError("تعذر تسجيل الدخول حالياً، حاول مرة أخرى.");
+      showLoginMessage("تعذر تسجيل الدخول حالياً، حاول مرة أخرى.", "error");
     } finally {
-      setButtonLoading(loginBtn, false, null, `<i class="ph ph-sign-in"></i> تسجيل الدخول`);
+      setButtonLoading(DOM.loginBtn, false, null, `<i class="ph ph-sign-in"></i> تسجيل الدخول`);
     }
   });
 }
 
+function bindSearch() {
+  if (!DOM.propertySearchInput || DOM.propertySearchInput.dataset.bound) return;
+  DOM.propertySearchInput.dataset.bound = "1";
+
+  DOM.propertySearchInput.addEventListener("input", function() {
+    APP_STATE.currentPropertyFilter = this.value || "";
+    renderPropertiesTable(getFilteredPropertyDocs());
+  });
+}
+
+function bindStaticButtons() {
+  if (DOM.logoutBtn && !DOM.logoutBtn.dataset.bound) {
+    DOM.logoutBtn.dataset.bound = "1";
+    DOM.logoutBtn.addEventListener("click", () => {
+      if (!confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
+      clearAdminSession();
+      showToast("تم تسجيل الخروج بنجاح", "success");
+      setTimeout(() => window.location.reload(), 350);
+    });
+  }
+
+  if (DOM.refreshOwnerAccountsBtn && !DOM.refreshOwnerAccountsBtn.dataset.bound) {
+    DOM.refreshOwnerAccountsBtn.dataset.bound = "1";
+    DOM.refreshOwnerAccountsBtn.addEventListener("click", async () => {
+      await loadOwnerAccounts();
+      await loadPropertiesForSelect();
+    });
+  }
+
+  if (DOM.refreshPropertiesBtn && !DOM.refreshPropertiesBtn.dataset.bound) {
+    DOM.refreshPropertiesBtn.dataset.bound = "1";
+    DOM.refreshPropertiesBtn.addEventListener("click", async () => {
+      await loadProperties();
+      if (getIsSuperAdmin()) await loadPropertiesForSelect();
+    });
+  }
+
+  if (DOM.refreshBookingsBtn && !DOM.refreshBookingsBtn.dataset.bound) {
+    DOM.refreshBookingsBtn.dataset.bound = "1";
+    DOM.refreshBookingsBtn.addEventListener("click", async () => {
+      await loadBookings();
+    });
+  }
+
+  document.querySelectorAll("[data-tab-target]").forEach(btn => {
+    if (btn.dataset.bound === "1") return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => switchTab(btn.dataset.tabTarget));
+  });
+
+  qs("#close-edit-modal-btn")?.addEventListener("click", closeEditModal);
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      const overlay = document.getElementById("admin-chat-overlay");
+      if (overlay?.classList.contains("active")) {
+        closeAdminChatModal();
+        return;
+      }
+      closeEditModal();
+      document.getElementById("admin-sidebar")?.classList.remove("open");
+    }
+  });
+}
+
+function initUploadHooks() {
+  const addImageInput = qs("#prop-image");
+  if (addImageInput && !addImageInput.dataset.bound) {
+    addImageInput.dataset.bound = "1";
+    addImageInput.addEventListener("change", function() {
+      updateUploadPreview(this.files?.[0] || null);
+    });
+  }
+
+  const editImageInput = qs("#edit-image");
+  if (editImageInput && !editImageInput.dataset.bound) {
+    editImageInput.dataset.bound = "1";
+    editImageInput.addEventListener("change", function() {
+      updateEditUploadPreview(this.files?.[0] || null);
+    });
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   ensureAdminChatModal();
+  bindSearch();
+  bindStaticButtons();
+  initUploadHooks();
 
   const hasSession = (!!localStorage.getItem(SESSION_KEYS.role) || !!localStorage.getItem(SESSION_KEYS.ownerPropId)) && ensureValidSession();
+
   if (hasSession) {
     showAdminLayout();
     setNavVisibilityByRole();
@@ -2302,53 +2541,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     showLoginLayout();
   }
 
-  const logoutBtn = document.getElementById("admin-logout-btn");
-  if (logoutBtn && !logoutBtn.dataset.bound) {
-    logoutBtn.dataset.bound = "1";
-    logoutBtn.addEventListener("click", () => {
-      if (!confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
-      clearAdminSession();
-      showToast("تم تسجيل الخروج بنجاح", "success");
-      setTimeout(() => window.location.reload(), 350);
-    });
-  }
-
-  const refreshOwnersBtn = document.getElementById("refresh-owner-accounts-btn");
-  if (refreshOwnersBtn && !refreshOwnersBtn.dataset.bound) {
-    refreshOwnersBtn.dataset.bound = "1";
-    refreshOwnersBtn.addEventListener("click", async () => {
-      await loadOwnerAccounts();
-      await loadPropertiesForSelect();
-    });
-  }
-
-  const refreshPropsBtn = document.getElementById("refresh-properties-btn");
-  if (refreshPropsBtn && !refreshPropsBtn.dataset.bound) {
-    refreshPropsBtn.dataset.bound = "1";
-    refreshPropsBtn.addEventListener("click", async () => {
-      await loadProperties();
-      if (getIsSuperAdmin()) await loadPropertiesForSelect();
-    });
-  }
-
-  const refreshBookingsBtn = document.getElementById("refresh-bookings-btn");
-  if (refreshBookingsBtn && !refreshBookingsBtn.dataset.bound) {
-    refreshBookingsBtn.dataset.bound = "1";
-    refreshBookingsBtn.addEventListener("click", async () => {
-      await loadBookings();
-    });
-  }
-});
-
-document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape") {
-    const overlay = document.getElementById("admin-chat-overlay");
-    if (overlay?.classList.contains("active")) {
-      closeAdminChatModal();
-      return;
-    }
-    closeEditModal();
-  }
+  updatePageMeta("manage-props");
+  updateQuickStats();
 });
 
 window.fetchProperties = loadProperties;
@@ -2391,3 +2585,5 @@ window.getBookingNotes = getBookingNotes;
 window.getBookingAddons = getBookingAddons;
 window.getBookingGuestsMeta = getBookingGuestsMeta;
 window.uploadToCloudinary = uploadToCloudinary;
+window.resetUploadPreview = resetUploadPreview;
+window.resetEditUploadPreview = resetEditUploadPreview;
