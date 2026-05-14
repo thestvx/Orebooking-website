@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="لوحة تحكم OreBooking لإدارة العقارات والحجوزات وحسابات الملاك." />
   <meta name="theme-color" content="#435abf" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>لوحة التحكم - OreBooking</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -184,34 +187,12 @@
       line-height: 1.7;
     }
 
-    .login-message {
-      padding: 14px 16px;
-      border-radius: 14px;
-      font-size: .9rem;
-      font-weight: 700;
-      margin-bottom: 18px;
-      display: none;
-      align-items: center;
-      gap: 10px;
-      line-height: 1.7;
-    }
-
-    .login-message.show { display: flex; }
-    .login-message.error {
-      background: var(--danger-bg);
-      color: var(--danger-text);
-      border: 1px solid var(--danger-border);
-    }
-    .login-message.success {
-      background: var(--success-bg);
-      color: var(--success-text);
-      border: 1px solid var(--success-border);
-    }
-    .login-message.info {
-      background: rgba(14,165,233,.08);
-      color: var(--info);
-      border: 1px solid rgba(14,165,233,.18);
-    }
+    .font-bold { font-weight: 800; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 16px; }
+    .mt-4 { margin-top: 24px; }
+    .text-danger { color: var(--error); }
+    .text-primary { color: var(--primary); }
 
     .logo-img {
       height: 46px;
@@ -219,13 +200,6 @@
       max-width: 170px;
       object-fit: contain;
     }
-
-    .font-bold { font-weight: 800; }
-    .mt-2 { margin-top: 8px; }
-    .mt-3 { margin-top: 16px; }
-    .mt-4 { margin-top: 24px; }
-    .text-danger { color: var(--error); }
-    .text-primary { color: var(--primary); }
 
     .primary-btn {
       min-height: 48px;
@@ -1563,8 +1537,6 @@
         لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات وحسابات الملاك بشكل احترافي وآمن.
       </p>
 
-      <div id="admin-login-message" class="login-message" role="alert" aria-live="polite"></div>
-
       <form id="admin-login-form" novalidate>
         <div class="input-group">
           <label for="admin-user">اسم المستخدم</label>
@@ -1601,19 +1573,19 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" type="button" data-tab-target="manage-props">
+        <button class="nav-item active" type="button" data-tab-target="manage-props" onclick="switchTab('manage-props')">
           <i class="ph ph-buildings"></i> إدارة العقارات
         </button>
 
-        <button class="nav-item" id="nav-add-property" type="button" data-tab-target="add-property">
+        <button class="nav-item" id="nav-add-property" type="button" data-tab-target="add-property" onclick="switchTab('add-property')">
           <i class="ph ph-plus-square"></i> إضافة عقار جديد
         </button>
 
-        <button class="nav-item" id="nav-owner-accounts" type="button" data-tab-target="owner-accounts">
+        <button class="nav-item" id="nav-owner-accounts" type="button" data-tab-target="owner-accounts" onclick="switchTab('owner-accounts')">
           <i class="ph ph-users-three"></i> حسابات الملاك
         </button>
 
-        <button class="nav-item" type="button" data-tab-target="bookings">
+        <button class="nav-item" type="button" data-tab-target="bookings" onclick="switchTab('bookings')">
           <i class="ph ph-calendar-check"></i> الحجوزات
         </button>
 
@@ -1742,8 +1714,8 @@
                 </div>
 
                 <div class="input-group">
-                  <label for="prop-title-en">اسم العقار (إنجليزي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" required />
+                  <label for="prop-title-en">اسم العقار (إنجليزي)</label>
+                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" />
                 </div>
 
                 <div class="input-group" style="grid-column:1/-1;">
@@ -1753,8 +1725,8 @@
                 </div>
 
                 <div class="input-group" style="grid-column:1/-1;">
-                  <label for="prop-desc-en">وصف العقار (إنجليزي) <span class="text-danger">*</span></label>
-                  <textarea id="prop-desc-en" rows="4" placeholder="Write a polished and attractive English description..." required></textarea>
+                  <label for="prop-desc-en">وصف العقار (إنجليزي)</label>
+                  <textarea id="prop-desc-en" rows="4" placeholder="Write a polished and attractive English description..."></textarea>
                 </div>
               </div>
             </div>
@@ -1823,8 +1795,8 @@
                 </div>
 
                 <div class="input-group">
-                  <label for="prop-loc-en">العنوان النصي (إنجليزي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" required />
+                  <label for="prop-loc-en">العنوان النصي (إنجليزي)</label>
+                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" />
                 </div>
               </div>
 
@@ -2106,1182 +2078,322 @@
   </div>
 
   <script>
-    const adminState = {
-      currentTab: "manage-props",
-      properties: [],
-      bookings: [],
-      ownerAccounts: [],
-      addMap: null,
-      addMarker: null,
-      editMap: null,
-      editMarker: null,
-      selectedEditProperty: null,
-      currentUser: null
-    };
-
-    const pageMeta = {
-      "manage-props": {
-        title: "إدارة العقارات",
-        subtitle: "واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح."
-      },
-      "add-property": {
-        title: "إضافة عقار جديد",
-        subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
-      },
-      "owner-accounts": {
-        title: "حسابات ملاك العقارات",
-        subtitle: "أنشئ حسابات خاصة لأصحاب العقارات وحدد من يمكنه الدخول إلى لوحة التحكم الخاصة بعقاره."
-      },
-      "bookings": {
-        title: "إدارة الحجوزات",
-        subtitle: "مراجعة طلبات الحجز، اعتمادها أو رفضها، ومتابعة الحالة الحالية بسهولة."
+    (function () {
+      function setThemeFromStorage() {
+        const theme = localStorage.getItem("ore_theme") || "light";
+        document.body.classList.toggle("dark", theme === "dark");
+        document.documentElement.classList.toggle("dark", theme === "dark");
       }
-    };
 
-    const demoProperties = [
-      {
-        id: "prop_1",
-        titleAr: "شاليه الأحلام",
-        titleEn: "Dream Chalet",
-        descAr: "شاليه مريح بإطلالة جميلة وموقع ممتاز.",
-        descEn: "Comfortable chalet with a beautiful view and great location.",
-        locationAr: "حي الرياض، الجزائر العاصمة",
-        locationEn: "Riad District, Algiers",
-        type: "villa",
-        price: 15000,
-        visible: true,
-        image: "images/palm-garden-01.jpg",
-        lat: 36.7538,
-        lng: 3.0588
-      },
-      {
-        id: "prop_2",
-        titleAr: "منتجع الواحة",
-        titleEn: "Oasis Resort",
-        descAr: "منتجع هادئ للعائلات مع جلسات خارجية.",
-        descEn: "Quiet family resort with outdoor seating.",
-        locationAr: "تقرت، الجزائر",
-        locationEn: "Touggourt, Algeria",
-        type: "resort",
-        price: 22000,
-        visible: false,
-        image: "images/palmgarden01.jpg",
-        lat: 33.1053,
-        lng: 6.0635
-      }
-    ];
+      function updatePageMetaFromNav(tab) {
+        const title = document.getElementById("page-title");
+        const subtitle = document.getElementById("page-subtitle");
+        const profileName = document.getElementById("admin-profile-name");
+        const profileRole = document.getElementById("admin-profile-role");
 
-    const demoBookings = [
-      {
-        id: "bk_1001",
-        guestName: "أحمد محمد",
-        propertyName: "شاليه الأحلام",
-        checkIn: "2026-05-18",
-        checkOut: "2026-05-20",
-        guests: 4,
-        total: "30,000 DZD",
-        status: "pending"
-      },
-      {
-        id: "bk_1002",
-        guestName: "Sara Ali",
-        propertyName: "منتجع الواحة",
-        checkIn: "2026-05-22",
-        checkOut: "2026-05-25",
-        guests: 2,
-        total: "66,000 DZD",
-        status: "confirmed"
-      }
-    ];
+        const map = {
+          "manage-props": {
+            title: "إدارة العقارات",
+            subtitle: "واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح."
+          },
+          "add-property": {
+            title: "إضافة عقار جديد",
+            subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
+          },
+          "owner-accounts": {
+            title: "حسابات ملاك العقارات",
+            subtitle: "أنشئ حسابات خاصة لأصحاب العقارات وحدد من يمكنه الدخول إلى لوحة التحكم الخاصة بعقاره."
+          },
+          "bookings": {
+            title: "إدارة الحجوزات",
+            subtitle: "مراجعة طلبات الحجز، اعتمادها أو رفضها، ومتابعة الحالة الحالية بسهولة."
+          }
+        };
 
-    const demoOwnerAccounts = [
-      {
-        id: "owner_1",
-        fullName: "مالك شاليه الأحلام",
-        username: "owner_dream",
-        password: "123456",
-        propertyId: "prop_1",
-        propertyName: "شاليه الأحلام",
-        active: true
-      }
-    ];
+        const current = map[tab] || map["manage-props"];
+        if (title) title.textContent = current.title;
+        if (subtitle) subtitle.textContent = current.subtitle;
 
-    function qs(id) {
-      return document.getElementById(id);
-    }
+        const isOwnerMode = !!localStorage.getItem("ownerPropId");
+        const ownerName = localStorage.getItem("ownerPropName") || "صاحب العقار";
+        const ownerUsername = localStorage.getItem("ownerUsername") || "";
 
-    function safeText(v, fallback = "—") {
-      return String(v ?? "").trim() || fallback;
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function formatPrice(v) {
-      const n = Number(v || 0);
-      return `${n.toLocaleString("en-US")} DZD`;
-    }
-
-    function propertyTypeLabel(type) {
-      const map = {
-        apartment: "شقة",
-        villa: "فيلا",
-        resort: "منتجع",
-        pool: "مسبح"
-      };
-      return map[type] || "عقار";
-    }
-
-    function loginMessage(type, text) {
-      const box = qs("admin-login-message");
-      if (!box) return;
-      box.className = `login-message ${type} show`;
-      box.innerHTML = `<i class="${type === "success" ? "ph ph-check-circle" : type === "info" ? "ph ph-info" : "ph ph-warning-circle"}"></i><span>${text}</span>`;
-    }
-
-    function clearLoginMessage() {
-      const box = qs("admin-login-message");
-      if (!box) return;
-      box.className = "login-message";
-      box.innerHTML = "";
-    }
-
-    function setThemeFromStorage() {
-      const theme = localStorage.getItem("ore_theme") || "light";
-      document.body.classList.toggle("dark", theme === "dark");
-      document.documentElement.classList.toggle("dark", theme === "dark");
-    }
-
-    function getStoredAdminSession() {
-      try {
-        return JSON.parse(sessionStorage.getItem("ore_admin_session") || localStorage.getItem("ore_admin_session") || "null");
-      } catch {
-        return null;
-      }
-    }
-
-    function storeAdminSession(data) {
-      sessionStorage.setItem("ore_admin_session", JSON.stringify(data));
-      localStorage.setItem("ore_admin_session", JSON.stringify(data));
-    }
-
-    function clearAdminSession() {
-      sessionStorage.removeItem("ore_admin_session");
-      localStorage.removeItem("ore_admin_session");
-    }
-
-    function isSuperAdmin() {
-      return adminState.currentUser?.type === "superadmin";
-    }
-
-    function isOwnerUser() {
-      return adminState.currentUser?.type === "owner";
-    }
-
-    function tryLogin(username, password) {
-      const customUsers = window.OREBOOKING_ADMIN_USERS;
-      if (Array.isArray(customUsers) && customUsers.length) {
-        const found = customUsers.find(u => u.username === username && u.password === password);
-        if (found) {
-          return {
-            ok: true,
-            user: {
-              type: found.type || "superadmin",
-              name: found.name || found.username,
-              role: found.role || "إدارة النظام",
-              username: found.username || username
-            }
-          };
+        if (profileName && profileRole) {
+          if (isOwnerMode) {
+            profileName.textContent = ownerName;
+            profileRole.textContent = ownerUsername ? `حساب مالك • ${ownerUsername}` : "حساب مالك";
+          } else {
+            profileName.textContent = "مدير النظام";
+            profileRole.textContent = "بصلاحيات كاملة";
+          }
         }
       }
 
-      if (username === "admin" && password === "admin") {
-        return {
-          ok: true,
-          user: {
-            type: "superadmin",
-            name: "مدير النظام",
-            role: "بصلاحيات كاملة",
-            username: "admin"
+      function bindSidebarUi() {
+        const mobileToggle = document.getElementById("admin-mobile-toggle");
+        const sidebar = document.getElementById("admin-sidebar");
+
+        mobileToggle?.addEventListener("click", () => {
+          sidebar?.classList.toggle("open");
+        });
+
+        document.addEventListener("click", e => {
+          if (window.innerWidth > 1100) return;
+          if (!sidebar || !mobileToggle) return;
+          if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
+          sidebar.classList.remove("open");
+        });
+
+        document.querySelectorAll("[data-tab-target]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            updatePageMetaFromNav(btn.dataset.tabTarget);
+            sidebar?.classList.remove("open");
+          });
+        });
+      }
+
+      function bindUploadPreview(inputId, previewBoxId, imgId, nameId, sizeId, textSelector, statusId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+
+        input.addEventListener("change", function () {
+          const file = this.files?.[0] || null;
+          const previewBox = document.getElementById(previewBoxId);
+          const img = document.getElementById(imgId);
+          const name = document.getElementById(nameId);
+          const size = document.getElementById(sizeId);
+          const status = statusId ? document.getElementById(statusId) : null;
+          const text = textSelector ? document.querySelector(textSelector) : null;
+
+          if (!file) {
+            previewBox?.classList.remove("visible");
+            if (img) img.removeAttribute("src");
+            if (name) name.textContent = "معاينة الصورة";
+            if (size) size.textContent = "سيظهر اسم وحجم الملف هنا";
+            if (status) status.textContent = "";
+            if (text) text.textContent = inputId === "edit-image" ? "اختر صورة جديدة إن أردت استبدال الحالية" : "اضغط هنا أو اسحب الصورة";
+            return;
           }
-        };
-      }
 
-      const owner = adminState.ownerAccounts.find(
-        item => item.username === username && item.password === password && item.active !== false
-      );
-
-      if (owner) {
-        return {
-          ok: true,
-          user: {
-            type: "owner",
-            name: owner.fullName || owner.username,
-            role: `مالك عقار: ${owner.propertyName || owner.propertyId || "عقار خاص"}`,
-            username: owner.username,
-            propertyId: owner.propertyId,
-            propertyName: owner.propertyName
+          if (file.size > 5 * 1024 * 1024) {
+            alert("حجم الصورة يتجاوز 5 ميجابايت، يرجى اختيار صورة أصغر.");
+            input.value = "";
+            previewBox?.classList.remove("visible");
+            if (img) img.removeAttribute("src");
+            return;
           }
-        };
+
+          if (text) text.textContent = "✅ " + file.name;
+          if (name) name.textContent = file.name;
+          if (size) size.textContent = `الحجم: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+          if (status) status.textContent = "تم اختيار ملف الصورة بنجاح";
+
+          if (file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.onload = e => {
+              if (img) img.src = e.target.result;
+              previewBox?.classList.add("visible");
+            };
+            reader.readAsDataURL(file);
+          }
+        });
       }
 
-      return { ok: false };
-    }
-
-    function setAdminProfile(user) {
-      qs("admin-profile-name").textContent = user?.name || "مدير النظام";
-      qs("admin-profile-role").textContent = user?.role || "بصلاحيات كاملة";
-    }
-
-    function setNavVisibilityByRole() {
-      const addPropertyNav = qs("nav-add-property");
-      const ownerAccountsNav = qs("nav-owner-accounts");
-
-      if (isSuperAdmin()) {
-        if (addPropertyNav) addPropertyNav.style.display = "";
-        if (ownerAccountsNav) ownerAccountsNav.style.display = "";
-      } else {
-        if (addPropertyNav) addPropertyNav.style.display = "none";
-        if (ownerAccountsNav) ownerAccountsNav.style.display = "none";
-      }
-    }
-
-    function showAdminLayout() {
-      qs("admin-login-screen").style.display = "none";
-      qs("admin-layout").style.display = "flex";
-    }
-
-    function showLoginScreen() {
-      qs("admin-login-screen").style.display = "grid";
-      qs("admin-layout").style.display = "none";
-    }
-
-    function handleAdminLogin(event) {
-      event.preventDefault();
-      clearLoginMessage();
-
-      const username = qs("admin-user").value.trim();
-      const password = qs("admin-pass").value.trim();
-      const btn = qs("admin-login-btn");
-
-      if (!username || !password) {
-        loginMessage("error", "يرجى إدخال اسم المستخدم وكلمة المرور.");
-        return;
+      function resetAddPropertyUi() {
+        document.getElementById("reset-property-form-btn")?.addEventListener("click", () => {
+          document.getElementById("add-property-form")?.reset();
+          document.getElementById("map-picked-badge")?.classList.remove("visible");
+          document.getElementById("prop-lat").value = "";
+          document.getElementById("prop-lng").value = "";
+          document.getElementById("upload-status").textContent = "";
+          document.getElementById("upload-preview-box")?.classList.remove("visible");
+          document.getElementById("upload-preview-img")?.removeAttribute("src");
+          document.getElementById("upload-preview-name").textContent = "معاينة الصورة";
+          document.getElementById("upload-preview-size").textContent = "سيظهر اسم وحجم الملف هنا";
+          const text = document.querySelector(".upload-zone-text");
+          if (text) text.textContent = "اضغط هنا أو اسحب الصورة";
+          if (typeof window._resetAddMap === "function") window._resetAddMap();
+        });
       }
 
-      btn.disabled = true;
-      const result = tryLogin(username, password);
+      function initAddMap() {
+        const mapEl = document.getElementById("admin-map-picker");
+        if (!mapEl || typeof L === "undefined") return;
 
-      setTimeout(() => {
-        btn.disabled = false;
-
-        if (!result.ok) {
-          loginMessage("error", "بيانات الدخول غير صحيحة.");
+        if (window.__adminAddMap) {
+          setTimeout(() => window.__adminAddMap.invalidateSize(), 100);
           return;
         }
 
-        adminState.currentUser = result.user;
-        storeAdminSession(result.user);
-        setAdminProfile(result.user);
-        setNavVisibilityByRole();
-        loginMessage("success", "تم تسجيل الدخول بنجاح.");
-        showAdminLayout();
-
-        if (isOwnerUser()) {
-          switchTab("manage-props");
-        } else {
-          switchTab("manage-props");
-        }
-
-        loadProperties();
-        loadOwnerAccounts();
-        loadBookings();
-      }, 350);
-    }
-
-    function logoutAdmin() {
-      clearAdminSession();
-      adminState.currentUser = null;
-      showLoginScreen();
-      qs("admin-login-form").reset();
-      clearLoginMessage();
-      loginMessage("info", "تم تسجيل الخروج بنجاح.");
-    }
-
-    function switchTab(tab) {
-      if ((tab === "add-property" || tab === "owner-accounts") && !isSuperAdmin()) {
-        tab = "manage-props";
-      }
-
-      adminState.currentTab = tab;
-
-      document.querySelectorAll(".tab-pane").forEach(pane => {
-        pane.classList.toggle("active", pane.id === `tab-${tab}`);
-      });
-
-      document.querySelectorAll("[data-tab-target]").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.tabTarget === tab);
-      });
-
-      const meta = pageMeta[tab] || pageMeta["manage-props"];
-      qs("page-title").textContent = meta.title;
-      qs("page-subtitle").textContent = meta.subtitle;
-
-      qs("admin-sidebar")?.classList.remove("open");
-
-      if (tab === "add-property") {
-        setTimeout(initAddMap, 180);
-      }
-
-      if (tab === "owner-accounts") {
-        renderOwnerPropertyOptions();
-        renderOwnerAccountsTable();
-      }
-
-      updateAdminQuickStats();
-    }
-
-    function getVisiblePropertiesForCurrentUser() {
-      if (isSuperAdmin()) return adminState.properties;
-
-      if (isOwnerUser()) {
-        return adminState.properties.filter(
-          prop => prop.id === adminState.currentUser?.propertyId
-        );
-      }
-
-      return adminState.properties;
-    }
-
-    function getVisibleBookingsForCurrentUser() {
-      if (isSuperAdmin()) return adminState.bookings;
-
-      if (isOwnerUser()) {
-        return adminState.bookings.filter(
-          booking => booking.propertyName === adminState.currentUser?.propertyName
-        );
-      }
-
-      return adminState.bookings;
-    }
-
-    function renderPropertiesTable(items = getVisiblePropertiesForCurrentUser()) {
-      const tbody = qs("properties-tbody");
-      if (!tbody) return;
-
-      if (!items.length) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6">
-              <div class="empty-state" style="padding:28px;">
-                <i class="ph ph-house"></i>
-                لا توجد عقارات حالياً.
-              </div>
-            </td>
-          </tr>
-        `;
-        updateAdminQuickStats();
-        return;
-      }
-
-      tbody.innerHTML = items.map(prop => `
-        <tr data-id="${prop.id}">
-          <td><img class="prop-thumb" src="${prop.image || 'images/palmgarden01.jpg'}" alt="${escapeHtml(safeText(prop.titleAr))}"></td>
-          <td>
-            <div class="prop-name-cell">
-              <strong>${escapeHtml(safeText(prop.titleAr))}</strong>
-              <span>${escapeHtml(safeText(prop.titleEn))}</span>
-            </div>
-          </td>
-          <td>${escapeHtml(safeText(prop.locationAr))}</td>
-          <td><span class="price-pill">${formatPrice(prop.price)}</span></td>
-          <td>
-            <span class="status-badge ${prop.visible ? 'visible' : 'hidden'}">
-              ${prop.visible ? 'ظاهر' : 'مخفي'}
-            </span>
-          </td>
-          <td>
-            <div class="table-actions">
-              <button type="button" data-action="edit-property" data-id="${prop.id}">
-                <i class="ph ph-pencil-simple"></i> تعديل
-              </button>
-              <button type="button" data-action="toggle-property" data-id="${prop.id}">
-                <i class="ph ph-eye${prop.visible ? '-slash' : ''}"></i>
-                ${prop.visible ? 'إخفاء' : 'إظهار'}
-              </button>
-              <button type="button" data-action="delete-property" data-id="${prop.id}">
-                <i class="ph ph-trash"></i> حذف
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join("");
-
-      updateAdminQuickStats();
-    }
-
-    function renderBookings(items = getVisibleBookingsForCurrentUser()) {
-      const container = qs("bookings-container");
-      if (!container) return;
-
-      if (!items.length) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <i class="ph ph-calendar-blank"></i>
-            لا توجد طلبات حجز حالياً.
-          </div>
-        `;
-        updateAdminQuickStats();
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="bookings-grid">
-          ${items.map(booking => `
-            <article class="booking-card" data-booking-id="${booking.id}">
-              <div class="booking-head">
-                <div class="booking-title">
-                  <strong>${escapeHtml(safeText(booking.guestName))}</strong>
-                  <span>${escapeHtml(safeText(booking.propertyName))} • ${escapeHtml(safeText(booking.id))}</span>
-                </div>
-                <span class="status-badge ${booking.status === "confirmed" ? "confirmed" : booking.status === "rejected" ? "rejected" : "pending"}">
-                  ${booking.status === "confirmed" ? "مؤكد" : booking.status === "rejected" ? "مرفوض" : "معلق"}
-                </span>
-              </div>
-
-              <div class="booking-meta-grid">
-                <div class="booking-meta-item">
-                  <label>تاريخ الدخول</label>
-                  <strong>${escapeHtml(safeText(booking.checkIn))}</strong>
-                </div>
-                <div class="booking-meta-item">
-                  <label>تاريخ الخروج</label>
-                  <strong>${escapeHtml(safeText(booking.checkOut))}</strong>
-                </div>
-                <div class="booking-meta-item">
-                  <label>عدد الضيوف</label>
-                  <span>${escapeHtml(safeText(booking.guests))}</span>
-                </div>
-                <div class="booking-meta-item">
-                  <label>الإجمالي</label>
-                  <strong>${escapeHtml(safeText(booking.total))}</strong>
-                </div>
-              </div>
-
-              <div class="booking-actions-row">
-                <button class="btn-approve" type="button" data-action="approve-booking" data-id="${booking.id}" ${booking.status === "confirmed" ? "disabled" : ""}>
-                  <i class="ph ph-check"></i> قبول
-                </button>
-                <button class="btn-reject" type="button" data-action="reject-booking" data-id="${booking.id}" ${booking.status === "rejected" ? "disabled" : ""}>
-                  <i class="ph ph-x"></i> رفض
-                </button>
-              </div>
-            </article>
-          `).join("")}
-        </div>
-      `;
-
-      updateAdminQuickStats();
-    }
-
-    function renderOwnerPropertyOptions() {
-      const select = qs("owner-property-id");
-      if (!select) return;
-
-      const items = adminState.properties || [];
-      const currentValue = select.value;
-
-      select.innerHTML = `<option value="">اختر العقار</option>` + items.map(prop => `
-        <option value="${prop.id}">${escapeHtml(safeText(prop.titleAr))}</option>
-      `).join("");
-
-      if (currentValue && items.some(item => item.id === currentValue)) {
-        select.value = currentValue;
-      }
-    }
-
-    function renderOwnerAccountsTable(items = adminState.ownerAccounts) {
-      const tbody = qs("owner-accounts-tbody");
-      if (!tbody) return;
-
-      if (!items.length) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6">
-              <div class="empty-state" style="padding:28px;">
-                <i class="ph ph-users-three"></i>
-                لا توجد حسابات ملاك حالياً.
-              </div>
-            </td>
-          </tr>
-        `;
-        updateAdminQuickStats();
-        return;
-      }
-
-      tbody.innerHTML = items.map(account => `
-        <tr data-owner-id="${account.id}">
-          <td>${escapeHtml(safeText(account.fullName))}</td>
-          <td>${escapeHtml(safeText(account.username))}</td>
-          <td>${escapeHtml(safeText(account.password))}</td>
-          <td>${escapeHtml(safeText(account.propertyName))}</td>
-          <td>
-            <span class="status-badge ${account.active !== false ? 'visible' : 'hidden'}">
-              ${account.active !== false ? 'نشط' : 'معطل'}
-            </span>
-          </td>
-          <td>
-            <div class="table-actions">
-              <button type="button" data-action="toggle-owner-account" data-id="${account.id}">
-                <i class="ph ph-power"></i>
-                ${account.active !== false ? 'تعطيل' : 'تفعيل'}
-              </button>
-              <button type="button" data-action="delete-owner-account" data-id="${account.id}">
-                <i class="ph ph-trash"></i> حذف
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join("");
-
-      updateAdminQuickStats();
-    }
-
-    function loadProperties() {
-      if (!adminState.properties.length) {
-        adminState.properties = [...demoProperties];
-      }
-      renderPropertiesTable();
-      renderOwnerPropertyOptions();
-    }
-
-    function loadOwnerAccounts() {
-      if (!adminState.ownerAccounts.length) {
-        adminState.ownerAccounts = [...demoOwnerAccounts];
-      }
-      renderOwnerAccountsTable();
-    }
-
-    function loadBookings() {
-      if (!adminState.bookings.length) {
-        adminState.bookings = [...demoBookings];
-      }
-      renderBookings();
-    }
-
-    function updateAdminQuickStats() {
-      const visibleProps = getVisiblePropertiesForCurrentUser();
-      const visibleBookings = getVisibleBookingsForCurrentUser();
-
-      qs("stat-total-properties").textContent = String(visibleProps.length);
-      qs("stat-active-properties").textContent = String(visibleProps.filter(p => p.visible).length);
-      qs("stat-total-bookings").textContent = String(visibleBookings.length);
-      qs("stat-owner-accounts").textContent = String(adminState.ownerAccounts.length);
-    }
-
-    function updateUploadPreview(file) {
-      const zoneText = document.querySelector(".upload-zone-text");
-      const zoneIcon = document.querySelector(".upload-zone i");
-      const previewBox = qs("upload-preview-box");
-      const previewImg = qs("upload-preview-img");
-      const previewName = qs("upload-preview-name");
-      const previewSize = qs("upload-preview-size");
-      const uploadStatus = qs("upload-status");
-
-      if (!file) {
-        resetUploadPreview();
-        if (uploadStatus) uploadStatus.textContent = "";
-        return;
-      }
-
-      if (zoneText) {
-        zoneText.textContent = "✅ " + file.name;
-        zoneText.style.color = "var(--primary)";
-      }
-      if (zoneIcon) zoneIcon.className = "ph-fill ph-check-circle";
-
-      const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
-      if (previewName) previewName.textContent = file.name;
-      if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
-      if (uploadStatus) uploadStatus.textContent = "تم اختيار ملف الصورة بنجاح";
-
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          if (previewImg) previewImg.src = e.target.result;
-          previewBox?.classList.add("visible");
-        };
-        reader.readAsDataURL(file);
-      } else {
-        previewBox?.classList.remove("visible");
-      }
-    }
-
-    function resetUploadPreview() {
-      const zoneText = document.querySelector(".upload-zone-text");
-      const zoneIcon = document.querySelector(".upload-zone i");
-      const previewBox = qs("upload-preview-box");
-      const previewImg = qs("upload-preview-img");
-      const previewName = qs("upload-preview-name");
-      const previewSize = qs("upload-preview-size");
-
-      if (zoneText) {
-        zoneText.textContent = "اضغط هنا أو اسحب الصورة";
-        zoneText.style.color = "";
-      }
-      if (zoneIcon) zoneIcon.className = "ph ph-cloud-arrow-up";
-      if (previewImg) previewImg.removeAttribute("src");
-      if (previewName) previewName.textContent = "معاينة الصورة";
-      if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
-      previewBox?.classList.remove("visible");
-    }
-
-    function updateEditUploadPreview(file) {
-      const zoneText = qs("edit-upload-zone-text");
-      const previewBox = qs("edit-upload-preview-box");
-      const previewImg = qs("edit-upload-preview-img");
-      const previewName = qs("edit-upload-preview-name");
-      const previewSize = qs("edit-upload-preview-size");
-
-      if (!file) {
-        resetEditUploadPreview();
-        return;
-      }
-
-      if (zoneText) zoneText.textContent = "✅ " + file.name;
-
-      const sizeInMb = (file.size / 1024 / 1024).toFixed(2);
-      if (previewName) previewName.textContent = file.name;
-      if (previewSize) previewSize.textContent = `الحجم: ${sizeInMb} MB`;
-
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          if (previewImg) previewImg.src = e.target.result;
-          previewBox?.classList.add("visible");
-        };
-        reader.readAsDataURL(file);
-      } else {
-        previewBox?.classList.remove("visible");
-      }
-    }
-
-    function resetEditUploadPreview() {
-      const zoneText = qs("edit-upload-zone-text");
-      const previewBox = qs("edit-upload-preview-box");
-      const previewImg = qs("edit-upload-preview-img");
-      const previewName = qs("edit-upload-preview-name");
-      const previewSize = qs("edit-upload-preview-size");
-
-      if (zoneText) zoneText.textContent = "اختر صورة جديدة إن أردت استبدال الحالية";
-      if (previewImg) previewImg.removeAttribute("src");
-      if (previewName) previewName.textContent = "معاينة الصورة الجديدة";
-      if (previewSize) previewSize.textContent = "سيظهر اسم وحجم الملف هنا";
-      previewBox?.classList.remove("visible");
-    }
-
-    function initAddMap() {
-      if (!window.L || !qs("admin-map-picker")) return;
-
-      if (adminState.addMap) {
-        adminState.addMap.invalidateSize();
-        return;
-      }
-
-      adminState.addMap = L.map("admin-map-picker").setView([28.0, 3.0], 5);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-        maxZoom: 19
-      }).addTo(adminState.addMap);
-
-      adminState.addMap.on("click", e => {
-        placeAddMarker(e.latlng.lat, e.latlng.lng);
-      });
-    }
-
-    function placeAddMarker(lat, lng) {
-      if (!adminState.addMap) return;
-
-      if (adminState.addMarker) adminState.addMap.removeLayer(adminState.addMarker);
-      adminState.addMarker = L.marker([lat, lng]).addTo(adminState.addMap).bindPopup("📍 تم تحديد الموقع").openPopup();
-
-      qs("prop-lat").value = Number(lat).toFixed(6);
-      qs("prop-lng").value = Number(lng).toFixed(6);
-      qs("map-picked-badge").classList.add("visible");
-    }
-
-    async function searchMapLocation() {
-      const query = qs("map-search-input").value.trim();
-      if (!query || !adminState.addMap) return;
-
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-        const data = await res.json();
-
-        if (Array.isArray(data) && data.length > 0) {
-          const lat = parseFloat(data[0].lat);
-          const lng = parseFloat(data[0].lon);
-          adminState.addMap.setView([lat, lng], 14);
-          placeAddMarker(lat, lng);
-        } else {
-          alert("لم يتم العثور على الموقع، جرب كتابة اسم الولاية أو المنطقة بشكل أوضح.");
-        }
-      } catch {
-        alert("حدث خطأ أثناء البحث عن الموقع.");
-      }
-    }
-
-    function initEditMap(existingLat, existingLng) {
-      if (!window.L || !qs("edit-map-picker")) return;
-
-      const hasCoords = existingLat !== null && existingLat !== undefined && existingLng !== null && existingLng !== undefined;
-      const center = hasCoords ? [existingLat, existingLng] : [28.0, 3.0];
-      const zoom = hasCoords ? 14 : 5;
-
-      if (!adminState.editMap) {
-        adminState.editMap = L.map("edit-map-picker").setView(center, zoom);
+        const defaultLatLng = [33.3561, 6.8632];
+        const map = L.map("admin-map-picker", { zoomControl: true }).setView(defaultLatLng, 6);
+        window.__adminAddMap = map;
+        window.__adminAddMarker = null;
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
-          attribution: "© OpenStreetMap contributors"
-        }).addTo(adminState.editMap);
+          attribution: "&copy; OpenStreetMap"
+        }).addTo(map);
 
-        adminState.editMap.on("click", e => {
-          const { lat, lng } = e.latlng;
-          if (adminState.editMarker) adminState.editMap.removeLayer(adminState.editMarker);
-          adminState.editMarker = L.marker([lat, lng]).addTo(adminState.editMap).bindPopup("📍 الموقع الجديد").openPopup();
-          qs("edit-lat").value = Number(lat).toFixed(6);
-          qs("edit-lng").value = Number(lng).toFixed(6);
-          qs("edit-map-picked-badge").classList.add("visible");
+        map.on("click", function (e) {
+          const lat = e.latlng.lat.toFixed(6);
+          const lng = e.latlng.lng.toFixed(6);
+
+          document.getElementById("prop-lat").value = lat;
+          document.getElementById("prop-lng").value = lng;
+          document.getElementById("map-picked-badge")?.classList.add("visible");
+
+          if (window.__adminAddMarker) {
+            window.__adminAddMarker.setLatLng(e.latlng);
+          } else {
+            window.__adminAddMarker = L.marker(e.latlng).addTo(map);
+          }
         });
-      } else {
-        adminState.editMap.setView(center, zoom);
-        adminState.editMap.invalidateSize();
+
+        setTimeout(() => map.invalidateSize(), 120);
       }
 
-      if (hasCoords) {
-        if (adminState.editMarker) adminState.editMap.removeLayer(adminState.editMarker);
-        adminState.editMarker = L.marker([existingLat, existingLng]).addTo(adminState.editMap).bindPopup("📍 الموقع الحالي").openPopup();
-        qs("edit-map-picked-badge").classList.add("visible");
-        qs("edit-lat").value = Number(existingLat).toFixed(6);
-        qs("edit-lng").value = Number(existingLng).toFixed(6);
-      } else {
-        qs("edit-map-picked-badge").classList.remove("visible");
-        qs("edit-lat").value = "";
-        qs("edit-lng").value = "";
-      }
-    }
+      async function searchMapLocation() {
+        const input = document.getElementById("map-search-input");
+        const query = (input?.value || "").trim();
+        if (!query || !window.__adminAddMap) return;
 
-    function resetAddMap() {
-      if (adminState.addMarker && adminState.addMap) {
-        adminState.addMap.removeLayer(adminState.addMarker);
-        adminState.addMarker = null;
-      }
-      if (adminState.addMap) adminState.addMap.setView([28.0, 3.0], 5);
-    }
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          if (!Array.isArray(data) || !data.length) {
+            alert("لم يتم العثور على الموقع المطلوب.");
+            return;
+          }
 
-    function openEditModal(propertyId) {
-      const allowedProperties = getVisiblePropertiesForCurrentUser();
-      const property = allowedProperties.find(p => p.id === propertyId);
-      if (!property) return;
+          const first = data[0];
+          const lat = parseFloat(first.lat);
+          const lng = parseFloat(first.lon);
+          const target = [lat, lng];
 
-      adminState.selectedEditProperty = property;
+          window.__adminAddMap.setView(target, 13);
+          document.getElementById("prop-lat").value = lat.toFixed(6);
+          document.getElementById("prop-lng").value = lng.toFixed(6);
+          document.getElementById("map-picked-badge")?.classList.add("visible");
 
-      qs("edit-prop-id").value = property.id;
-      qs("edit-title-ar").value = property.titleAr || "";
-      qs("edit-title-en").value = property.titleEn || "";
-      qs("edit-price").value = property.price || "";
-      qs("edit-type").value = property.type || "apartment";
-      qs("edit-loc-ar").value = property.locationAr || "";
-      qs("edit-loc-en").value = property.locationEn || "";
-      qs("edit-desc-ar").value = property.descAr || "";
-      qs("edit-desc-en").value = property.descEn || "";
-
-      resetEditUploadPreview();
-      qs("edit-image").value = "";
-      qs("edit-modal").classList.add("active");
-
-      setTimeout(() => {
-        initEditMap(property.lat ?? null, property.lng ?? null);
-        adminState.editMap?.invalidateSize();
-      }, 180);
-    }
-
-    function closeEditModal() {
-      qs("edit-modal").classList.remove("active");
-      adminState.selectedEditProperty = null;
-    }
-
-    function handleAddProperty(event) {
-      event.preventDefault();
-
-      if (!isSuperAdmin()) {
-        alert("فقط الأدمن الرئيسي يمكنه إضافة عقارات جديدة.");
-        return;
+          if (window.__adminAddMarker) {
+            window.__adminAddMarker.setLatLng(target);
+          } else {
+            window.__adminAddMarker = L.marker(target).addTo(window.__adminAddMap);
+          }
+        } catch (_) {
+          alert("تعذر تنفيذ البحث على الخريطة حالياً.");
+        }
       }
 
-      const titleAr = qs("prop-title-ar").value.trim();
-      const titleEn = qs("prop-title-en").value.trim();
-      const descAr = qs("prop-desc-ar").value.trim();
-      const descEn = qs("prop-desc-en").value.trim();
-      const type = qs("prop-type").value;
-      const price = Number(qs("prop-price").value || 0);
-      const locationAr = qs("prop-loc-ar").value.trim();
-      const locationEn = qs("prop-loc-en").value.trim();
-      const lat = qs("prop-lat").value.trim();
-      const lng = qs("prop-lng").value.trim();
-      const imageFile = qs("prop-image").files?.[0] || null;
+      function initEditMap(lat = null, lng = null) {
+        const mapEl = document.getElementById("edit-map-picker");
+        if (!mapEl || typeof L === "undefined") return;
 
-      if (!titleAr || !titleEn || !descAr || !descEn || !locationAr || !locationEn || !price) {
-        alert("يرجى تعبئة جميع الحقول المطلوبة.");
-        return;
+        const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+        const center = hasCoords ? [lat, lng] : [33.3561, 6.8632];
+
+        if (!window.__adminEditMap) {
+          window.__adminEditMap = L.map("edit-map-picker", { zoomControl: true }).setView(center, hasCoords ? 14 : 6);
+
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap"
+          }).addTo(window.__adminEditMap);
+
+          window.__adminEditMap.on("click", function (e) {
+            const pickedLat = e.latlng.lat.toFixed(6);
+            const pickedLng = e.latlng.lng.toFixed(6);
+
+            document.getElementById("edit-lat").value = pickedLat;
+            document.getElementById("edit-lng").value = pickedLng;
+            document.getElementById("edit-map-picked-badge")?.classList.add("visible");
+
+            if (window.__adminEditMarker) {
+              window.__adminEditMarker.setLatLng(e.latlng);
+            } else {
+              window.__adminEditMarker = L.marker(e.latlng).addTo(window.__adminEditMap);
+            }
+          });
+        } else {
+          window.__adminEditMap.setView(center, hasCoords ? 14 : 6);
+        }
+
+        if (hasCoords) {
+          document.getElementById("edit-lat").value = Number(lat).toFixed(6);
+          document.getElementById("edit-lng").value = Number(lng).toFixed(6);
+          document.getElementById("edit-map-picked-badge")?.classList.add("visible");
+
+          if (window.__adminEditMarker) {
+            window.__adminEditMarker.setLatLng(center);
+          } else {
+            window.__adminEditMarker = L.marker(center).addTo(window.__adminEditMap);
+          }
+        } else {
+          document.getElementById("edit-map-picked-badge")?.classList.remove("visible");
+        }
+
+        setTimeout(() => window.__adminEditMap.invalidateSize(), 160);
       }
 
-      if (!lat || !lng) {
-        alert("يرجى تحديد موقع العقار على الخريطة.");
-        return;
+      function bindEditModalUi() {
+        document.getElementById("close-edit-modal-btn")?.addEventListener("click", () => {
+          if (typeof window.closeEditModal === "function") window.closeEditModal();
+          else document.getElementById("edit-modal")?.classList.remove("active");
+        });
+
+        document.getElementById("edit-modal")?.addEventListener("click", e => {
+          if (e.target.id === "edit-modal") {
+            if (typeof window.closeEditModal === "function") window.closeEditModal();
+            else document.getElementById("edit-modal")?.classList.remove("active");
+          }
+        });
+
+        document.addEventListener("keydown", e => {
+          if (e.key === "Escape") {
+            document.getElementById("admin-sidebar")?.classList.remove("open");
+          }
+        });
       }
 
-      if (!imageFile) {
-        alert("يرجى اختيار صورة رئيسية للعقار.");
-        return;
-      }
-
-      const newProperty = {
-        id: `prop_${Date.now()}`,
-        titleAr,
-        titleEn,
-        descAr,
-        descEn,
-        type,
-        price,
-        locationAr,
-        locationEn,
-        visible: true,
-        image: URL.createObjectURL(imageFile),
-        lat: Number(lat),
-        lng: Number(lng)
+      window.searchMapLocation = searchMapLocation;
+      window.initEditMapFromAdmin = function (lat, lng) {
+        initEditMap(lat, lng);
+      };
+      window._resetAddMap = function () {
+        if (window.__adminAddMap) {
+          window.__adminAddMap.setView([33.3561, 6.8632], 6);
+        }
+        if (window.__adminAddMarker && window.__adminAddMap) {
+          window.__adminAddMap.removeLayer(window.__adminAddMarker);
+          window.__adminAddMarker = null;
+        }
+        document.getElementById("map-picked-badge")?.classList.remove("visible");
       };
 
-      adminState.properties.unshift(newProperty);
-      renderPropertiesTable();
-      renderOwnerPropertyOptions();
-      updateAdminQuickStats();
+      document.addEventListener("DOMContentLoaded", function () {
+        setThemeFromStorage();
+        bindSidebarUi();
+        bindEditModalUi();
+        bindUploadPreview("prop-image", "upload-preview-box", "upload-preview-img", "upload-preview-name", "upload-preview-size", ".upload-zone-text", "upload-status");
+        bindUploadPreview("edit-image", "edit-upload-preview-box", "edit-upload-preview-img", "edit-upload-preview-name", "edit-upload-preview-size", "#edit-upload-zone-text", null);
+        resetAddPropertyUi();
+        initAddMap();
 
-      event.target.reset();
-      qs("map-picked-badge").classList.remove("visible");
-      qs("prop-lat").value = "";
-      qs("prop-lng").value = "";
-      qs("upload-status").textContent = "";
-      resetUploadPreview();
-      resetAddMap();
+        document.getElementById("map-search-btn")?.addEventListener("click", searchMapLocation);
+        document.getElementById("map-search-input")?.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            searchMapLocation();
+          }
+        });
 
-      alert("تمت إضافة العقار محلياً بنجاح.");
-      switchTab("manage-props");
-    }
-
-    function handleEditPropertySubmit(event) {
-      event.preventDefault();
-
-      const id = qs("edit-prop-id").value;
-      const item = adminState.properties.find(p => p.id === id);
-      if (!item) return;
-
-      if (isOwnerUser() && item.id !== adminState.currentUser?.propertyId) {
-        alert("لا يمكنك تعديل هذا العقار.");
-        return;
-      }
-
-      item.titleAr = qs("edit-title-ar").value.trim();
-      item.titleEn = qs("edit-title-en").value.trim();
-      item.price = Number(qs("edit-price").value || 0);
-      item.type = qs("edit-type").value;
-      item.locationAr = qs("edit-loc-ar").value.trim();
-      item.locationEn = qs("edit-loc-en").value.trim();
-      item.descAr = qs("edit-desc-ar").value.trim();
-      item.descEn = qs("edit-desc-en").value.trim();
-
-      const newLat = qs("edit-lat").value.trim();
-      const newLng = qs("edit-lng").value.trim();
-      if (newLat && newLng) {
-        item.lat = Number(newLat);
-        item.lng = Number(newLng);
-      }
-
-      const file = qs("edit-image").files?.[0];
-      if (file && file.type.startsWith("image/")) {
-        item.image = URL.createObjectURL(file);
-      }
-
-      renderPropertiesTable();
-      closeEditModal();
-      alert("تم حفظ التعديلات بنجاح.");
-    }
-
-    function togglePropertyVisibility(id) {
-      const item = adminState.properties.find(p => p.id === id);
-      if (!item) return;
-
-      if (isOwnerUser() && item.id !== adminState.currentUser?.propertyId) {
-        alert("لا يمكنك تعديل هذا العقار.");
-        return;
-      }
-
-      item.visible = !item.visible;
-      renderPropertiesTable();
-    }
-
-    function deleteProperty(id) {
-      if (!isSuperAdmin()) {
-        alert("فقط الأدمن الرئيسي يمكنه حذف العقارات.");
-        return;
-      }
-
-      const ok = confirm("هل أنت متأكد من حذف هذا العقار؟");
-      if (!ok) return;
-      adminState.properties = adminState.properties.filter(p => p.id !== id);
-      adminState.ownerAccounts = adminState.ownerAccounts.filter(acc => acc.propertyId !== id);
-      renderPropertiesTable();
-      renderOwnerAccountsTable();
-      renderOwnerPropertyOptions();
-    }
-
-    function updateBookingStatus(id, status) {
-      const booking = adminState.bookings.find(b => b.id === id);
-      if (!booking) return;
-
-      if (isOwnerUser() && booking.propertyName !== adminState.currentUser?.propertyName) {
-        alert("لا يمكنك تعديل هذا الحجز.");
-        return;
-      }
-
-      booking.status = status;
-      renderBookings();
-    }
-
-    function filterPropertiesTable(query) {
-      const q = query.trim().toLowerCase();
-      const rows = document.querySelectorAll("#properties-tbody tr[data-id]");
-      rows.forEach(row => {
-        const txt = row.textContent.toLowerCase();
-        row.style.display = txt.includes(q) ? "" : "none";
+        updatePageMetaFromNav("manage-props");
       });
-    }
-
-    function handleCreateOwnerAccount(event) {
-      event.preventDefault();
-
-      if (!isSuperAdmin()) {
-        alert("فقط الأدمن الرئيسي يمكنه إنشاء حسابات ملاك.");
-        return;
-      }
-
-      const fullName = qs("owner-full-name").value.trim();
-      const propertyId = qs("owner-property-id").value.trim();
-      const username = qs("owner-username").value.trim();
-      const password = qs("owner-password").value.trim();
-
-      if (!fullName || !propertyId || !username || !password) {
-        alert("يرجى تعبئة جميع الحقول المطلوبة.");
-        return;
-      }
-
-      const property = adminState.properties.find(item => item.id === propertyId);
-      if (!property) {
-        alert("العقار المحدد غير موجود.");
-        return;
-      }
-
-      const usernameExists = adminState.ownerAccounts.some(item => item.username === username);
-      if (usernameExists) {
-        alert("اسم المستخدم مستخدم مسبقاً، اختر اسماً آخر.");
-        return;
-      }
-
-      const newAccount = {
-        id: `owner_${Date.now()}`,
-        fullName,
-        username,
-        password,
-        propertyId,
-        propertyName: property.titleAr || property.titleEn || property.id,
-        active: true
-      };
-
-      adminState.ownerAccounts.unshift(newAccount);
-      renderOwnerAccountsTable();
-      updateAdminQuickStats();
-      qs("owner-account-form").reset();
-
-      alert("تم إنشاء حساب المالك بنجاح.");
-    }
-
-    function toggleOwnerAccount(id) {
-      const account = adminState.ownerAccounts.find(item => item.id === id);
-      if (!account) return;
-      account.active = account.active === false ? true : false;
-      renderOwnerAccountsTable();
-    }
-
-    function deleteOwnerAccount(id) {
-      if (!isSuperAdmin()) {
-        alert("فقط الأدمن الرئيسي يمكنه حذف حسابات الملاك.");
-        return;
-      }
-
-      const ok = confirm("هل تريد حذف حساب المالك؟");
-      if (!ok) return;
-
-      adminState.ownerAccounts = adminState.ownerAccounts.filter(item => item.id !== id);
-      renderOwnerAccountsTable();
-      updateAdminQuickStats();
-    }
-
-    function bindEvents() {
-      qs("admin-login-form")?.addEventListener("submit", handleAdminLogin);
-      qs("admin-logout-btn")?.addEventListener("click", logoutAdmin);
-
-      qs("admin-mobile-toggle")?.addEventListener("click", () => {
-        qs("admin-sidebar")?.classList.toggle("open");
-      });
-
-      document.addEventListener("click", e => {
-        if (window.innerWidth > 1100) return;
-        const sidebar = qs("admin-sidebar");
-        const mobileToggle = qs("admin-mobile-toggle");
-        if (!sidebar || !mobileToggle) return;
-        if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
-        sidebar.classList.remove("open");
-      });
-
-      document.querySelectorAll("[data-tab-target]").forEach(btn => {
-        btn.addEventListener("click", () => switchTab(btn.dataset.tabTarget));
-      });
-
-      qs("prop-image")?.addEventListener("change", function () {
-        updateUploadPreview(this.files?.[0] || null);
-      });
-
-      qs("edit-image")?.addEventListener("change", function () {
-        updateEditUploadPreview(this.files?.[0] || null);
-      });
-
-      qs("reset-property-form-btn")?.addEventListener("click", () => {
-        qs("add-property-form")?.reset();
-        qs("map-picked-badge")?.classList.remove("visible");
-        qs("prop-lat").value = "";
-        qs("prop-lng").value = "";
-        qs("upload-status").textContent = "";
-        resetUploadPreview();
-        resetAddMap();
-      });
-
-      qs("map-search-btn")?.addEventListener("click", searchMapLocation);
-      qs("map-search-input")?.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          searchMapLocation();
-        }
-      });
-
-      qs("property-search-input")?.addEventListener("input", function () {
-        filterPropertiesTable(this.value);
-      });
-
-      qs("refresh-properties-btn")?.addEventListener("click", () => {
-        loadProperties();
-      });
-
-      qs("refresh-bookings-btn")?.addEventListener("click", () => {
-        loadBookings();
-      });
-
-      qs("refresh-owner-accounts-btn")?.addEventListener("click", () => {
-        loadOwnerAccounts();
-      });
-
-      qs("add-property-form")?.addEventListener("submit", handleAddProperty);
-      qs("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
-      qs("owner-account-form")?.addEventListener("submit", handleCreateOwnerAccount);
-
-      qs("close-edit-modal-btn")?.addEventListener("click", closeEditModal);
-      qs("edit-modal")?.addEventListener("click", e => {
-        if (e.target.id === "edit-modal") closeEditModal();
-      });
-
-      document.addEventListener("keydown", e => {
-        if (e.key === "Escape") {
-          closeEditModal();
-          qs("admin-sidebar")?.classList.remove("open");
-        }
-      });
-
-      document.addEventListener("click", e => {
-        const actionEl = e.target.closest("[data-action]");
-        if (!actionEl) return;
-
-        const action = actionEl.dataset.action;
-        const id = actionEl.dataset.id;
-
-        if (action === "edit-property") openEditModal(id);
-        if (action === "toggle-property") togglePropertyVisibility(id);
-        if (action === "delete-property") deleteProperty(id);
-        if (action === "approve-booking") updateBookingStatus(id, "confirmed");
-        if (action === "reject-booking") updateBookingStatus(id, "rejected");
-        if (action === "toggle-owner-account") toggleOwnerAccount(id);
-        if (action === "delete-owner-account") deleteOwnerAccount(id);
-      });
-    }
-
-    function initAdminSession() {
-      adminState.properties = [...demoProperties];
-      adminState.bookings = [...demoBookings];
-      adminState.ownerAccounts = [...demoOwnerAccounts];
-
-      const session = getStoredAdminSession();
-      if (session) {
-        adminState.currentUser = session;
-        setAdminProfile(session);
-        setNavVisibilityByRole();
-        showAdminLayout();
-        loadProperties();
-        loadOwnerAccounts();
-        loadBookings();
-        return;
-      }
-
-      showLoginScreen();
-    }
-
-    window.switchTab = switchTab;
-    window.closeEditModal = closeEditModal;
-    window.searchMapLocation = searchMapLocation;
-    window.loadBookings = loadBookings;
-    window.loadProperties = loadProperties;
-    window.loadOwnerAccounts = loadOwnerAccounts;
-    window.fetchProperties = loadProperties;
-    window.updateAdminQuickStats = updateAdminQuickStats;
-    window.initEditMapFromAdmin = function(lat, lng) {
-      setTimeout(() => {
-        initEditMap(lat || null, lng || null);
-        adminState.editMap?.invalidateSize();
-      }, 200);
-    };
-    window._resetAddMap = resetAddMap;
-
-    document.addEventListener("DOMContentLoaded", () => {
-      setThemeFromStorage();
-      bindEvents();
-      initAdminSession();
-      updateAdminQuickStats();
-    });
+    })();
   </script>
+
+  <script src="admin.js"></script>
+  <script src="admin_bookings_addon.js"></script>
 </body>
 </html>
