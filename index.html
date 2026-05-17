@@ -1,1942 +1,2124 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
+
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="OreBooking – Discover and book premium hotels, apartments, and villas.">
-  <meta name="theme-color" content="#435abf">
-  <meta name="format-detection" content="telephone=no">
-  <title>OreBooking - Premium Stays</title>
-
-  <link rel="icon" type="image/png" href="logos/orebooking.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="style.css?v=2.4">
-
-  <script>
-    (function () {
-      try {
-        const savedTheme = localStorage.getItem("ore_theme") || "light";
-        const savedLang = localStorage.getItem("ore_lang") || "en";
-        document.documentElement.lang = savedLang;
-        document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
-        if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
-      } catch (_) {}
-    })();
-  </script>
-
-  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-  <style>
-    :root {
-      --primary: #435abf;
-      --primary-hover: #34459c;
-      --surface-color: #ffffff;
-      --bg-color: #f8fafc;
-      --border-color: #e2e8f0;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --success: #10b981;
-      --error: #ef4444;
-      --warning: #f59e0b;
-      --radius-full: 9999px;
-      --radius-xl: 24px;
-      --radius-lg: 16px;
-      --radius-md: 12px;
-      --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
-      --shadow-hover: 0 20px 40px -10px rgba(67,90,191,0.15);
-      --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      --transition-fast: 0.2s ease-out;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Outfit', sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      margin: 0;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
-
-    .preload-dark body,
-    body.dark {
-      --surface-color: #0f172a;
-      --bg-color: #020617;
-      --border-color: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --shadow-sm: 0 6px 18px rgba(0,0,0,0.25);
-      --shadow-hover: 0 24px 48px rgba(0,0,0,0.28);
-    }
-
-    body.modal-open { overflow: hidden; }
-    .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
-
-    @keyframes slideUpFade {
-      0% { opacity: 0; transform: translateY(30px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-
-    @keyframes scaleIn {
-      0% { opacity: 0; transform: scale(0.95); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .ph-spin { animation: spin 1s linear infinite; }
-
-    .animate-up { opacity: 0; animation: slideUpFade var(--transition-smooth) forwards; }
-    .delay-1 { animation-delay: 0.1s; }
-    .delay-2 { animation-delay: 0.2s; }
-    .delay-3 { animation-delay: 0.3s; }
-    .delay-4 { animation-delay: 0.4s; }
-
-    [class^="ph-"], [class*=" ph-"], [class^="ph "], [class*=" ph "] {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      font-style: normal;
-    }
-
-    .navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(255,255,255,0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color);
-      padding: 16px 24px;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      transition: var(--transition-smooth);
-      gap: 12px;
-    }
-
-    .dark .navbar { background: rgba(15,23,42,0.85); }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-
-    .logo-img {
-      height: 38px;
-      width: auto;
-      object-fit: contain;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-inline-start: auto;
-    }
-
-    .rewards-badge {
-      border-radius: var(--radius-full);
-      background: rgba(139,92,246,0.1);
-      color: #8b5cf6;
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      white-space: nowrap;
-    }
-
-    .icon-btn, .lang-btn, .profile-menu, .chat-toggle-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--border-color);
-      background: var(--surface-color);
-      color: var(--text-main);
-      height: 42px;
-      cursor: pointer;
-      transition: var(--transition-fast);
-      font-family: inherit;
-    }
-
-    .icon-btn,
-    .profile-menu {
-      width: 42px;
-      border-radius: 50%;
-      font-size: 1.2rem;
-    }
-
-    .lang-btn {
-      padding: 0 18px;
-      border-radius: var(--radius-full);
-      font-weight: 600;
-      font-size: 0.95rem;
-      gap: 6px;
-    }
-
-    .icon-btn:hover,
-    .lang-btn:hover,
-    .profile-menu:hover,
-    .chat-toggle-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .profile-container { position: relative; }
-
-    #profile-dropdown {
-      position: absolute;
-      top: calc(100% + 10px);
-      inset-inline-end: 0;
-      min-width: 230px;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-hover);
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-      transform-origin: top right;
-      z-index: 100;
-    }
-
-    html[dir="rtl"] #profile-dropdown { transform-origin: top left; }
-    #profile-dropdown.active { display: flex; animation: scaleIn 0.2s forwards; }
-
-    .dropdown-header {
-      padding: 16px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .dropdown-body { padding: 8px; }
-
-    .dropdown-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: transparent;
-      border: none;
-      color: var(--text-main);
-      font-size: 0.95rem;
-      font-weight: 500;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: var(--transition-fast);
-      text-align: start;
-      font-family: inherit;
-    }
-
-    .dropdown-item:hover {
-      background: rgba(67,90,191,0.08);
-      color: var(--primary);
-    }
-
-    .dropdown-item.text-danger:hover {
-      background: rgba(239,68,68,0.1);
-      color: #ef4444;
-    }
-
-    .hero {
-      position: relative;
-      padding: 100px 20px 60px;
-      text-align: center;
-      background: radial-gradient(circle at top center, rgba(67,90,191,0.08) 0%, transparent 60%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .hero h1 {
-      font-size: clamp(2.5rem, 5vw, 3.5rem);
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.2;
-      font-weight: 800;
-      color: var(--text-main);
-    }
-
-    .hero p {
-      font-size: 1.15rem;
-      color: var(--text-muted);
-      max-width: 600px;
-      margin: 0 auto 40px;
-    }
-
-    .search-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--surface-color);
-      border-radius: var(--radius-full);
-      padding: 8px 8px 8px 24px;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
-      border: 1px solid var(--border-color);
-      max-width: 980px;
-      width: 100%;
-      transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth), background-color var(--transition-smooth);
-      position: relative;
-      z-index: 50;
-    }
-
-    html[dir="rtl"] .search-bar { padding: 8px 24px 8px 8px; }
-
-    .search-bar:hover,
-    .search-bar:focus-within {
-      box-shadow: var(--shadow-hover);
-      border-color: var(--primary);
-    }
-
-    .search-field {
-      flex: 1;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      padding: 8px 16px;
-      border-radius: var(--radius-full);
-      transition: background var(--transition-fast);
-      z-index: 60;
-      text-align: start;
-    }
-
-    .search-field:hover { background: rgba(0,0,0,0.03); }
-    .dark .search-field:hover { background: rgba(255,255,255,0.05); }
-
-    .search-field label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-      cursor: pointer;
-      color: var(--text-main);
-    }
-
-    .search-field input {
-      border: none;
-      background: transparent;
-      outline: none;
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      width: 100%;
-      font-family: inherit;
-    }
-
-    .search-divider {
-      width: 1px;
-      height: 32px;
-      background: var(--border-color);
-      margin: 0 8px;
-    }
-
-    .search-btn {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: white;
-      border: none;
-      border-radius: var(--radius-full);
-      padding: 16px 32px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: box-shadow var(--transition-smooth), filter var(--transition-smooth), background var(--transition-smooth);
-      box-shadow: 0 4px 14px rgba(67,90,191,0.3);
-      z-index: 60;
-      flex-shrink: 0;
-      font-family: inherit;
-    }
-
-    .search-btn:hover,
-    .search-btn:focus-visible {
-      box-shadow: 0 6px 20px rgba(67,90,191,0.4);
-      filter: brightness(1.03);
-    }
-
-    .search-dropdown {
-      position: absolute;
-      top: calc(100% + 12px);
-      left: 0;
-      right: 0;
-      min-width: 250px;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-      z-index: 1000;
-      display: none;
-      padding: 10px;
-      overflow: hidden;
-    }
-
-    .search-dropdown.active {
-      display: block;
-      animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    .search-suggestion-item {
-      width: 100%;
-      padding: 12px 14px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      transition: var(--transition-fast);
-      background: transparent;
-      border: none;
-      color: var(--text-main);
-      text-align: start;
-      font-family: inherit;
-      border-radius: 14px;
-    }
-
-    .search-suggestion-item:hover {
-      background: rgba(67,90,191,0.06);
-      color: var(--primary);
-    }
-
-    .search-suggestion-main {
-      font-size: 0.95rem;
-      font-weight: 700;
-    }
-
-    .search-suggestion-sub {
-      color: var(--text-muted);
-      font-size: 0.82rem;
-    }
-
-    .search-empty {
-      padding: 14px;
-      color: var(--text-muted);
-      text-align: center;
-      font-weight: 600;
-    }
-
-    .categories {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      padding: 10px 20px 30px;
-      position: relative;
-      z-index: 10;
-      min-height: 72px;
-    }
-
-    .category-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      background: var(--surface-color);
-      border: 1.5px solid var(--border-color);
-      border-radius: var(--radius-full);
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: var(--transition-smooth);
-      font-family: inherit;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .category-item i { font-size: 1.3rem; }
-
-    .category-item:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .category-item.active {
-      background: var(--text-main);
-      color: var(--surface-color);
-      border-color: var(--text-main);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .section-header-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .section-header-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      position: relative;
-    }
-
-    .sort-select,
-    .clear-search-btn {
-      padding: 12px 20px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--border-color);
-      background: var(--surface-color);
-      color: var(--text-main);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      outline: none;
-      transition: var(--transition-smooth);
-      box-shadow: var(--shadow-sm);
-      font-family: inherit;
-    }
-
-    .clear-search-btn {
-      padding: 12px 18px;
-      display: none;
-    }
-
-    #listings-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 28px;
-      padding: 20px 0;
-      min-height: 220px;
-    }
-
-    .property-card {
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
-      box-shadow: var(--shadow-sm);
-      cursor: pointer;
-    }
-
-    .property-card:hover {
-      transform: translateY(-8px);
-      box-shadow: var(--shadow-hover);
-      border-color: var(--primary);
-    }
-
-    .property-card-media {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 4/3;
-      overflow: hidden;
-      background: #e2e8f0;
-    }
-
-    .property-card-media img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.5s ease;
-      display: block;
-    }
-
-    .property-card:hover .property-card-media img {
-      transform: scale(1.05);
-    }
-
-    .property-card-body {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      gap: 10px;
-    }
-
-    .property-card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .property-card-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text-main);
-      margin: 0;
-      line-height: 1.3;
-    }
-
-    .property-card-rating {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.92rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .property-card-location {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 22px;
-    }
-
-    .property-card-price {
-      margin-top: auto;
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--text-main);
-    }
-
-    .property-card-price span {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--text-muted);
-    }
-
-    .property-card-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .property-card-actions button,
-    .property-card-actions a {
-      flex: 1;
-      border-radius: 12px;
-      padding: 12px 14px;
-      border: 1px solid var(--border-color);
-      background: var(--surface-color);
-      color: var(--text-main);
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      text-align: center;
-      text-decoration: none;
-      transition: var(--transition-fast);
-    }
-
-    .property-card-actions .primary,
-    .property-card-actions .reserve-btn.primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: #fff;
-      border-color: transparent;
-    }
-
-    .property-card-actions button:hover,
-    .property-card-actions a:hover {
-      transform: translateY(-2px);
-      border-color: var(--primary);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .favorite-btn {
-      position: absolute;
-      top: 14px;
-      inset-inline-end: 14px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.65);
-      background: rgba(255,255,255,0.92);
-      color: #0f172a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 3;
-      transition: .25s ease;
-      box-shadow: 0 6px 18px rgba(15,23,42,.12);
-    }
-
-    .favorite-btn:hover { transform: scale(1.06); }
-    .favorite-btn.active { color: #ef4444; }
-
-    .property-urgency {
-      position: absolute;
-      top: 14px;
-      inset-inline-start: 14px;
-      padding: 8px 12px;
-      border-radius: var(--radius-full);
-      background: rgba(15,23,42,.78);
-      color: #fff;
-      font-size: 0.8rem;
-      font-weight: 700;
-      z-index: 3;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .listings-empty-state {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 80px 20px;
-      color: var(--text-muted);
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-    }
-
-    .listings-empty-state i {
-      font-size: 2.3rem;
-      display: block;
-      margin-bottom: 12px;
-      color: var(--primary);
-    }
-
-    #scroll-top-btn,
-    #chat-open-btn {
-      position: fixed;
-      inset-inline-end: 24px;
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      z-index: 500;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    #scroll-top-btn {
-      bottom: 88px;
-      background: var(--primary);
-      box-shadow: 0 8px 24px rgba(67,90,191,0.4);
-      opacity: 0;
-      transform: translateY(20px) scale(0.8);
-      pointer-events: none;
-    }
-
-    #scroll-top-btn.visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      pointer-events: auto;
-    }
-
-    #scroll-top-btn:hover {
-      transform: translateY(-4px) scale(1.1);
-      background: var(--primary-hover);
-      box-shadow: 0 12px 30px rgba(67,90,191,0.5);
-    }
-
-    #chat-open-btn {
-      bottom: 150px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      box-shadow: 0 10px 28px rgba(67,90,191,0.35);
-    }
-
-    #chat-open-btn:hover {
-      transform: translateY(-3px) scale(1.06);
-    }
-
-    .chat-unread-badge {
-      position: absolute;
-      top: -4px;
-      inset-inline-end: -2px;
-      min-width: 22px;
-      height: 22px;
-      padding: 0 6px;
-      border-radius: 999px;
-      background: #ef4444;
-      color: #fff;
-      font-size: 0.72rem;
-      font-weight: 800;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid #fff;
-    }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: 0.3s;
-      padding: 16px;
-    }
-
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-content {
-      background: var(--surface-color);
-      border-radius: var(--radius-xl);
-      width: 100%;
-      max-width: 420px;
-      position: relative;
-      box-shadow: var(--shadow-hover);
-      border: 1px solid var(--border-color);
-    }
-
-    .auth-card { padding: 32px; }
-
-    .close-modal-btn {
-      position: absolute;
-      top: 16px;
-      inset-inline-end: 16px;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-
-    .auth-header { text-align: center; margin-bottom: 24px; }
-    .auth-header img { height: 40px; width: auto; }
-
-    .auth-message {
-      display: none;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      font-size: 0.92rem;
-      font-weight: 600;
-    }
-
-    .auth-message.error {
-      display: block;
-      background: rgba(239,68,68,0.1);
-      color: #b91c1c;
-      border: 1px solid rgba(239,68,68,0.18);
-    }
-
-    .auth-message.success {
-      display: block;
-      background: rgba(16,185,129,0.12);
-      color: #047857;
-      border: 1px solid rgba(16,185,129,0.18);
-    }
-
-    .auth-form {
-      display: none;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .auth-title {
-      margin: 0;
-      text-align: center;
-      font-size: 1.5rem;
-    }
-
-    .auth-subtitle {
-      text-align: center;
-      color: var(--text-muted);
-      margin: -4px 0 4px;
-      line-height: 1.6;
-      font-size: 0.95rem;
-    }
-
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .input-group label {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    .input-group input,
-    .chat-input-area textarea {
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
-      background: var(--bg-color);
-      outline: none;
-      font-family: inherit;
-      color: var(--text-main);
-    }
-
-    .pass-wrapper { position: relative; }
-
-    .pass-wrapper input {
-      width: 100%;
-      padding-inline-end: 48px;
-    }
-
-    .toggle-pass-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      inset-inline-end: 12px;
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-
-    .auth-options {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .primary-btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-top: 4px;
-      font-family: inherit;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .social-btn {
-      width: 100%;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      padding: 12px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-family: inherit;
-      color: var(--text-main);
-    }
-
-    .switch-form-text {
-      text-align: center;
-      font-size: 0.92rem;
-      margin-top: 10px;
-      color: var(--text-muted);
-      line-height: 1.7;
-    }
-
-    .switch-form-text a {
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 700;
-    }
-
-    .text-muted { color: var(--text-muted); }
-    .text-sm { font-size: 0.875rem; }
-    .font-bold { font-weight: 700; }
-    .text-primary { color: var(--primary); }
-
-    #password-strength {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 2px;
-    }
-
-    .strength-bars {
-      display: flex;
-      gap: 6px;
-      flex: 1;
-    }
-
-    .str-bar {
-      height: 6px;
-      flex: 1;
-      border-radius: 999px;
-      background: var(--border-color);
-      transition: .2s ease;
-    }
-
-    #strength-label {
-      font-size: 0.82rem;
-      font-weight: 700;
-      min-width: 48px;
-      text-align: end;
-      color: var(--text-muted);
-    }
-
-    #toast-container {
-      position: fixed;
-      top: 20px;
-      inset-inline-end: 20px;
-      z-index: 12000;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-width: min(92vw, 360px);
-    }
-
-    #fav-toast {
-      position: fixed;
-      bottom: 150px;
-      inset-inline-start: 50%;
-      transform: translateX(-50%) translateY(12px);
-      background: rgba(15,23,42,.92);
-      color: #fff;
-      padding: 12px 18px;
-      border-radius: 999px;
-      font-weight: 700;
-      z-index: 12000;
-      opacity: 0;
-      pointer-events: none;
-      transition: .25s ease;
-      box-shadow: 0 16px 30px rgba(15,23,42,.24);
-      white-space: nowrap;
-    }
-
-    #fav-toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .bookings-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 6, 23, 0.56);
-      z-index: 10020;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-    }
-
-    .bookings-modal.active { display: flex; }
-
-    .bookings-modal-dialog {
-      width: min(960px, 100%);
-      max-height: 90vh;
-      overflow: hidden;
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      box-shadow: var(--shadow-hover);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .bookings-modal-header {
-      padding: 22px 24px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .bookings-modal-header h3 {
-      margin: 0;
-      font-size: 1.25rem;
-    }
-
-    .bookings-modal-header button {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: 1px solid var(--border-color);
-      background: var(--surface-color);
-      color: var(--text-main);
-      cursor: pointer;
-    }
-
-    .bookings-modal-body {
-      padding: 24px;
-      max-height: min(72vh, 700px);
-      overflow: auto;
-      background: var(--bg-color);
-    }
-
-    .booking-card {
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: 18px;
-      padding: 18px;
-      margin-bottom: 14px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .booking-card:last-child { margin-bottom: 0; }
-
-    .booking-card-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .booking-card-head h4 {
-      margin: 0 0 4px;
-      font-size: 1.05rem;
-    }
-
-    .booking-card-sub {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
-
-    .booking-card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 10px 16px;
-      font-size: 0.92rem;
-      color: var(--text-main);
-      margin-bottom: 14px;
-    }
-
-    .booking-card-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    .booking-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: 700;
-    }
-
-    .booking-status.pending {
-      background: rgba(245,158,11,.12);
-      color: #b45309;
-    }
-
-    .booking-status.confirmed {
-      background: rgba(16,185,129,.12);
-      color: #047857;
-    }
-
-    .booking-status.cancelled {
-      background: rgba(239,68,68,.12);
-      color: #b91c1c;
-    }
-
-    .chat-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 6, 23, 0.58);
-      z-index: 10030;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-    }
-
-    .chat-modal.active { display: flex; }
-
-    .chat-modal-dialog {
-      width: min(460px, 100%);
-      height: min(720px, 88vh);
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      box-shadow: var(--shadow-hover);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .chat-modal-header {
-      padding: 18px 20px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .chat-modal-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .chat-avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: rgba(67,90,191,0.12);
-      color: var(--primary);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      flex-shrink: 0;
-    }
-
-    .chat-title-text h3 {
-      margin: 0;
-      font-size: 1rem;
-    }
-
-    .chat-title-text p {
-      margin: 3px 0 0;
-      font-size: 0.84rem;
-      color: var(--text-muted);
-    }
-
-    .chat-close-btn {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: 1px solid var(--border-color);
-      background: var(--surface-color);
-      color: var(--text-main);
-      cursor: pointer;
-    }
-
-    .chat-modal-body {
-      flex: 1;
-      overflow-y: auto;
-      background: var(--bg-color);
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .chat-empty-state {
-      margin: auto 0;
-      text-align: center;
-      color: var(--text-muted);
-      padding: 24px;
-      border: 1px dashed var(--border-color);
-      border-radius: 18px;
-      background: var(--surface-color);
-    }
-
-    .chat-message {
-      max-width: 82%;
-      padding: 12px 14px;
-      border-radius: 16px;
-      line-height: 1.6;
-      font-size: 0.93rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .chat-message.admin {
-      align-self: flex-start;
-      background: var(--surface-color);
-      color: var(--text-main);
-      border: 1px solid var(--border-color);
-      border-top-left-radius: 6px;
-    }
-
-    .chat-message.customer {
-      align-self: flex-end;
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: #fff;
-      border-top-right-radius: 6px;
-    }
-
-    .chat-meta {
-      display: block;
-      margin-top: 6px;
-      font-size: 0.75rem;
-      opacity: 0.8;
-    }
-
-    .chat-input-area {
-      border-top: 1px solid var(--border-color);
-      background: var(--surface-color);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .chat-input-area textarea {
-      resize: none;
-      min-height: 92px;
-      width: 100%;
-    }
-
-    .chat-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .chat-note {
-      color: var(--text-muted);
-      font-size: 0.82rem;
-    }
-
-    .chat-send-btn {
-      min-width: 140px;
-    }
-
-    #mobile-bottom-nav {
-      position: sticky;
-      bottom: 0;
-      z-index: 999;
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .dark #mobile-bottom-nav {
-      background: rgba(15,23,42,0.9);
-      border-top-color: rgba(255,255,255,0.05);
-    }
-
-    .mobile-nav-inner {
-      display: flex;
-      justify-content: space-around;
-      padding: 10px 0;
-    }
-
-    .mob-nav-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      cursor: pointer;
-      font-family: inherit;
-      padding: 6px 0;
-      flex: 1;
-    }
-
-    .mob-nav-btn.active {
-      color: var(--primary);
-      font-weight: 700;
-    }
-
-    footer.footer {
-      margin-top: 80px;
-      padding: 40px 0;
-      border-top: 1px solid var(--border-color);
-      background: var(--surface-color);
-    }
-
-    .footer-copy {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-    }
-
-    .developers-names {
-      color: var(--text-main);
-    }
-
-    .copyright-line {
-      font-size: 0.85rem;
-    }
-
-    @media (max-width: 992px) {
-      .search-bar {
-        flex-direction: column;
-        background: transparent;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        gap: 12px;
-      }
-
-      .search-bar:hover,
-      .search-bar:focus-within {
-        box-shadow: none;
-        border-color: transparent;
-      }
-
-      .search-field {
-        background: var(--surface-color);
-        width: 100%;
-        border: 1px solid var(--border-color);
-        padding: 12px 20px;
-        box-shadow: var(--shadow-sm);
-        border-radius: var(--radius-xl);
-      }
-
-      .search-divider { display: none; }
-      .search-btn { width: 100%; justify-content: center; padding: 16px; }
-      .hero { padding-top: 60px; }
-      .hero h1 { font-size: 2.2rem; }
-      .navbar { padding: 12px 16px; }
-      .rewards-badge { display: none; }
-      .container { padding: 0 16px; }
-      .auth-card { padding: 24px 18px; }
-      .bookings-modal-header,
-      .bookings-modal-body { padding: 18px; }
-    }
-
-    @media (max-width: 768px) {
-      #listings-grid { grid-template-columns: 1fr; }
-      .section-header-wrapper { align-items: stretch; }
-      .section-header-controls { width: 100%; }
-      .section-header-controls > * { flex: 1; }
-      .property-card-actions { flex-direction: column; }
-      #chat-open-btn {
-        bottom: 146px;
-        inset-inline-end: 18px;
-      }
-      #scroll-top-btn {
-        bottom: 82px;
-        inset-inline-end: 18px;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .nav-actions { gap: 8px; }
-      .lang-btn span { display: none; }
-      .hero p { font-size: 1rem; }
-      .bookings-modal-dialog,
-      .chat-modal-dialog { border-radius: 18px; }
-      .chat-actions {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .chat-send-btn { width: 100%; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OreBooking – Discover and book premium hotels, apartments, and villas.">
+    <meta name="theme-color" content="#435abf">
+    <meta name="format-detection" content="telephone=no">
+    <title>OreBooking - Premium Stays</title>
+
+    <link rel="icon" type="image/png" href="logos/orebooking.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css?v=2.4">
+
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem("ore_theme") || "light";
+                const savedLang = localStorage.getItem("ore_lang") || "en";
+                document.documentElement.lang = savedLang;
+                document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
+                if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+            } catch (_) { }
+        })();
+    </script>
+
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #435abf;
+            --primary-hover: #34459c;
+            --surface-color: #ffffff;
+            --bg-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --radius-full: 9999px;
+            --radius-xl: 24px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 20px 40px -10px rgba(67, 90, 191, 0.15);
+            --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            --transition-fast: 0.2s ease-out;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        html[dir="rtl"] body {
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .preload-dark body,
+        body.dark {
+            --surface-color: #0f172a;
+            --bg-color: #020617;
+            --border-color: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.25);
+            --shadow-hover: 0 24px 48px rgba(0, 0, 0, 0.28);
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        @keyframes slideUpFade {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        @keyframes scaleIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .ph-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .animate-up {
+            opacity: 0;
+            animation: slideUpFade var(--transition-smooth) forwards;
+        }
+
+        .delay-1 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-4 {
+            animation-delay: 0.4s;
+        }
+
+        [class^="ph-"],
+        [class*=" ph-"],
+        [class^="ph "],
+        [class*=" ph "] {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            font-style: normal;
+        }
+
+        .navbar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 40px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: var(--transition-smooth);
+        }
+
+        .dark .navbar {
+            background: rgba(15, 23, 42, 0.88);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            flex: 1;
+            min-width: 0;
+            text-decoration: none;
+        }
+
+        .logo-img {
+            height: 42px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 14px;
+            flex: 1;
+        }
+
+        html[dir="rtl"] .nav-actions {
+            justify-content: flex-start;
+        }
+
+        .rewards-badge {
+            border-radius: var(--radius-full);
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .icon-btn,
+        .lang-btn,
+        .profile-menu,
+        .chat-toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            height: 42px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-family: inherit;
+        }
+
+        .icon-btn,
+        .profile-menu {
+            width: 42px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+        }
+
+        .lang-btn {
+            padding: 0 18px;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 0.95rem;
+            gap: 6px;
+        }
+
+        .icon-btn:hover,
+        .lang-btn:hover,
+        .profile-menu:hover,
+        .chat-toggle-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .profile-container {
+            position: relative;
+        }
+
+        #profile-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            inset-inline-end: 0;
+            min-width: 230px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-hover);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transform-origin: top right;
+            z-index: 100;
+        }
+
+        html[dir="rtl"] #profile-dropdown {
+            transform-origin: top left;
+        }
+
+        #profile-dropdown.active {
+            display: flex;
+            animation: scaleIn 0.2s forwards;
+        }
+
+        .dropdown-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .dropdown-body {
+            padding: 8px;
+        }
+
+        .dropdown-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition-fast);
+            text-align: start;
+            font-family: inherit;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(67, 90, 191, 0.08);
+            color: var(--primary);
+        }
+
+        .dropdown-item.text-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .hero {
+            position: relative;
+            padding: 100px 20px 60px;
+            text-align: center;
+            background: radial-gradient(circle at top center, rgba(67, 90, 191, 0.08) 0%, transparent 60%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+            line-height: 1.2;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface-color);
+            border-radius: var(--radius-full);
+            padding: 8px 8px 8px 24px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            max-width: 980px;
+            width: 100%;
+            transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth), background-color var(--transition-smooth);
+            position: relative;
+            z-index: 50;
+        }
+
+        html[dir="rtl"] .search-bar {
+            padding: 8px 24px 8px 8px;
+        }
+
+        .search-bar:hover,
+        .search-bar:focus-within {
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary);
+        }
+
+        .search-field {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            transition: background var(--transition-fast);
+            z-index: 60;
+            text-align: start;
+        }
+
+        .search-field:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .dark .search-field:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .search-field label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+
+        .search-field input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .search-divider {
+            width: 1px;
+            height: 32px;
+            background: var(--border-color);
+            margin: 0 8px;
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: var(--radius-full);
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: box-shadow var(--transition-smooth), filter var(--transition-smooth), background var(--transition-smooth);
+            box-shadow: 0 4px 14px rgba(67, 90, 191, 0.3);
+            z-index: 60;
+            flex-shrink: 0;
+            font-family: inherit;
+        }
+
+        .search-btn:hover,
+        .search-btn:focus-visible {
+            box-shadow: 0 6px 20px rgba(67, 90, 191, 0.4);
+            filter: brightness(1.03);
+        }
+
+        .search-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            left: 0;
+            right: 0;
+            min-width: 250px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            z-index: 1000;
+            display: none;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .search-dropdown.active {
+            display: block;
+            animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .search-suggestion-item {
+            width: 100%;
+            padding: 12px 14px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: var(--transition-fast);
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            text-align: start;
+            font-family: inherit;
+            border-radius: 14px;
+        }
+
+        .search-suggestion-item:hover {
+            background: rgba(67, 90, 191, 0.06);
+            color: var(--primary);
+        }
+
+        .search-suggestion-main {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .search-suggestion-sub {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .search-empty {
+            padding: 14px;
+            color: var(--text-muted);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .categories {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            padding: 10px 20px 30px;
+            position: relative;
+            z-index: 10;
+            min-height: 72px;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: var(--surface-color);
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-full);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: inherit;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .category-item i {
+            font-size: 1.3rem;
+        }
+
+        .category-item:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .category-item.active {
+            background: var(--text-main);
+            color: var(--surface-color);
+            border-color: var(--text-main);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .section-header-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .section-header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .sort-select,
+        .clear-search-btn {
+            padding: 12px 20px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: var(--transition-smooth);
+            box-shadow: var(--shadow-sm);
+            font-family: inherit;
+        }
+
+        .clear-search-btn {
+            padding: 12px 18px;
+            display: none;
+        }
+
+        #listings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 28px;
+            padding: 20px 0;
+            min-height: 220px;
+        }
+
+        .property-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+        }
+
+        .property-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary);
+        }
+
+        .property-card-media {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+
+        .property-card-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+            display: block;
+        }
+
+        .property-card:hover .property-card-media img {
+            transform: scale(1.05);
+        }
+
+        .property-card-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 10px;
+        }
+
+        .property-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .property-card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .property-card-rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .property-card-location {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 22px;
+        }
+
+        .property-card-price {
+            margin-top: auto;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .property-card-price span {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .property-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .property-card-actions button,
+        .property-card-actions a {
+            flex: 1;
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            text-align: center;
+            text-decoration: none;
+            transition: var(--transition-fast);
+        }
+
+        .property-card-actions .primary,
+        .property-card-actions .reserve-btn.primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .property-card-actions button:hover,
+        .property-card-actions a:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .favorite-btn {
+            position: absolute;
+            top: 14px;
+            inset-inline-end: 14px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.92);
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 3;
+            transition: .25s ease;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, .12);
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.06);
+        }
+
+        .favorite-btn.active {
+            color: #ef4444;
+        }
+
+        .property-urgency {
+            position: absolute;
+            top: 14px;
+            inset-inline-start: 14px;
+            padding: 8px 12px;
+            border-radius: var(--radius-full);
+            background: rgba(15, 23, 42, .78);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .listings-empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+        }
+
+        .listings-empty-state i {
+            font-size: 2.3rem;
+            display: block;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        #scroll-top-btn,
+        #chat-open-btn {
+            position: fixed;
+            inset-inline-end: 24px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 500;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #scroll-top-btn {
+            bottom: 88px;
+            background: var(--primary);
+            box-shadow: 0 8px 24px rgba(67, 90, 191, 0.4);
+            opacity: 0;
+            transform: translateY(20px) scale(0.8);
+            pointer-events: none;
+        }
+
+        #scroll-top-btn.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        #scroll-top-btn:hover {
+            transform: translateY(-4px) scale(1.1);
+            background: var(--primary-hover);
+            box-shadow: 0 12px 30px rgba(67, 90, 191, 0.5);
+        }
+
+        #chat-open-btn {
+            bottom: 150px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            box-shadow: 0 10px 28px rgba(67, 90, 191, 0.35);
+        }
+
+        #chat-open-btn:hover {
+            transform: translateY(-3px) scale(1.06);
+        }
+
+        .chat-unread-badge {
+            position: absolute;
+            top: -4px;
+            inset-inline-end: -2px;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            border-radius: var(--radius-xl);
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            box-shadow: var(--shadow-hover);
+            border: 1px solid var(--border-color);
+        }
+
+        .auth-card {
+            padding: 32px;
+        }
+
+        .close-modal-btn {
+            position: absolute;
+            top: 16px;
+            inset-inline-end: 16px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-header img {
+            height: 40px;
+            width: auto;
+        }
+
+        .auth-message {
+            display: none;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .auth-message.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+            border: 1px solid rgba(239, 68, 68, 0.18);
+        }
+
+        .auth-message.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.12);
+            color: #047857;
+            border: 1px solid rgba(16, 185, 129, 0.18);
+        }
+
+        .auth-form {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-title {
+            margin: 0;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .auth-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin: -4px 0 4px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .input-group input,
+        .chat-input-area textarea {
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            outline: none;
+            font-family: inherit;
+            color: var(--text-main);
+        }
+
+        .pass-wrapper {
+            position: relative;
+        }
+
+        .pass-wrapper input {
+            width: 100%;
+            padding-inline-end: 48px;
+        }
+
+        .toggle-pass-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            inset-inline-end: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .auth-options {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .primary-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 4px;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .social-btn {
+            width: 100%;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+            color: var(--text-main);
+        }
+
+        .switch-form-text {
+            text-align: center;
+            font-size: 0.92rem;
+            margin-top: 10px;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        .switch-form-text a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .text-primary {
+            color: var(--primary);
+        }
+
+        #password-strength {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .strength-bars {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .str-bar {
+            height: 6px;
+            flex: 1;
+            border-radius: 999px;
+            background: var(--border-color);
+            transition: .2s ease;
+        }
+
+        #strength-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            min-width: 48px;
+            text-align: end;
+            color: var(--text-muted);
+        }
+
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            inset-inline-end: 20px;
+            z-index: 12000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: min(92vw, 360px);
+        }
+
+        #fav-toast {
+            position: fixed;
+            bottom: 150px;
+            inset-inline-start: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: rgba(15, 23, 42, .92);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 999px;
+            font-weight: 700;
+            z-index: 12000;
+            opacity: 0;
+            pointer-events: none;
+            transition: .25s ease;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, .24);
+            white-space: nowrap;
+        }
+
+        #fav-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .bookings-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.56);
+            z-index: 10020;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+
+        .bookings-modal.active {
+            display: flex;
+        }
+
+        .bookings-modal-dialog {
+            width: min(960px, 100%);
+            max-height: 90vh;
+            overflow: hidden;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: var(--shadow-hover);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bookings-modal-header {
+            padding: 22px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .bookings-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .bookings-modal-header button {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .bookings-modal-body {
+            padding: 24px;
+            max-height: min(72vh, 700px);
+            overflow: auto;
+            background: var(--bg-color);
+        }
+
+        .booking-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .booking-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .booking-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .booking-card-head h4 {
+            margin: 0 0 4px;
+            font-size: 1.05rem;
+        }
+
+        .booking-card-sub {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .booking-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px 16px;
+            font-size: 0.92rem;
+            color: var(--text-main);
+            margin-bottom: 14px;
+        }
+
+        .booking-card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .booking-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .booking-status.pending {
+            background: rgba(245, 158, 11, .12);
+            color: #b45309;
+        }
+
+        .booking-status.confirmed {
+            background: rgba(16, 185, 129, .12);
+            color: #047857;
+        }
+
+        .booking-status.cancelled {
+            background: rgba(239, 68, 68, .12);
+            color: #b91c1c;
+        }
+
+        .chat-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.58);
+            z-index: 10030;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+
+        .chat-modal.active {
+            display: flex;
+        }
+
+        .chat-modal-dialog {
+            width: min(460px, 100%);
+            height: min(720px, 88vh);
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: var(--shadow-hover);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-modal-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .chat-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(67, 90, 191, 0.12);
+            color: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .chat-title-text h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .chat-title-text p {
+            margin: 3px 0 0;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+        }
+
+        .chat-close-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .chat-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-color);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-empty-state {
+            margin: auto 0;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 24px;
+            border: 1px dashed var(--border-color);
+            border-radius: 18px;
+            background: var(--surface-color);
+        }
+
+        .chat-message {
+            max-width: 82%;
+            padding: 12px 14px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 0.93rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chat-message.admin {
+            align-self: flex-start;
+            background: var(--surface-color);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-top-left-radius: 6px;
+        }
+
+        .chat-message.customer {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            border-top-right-radius: 6px;
+        }
+
+        .chat-meta {
+            display: block;
+            margin-top: 6px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .chat-input-area {
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-input-area textarea {
+            resize: none;
+            min-height: 92px;
+            width: 100%;
+        }
+
+        .chat-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .chat-note {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .chat-send-btn {
+            min-width: 140px;
+        }
+
+        #mobile-bottom-nav {
+            position: sticky;
+            bottom: 0;
+            z-index: 999;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .dark #mobile-bottom-nav {
+            background: rgba(15, 23, 42, 0.9);
+            border-top-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .mobile-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+
+        .mob-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-family: inherit;
+            padding: 6px 0;
+            flex: 1;
+        }
+
+        .mob-nav-btn.active {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        footer.footer {
+            margin-top: 80px;
+            padding: 40px 0;
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+        }
+
+        .footer-copy {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .developers-names {
+            color: var(--text-main);
+        }
+
+        .copyright-line {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 992px) {
+            .search-bar {
+                flex-direction: column;
+                background: transparent;
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                gap: 12px;
+            }
+
+            .search-bar:hover,
+            .search-bar:focus-within {
+                box-shadow: none;
+                border-color: transparent;
+            }
+
+            .search-field {
+                background: var(--surface-color);
+                width: 100%;
+                border: 1px solid var(--border-color);
+                padding: 12px 20px;
+                box-shadow: var(--shadow-sm);
+                border-radius: var(--radius-xl);
+            }
+
+            .search-divider {
+                display: none;
+            }
+
+            .search-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 16px;
+            }
+
+            .hero {
+                padding-top: 60px;
+            }
+
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .navbar {
+                padding: 14px 18px;
+                gap: 14px;
+            }
+
+            .rewards-badge {
+                display: none;
+            }
+
+            .container {
+                padding: 0 16px;
+            }
+
+            .auth-card {
+                padding: 24px 18px;
+            }
+
+            .bookings-modal-header,
+            .bookings-modal-body {
+                padding: 18px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #listings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header-wrapper {
+                align-items: stretch;
+            }
+
+            .section-header-controls {
+                width: 100%;
+            }
+
+            .section-header-controls>* {
+                flex: 1;
+            }
+
+            .property-card-actions {
+                flex-direction: column;
+            }
+
+            #chat-open-btn {
+                bottom: 146px;
+                inset-inline-end: 18px;
+            }
+
+            #scroll-top-btn {
+                bottom: 82px;
+                inset-inline-end: 18px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .nav-actions {
+                gap: 8px;
+            }
+
+            .logo-img {
+                height: 32px;
+            }
+
+            .icon-btn,
+            .profile-menu {
+                width: 40px;
+                height: 40px;
+            }
+
+            .lang-btn {
+                height: 40px;
+                padding: 0 14px;
+            }
+
+            .lang-btn span {
+                display: none;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .bookings-modal-dialog,
+            .chat-modal-dialog {
+                border-radius: 18px;
+            }
+
+            .chat-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chat-send-btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
+
 <body>
 
-  <button id="scroll-top-btn" aria-label="Scroll to top" type="button">
-    <i class="ph ph-caret-up" aria-hidden="true"></i>
-  </button>
+    <button id="scroll-top-btn" aria-label="Scroll to top" type="button">
+        <i class="ph ph-caret-up" aria-hidden="true"></i>
+    </button>
 
-  <button id="chat-open-btn" aria-label="Open support chat" type="button">
-    <i class="ph ph-chat-centered-dots" aria-hidden="true"></i>
-    <span class="chat-unread-badge" id="chat-unread-badge">0</span>
-  </button>
+    <button id="chat-open-btn" aria-label="Open support chat" type="button">
+        <i class="ph ph-chat-centered-dots" aria-hidden="true"></i>
+        <span class="chat-unread-badge" id="chat-unread-badge">0</span>
+    </button>
 
-  <div id="toast-container" aria-live="polite"></div>
-  <div id="fav-toast" role="status" aria-live="polite"></div>
+    <div id="toast-container" aria-live="polite"></div>
+    <div id="fav-toast" role="status" aria-live="polite"></div>
 
-  <nav class="navbar" role="navigation" aria-label="Main navigation">
-    <a href="index.html" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
-      <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
-    </a>
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <a href="index.html" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
+            <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
+        </a>
 
-    <div class="nav-actions">
-      <div class="rewards-badge" role="status" aria-label="Reward points">
-        <i class="ph-fill ph-star" style="animation: float 3s ease-in-out infinite;"></i>
-        <span id="user-points">1,250</span>
-        <span data-i18n="pts">Pts</span>
-      </div>
-
-      <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" type="button">
-        <i class="ph ph-moon"></i>
-      </button>
-
-      <button id="lang-toggle" class="lang-btn" aria-label="Switch language" type="button">
-        <i class="ph ph-globe"></i>
-        <span>AR</span>
-      </button>
-
-      <div class="profile-container">
-        <button
-          id="open-auth-btn"
-          class="profile-menu auth-btn-guest"
-          aria-label="Profile menu"
-          aria-haspopup="true"
-          aria-expanded="false"
-          aria-controls="profile-dropdown"
-          type="button"
-        >
-          <i class="ph ph-user"></i>
-        </button>
-
-        <div id="profile-dropdown" class="profile-dropdown" role="menu">
-          <div class="dropdown-header">
-            <span class="font-bold" id="dropdown-user-name">Guest</span>
-            <span class="text-muted text-sm" id="dropdown-user-email"></span>
-          </div>
-          <div class="dropdown-body">
-            <button class="dropdown-item" id="my-bookings-btn" role="menuitem" type="button">
-              <i class="ph ph-list-checks"></i>
-              <span data-i18n="my_bookings">My Bookings</span>
-            </button>
-
-            <button class="dropdown-item" id="my-favorites-btn" role="menuitem" type="button">
-              <i class="ph ph-heart"></i>
-              <span data-i18n="my_favorites">My Favorites</span>
-            </button>
-
-            <button class="dropdown-item" id="open-chat-btn" role="menuitem" type="button">
-              <i class="ph ph-chat-centered-text"></i>
-              <span>Support Chat</span>
-            </button>
-
-            <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
-
-            <button class="dropdown-item text-danger" id="logout-btn" role="menuitem" type="button">
-              <i class="ph ph-sign-out"></i>
-              <span data-i18n="logout">Log Out</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <header class="hero" id="hero-section" role="banner">
-    <h1 class="animate-up" data-i18n="hero_title">Find your next perfect stay</h1>
-    <p class="animate-up delay-1" data-i18n="hero_subtitle">
-      Discover premium apartments, villas, and unique homes around the world.
-    </p>
-
-    <div class="search-bar animate-up delay-2" role="search" aria-label="Property search">
-      <div class="search-field" id="search-location-wrapper">
-        <label for="search-location" data-i18n="location">Location</label>
-        <input
-          type="text"
-          id="search-location"
-          placeholder="Where are you going?"
-          data-i18n-placeholder="location_placeholder"
-          autocomplete="off"
-        >
-        <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="Search suggestions"></div>
-      </div>
-
-      <div class="search-divider" aria-hidden="true"></div>
-
-      <div class="search-field">
-        <label for="search-dates" data-i18n="dates">Dates</label>
-        <input
-          type="text"
-          id="search-dates"
-          placeholder="Add dates"
-          data-i18n-placeholder="dates_placeholder"
-          readonly
-        >
-      </div>
-
-      <div class="search-divider" aria-hidden="true"></div>
-
-      <div class="search-field">
-        <label for="search-guests" data-i18n="guests">Guests</label>
-        <input
-          type="text"
-          id="search-guests"
-          placeholder="Add guests"
-          data-i18n-placeholder="guests_placeholder"
-          readonly
-        >
-      </div>
-
-      <button class="search-btn" id="main-search-btn" type="button">
-        <i class="ph ph-magnifying-glass"></i>
-        <span data-i18n="search">Search</span>
-      </button>
-    </div>
-  </header>
-
-  <section class="categories animate-up delay-3" id="categories-container" aria-label="Browse categories"></section>
-
-  <main class="container" id="main-content" role="main" style="padding-top: 20px;">
-    <div class="section-header-wrapper animate-up delay-4">
-      <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">
-        Trending Destinations
-      </h2>
-
-      <div class="section-header-controls">
-        <select id="sort-select" class="sort-select" aria-label="Sort listings">
-          <option value="default">Sort: Default</option>
-          <option value="price_asc">Price ↑</option>
-          <option value="price_desc">Price ↓</option>
-          <option value="rating">Top Rated</option>
-        </select>
-
-        <button id="clear-search-btn" class="clear-search-btn" type="button" data-i18n="clear_search">
-          Clear Search
-        </button>
-      </div>
-    </div>
-
-    <div id="listings-grid" role="list" aria-live="polite">
-      <div class="listings-empty-state" id="initial-listings-loading">
-        <i class="ph ph-spinner-gap ph-spin"></i>
-        <p>Loading properties...</p>
-      </div>
-    </div>
-  </main>
-
-  <footer class="footer" role="contentinfo">
-    <div class="container">
-      <p class="footer-copy">
-        <span data-i18n="developed_by">Developed by:</span>
-        <span class="developers-names font-bold">Henni Abdennour, Khadem Mohammed, Kouidi Adel</span>
-        <br><br>
-        <span class="copyright-line">© 2025 OreBooking</span>
-      </p>
-    </div>
-  </footer>
-
-  <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
-    <div class="mobile-nav-inner">
-      <button class="mob-nav-btn active" id="mob-nav-home" data-target="home" type="button">
-        <i class="ph-fill ph-house" style="font-size:1.5rem;"></i>
-        <span>Home</span>
-      </button>
-
-      <button class="mob-nav-btn" id="mob-nav-search" data-target="home" type="button">
-        <i class="ph ph-magnifying-glass" style="font-size:1.5rem;"></i>
-        <span data-i18n="search">Search</span>
-      </button>
-
-      <button class="mob-nav-btn" id="mob-nav-favorites" data-target="favorites" type="button">
-        <i class="ph ph-heart" style="font-size:1.5rem;"></i>
-        <span>Saved</span>
-      </button>
-
-      <button class="mob-nav-btn" id="mob-nav-profile" data-target="profile" type="button">
-        <i class="ph ph-user" style="font-size:1.5rem;"></i>
-        <span>Profile</span>
-      </button>
-    </div>
-  </nav>
-
-  <div id="auth-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-    <div class="modal-content auth-card">
-      <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
-        <i class="ph ph-x"></i>
-      </button>
-
-      <div class="auth-header">
-        <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking Logo">
-      </div>
-
-      <div class="auth-content">
-        <div id="auth-message" class="auth-message"></div>
-
-        <form id="login-form" class="auth-form active" novalidate style="display:flex;">
-          <h2 class="font-bold auth-title" id="auth-modal-title" data-i18n="welcome_back">Welcome back</h2>
-          <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
-
-          <div class="input-group">
-            <label for="login-email" data-i18n="email">Email</label>
-            <input type="email" id="login-email" required>
-          </div>
-
-          <div class="input-group">
-            <label for="login-password" data-i18n="password">Password</label>
-            <div class="pass-wrapper">
-              <input type="password" id="login-password" required>
-              <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
-                <i class="ph ph-eye"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="auth-options">
-            <label class="checkbox-container" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-              <input type="checkbox" id="remember-me" style="margin:0;">
-              <span data-i18n="remember_me">Remember me</span>
-            </label>
-            <a href="#" id="go-to-forgot" data-i18n="forgot_pass" style="color:var(--primary); font-weight:600; text-decoration:none;">Forgot password?</a>
-          </div>
-
-          <button type="submit" class="primary-btn" id="login-submit-btn">
-            <span data-i18n="sign_in">Sign In</span>
-          </button>
-
-          <div class="social-logins" style="margin-top:16px;">
-            <button type="button" class="social-btn" id="google-login-btn">
-              <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
-              <span>Google</span>
-            </button>
-          </div>
-
-          <p class="switch-form-text">
-            <span data-i18n="no_account">Don't have an account?</span>
-            <a href="#" id="go-to-register" data-i18n="sign_up">Sign up</a>
-          </p>
-        </form>
-
-        <form id="register-form" class="auth-form" novalidate style="display:none;">
-          <h2 class="font-bold auth-title" data-i18n="create_account">Create Account</h2>
-          <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
-
-          <div class="input-group">
-            <label for="reg-name" data-i18n="full_name">Full Name</label>
-            <input type="text" id="reg-name" required>
-          </div>
-
-          <div class="input-group">
-            <label for="reg-email" data-i18n="email">Email</label>
-            <input type="email" id="reg-email" required>
-          </div>
-
-          <div class="input-group">
-            <label for="reg-password" data-i18n="password">Password</label>
-            <div class="pass-wrapper">
-              <input type="password" id="reg-password" required>
-              <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
-                <i class="ph ph-eye"></i>
-              </button>
+        <div class="nav-actions">
+            <div class="rewards-badge" role="status" aria-label="Reward points">
+                <i class="ph-fill ph-star" style="animation: float 3s ease-in-out infinite;"></i>
+                <span id="user-points">1,250</span>
+                <span data-i18n="pts">Pts</span>
             </div>
 
-            <div id="password-strength">
-              <div class="strength-bars">
-                <span class="str-bar"></span>
-                <span class="str-bar"></span>
-                <span class="str-bar"></span>
-                <span class="str-bar"></span>
-              </div>
-              <span id="strength-label"></span>
-            </div>
-          </div>
-
-          <button type="submit" class="primary-btn" id="register-submit-btn">
-            <span data-i18n="sign_up_btn">Create Account</span>
-          </button>
-
-          <div class="social-logins" style="margin-top:16px;">
-            <button type="button" class="social-btn" id="google-register-btn">
-              <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
-              <span>Google</span>
+            <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" type="button">
+                <i class="ph ph-moon"></i>
             </button>
-          </div>
 
-          <p class="switch-form-text">
-            <span data-i18n="has_account">Already have an account?</span>
-            <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
-          </p>
-        </form>
+            <button id="lang-toggle" class="lang-btn" aria-label="Switch language" type="button">
+                <i class="ph ph-globe"></i>
+                <span>AR</span>
+            </button>
 
-        <form id="forgot-form" class="auth-form" novalidate style="display:none;">
-          <h2 class="font-bold auth-title" data-i18n="reset_pass_title">Reset Password</h2>
-          <p class="auth-subtitle" data-i18n="reset_pass_desc">Enter your email and we'll send you a reset link.</p>
+            <div class="profile-container">
+                <button id="open-auth-btn" class="profile-menu auth-btn-guest" aria-label="Profile menu"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="profile-dropdown" type="button">
+                    <i class="ph ph-user"></i>
+                </button>
 
-          <div class="input-group">
-            <label for="forgot-email" data-i18n="email">Email</label>
-            <input type="email" id="forgot-email" required>
-          </div>
+                <div id="profile-dropdown" class="profile-dropdown" role="menu">
+                    <div class="dropdown-header">
+                        <span class="font-bold" id="dropdown-user-name">Guest</span>
+                        <span class="text-muted text-sm" id="dropdown-user-email"></span>
+                    </div>
+                    <div class="dropdown-body">
+                        <button class="dropdown-item" id="my-bookings-btn" role="menuitem" type="button">
+                            <i class="ph ph-list-checks"></i>
+                            <span data-i18n="my_bookings">My Bookings</span>
+                        </button>
 
-          <button type="submit" class="primary-btn" id="forgot-submit-btn">
-            <span data-i18n="send_link">Send Reset Link</span>
-          </button>
+                        <button class="dropdown-item" id="my-favorites-btn" role="menuitem" type="button">
+                            <i class="ph ph-heart"></i>
+                            <span data-i18n="my_favorites">My Favorites</span>
+                        </button>
 
-          <p class="switch-form-text">
-            <a href="#" id="back-to-login" data-i18n="back_to_login">Back to login</a>
-          </p>
-        </form>
-      </div>
+                        <button class="dropdown-item" id="open-chat-btn" role="menuitem" type="button">
+                            <i class="ph ph-chat-centered-text"></i>
+                            <span>Support Chat</span>
+                        </button>
+
+                        <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
+
+                        <button class="dropdown-item text-danger" id="logout-btn" role="menuitem" type="button">
+                            <i class="ph ph-sign-out"></i>
+                            <span data-i18n="logout">Log Out</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero" id="hero-section" role="banner">
+        <h1 class="animate-up" data-i18n="hero_title">Find your next perfect stay</h1>
+        <p class="animate-up delay-1" data-i18n="hero_subtitle">
+            Discover premium apartments, villas, and unique homes around the world.
+        </p>
+
+        <div class="search-bar animate-up delay-2" role="search" aria-label="Property search">
+            <div class="search-field" id="search-location-wrapper">
+                <label for="search-location" data-i18n="location">Location</label>
+                <input type="text" id="search-location" placeholder="Where are you going?"
+                    data-i18n-placeholder="location_placeholder" autocomplete="off">
+                <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="Search suggestions"></div>
+            </div>
+
+            <div class="search-divider" aria-hidden="true"></div>
+
+            <div class="search-field">
+                <label for="search-dates" data-i18n="dates">Dates</label>
+                <input type="text" id="search-dates" placeholder="Add dates" data-i18n-placeholder="dates_placeholder"
+                    readonly>
+            </div>
+
+            <div class="search-divider" aria-hidden="true"></div>
+
+            <div class="search-field">
+                <label for="search-guests" data-i18n="guests">Guests</label>
+                <input type="text" id="search-guests" placeholder="Add guests"
+                    data-i18n-placeholder="guests_placeholder" readonly>
+            </div>
+
+            <button class="search-btn" id="main-search-btn" type="button">
+                <i class="ph ph-magnifying-glass"></i>
+                <span data-i18n="search">Search</span>
+            </button>
+        </div>
+    </header>
+
+    <section class="categories animate-up delay-3" id="categories-container" aria-label="Browse categories"></section>
+
+    <main class="container" id="main-content" role="main" style="padding-top: 20px;">
+        <div class="section-header-wrapper animate-up delay-4">
+            <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">
+                Trending Destinations
+            </h2>
+
+            <div class="section-header-controls">
+                <select id="sort-select" class="sort-select" aria-label="Sort listings">
+                    <option value="default">Sort: Default</option>
+                    <option value="price_asc">Price ↑</option>
+                    <option value="price_desc">Price ↓</option>
+                    <option value="rating">Top Rated</option>
+                </select>
+
+                <button id="clear-search-btn" class="clear-search-btn" type="button" data-i18n="clear_search">
+                    Clear Search
+                </button>
+            </div>
+        </div>
+
+        <div id="listings-grid" role="list" aria-live="polite">
+            <div class="listings-empty-state" id="initial-listings-loading">
+                <i class="ph ph-spinner-gap ph-spin"></i>
+                <p>Loading properties...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p class="footer-copy">
+                <span data-i18n="developed_by">Developed by:</span>
+                <span class="developers-names font-bold">Henni Abdennour, Khadem Mohammed, Kouidi Adel</span>
+                <br><br>
+                <span class="copyright-line">© 2025 OreBooking</span>
+            </p>
+        </div>
+    </footer>
+
+    <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
+        <div class="mobile-nav-inner">
+            <button class="mob-nav-btn active" id="mob-nav-home" data-target="home" type="button">
+                <i class="ph-fill ph-house" style="font-size:1.5rem;"></i>
+                <span>Home</span>
+            </button>
+
+            <button class="mob-nav-btn" id="mob-nav-search" data-target="home" type="button">
+                <i class="ph ph-magnifying-glass" style="font-size:1.5rem;"></i>
+                <span data-i18n="search">Search</span>
+            </button>
+
+            <button class="mob-nav-btn" id="mob-nav-favorites" data-target="favorites" type="button">
+                <i class="ph ph-heart" style="font-size:1.5rem;"></i>
+                <span>Saved</span>
+            </button>
+
+            <button class="mob-nav-btn" id="mob-nav-profile" data-target="profile" type="button">
+                <i class="ph ph-user" style="font-size:1.5rem;"></i>
+                <span>Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <div id="auth-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+        <div class="modal-content auth-card">
+            <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
+                <i class="ph ph-x"></i>
+            </button>
+
+            <div class="auth-header">
+                <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking Logo">
+            </div>
+
+            <div class="auth-content">
+                <div id="auth-message" class="auth-message"></div>
+
+                <form id="login-form" class="auth-form active" novalidate style="display:flex;">
+                    <h2 class="font-bold auth-title" id="auth-modal-title" data-i18n="welcome_back">Welcome back</h2>
+                    <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
+
+                    <div class="input-group">
+                        <label for="login-email" data-i18n="email">Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="login-password" data-i18n="password">Password</label>
+                        <div class="pass-wrapper">
+                            <input type="password" id="login-password" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="auth-options">
+                        <label class="checkbox-container"
+                            style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" id="remember-me" style="margin:0;">
+                            <span data-i18n="remember_me">Remember me</span>
+                        </label>
+                        <a href="#" id="go-to-forgot" data-i18n="forgot_pass"
+                            style="color:var(--primary); font-weight:600; text-decoration:none;">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="primary-btn" id="login-submit-btn">
+                        <span data-i18n="sign_in">Sign In</span>
+                    </button>
+
+                    <div class="social-logins" style="margin-top:16px;">
+                        <button type="button" class="social-btn" id="google-login-btn">
+                            <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
+                            <span>Google</span>
+                        </button>
+                    </div>
+
+                    <p class="switch-form-text">
+                        <span data-i18n="no_account">Don't have an account?</span>
+                        <a href="#" id="go-to-register" data-i18n="sign_up">Sign up</a>
+                    </p>
+                </form>
+
+                <form id="register-form" class="auth-form" novalidate style="display:none;">
+                    <h2 class="font-bold auth-title" data-i18n="create_account">Create Account</h2>
+                    <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
+
+                    <div class="input-group">
+                        <label for="reg-name" data-i18n="full_name">Full Name</label>
+                        <input type="text" id="reg-name" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="reg-email" data-i18n="email">Email</label>
+                        <input type="email" id="reg-email" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="reg-password" data-i18n="password">Password</label>
+                        <div class="pass-wrapper">
+                            <input type="password" id="reg-password" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+
+                        <div id="password-strength">
+                            <div class="strength-bars">
+                                <span class="str-bar"></span>
+                                <span class="str-bar"></span>
+                                <span class="str-bar"></span>
+                                <span class="str-bar"></span>
+                            </div>
+                            <span id="strength-label"></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="primary-btn" id="register-submit-btn">
+                        <span data-i18n="sign_up_btn">Create Account</span>
+                    </button>
+
+                    <div class="social-logins" style="margin-top:16px;">
+                        <button type="button" class="social-btn" id="google-register-btn">
+                            <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
+                            <span>Google</span>
+                        </button>
+                    </div>
+
+                    <p class="switch-form-text">
+                        <span data-i18n="has_account">Already have an account?</span>
+                        <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
+                    </p>
+                </form>
+
+                <form id="forgot-form" class="auth-form" novalidate style="display:none;">
+                    <h2 class="font-bold auth-title" data-i18n="reset_pass_title">Reset Password</h2>
+                    <p class="auth-subtitle" data-i18n="reset_pass_desc">Enter your email and we'll send you a reset
+                        link.</p>
+
+                    <div class="input-group">
+                        <label for="forgot-email" data-i18n="email">Email</label>
+                        <input type="email" id="forgot-email" required>
+                    </div>
+
+                    <button type="submit" class="primary-btn" id="forgot-submit-btn">
+                        <span data-i18n="send_link">Send Reset Link</span>
+                    </button>
+
+                    <p class="switch-form-text">
+                        <a href="#" id="back-to-login" data-i18n="back_to_login">Back to login</a>
+                    </p>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div id="chat-modal" class="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
-    <div class="chat-modal-dialog">
-      <div class="chat-modal-header">
-        <div class="chat-modal-title">
-          <div class="chat-avatar">
-            <i class="ph ph-headset"></i>
-          </div>
-          <div class="chat-title-text">
-            <h3 id="chat-modal-title">Support Chat</h3>
-            <p>Talk to admin about bookings, payments, or issues.</p>
-          </div>
+    <div id="chat-modal" class="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
+        <div class="chat-modal-dialog">
+            <div class="chat-modal-header">
+                <div class="chat-modal-title">
+                    <div class="chat-avatar">
+                        <i class="ph ph-headset"></i>
+                    </div>
+                    <div class="chat-title-text">
+                        <h3 id="chat-modal-title">Support Chat</h3>
+                        <p>Talk to admin about bookings, payments, or issues.</p>
+                    </div>
+                </div>
+
+                <button id="close-chat-btn" class="chat-close-btn" type="button" aria-label="Close chat">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <div class="chat-modal-body" id="chat-messages" aria-live="polite">
+                <div class="chat-empty-state" id="chat-empty-state">
+                    <i class="ph ph-chat-centered-text"
+                        style="font-size:2rem; color:var(--primary); margin-bottom:10px;"></i>
+                    <p style="margin:0 0 8px;">No messages yet.</p>
+                    <p style="margin:0;">Start the conversation and the admin will reply here.</p>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <textarea id="chat-message-input" placeholder="Type your message here..."></textarea>
+
+                <div class="chat-actions">
+                    <span class="chat-note">Messages should be linked later with Firestore between customer and
+                        admin.</span>
+                    <button id="send-chat-btn" class="primary-btn chat-send-btn" type="button">
+                        <i class="ph ph-paper-plane-tilt"></i>
+                        <span>Send Message</span>
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <button id="close-chat-btn" class="chat-close-btn" type="button" aria-label="Close chat">
-          <i class="ph ph-x"></i>
-        </button>
-      </div>
-
-      <div class="chat-modal-body" id="chat-messages" aria-live="polite">
-        <div class="chat-empty-state" id="chat-empty-state">
-          <i class="ph ph-chat-centered-text" style="font-size:2rem; color:var(--primary); margin-bottom:10px;"></i>
-          <p style="margin:0 0 8px;">No messages yet.</p>
-          <p style="margin:0;">Start the conversation and the admin will reply here.</p>
-        </div>
-      </div>
-
-      <div class="chat-input-area">
-        <textarea
-          id="chat-message-input"
-          placeholder="Type your message here..."
-        ></textarea>
-
-        <div class="chat-actions">
-          <span class="chat-note">Messages should be linked later with Firestore between customer and admin.</span>
-          <button id="send-chat-btn" class="primary-btn chat-send-btn" type="button">
-            <i class="ph ph-paper-plane-tilt"></i>
-            <span>Send Message</span>
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <script src="script.js?v=4.0"></script>
+    <script src="script.js?v=4.0"></script>
 
-  <script>
-    (function () {
-      const sortSelect = document.getElementById("sort-select");
-      const listingsGrid = document.getElementById("listings-grid");
-      const profileBtn = document.getElementById("open-auth-btn");
-      const profileDropdown = document.getElementById("profile-dropdown");
+    <script>
+        (function () {
+            const sortSelect = document.getElementById("sort-select");
+            const listingsGrid = document.getElementById("listings-grid");
+            const profileBtn = document.getElementById("open-auth-btn");
+            const profileDropdown = document.getElementById("profile-dropdown");
 
-      const chatModal = document.getElementById("chat-modal");
-      const chatOpenBtn = document.getElementById("chat-open-btn");
-      const chatMenuBtn = document.getElementById("open-chat-btn");
-      const chatCloseBtn = document.getElementById("close-chat-btn");
-      const chatSendBtn = document.getElementById("send-chat-btn");
-      const chatInput = document.getElementById("chat-message-input");
-      const chatMessages = document.getElementById("chat-messages");
-      const chatEmptyState = document.getElementById("chat-empty-state");
-      const chatUnreadBadge = document.getElementById("chat-unread-badge");
+            const chatModal = document.getElementById("chat-modal");
+            const chatOpenBtn = document.getElementById("chat-open-btn");
+            const chatMenuBtn = document.getElementById("open-chat-btn");
+            const chatCloseBtn = document.getElementById("close-chat-btn");
+            const chatSendBtn = document.getElementById("send-chat-btn");
+            const chatInput = document.getElementById("chat-message-input");
+            const chatMessages = document.getElementById("chat-messages");
+            const chatEmptyState = document.getElementById("chat-empty-state");
+            const chatUnreadBadge = document.getElementById("chat-unread-badge");
 
-      if (sortSelect && listingsGrid) {
-        sortSelect.addEventListener("change", () => {
-          const cards = [...listingsGrid.querySelectorAll(".property-card")];
-          if (!cards.length) return;
+            if (sortSelect && listingsGrid) {
+                sortSelect.addEventListener("change", () => {
+                    const cards = [...listingsGrid.querySelectorAll(".property-card")];
+                    if (!cards.length) return;
 
-          const getPrice = (card) => {
-            const txt = card.querySelector(".property-card-price strong")?.textContent || "0";
-            return Number(String(txt).replace(/[^\d]/g, "")) || 0;
-          };
+                    const getPrice = (card) => {
+                        const txt = card.querySelector(".property-card-price strong")?.textContent || "0";
+                        return Number(String(txt).replace(/[^\d]/g, "")) || 0;
+                    };
 
-          const getRating = (card) => {
-            const txt = card.querySelector(".property-card-rating span")?.textContent || "0";
-            return Number(txt) || 0;
-          };
+                    const getRating = (card) => {
+                        const txt = card.querySelector(".property-card-rating span")?.textContent || "0";
+                        return Number(txt) || 0;
+                    };
 
-          cards.sort((a, b) => {
-            switch (sortSelect.value) {
-              case "price_asc":
-                return getPrice(a) - getPrice(b);
-              case "price_desc":
-                return getPrice(b) - getPrice(a);
-              case "rating":
-                return getRating(b) - getRating(a);
-              default:
-                return 0;
+                    cards.sort((a, b) => {
+                        switch (sortSelect.value) {
+                            case "price_asc":
+                                return getPrice(a) - getPrice(b);
+                            case "price_desc":
+                                return getPrice(b) - getPrice(a);
+                            case "rating":
+                                return getRating(b) - getRating(a);
+                            default:
+                                return 0;
+                        }
+                    });
+
+                    cards.forEach((card) => listingsGrid.appendChild(card));
+                });
             }
-          });
 
-          cards.forEach((card) => listingsGrid.appendChild(card));
-        });
-      }
+            if (profileBtn && profileDropdown) {
+                profileBtn.addEventListener("click", () => {
+                    const isActive = profileDropdown.classList.contains("active");
+                    profileBtn.setAttribute("aria-expanded", isActive ? "true" : "false");
+                });
 
-      if (profileBtn && profileDropdown) {
-        profileBtn.addEventListener("click", () => {
-          const isActive = profileDropdown.classList.contains("active");
-          profileBtn.setAttribute("aria-expanded", isActive ? "true" : "false");
-        });
+                document.addEventListener("click", () => {
+                    profileBtn.setAttribute("aria-expanded", profileDropdown.classList.contains("active") ? "true" : "false");
+                });
+            }
 
-        document.addEventListener("click", () => {
-          profileBtn.setAttribute("aria-expanded", profileDropdown.classList.contains("active") ? "true" : "false");
-        });
-      }
+            const openChat = () => {
+                if (!chatModal) return;
+                chatModal.classList.add("active");
+                document.body.classList.add("modal-open");
+                if (chatUnreadBadge) chatUnreadBadge.textContent = "0";
+            };
 
-      const openChat = () => {
-        if (!chatModal) return;
-        chatModal.classList.add("active");
-        document.body.classList.add("modal-open");
-        if (chatUnreadBadge) chatUnreadBadge.textContent = "0";
-      };
+            const closeChat = () => {
+                if (!chatModal) return;
+                chatModal.classList.remove("active");
+                document.body.classList.remove("modal-open");
+            };
 
-      const closeChat = () => {
-        if (!chatModal) return;
-        chatModal.classList.remove("active");
-        document.body.classList.remove("modal-open");
-      };
+            if (chatOpenBtn) chatOpenBtn.addEventListener("click", openChat);
+            if (chatMenuBtn) {
+                chatMenuBtn.addEventListener("click", () => {
+                    if (profileDropdown) profileDropdown.classList.remove("active");
+                    if (profileBtn) profileBtn.setAttribute("aria-expanded", "false");
+                    openChat();
+                });
+            }
+            if (chatCloseBtn) chatCloseBtn.addEventListener("click", closeChat);
 
-      if (chatOpenBtn) chatOpenBtn.addEventListener("click", openChat);
-      if (chatMenuBtn) {
-        chatMenuBtn.addEventListener("click", () => {
-          if (profileDropdown) profileDropdown.classList.remove("active");
-          if (profileBtn) profileBtn.setAttribute("aria-expanded", "false");
-          openChat();
-        });
-      }
-      if (chatCloseBtn) chatCloseBtn.addEventListener("click", closeChat);
+            if (chatModal) {
+                chatModal.addEventListener("click", (e) => {
+                    if (e.target === chatModal) closeChat();
+                });
+            }
 
-      if (chatModal) {
-        chatModal.addEventListener("click", (e) => {
-          if (e.target === chatModal) closeChat();
-        });
-      }
+            if (chatSendBtn && chatInput && chatMessages) {
+                chatSendBtn.addEventListener("click", () => {
+                    const message = chatInput.value.trim();
+                    if (!message) return;
 
-      if (chatSendBtn && chatInput && chatMessages) {
-        chatSendBtn.addEventListener("click", () => {
-          const message = chatInput.value.trim();
-          if (!message) return;
+                    if (chatEmptyState) chatEmptyState.style.display = "none";
 
-          if (chatEmptyState) chatEmptyState.style.display = "none";
-
-          const bubble = document.createElement("div");
-          bubble.className = "chat-message customer";
-          bubble.innerHTML = `
+                    const bubble = document.createElement("div");
+                    bubble.className = "chat-message customer";
+                    bubble.innerHTML = `
             ${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
             <span class="chat-meta">You · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           `;
 
-          chatMessages.appendChild(bubble);
-          chatMessages.scrollTop = chatMessages.scrollHeight;
-          chatInput.value = "";
-        });
-      }
+                    chatMessages.appendChild(bubble);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    chatInput.value = "";
+                });
+            }
 
-      setTimeout(() => {
-        const loading = document.getElementById("initial-listings-loading");
-        const cards = listingsGrid?.querySelectorAll(".property-card") || [];
-        if (loading && cards.length > 0) loading.remove();
-      }, 2500);
-    })();
-  </script>
+            setTimeout(() => {
+                const loading = document.getElementById("initial-listings-loading");
+                const cards = listingsGrid?.querySelectorAll(".property-card") || [];
+                if (loading && cards.length > 0) loading.remove();
+            }, 2500);
+        })();
+    </script>
 </body>
+
 </html>
