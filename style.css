@@ -275,10 +275,17 @@ i[class*=" ph-"] {
   width: 100%;
 }
 
-/* --- Navbar --- */
+/* ===========================
+   --- Navbar (FIXED) ---
+   ===========================
+   المشكلة كانت:
+   - في RTL كانت nav-actions تستخدم margin-inline-end: auto
+     وهذا يدفعها لليسار ويجمع كل شيء على اليمين
+   - الحل: استخدام flex مع اللوغو على الجهة الصحيحة
+     وnav-actions دائماً على الطرف المقابل بدون margin auto
+   =========================== */
 .navbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   min-height: var(--navbar-height);
   padding: 12px 20px;
@@ -292,6 +299,14 @@ i[class*=" ph-"] {
   transition: var(--transition);
   gap: 12px;
   flex-wrap: nowrap;
+  /* اللوغو على اليسار في LTR / اليمين في RTL — nav-actions على الطرف الآخر */
+  direction: ltr;
+}
+
+/* في RTL نعكس اتجاه الفلكس لكن نبقي الـ direction محايداً */
+html[dir="rtl"] .navbar {
+  direction: rtl;
+  flex-direction: row;
 }
 
 .logo {
@@ -299,6 +314,7 @@ i[class*=" ph-"] {
   align-items: center;
   text-decoration: none;
   flex-shrink: 0;
+  /* اللوغو يبقى في بدايته الطبيعية حسب dir */
 }
 
 .logo-img {
@@ -313,17 +329,21 @@ i[class*=" ph-"] {
   transform: scale(1.02);
 }
 
+/* nav-actions — يمتد ليملأ باقي المساحة ويضع عناصره في النهاية */
 .nav-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 10px;
-  flex-shrink: 0;
-  overflow: visible;
-  margin-inline-start: auto;
-  flex-wrap: wrap;
+  flex: 1 1 auto;           /* يمتد ليأخذ باقي المساحة */
+  justify-content: flex-end; /* العناصر دائماً في الطرف البعيد عن اللوغو */
+  flex-wrap: nowrap;
   min-width: 0;
-  max-width: 100%;
+  overflow: visible;
+}
+
+/* في RTL: العناصر تذهب لليسار (الطرف البعيد عن اللوغو الذي صار على اليمين) */
+html[dir="rtl"] .nav-actions {
+  justify-content: flex-start;
 }
 
 .rewards-badge {
@@ -394,16 +414,6 @@ body.dark .rewards-badge {
   font-size: 1.15rem;
 }
 
-html[dir="rtl"] .navbar {
-  direction: rtl;
-}
-
-html[dir="rtl"] .nav-actions {
-  justify-content: flex-start;
-  margin-inline-start: 0;
-  margin-inline-end: auto;
-}
-
 /* --- Profile Dropdown --- */
 .profile-container {
   position: relative;
@@ -448,11 +458,6 @@ html[dir="rtl"] .nav-actions {
   transition: var(--transition);
   z-index: 1010;
   overflow: hidden;
-}
-
-html[dir="rtl"] .profile-dropdown {
-  inset-inline-end: auto;
-  inset-inline-start: 0;
 }
 
 .profile-dropdown.active {
@@ -2482,7 +2487,10 @@ html[dir="rtl"] .back-btn i {
   outline-offset: 3px;
 }
 
-/* --- Responsive Adjustments --- */
+/* ===========================
+   --- Responsive Adjustments ---
+   =========================== */
+
 @media (max-width: 992px) {
   .search-bar {
     flex-direction: column !important;
@@ -2538,7 +2546,7 @@ html[dir="rtl"] .back-btn i {
   .navbar {
     min-height: 60px;
     padding: 10px 14px;
-    gap: 6px;
+    gap: 8px;
   }
 
   .logo-img {
@@ -2551,8 +2559,7 @@ html[dir="rtl"] .back-btn i {
   }
 
   .nav-actions {
-    gap: 5px;
-    overflow: visible;
+    gap: 6px;
     flex-wrap: nowrap;
   }
 
@@ -2723,6 +2730,7 @@ html[dir="rtl"] .back-btn i {
 @media (max-width: 480px) {
   .navbar {
     padding: 8px 10px;
+    gap: 6px;
   }
 
   .logo-img {
