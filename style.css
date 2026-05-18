@@ -469,11 +469,6 @@ html[dir="rtl"] .navbar {
   overflow: visible;
 }
 
-/* في RTL: العناصر تذهب لليسار (الطرف البعيد عن اللوغو الذي صار على اليمين) */
-html[dir="rtl"] .nav-actions {
-  justify-content: flex-start;
-}
-
 .rewards-badge {
   display: flex;
   align-items: center;
