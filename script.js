@@ -728,7 +728,7 @@ function updateLanguageUI() {
   });
 
   if (langBtn) {
-    langBtn.innerHTML = `<i class="ph ph-globe"></i><span>${state.lang === "en" ? "AR" : "EN"}</span>`;
+    langBtn.innerHTML = `<i class="ph ph-globe"></i><span>${state.lang === "en" ? "EN" : "AR"}</span>`;
   }
 
   const sectionTitle = document.getElementById("section-main-title");

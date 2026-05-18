@@ -156,12 +156,6 @@ body.dark .navbar,
   overflow: visible;
 }
 
-html[dir="rtl"] .nav-actions {
-  justify-content: flex-start;
-  margin-inline-start: 0;
-  margin-inline-end: auto;
-}
-
 .rewards-badge {
   display: inline-flex;
   align-items: center;
