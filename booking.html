@@ -63,7 +63,6 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     html { scroll-behavior: smooth; }
 
     body {
@@ -526,6 +525,29 @@
       font-size: 0.78rem;
       color: var(--text-muted);
       margin-top: -2px;
+    }
+
+    .amenities-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .amenity-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--surface-color);
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .amenity-chip i {
+      color: var(--primary);
+      font-size: 1.1rem;
     }
 
     .payment-methods-grid {
@@ -1532,8 +1554,7 @@
         <div class="booking-hero-card">
           <h1>Complete your booking</h1>
           <p>
-            Fill in every important guest, stay, room, and hotel preference so the host can prepare your reservation accurately and
-            give you the best stay experience.
+            Fill in the essential guest and stay details to complete your reservation quickly and clearly.
           </p>
         </div>
       </section>
@@ -1568,7 +1589,7 @@
               <div class="step-header-icon"><i class="ph ph-identification-card"></i></div>
               <div>
                 <h2 class="step-title">Guest & Reservation Details</h2>
-                <p class="step-subtitle">Please fill in all required booking, guest, room, and arrival information carefully.</p>
+                <p class="step-subtitle">Enter only the essential information needed to complete the booking.</p>
               </div>
             </div>
 
@@ -1577,264 +1598,52 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label" for="guest-name">Full Name <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-name" placeholder="Full legal name as in ID" required />
+                  <input type="text" class="form-control" id="guest-name" placeholder="Full name" required />
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-father-name">Father Name <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-father-name" placeholder="Father name" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-family-name">Family Name <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-family-name" placeholder="Family surname" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-gender">Gender <span class="required-star">*</span></label>
-                  <select class="form-control" id="guest-gender" required>
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-dob">Date of Birth <span class="required-star">*</span></label>
-                  <input type="date" class="form-control" id="guest-dob" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-nationality">Nationality <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-nationality" placeholder="Nationality" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-occupation">Occupation <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-occupation" placeholder="Your occupation" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-marital-status">Marital Status <span class="required-star">*</span></label>
-                  <select class="form-control" id="guest-marital-status" required>
-                    <option value="">Select marital status</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                  </select>
-                </div>
-              </div>
-            </div>
 
-            <div class="section-block">
-              <h3><i class="ph ph-phone"></i> Contact information</h3>
-              <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label" for="guest-email">Email Address <span class="required-star">*</span></label>
                   <input type="email" class="form-control" id="guest-email" placeholder="name@example.com" required />
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="guest-phone">Primary Phone Number <span class="required-star">*</span></label>
+                  <label class="form-label" for="guest-phone">Phone Number <span class="required-star">*</span></label>
                   <input type="tel" class="form-control" id="guest-phone" placeholder="+213 ..." required />
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="guest-whatsapp">WhatsApp Number <span class="required-star">*</span></label>
-                  <input type="tel" class="form-control" id="guest-whatsapp" placeholder="+213 ..." required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-alt-phone">Alternative Phone Number</label>
-                  <input type="tel" class="form-control" id="guest-alt-phone" placeholder="Optional backup number" />
-                </div>
-                <div class="form-group full-width">
-                  <label class="form-label" for="guest-address">Residential Address <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-address" placeholder="Street, district, city" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-city">City <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-city" placeholder="City" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-state">State / Wilaya <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-state" placeholder="State / Wilaya" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-postal">Postal Code</label>
-                  <input type="text" class="form-control" id="guest-postal" placeholder="Postal code" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-country">Country of Residence <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-country" placeholder="Country" required />
+                  <label class="form-label" for="guest-country">Country / Region</label>
+                  <input type="text" class="form-control" id="guest-country" placeholder="Country or region" />
                 </div>
               </div>
             </div>
 
             <div class="section-block">
-              <h3><i class="ph ph-cardholder"></i> Identity & verification</h3>
+              <h3><i class="ph ph-calendar-check"></i> Stay details</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="form-label" for="guest-id-type">Document Type <span class="required-star">*</span></label>
-                  <select class="form-control" id="guest-id-type" required>
-                    <option value="">Select document type</option>
-                    <option value="National ID">National ID</option>
-                    <option value="Passport">Passport</option>
-                    <option value="Driver License">Driver License</option>
-                    <option value="Residence Card">Residence Card</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-number">Document Number <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-id-number" placeholder="ID / Passport number" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-issue-place">Place of Issue <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="guest-id-issue-place" placeholder="Issuing authority / place" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-issue-date">Issue Date <span class="required-star">*</span></label>
-                  <input type="date" class="form-control" id="guest-id-issue-date" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-expiry">Expiry Date <span class="required-star">*</span></label>
-                  <input type="date" class="form-control" id="guest-id-expiry" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-id-upload">National ID / Passport Photo Upload</label>
-                  <input type="file" class="form-control" id="guest-id-upload" accept="image/*,.pdf" />
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-bed"></i> Room & accommodation preferences</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="room-type">Preferred Room Type <span class="required-star">*</span></label>
-                  <select class="form-control" id="room-type" required>
-                    <option value="">Select room type</option>
-                    <option value="Standard Room">Standard Room</option>
-                    <option value="Deluxe Room">Deluxe Room</option>
-                    <option value="Twin Room">Twin Room</option>
-                    <option value="Double Room">Double Room</option>
-                    <option value="Family Room">Family Room</option>
-                    <option value="Suite">Suite</option>
-                    <option value="Executive Suite">Executive Suite</option>
-                    <option value="Villa">Villa</option>
-                    <option value="Apartment">Apartment</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="bed-type">Preferred Bed Type</label>
-                  <select class="form-control" id="bed-type">
-                    <option value="">Select bed type</option>
-                    <option value="King Bed">King Bed</option>
-                    <option value="Queen Bed">Queen Bed</option>
-                    <option value="Twin Beds">Twin Beds</option>
-                    <option value="Triple Beds">Triple Beds</option>
-                    <option value="Extra Bed Needed">Extra Bed Needed</option>
-                    <option value="No Preference">No Preference</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="room-view">Preferred View</label>
-                  <select class="form-control" id="room-view">
-                    <option value="">Select preferred view</option>
-                    <option value="Sea View">Sea View</option>
-                    <option value="Pool View">Pool View</option>
-                    <option value="Garden View">Garden View</option>
-                    <option value="City View">City View</option>
-                    <option value="Mountain View">Mountain View</option>
-                    <option value="No Preference">No Preference</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="floor-preference">Floor Preference</label>
-                  <select class="form-control" id="floor-preference">
-                    <option value="">Select floor preference</option>
-                    <option value="Ground Floor">Ground Floor</option>
-                    <option value="Low Floor">Low Floor</option>
-                    <option value="High Floor">High Floor</option>
-                    <option value="Top Floor">Top Floor</option>
-                    <option value="No Preference">No Preference</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="smoking-preference">Smoking Preference <span class="required-star">*</span></label>
-                  <select class="form-control" id="smoking-preference" required>
-                    <option value="">Select preference</option>
-                    <option value="Non-Smoking">Non-Smoking</option>
-                    <option value="Smoking">Smoking</option>
-                    <option value="No Preference">No Preference</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="quiet-room">Need Quiet Room</label>
-                  <select class="form-control" id="quiet-room">
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="near-elevator">Near Elevator</label>
-                  <select class="form-control" id="near-elevator">
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                    <option value="No Preference">No Preference</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="connected-rooms">Need Connected Rooms</label>
-                  <select class="form-control" id="connected-rooms">
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-users-three"></i> Stay details</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="guest-adults">Number of Adults <span class="required-star">*</span></label>
-                  <input type="number" class="form-control" id="guest-adults" min="1" value="1" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-children">Number of Children <span class="required-star">*</span></label>
-                  <input type="number" class="form-control" id="guest-children" min="0" value="0" required />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="guest-infants">Number of Infants</label>
-                  <input type="number" class="form-control" id="guest-infants" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="stay-purpose">Purpose of Stay <span class="required-star">*</span></label>
-                  <select class="form-control" id="stay-purpose" required>
-                    <option value="">Select purpose</option>
-                    <option value="Family stay">Family stay</option>
-                    <option value="Business">Business</option>
-                    <option value="Tourism">Tourism</option>
-                    <option value="Medical">Medical</option>
-                    <option value="Event">Event</option>
-                    <option value="Honeymoon">Honeymoon</option>
-                    <option value="Anniversary">Anniversary</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="arrival-date">Arrival Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="arrival-date">Check-in Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="arrival-date" required />
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="departure-date">Departure Date <span class="required-star">*</span></label>
+                  <label class="form-label" for="departure-date">Check-out Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="departure-date" required />
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="arrival-time">Expected Arrival Time <span class="required-star">*</span></label>
-                  <select class="form-control" id="arrival-time" required>
+                  <label class="form-label" for="guest-adults">Adults <span class="required-star">*</span></label>
+                  <input type="number" class="form-control" id="guest-adults" min="1" value="1" required />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="guest-children">Children</label>
+                  <input type="number" class="form-control" id="guest-children" min="0" value="0" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="arrival-time">Expected Arrival Time</label>
+                  <select class="form-control" id="arrival-time">
                     <option value="">Select arrival time</option>
                     <option value="08:00 - 10:00">08:00 - 10:00</option>
                     <option value="10:00 - 12:00">10:00 - 12:00</option>
@@ -1846,74 +1655,34 @@
                     <option value="After Midnight">After Midnight</option>
                   </select>
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="arrival-method">Arrival Method <span class="required-star">*</span></label>
-                  <select class="form-control" id="arrival-method" required>
-                    <option value="">Select arrival method</option>
-                    <option value="Private car">Private car</option>
-                    <option value="Taxi">Taxi</option>
-                    <option value="Airport transfer">Airport transfer</option>
-                    <option value="Bus">Bus</option>
-                    <option value="Train">Train</option>
-                    <option value="Walking">Walking</option>
+                  <label class="form-label" for="stay-purpose">Purpose of Stay</label>
+                  <select class="form-control" id="stay-purpose">
+                    <option value="">Select purpose</option>
+                    <option value="Family stay">Family stay</option>
+                    <option value="Business">Business</option>
+                    <option value="Tourism">Tourism</option>
+                    <option value="Medical">Medical</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="vehicle-plate">Vehicle Plate Number</label>
-                  <input type="text" class="form-control" id="vehicle-plate" placeholder="If arriving by car" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="checkin-contact-person">Estimated Check-in Contact Person</label>
-                  <input type="text" class="form-control" id="checkin-contact-person" placeholder="Who will arrive first" />
-                </div>
+
                 <div class="form-group full-width">
-                  <label class="form-label" for="additional-guests">Names of Additional Guests <span class="required-star">*</span></label>
-                  <textarea class="form-control" id="additional-guests" placeholder="Write full names of all accompanying guests" required></textarea>
-                  <div class="hint-text">Write one or all names as required by your hosting policy.</div>
+                  <label class="form-label" for="special-requests">Special Requests</label>
+                  <textarea class="form-control" id="special-requests" placeholder="Optional note for the host, such as arrival note or simple request"></textarea>
+                  <div class="hint-text">Keep requests short and essential.</div>
                 </div>
               </div>
             </div>
 
             <div class="section-block">
-              <h3><i class="ph ph-coffee"></i> Hotel services & add-ons</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="breakfast-option">Breakfast Included</label>
-                  <select class="form-control" id="breakfast-option">
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                    <option value="Only for adults">Only for adults</option>
-                  </select>
-                </div>
-                <!-- ... بقية الحقول موجودة في الملف الأصلي لكن الأداة اختصرتها ... -->
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-baby"></i> Family, children & accessibility</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="baby-crib">Need Baby Crib</label>
-                  <select class="form-control" id="baby-crib">
-                    <option value="">Select option</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                <!-- ... مختصر من الأداة ... -->
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3><i class="ph ph-first-aid-kit"></i> Safety, emergency & special requirements</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label" for="emergency-name">Emergency Contact Name <span class="required-star">*</span></label>
-                  <input type="text" class="form-control" id="emergency-name" placeholder="Emergency contact full name" required />
-                </div>
-                <!-- ... مختصر من الأداة ... -->
+              <h3><i class="ph ph-house-line"></i> Property amenities</h3>
+              <div class="amenities-box">
+                <div class="amenity-chip"><i class="ph ph-wifi-high"></i><span>Wi‑Fi</span></div>
+                <div class="amenity-chip"><i class="ph ph-car"></i><span>Parking</span></div>
+                <div class="amenity-chip"><i class="ph ph-snowflake"></i><span>Air conditioning</span></div>
+                <div class="amenity-chip"><i class="ph ph-cooking-pot"></i><span>Kitchen</span></div>
               </div>
             </div>
 
@@ -1930,7 +1699,7 @@
               <div class="step-header-icon"><i class="ph ph-credit-card"></i></div>
               <div>
                 <h2 class="step-title">Payment & Billing</h2>
-                <p class="step-subtitle">Choose the payment method and provide billing and transfer details if needed.</p>
+                <p class="step-subtitle">Choose the payment method and provide only the essential payment details.</p>
               </div>
             </div>
 
@@ -1957,7 +1726,11 @@
                   <label class="form-label" for="billing-name">Billing Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="billing-name" placeholder="Billing full name" required />
                 </div>
-                <!-- ... مختصر من الأداة ... -->
+
+                <div class="form-group">
+                  <label class="form-label" for="billing-note">Billing Note</label>
+                  <input type="text" class="form-control" id="billing-note" placeholder="Optional note for invoice or payment" />
+                </div>
               </div>
             </div>
 
@@ -1987,17 +1760,15 @@
                   <label class="form-label" for="sender-name">Sender Full Name <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="sender-name" placeholder="Name used in transfer" />
                 </div>
+
                 <div class="form-group">
                   <label class="form-label" for="transfer-amount">Transferred Amount <span class="required-star">*</span></label>
                   <input type="number" class="form-control" id="transfer-amount" placeholder="Amount paid" />
                 </div>
+
                 <div class="form-group">
                   <label class="form-label" for="transfer-date">Transfer Date <span class="required-star">*</span></label>
                   <input type="date" class="form-control" id="transfer-date" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="transfer-time">Transfer Time</label>
-                  <input type="time" class="form-control" id="transfer-time" />
                 </div>
               </div>
 
@@ -2012,8 +1783,7 @@
             <div class="payment-details-box" id="cash-details">
               <h4 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:1.08rem;">Cash payment confirmation</h4>
               <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; line-height:1.6;">
-                If you choose cash payment, please confirm who will pay, in which currency, and whether you understand that host
-                approval may be required before confirming the booking.
+                Confirm who will pay at check-in.
               </p>
 
               <div class="form-grid">
@@ -2021,18 +1791,15 @@
                   <label class="form-label" for="cash-payer-name">Who will pay at check-in <span class="required-star">*</span></label>
                   <input type="text" class="form-control" id="cash-payer-name" placeholder="Person responsible for payment" />
                 </div>
+
                 <div class="form-group">
-                  <label class="form-label" for="cash-currency">Preferred Currency <span class="required-star">*</span></label>
+                  <label class="form-label" for="cash-currency">Preferred Currency</label>
                   <select class="form-control" id="cash-currency">
                     <option value="">Select currency</option>
                     <option value="DZD">DZD</option>
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
                   </select>
-                </div>
-                <div class="form-group full-width">
-                  <label class="form-label" for="cash-payment-note">Cash payment note</label>
-                  <textarea class="form-control" id="cash-payment-note" placeholder="Optional note for the host regarding cash payment"></textarea>
                 </div>
               </div>
             </div>
@@ -2054,7 +1821,7 @@
               <div class="step-header-icon"><i class="ph ph-check-square-offset"></i></div>
               <div>
                 <h2 class="step-title">Review & Confirm</h2>
-                <p class="step-subtitle">Review all guest, stay, identity, room, and payment details before final confirmation.</p>
+                <p class="step-subtitle">Review the essential guest, stay, and payment details before final confirmation.</p>
               </div>
             </div>
 
@@ -2079,8 +1846,8 @@
                       <span class="rd-value" id="rev-phone">—</span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label">Nationality / Gender</span>
-                      <span class="rd-value" id="rev-nationality-gender">—</span>
+                      <span class="rd-label">Country / Region</span>
+                      <span class="rd-value" id="rev-country">—</span>
                     </div>
                   </div>
                 </div>
@@ -2104,29 +1871,21 @@
                       <span class="rd-value" id="rev-purpose-arrival">—</span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label">Additional Guests</span>
-                      <span class="rd-value" id="rev-additional-guests">—</span>
+                      <span class="rd-label">Special Requests</span>
+                      <span class="rd-value" id="rev-special-requests">—</span>
                     </div>
                   </div>
                 </div>
 
                 <div class="review-card full-width">
                   <div class="review-card-header">
-                    <h3><i class="ph ph-cardholder"></i> Identity, Room & Payment</h3>
+                    <h3><i class="ph ph-cardholder"></i> Payment</h3>
                     <button class="edit-btn" id="btn-edit-payment" type="button"><i class="ph ph-pencil-simple"></i> Edit</button>
                   </div>
                   <div class="review-card-body">
                     <div class="review-data">
-                      <span class="rd-label">Document</span>
-                      <span class="rd-value" id="rev-document">—</span>
-                    </div>
-                    <div class="review-data">
                       <span class="rd-label">Billing</span>
                       <span class="rd-value" id="rev-billing">—</span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label">Room Preference</span>
-                      <span class="rd-value" id="rev-room-preference">—</span>
                     </div>
                     <div class="review-data full-width">
                       <span class="rd-label">Selected Payment Method</span>
@@ -2149,8 +1908,7 @@
                   <input type="checkbox" id="agree-policy" required />
                   <span class="checkmark"></span>
                   <span class="agree-text">
-                    I confirm that all submitted booking information is accurate, that all guests are authorized to stay, and that I agree
-                    to the Terms of Service, Privacy Policy, property rules, cancellation policy, and payment verification procedures.
+                    I confirm that the submitted booking information is accurate and that I agree to the Terms of Service, Privacy Policy, property rules, cancellation policy, and payment verification procedures.
                   </span>
                 </label>
               </div>
