@@ -13,9 +13,7 @@
     <link rel="icon" type="image/png" href="logos/orebooking.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css?v=2.4">
 
@@ -220,6 +218,7 @@
             justify-content: flex-end;
             gap: 14px;
             flex: 1;
+            flex-wrap: wrap;
         }
 
         .rewards-badge {
@@ -238,7 +237,8 @@
         .icon-btn,
         .lang-btn,
         .profile-menu,
-        .chat-toggle-btn {
+        .chat-toggle-btn,
+        .auth-link-btn {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -249,6 +249,7 @@
             cursor: pointer;
             transition: var(--transition-fast);
             font-family: inherit;
+            text-decoration: none;
         }
 
         .icon-btn,
@@ -258,7 +259,8 @@
             font-size: 1.2rem;
         }
 
-        .lang-btn {
+        .lang-btn,
+        .auth-link-btn {
             padding: 0 18px;
             border-radius: var(--radius-full);
             font-weight: 600;
@@ -269,7 +271,8 @@
         .icon-btn:hover,
         .lang-btn:hover,
         .profile-menu:hover,
-        .chat-toggle-btn:hover {
+        .chat-toggle-btn:hover,
+        .auth-link-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
             transform: translateY(-2px);
@@ -284,7 +287,7 @@
             position: absolute;
             top: calc(100% + 10px);
             inset-inline-end: 0;
-            min-width: 230px;
+            min-width: 260px;
             background: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
@@ -472,65 +475,6 @@
             filter: brightness(1.03);
         }
 
-        .search-dropdown {
-            position: absolute;
-            top: calc(100% + 12px);
-            left: 0;
-            right: 0;
-            min-width: 250px;
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-xl);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-            z-index: 1000;
-            display: none;
-            padding: 10px;
-            overflow: hidden;
-        }
-
-        .search-dropdown.active {
-            display: block;
-            animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .search-suggestion-item {
-            width: 100%;
-            padding: 12px 14px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            transition: var(--transition-fast);
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            text-align: start;
-            font-family: inherit;
-            border-radius: 14px;
-        }
-
-        .search-suggestion-item:hover {
-            background: rgba(67, 90, 191, 0.06);
-            color: var(--primary);
-        }
-
-        .search-suggestion-main {
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-
-        .search-suggestion-sub {
-            color: var(--text-muted);
-            font-size: 0.82rem;
-        }
-
-        .search-empty {
-            padding: 14px;
-            color: var(--text-muted);
-            text-align: center;
-            font-weight: 600;
-        }
-
         .categories {
             display: flex;
             align-items: center;
@@ -587,6 +531,11 @@
             gap: 16px;
         }
 
+        .section-header-wrapper h2 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+
         .section-header-controls {
             display: flex;
             align-items: center;
@@ -620,7 +569,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 28px;
-            padding: 20px 0;
+            padding: 20px 0 70px;
             min-height: 220px;
         }
 
@@ -880,281 +829,8 @@
             border: 2px solid #fff;
         }
 
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: 0.3s;
-            padding: 16px;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-content {
-            background: var(--surface-color);
-            border-radius: var(--radius-xl);
-            width: 100%;
-            max-width: 420px;
-            position: relative;
-            box-shadow: var(--shadow-hover);
-            border: 1px solid var(--border-color);
-        }
-
-        .auth-card {
-            padding: 32px;
-        }
-
-        .close-modal-btn {
-            position: absolute;
-            top: 16px;
-            inset-inline-end: 16px;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-
-        .auth-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .auth-header img {
-            height: 40px;
-            width: auto;
-        }
-
-        .auth-message {
-            display: none;
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            font-size: 0.92rem;
-            font-weight: 600;
-        }
-
-        .auth-message.error {
-            display: block;
-            background: rgba(239, 68, 68, 0.1);
-            color: #b91c1c;
-            border: 1px solid rgba(239, 68, 68, 0.18);
-        }
-
-        .auth-message.success {
-            display: block;
-            background: rgba(16, 185, 129, 0.12);
-            color: #047857;
-            border: 1px solid rgba(16, 185, 129, 0.18);
-        }
-
-        .auth-form {
-            display: none;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .auth-title {
-            margin: 0;
-            text-align: center;
-            font-size: 1.5rem;
-        }
-
-        .auth-subtitle {
-            text-align: center;
-            color: var(--text-muted);
-            margin: -4px 0 4px;
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-group label {
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .input-group input,
-        .chat-input-area textarea {
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-color);
-            outline: none;
-            font-family: inherit;
-            color: var(--text-main);
-        }
-
-        .pass-wrapper {
-            position: relative;
-        }
-
-        .pass-wrapper input {
-            width: 100%;
-            padding-inline-end: 48px;
-        }
-
-        .toggle-pass-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            inset-inline-end: 12px;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-
-        .auth-options {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .primary-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 4px;
-            font-family: inherit;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .social-btn {
-            width: 100%;
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-family: inherit;
-            color: var(--text-main);
-        }
-
-        .switch-form-text {
-            text-align: center;
-            font-size: 0.92rem;
-            margin-top: 10px;
-            color: var(--text-muted);
-            line-height: 1.7;
-        }
-
-        .switch-form-text a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 700;
-        }
-
-        .text-muted {
-            color: var(--text-muted);
-        }
-
-        .text-sm {
-            font-size: 0.875rem;
-        }
-
-        .font-bold {
-            font-weight: 700;
-        }
-
-        .text-primary {
-            color: var(--primary);
-        }
-
-        #password-strength {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 2px;
-        }
-
-        .strength-bars {
-            display: flex;
-            gap: 6px;
-            flex: 1;
-        }
-
-        .str-bar {
-            height: 6px;
-            flex: 1;
-            border-radius: 999px;
-            background: var(--border-color);
-            transition: .2s ease;
-        }
-
-        #strength-label {
-            font-size: 0.82rem;
-            font-weight: 700;
-            min-width: 48px;
-            text-align: end;
-            color: var(--text-muted);
-        }
-
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            inset-inline-end: 20px;
-            z-index: 12000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: min(92vw, 360px);
-        }
-
-        #fav-toast {
-            position: fixed;
-            bottom: 150px;
-            inset-inline-start: 50%;
-            transform: translateX(-50%) translateY(12px);
-            background: rgba(15, 23, 42, .92);
-            color: #fff;
-            padding: 12px 18px;
-            border-radius: 999px;
-            font-weight: 700;
-            z-index: 12000;
-            opacity: 0;
-            pointer-events: none;
-            transition: .25s ease;
-            box-shadow: 0 16px 30px rgba(15, 23, 42, .24);
-            white-space: nowrap;
-        }
-
-        #fav-toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .bookings-modal {
+        .bookings-modal,
+        .chat-modal {
             position: fixed;
             inset: 0;
             background: rgba(2, 6, 23, 0.56);
@@ -1165,7 +841,8 @@
             padding: 18px;
         }
 
-        .bookings-modal.active {
+        .bookings-modal.active,
+        .chat-modal.active {
             display: flex;
         }
 
@@ -1195,7 +872,8 @@
             font-size: 1.25rem;
         }
 
-        .bookings-modal-header button {
+        .bookings-modal-header button,
+        .chat-close-btn {
             width: 42px;
             height: 42px;
             border-radius: 50%;
@@ -1253,12 +931,6 @@
             margin-bottom: 14px;
         }
 
-        .booking-card-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
         .booking-status {
             display: inline-flex;
             align-items: center;
@@ -1282,21 +954,6 @@
         .booking-status.cancelled {
             background: rgba(239, 68, 68, .12);
             color: #b91c1c;
-        }
-
-        .chat-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(2, 6, 23, 0.58);
-            z-index: 10030;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 18px;
-        }
-
-        .chat-modal.active {
-            display: flex;
         }
 
         .chat-modal-dialog {
@@ -1348,16 +1005,6 @@
             margin: 3px 0 0;
             font-size: 0.84rem;
             color: var(--text-muted);
-        }
-
-        .chat-close-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            background: var(--surface-color);
-            color: var(--text-main);
-            cursor: pointer;
         }
 
         .chat-modal-body {
@@ -1424,6 +1071,13 @@
             resize: none;
             min-height: 92px;
             width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            outline: none;
+            font-family: inherit;
+            color: var(--text-main);
         }
 
         .chat-actions {
@@ -1443,6 +1097,59 @@
             min-width: 140px;
         }
 
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            inset-inline-end: 20px;
+            z-index: 12000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: min(92vw, 360px);
+        }
+
+        .toast {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 16px;
+            padding: 14px 16px;
+            box-shadow: var(--shadow-hover);
+            animation: scaleIn .2s ease;
+            font-weight: 600;
+        }
+
+        .toast.success {
+            border-color: rgba(16, 185, 129, .25);
+        }
+
+        .toast.error {
+            border-color: rgba(239, 68, 68, .25);
+        }
+
+        #fav-toast {
+            position: fixed;
+            bottom: 150px;
+            inset-inline-start: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: rgba(15, 23, 42, .92);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 999px;
+            font-weight: 700;
+            z-index: 12000;
+            opacity: 0;
+            pointer-events: none;
+            transition: .25s ease;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, .24);
+            white-space: nowrap;
+        }
+
+        #fav-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         #mobile-bottom-nav {
             position: sticky;
             bottom: 0;
@@ -1450,6 +1157,7 @@
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.05);
+            display: none;
         }
 
         .dark #mobile-bottom-nav {
@@ -1471,648 +1179,1161 @@
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 0.8rem;
             cursor: pointer;
             font-family: inherit;
-            padding: 6px 0;
-            flex: 1;
+            padding: 6px 10px;
+            min-width: 68px;
+            transition: var(--transition-fast);
         }
 
-        .mob-nav-btn.active {
-            color: var(--primary);
+        .mob-nav-btn i {
+            font-size: 1.25rem;
+        }
+
+        .mob-nav-btn span {
+            font-size: 0.78rem;
             font-weight: 700;
         }
 
-        footer.footer {
-            margin-top: 80px;
-            padding: 40px 0;
-            border-top: 1px solid var(--border-color);
-            background: var(--surface-color);
+        .mob-nav-btn.active,
+        .mob-nav-btn:hover {
+            color: var(--primary);
         }
 
-        .footer-copy {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.95rem;
+        .hidden {
+            display: none !important;
         }
 
-        .developers-names {
-            color: var(--text-main);
-        }
-
-        .copyright-line {
-            font-size: 0.85rem;
-        }
-
-        @media (max-width: 992px) {
+        @media (max-width: 1024px) {
             .search-bar {
-                flex-direction: column;
-                background: transparent;
-                box-shadow: none;
-                border: none;
-                padding: 0;
-                gap: 12px;
-            }
-
-            .search-bar:hover,
-            .search-bar:focus-within {
-                box-shadow: none;
-                border-color: transparent;
-            }
-
-            .search-field {
-                background: var(--surface-color);
-                width: 100%;
-                border: 1px solid var(--border-color);
-                padding: 12px 20px;
-                box-shadow: var(--shadow-sm);
-                border-radius: var(--radius-xl);
+                flex-wrap: wrap;
+                border-radius: 28px;
+                padding: 14px;
+                gap: 10px;
             }
 
             .search-divider {
                 display: none;
             }
 
+            .search-field {
+                min-width: calc(50% - 10px);
+                padding: 10px 12px;
+                border: 1px solid var(--border-color);
+                border-radius: 16px;
+                background: var(--bg-color);
+            }
+
             .search-btn {
                 width: 100%;
                 justify-content: center;
-                padding: 16px;
             }
+        }
 
-            .hero {
-                padding-top: 60px;
-            }
-
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-
+        @media (max-width: 768px) {
             .navbar {
                 padding: 14px 18px;
-                gap: 14px;
+                gap: 12px;
+            }
+
+            .nav-actions {
+                gap: 10px;
             }
 
             .rewards-badge {
                 display: none;
             }
 
+            .hero {
+                padding: 70px 16px 36px;
+            }
+
+            .hero p {
+                margin-bottom: 26px;
+            }
+
             .container {
                 padding: 0 16px;
             }
 
-            .auth-card {
-                padding: 24px 18px;
+            #mobile-bottom-nav {
+                display: block;
             }
 
-            .bookings-modal-header,
-            .bookings-modal-body {
-                padding: 18px;
+            #chat-open-btn,
+            #scroll-top-btn {
+                inset-inline-end: 16px;
+            }
+
+            #chat-open-btn {
+                bottom: 134px;
+            }
+
+            #scroll-top-btn {
+                bottom: 72px;
             }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 640px) {
+            .logo-img {
+                height: 36px;
+            }
+
+            .lang-btn,
+            .auth-link-btn {
+                padding: 0 14px;
+                font-size: 0.9rem;
+            }
+
+            .search-field {
+                min-width: 100%;
+            }
+
+            .section-header-wrapper h2 {
+                font-size: 1.45rem;
+            }
+
             #listings-grid {
                 grid-template-columns: 1fr;
             }
 
-            .section-header-wrapper {
-                align-items: stretch;
-            }
-
-            .section-header-controls {
-                width: 100%;
-            }
-
-            .section-header-controls>* {
-                flex: 1;
-            }
-
             .property-card-actions {
                 flex-direction: column;
-            }
-
-            #chat-open-btn {
-                bottom: 146px;
-                inset-inline-end: 18px;
-            }
-
-            #scroll-top-btn {
-                bottom: 82px;
-                inset-inline-end: 18px;
-            }
-        }
-
-        @media (max-width: 520px) {
-            .nav-actions {
-                gap: 8px;
-            }
-
-            .logo-img {
-                height: 32px;
-            }
-
-            .icon-btn,
-            .profile-menu {
-                width: 40px;
-                height: 40px;
-            }
-
-            .lang-btn {
-                height: 40px;
-                padding: 0 14px;
-            }
-
-            .lang-btn span {
-                display: none;
-            }
-
-            .hero p {
-                font-size: 1rem;
-            }
-
-            .bookings-modal-dialog,
-            .chat-modal-dialog {
-                border-radius: 18px;
-            }
-
-            .chat-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .chat-send-btn {
-                width: 100%;
             }
         }
     </style>
 </head>
 
 <body>
-
-    <button id="scroll-top-btn" aria-label="Scroll to top" type="button">
-        <i class="ph ph-caret-up" aria-hidden="true"></i>
-    </button>
-
-    <button id="chat-open-btn" aria-label="Open support chat" type="button">
-        <i class="ph ph-chat-centered-dots" aria-hidden="true"></i>
-        <span class="chat-unread-badge" id="chat-unread-badge">0</span>
-    </button>
-
-    <div id="toast-container" aria-live="polite"></div>
-    <div id="fav-toast" role="status" aria-live="polite"></div>
-
-    <nav class="navbar" role="navigation" aria-label="Main navigation">
-        <a href="index.html" class="logo" id="home-logo-btn" aria-label="OreBooking Home">
-            <img src="logos/orebooking.png" id="main-logo" alt="OreBooking Logo" class="logo-img">
+    <header class="navbar">
+        <a class="logo" href="index.html" aria-label="OreBooking Home">
+            <img src="logos/orebooking.png" alt="OreBooking" class="logo-img">
         </a>
 
         <div class="nav-actions">
-            <div class="rewards-badge" role="status" aria-label="Reward points">
-                <i class="ph-fill ph-star" style="animation: float 3s ease-in-out infinite;"></i>
-                <span id="user-points">1,250</span>
-                <span data-i18n="pts">Pts</span>
+            <div class="rewards-badge">
+                <i class="ph-fill ph-gift"></i>
+                <span data-i18n="rewards_badge">Loyalty Rewards</span>
             </div>
 
-            <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" type="button">
+            <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
                 <i class="ph ph-moon"></i>
             </button>
 
-            <button id="lang-toggle" class="lang-btn" aria-label="Switch language" type="button">
-                <i class="ph ph-globe"></i>
-                <span>EN</span>
-            </button>
+            <button id="lang-toggle" class="lang-btn" type="button">AR</button>
+
+            <a id="auth-cta" class="auth-link-btn" href="auth.html?redirect=index.html">
+                <i class="ph ph-sign-in"></i>
+                <span data-i18n="sign_in">Sign In</span>
+            </a>
 
             <div class="profile-container">
-                <button id="open-auth-btn" class="profile-menu auth-btn-guest" aria-label="Profile menu"
-                    aria-haspopup="true" aria-expanded="false" aria-controls="profile-dropdown" type="button">
-                    <i class="ph ph-user"></i>
+                <button id="profile-trigger" class="profile-menu hidden" type="button" aria-label="Profile menu">
+                    <i class="ph ph-user-circle"></i>
                 </button>
 
-                <div id="profile-dropdown" class="profile-dropdown" role="menu">
+                <div id="profile-dropdown">
                     <div class="dropdown-header">
-                        <span class="font-bold" id="dropdown-user-name">Guest</span>
-                        <span class="text-muted text-sm" id="dropdown-user-email"></span>
+                        <strong id="profile-name">Guest User</strong>
+                        <span id="profile-email" class="text-muted text-sm">guest@example.com</span>
                     </div>
+
                     <div class="dropdown-body">
-                        <button class="dropdown-item" id="my-bookings-btn" role="menuitem" type="button">
-                            <i class="ph ph-list-checks"></i>
-                            <span data-i18n="my_bookings">My Bookings</span>
+                        <button class="dropdown-item" id="open-bookings-btn" type="button">
+                            <i class="ph ph-calendar-check"></i>
+                            <span data-i18n="my_bookings">My bookings</span>
                         </button>
 
-                        <button class="dropdown-item" id="my-favorites-btn" role="menuitem" type="button">
+                        <button class="dropdown-item" id="profile-favorites-btn" type="button">
                             <i class="ph ph-heart"></i>
-                            <span data-i18n="my_favorites">My Favorites</span>
+                            <span data-i18n="favorites">Favorites</span>
                         </button>
 
-                        <button class="dropdown-item" id="open-chat-btn" role="menuitem" type="button">
-                            <i class="ph ph-chat-centered-text"></i>
-                            <span>Support Chat</span>
-                        </button>
-
-                        <hr style="margin:6px 0; border:none; border-top:1px solid var(--border-color);">
-
-                        <button class="dropdown-item text-danger" id="logout-btn" role="menuitem" type="button">
+                        <button class="dropdown-item text-danger" id="logout-btn" type="button">
                             <i class="ph ph-sign-out"></i>
-                            <span data-i18n="logout">Log Out</span>
+                            <span data-i18n="sign_out">Sign out</span>
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
-    </nav>
-
-    <header class="hero" id="hero-section" role="banner">
-        <h1 class="animate-up" data-i18n="hero_title">Find your next perfect stay</h1>
-        <p class="animate-up delay-1" data-i18n="hero_subtitle">
-            Discover premium apartments, villas, and unique homes around the world.
-        </p>
-
-        <div class="search-bar animate-up delay-2" role="search" aria-label="Property search">
-            <div class="search-field" id="search-location-wrapper">
-                <label for="search-location" data-i18n="location">Location</label>
-                <input type="text" id="search-location" placeholder="Where are you going?"
-                    data-i18n-placeholder="location_placeholder" autocomplete="off">
-                <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="Search suggestions"></div>
-            </div>
-
-            <div class="search-divider" aria-hidden="true"></div>
-
-            <div class="search-field">
-                <label for="search-dates" data-i18n="dates">Dates</label>
-                <input type="text" id="search-dates" placeholder="Add dates" data-i18n-placeholder="dates_placeholder"
-                    readonly>
-            </div>
-
-            <div class="search-divider" aria-hidden="true"></div>
-
-            <div class="search-field">
-                <label for="search-guests" data-i18n="guests">Guests</label>
-                <input type="text" id="search-guests" placeholder="Add guests"
-                    data-i18n-placeholder="guests_placeholder" readonly>
-            </div>
-
-            <button class="search-btn" id="main-search-btn" type="button">
-                <i class="ph ph-magnifying-glass"></i>
-                <span data-i18n="search">Search</span>
-            </button>
         </div>
     </header>
 
-    <section class="categories animate-up delay-3" id="categories-container" aria-label="Browse categories"></section>
+    <main>
+        <section class="hero">
+            <h1 class="animate-up" data-i18n="hero_title">Discover premium stays for every trip.</h1>
+            <p class="animate-up delay-1" data-i18n="hero_text">Browse hotels, apartments, and villas with smooth booking, secure access, and one elegant travel experience.</p>
 
-    <main class="container" id="main-content" role="main" style="padding-top: 20px;">
-        <div class="section-header-wrapper animate-up delay-4">
-            <h2 class="font-bold" id="section-main-title" data-i18n="trending" style="font-size: 2rem; margin: 0;">
-                Trending Destinations
-            </h2>
-
-            <div class="section-header-controls">
-                <select id="sort-select" class="sort-select" aria-label="Sort listings">
-                    <option value="default">Sort: Default</option>
-                    <option value="price_asc">Price ↑</option>
-                    <option value="price_desc">Price ↓</option>
-                    <option value="rating">Top Rated</option>
-                </select>
-
-                <button id="clear-search-btn" class="clear-search-btn" type="button" data-i18n="clear_search">
-                    Clear Search
-                </button>
-            </div>
-        </div>
-
-        <div id="listings-grid" role="list" aria-live="polite">
-            <div class="listings-empty-state" id="initial-listings-loading">
-                <i class="ph ph-spinner-gap ph-spin"></i>
-                <p>Loading properties...</p>
-            </div>
-        </div>
-    </main>
-
-    <footer class="footer" role="contentinfo">
-        <div class="container">
-            <p class="footer-copy">
-                <span data-i18n="developed_by">Developed by:</span>
-                <span class="developers-names font-bold">Henni Abdennour, Khadem Mohammed, Kouidi Adel</span>
-                <br><br>
-                <span class="copyright-line">© 2025 OreBooking</span>
-            </p>
-        </div>
-    </footer>
-
-    <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
-        <div class="mobile-nav-inner">
-            <button class="mob-nav-btn active" id="mob-nav-home" data-target="home" type="button">
-                <i class="ph-fill ph-house" style="font-size:1.5rem;"></i>
-                <span>Home</span>
-            </button>
-
-            <button class="mob-nav-btn" id="mob-nav-search" data-target="home" type="button">
-                <i class="ph ph-magnifying-glass" style="font-size:1.5rem;"></i>
-                <span data-i18n="search">Search</span>
-            </button>
-
-            <button class="mob-nav-btn" id="mob-nav-favorites" data-target="favorites" type="button">
-                <i class="ph ph-heart" style="font-size:1.5rem;"></i>
-                <span>Saved</span>
-            </button>
-
-            <button class="mob-nav-btn" id="mob-nav-profile" data-target="profile" type="button">
-                <i class="ph ph-user" style="font-size:1.5rem;"></i>
-                <span>Profile</span>
-            </button>
-        </div>
-    </nav>
-
-    <div id="auth-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-        <div class="modal-content auth-card">
-            <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
-                <i class="ph ph-x"></i>
-            </button>
-
-            <div class="auth-header">
-                <img src="logos/orebooking.png" id="modal-logo" alt="OreBooking Logo">
-            </div>
-
-            <div class="auth-content">
-                <div id="auth-message" class="auth-message"></div>
-
-                <form id="login-form" class="auth-form active" novalidate style="display:flex;">
-                    <h2 class="font-bold auth-title" id="auth-modal-title" data-i18n="welcome_back">Welcome back</h2>
-                    <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account.</p>
-
-                    <div class="input-group">
-                        <label for="login-email" data-i18n="email">Email</label>
-                        <input type="email" id="login-email" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="login-password" data-i18n="password">Password</label>
-                        <div class="pass-wrapper">
-                            <input type="password" id="login-password" required>
-                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
-                                <i class="ph ph-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="auth-options">
-                        <label class="checkbox-container"
-                            style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="checkbox" id="remember-me" style="margin:0;">
-                            <span data-i18n="remember_me">Remember me</span>
-                        </label>
-                        <a href="#" id="go-to-forgot" data-i18n="forgot_pass"
-                            style="color:var(--primary); font-weight:600; text-decoration:none;">Forgot password?</a>
-                    </div>
-
-                    <button type="submit" class="primary-btn" id="login-submit-btn">
-                        <span data-i18n="sign_in">Sign In</span>
-                    </button>
-
-                    <div class="social-logins" style="margin-top:16px;">
-                        <button type="button" class="social-btn" id="google-login-btn">
-                            <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
-                            <span>Google</span>
-                        </button>
-                    </div>
-
-                    <p class="switch-form-text">
-                        <span data-i18n="no_account">Don't have an account?</span>
-                        <a href="#" id="go-to-register" data-i18n="sign_up">Sign up</a>
-                    </p>
-                </form>
-
-                <form id="register-form" class="auth-form" novalidate style="display:none;">
-                    <h2 class="font-bold auth-title" data-i18n="create_account">Create Account</h2>
-                    <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking to unlock premium features.</p>
-
-                    <div class="input-group">
-                        <label for="reg-name" data-i18n="full_name">Full Name</label>
-                        <input type="text" id="reg-name" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="reg-email" data-i18n="email">Email</label>
-                        <input type="email" id="reg-email" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="reg-password" data-i18n="password">Password</label>
-                        <div class="pass-wrapper">
-                            <input type="password" id="reg-password" required>
-                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password">
-                                <i class="ph ph-eye"></i>
-                            </button>
-                        </div>
-
-                        <div id="password-strength">
-                            <div class="strength-bars">
-                                <span class="str-bar"></span>
-                                <span class="str-bar"></span>
-                                <span class="str-bar"></span>
-                                <span class="str-bar"></span>
-                            </div>
-                            <span id="strength-label"></span>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="primary-btn" id="register-submit-btn">
-                        <span data-i18n="sign_up_btn">Create Account</span>
-                    </button>
-
-                    <div class="social-logins" style="margin-top:16px;">
-                        <button type="button" class="social-btn" id="google-register-btn">
-                            <i class="ph-fill ph-google-logo" style="color:#ea4335; font-size:1.2rem;"></i>
-                            <span>Google</span>
-                        </button>
-                    </div>
-
-                    <p class="switch-form-text">
-                        <span data-i18n="has_account">Already have an account?</span>
-                        <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
-                    </p>
-                </form>
-
-                <form id="forgot-form" class="auth-form" novalidate style="display:none;">
-                    <h2 class="font-bold auth-title" data-i18n="reset_pass_title">Reset Password</h2>
-                    <p class="auth-subtitle" data-i18n="reset_pass_desc">Enter your email and we'll send you a reset
-                        link.</p>
-
-                    <div class="input-group">
-                        <label for="forgot-email" data-i18n="email">Email</label>
-                        <input type="email" id="forgot-email" required>
-                    </div>
-
-                    <button type="submit" class="primary-btn" id="forgot-submit-btn">
-                        <span data-i18n="send_link">Send Reset Link</span>
-                    </button>
-
-                    <p class="switch-form-text">
-                        <a href="#" id="back-to-login" data-i18n="back_to_login">Back to login</a>
-                    </p>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div id="chat-modal" class="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
-        <div class="chat-modal-dialog">
-            <div class="chat-modal-header">
-                <div class="chat-modal-title">
-                    <div class="chat-avatar">
-                        <i class="ph ph-headset"></i>
-                    </div>
-                    <div class="chat-title-text">
-                        <h3 id="chat-modal-title">Support Chat</h3>
-                        <p>Talk to admin about bookings, payments, or issues.</p>
-                    </div>
+            <div class="search-bar animate-up delay-2" role="search">
+                <div class="search-field">
+                    <label for="destination-input" data-i18n="where_label">Where</label>
+                    <input id="destination-input" type="text" data-i18n-placeholder="where_placeholder" placeholder="Search city or property">
                 </div>
 
-                <button id="close-chat-btn" class="chat-close-btn" type="button" aria-label="Close chat">
+                <div class="search-divider"></div>
+
+                <div class="search-field">
+                    <label for="checkin-input" data-i18n="checkin_label">Check in</label>
+                    <input id="checkin-input" type="date">
+                </div>
+
+                <div class="search-divider"></div>
+
+                <div class="search-field">
+                    <label for="checkout-input" data-i18n="checkout_label">Check out</label>
+                    <input id="checkout-input" type="date">
+                </div>
+
+                <div class="search-divider"></div>
+
+                <div class="search-field">
+                    <label for="guests-input" data-i18n="guests_label">Guests</label>
+                    <input id="guests-input" type="number" min="1" max="20" value="2">
+                </div>
+
+                <button id="search-btn" class="search-btn" type="button">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <span data-i18n="search_btn">Search</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="categories">
+            <button class="category-item active" type="button" data-category="all">
+                <i class="ph ph-compass"></i>
+                <span data-i18n="cat_all">All stays</span>
+            </button>
+
+            <button class="category-item" type="button" data-category="hotel">
+                <i class="ph ph-buildings"></i>
+                <span data-i18n="cat_hotels">Hotels</span>
+            </button>
+
+            <button class="category-item" type="button" data-category="apartment">
+                <i class="ph ph-house-line"></i>
+                <span data-i18n="cat_apartments">Apartments</span>
+            </button>
+
+            <button class="category-item" type="button" data-category="villa">
+                <i class="ph ph-house"></i>
+                <span data-i18n="cat_villas">Villas</span>
+            </button>
+        </section>
+
+        <section class="container">
+            <div class="section-header-wrapper">
+                <h2 data-i18n="featured_title">Featured properties</h2>
+
+                <div class="section-header-controls">
+                    <select id="sort-select" class="sort-select" aria-label="Sort listings">
+                        <option value="featured" data-i18n="sort_featured">Featured</option>
+                        <option value="rating" data-i18n="sort_rating">Top rated</option>
+                        <option value="price-asc" data-i18n="sort_price_low">Price: low to high</option>
+                        <option value="price-desc" data-i18n="sort_price_high">Price: high to low</option>
+                    </select>
+
+                    <button id="clear-search-btn" class="clear-search-btn" type="button" data-i18n="clear_search">Clear search</button>
+                </div>
+            </div>
+
+            <div id="listings-grid"></div>
+        </section>
+    </main>
+
+    <button id="chat-open-btn" type="button" aria-label="Open chat">
+        <i class="ph-fill ph-chat-circle-dots"></i>
+        <span class="chat-unread-badge">1</span>
+    </button>
+
+    <button id="scroll-top-btn" type="button" aria-label="Scroll to top">
+        <i class="ph ph-arrow-up"></i>
+    </button>
+
+    <div id="toast-container"></div>
+    <div id="fav-toast">Saved</div>
+
+    <div id="bookings-modal" class="bookings-modal">
+        <div class="bookings-modal-dialog">
+            <div class="bookings-modal-header">
+                <h3 data-i18n="bookings_modal_title">My bookings</h3>
+                <button id="close-bookings-btn" type="button" aria-label="Close bookings">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="chat-modal-body" id="chat-messages" aria-live="polite">
-                <div class="chat-empty-state" id="chat-empty-state">
-                    <i class="ph ph-chat-centered-text"
-                        style="font-size:2rem; color:var(--primary); margin-bottom:10px;"></i>
-                    <p style="margin:0 0 8px;">No messages yet.</p>
-                    <p style="margin:0;">Start the conversation and the admin will reply here.</p>
+            <div class="bookings-modal-body" id="bookings-list">
+                <div class="booking-card">
+                    <div class="booking-card-head">
+                        <div>
+                            <h4 id="booking-demo-title">Skyline Hotel</h4>
+                            <div class="booking-card-sub" id="booking-demo-location">Algiers, Algeria</div>
+                        </div>
+                        <span class="booking-status confirmed" id="booking-demo-status">Confirmed</span>
+                    </div>
+
+                    <div class="booking-card-grid">
+                        <div><strong data-i18n="booking_checkin">Check-in:</strong> 2026-05-25</div>
+                        <div><strong data-i18n="booking_checkout">Check-out:</strong> 2026-05-28</div>
+                        <div><strong data-i18n="booking_guests">Guests:</strong> 2</div>
+                        <div><strong data-i18n="booking_total">Total:</strong> $540</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-modal" class="chat-modal">
+        <div class="chat-modal-dialog">
+            <div class="chat-modal-header">
+                <div class="chat-modal-title">
+                    <div class="chat-avatar">
+                        <i class="ph-fill ph-headset"></i>
+                    </div>
+                    <div class="chat-title-text">
+                        <h3 data-i18n="chat_title">Support chat</h3>
+                        <p data-i18n="chat_subtitle">We usually reply quickly</p>
+                    </div>
+                </div>
+
+                <button id="chat-close-btn" class="chat-close-btn" type="button" aria-label="Close chat">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <div class="chat-modal-body">
+                <div class="chat-message admin">
+                    <span data-i18n="chat_welcome">Hello, how can we help you today?</span>
+                    <span class="chat-meta">OreBooking</span>
+                </div>
+
+                <div class="chat-empty-state">
+                    <i class="ph ph-chat-circle-text"></i>
+                    <div data-i18n="chat_empty">Start a conversation with our support team.</div>
                 </div>
             </div>
 
             <div class="chat-input-area">
-                <textarea id="chat-message-input" placeholder="Type your message here..."></textarea>
-
+                <textarea id="chat-textarea" data-i18n-placeholder="chat_placeholder" placeholder="Type your message"></textarea>
                 <div class="chat-actions">
-                    <span class="chat-note">Messages should be linked later with Firestore between customer and
-                        admin.</span>
-                    <button id="send-chat-btn" class="primary-btn chat-send-btn" type="button">
+                    <span class="chat-note" data-i18n="chat_note">For account issues, sign in first for a faster response.</span>
+                    <button id="chat-send-btn" class="primary-btn chat-send-btn" type="button">
                         <i class="ph ph-paper-plane-tilt"></i>
-                        <span>Send Message</span>
+                        <span data-i18n="send_message">Send message</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js?v=4.0"></script>
+    <nav id="mobile-bottom-nav">
+        <div class="mobile-nav-inner">
+            <button class="mob-nav-btn active" type="button" id="mob-home-btn">
+                <i class="ph ph-house-line"></i>
+                <span data-i18n="mobile_home">Home</span>
+            </button>
+
+            <button class="mob-nav-btn" type="button" id="mob-stays-btn">
+                <i class="ph ph-buildings"></i>
+                <span data-i18n="mobile_stays">Stays</span>
+            </button>
+
+            <button class="mob-nav-btn" type="button" id="mob-fav-btn">
+                <i class="ph ph-heart"></i>
+                <span data-i18n="mobile_favorites">Favorites</span>
+            </button>
+
+            <button class="mob-nav-btn" type="button" id="mob-profile-btn">
+                <i class="ph ph-user"></i>
+                <span data-i18n="mobile_profile">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        window.OREBOOKING_FIREBASE_CONFIG = window.OREBOOKING_FIREBASE_CONFIG || {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            appId: "YOUR_APP_ID"
+        };
+    </script>
 
     <script>
         (function () {
-            const sortSelect = document.getElementById("sort-select");
-            const listingsGrid = document.getElementById("listings-grid");
-            const profileBtn = document.getElementById("open-auth-btn");
-            const profileDropdown = document.getElementById("profile-dropdown");
+            "use strict";
 
-            const chatModal = document.getElementById("chat-modal");
-            const chatOpenBtn = document.getElementById("chat-open-btn");
-            const chatMenuBtn = document.getElementById("open-chat-btn");
-            const chatCloseBtn = document.getElementById("close-chat-btn");
-            const chatSendBtn = document.getElementById("send-chat-btn");
-            const chatInput = document.getElementById("chat-message-input");
-            const chatMessages = document.getElementById("chat-messages");
-            const chatEmptyState = document.getElementById("chat-empty-state");
-            const chatUnreadBadge = document.getElementById("chat-unread-badge");
+            const STORAGE_KEYS = {
+                theme: "ore_theme",
+                lang: "ore_lang",
+                favorites: "ore_favorites"
+            };
 
-            if (sortSelect && listingsGrid) {
-                sortSelect.addEventListener("change", () => {
-                    const cards = [...listingsGrid.querySelectorAll(".property-card")];
-                    if (!cards.length) return;
+            const state = {
+                theme: safeGet(STORAGE_KEYS.theme, "light"),
+                lang: safeGet(STORAGE_KEYS.lang, "en"),
+                user: null,
+                category: "all",
+                sort: "featured",
+                query: ""
+            };
 
-                    const getPrice = (card) => {
-                        const txt = card.querySelector(".property-card-price strong")?.textContent || "0";
-                        return Number(String(txt).replace(/[^\d]/g, "")) || 0;
-                    };
+            const i18n = {
+                en: {
+                    page_title: "OreBooking - Premium Stays",
+                    meta_description: "OreBooking – Discover and book premium hotels, apartments, and villas.",
+                    rewards_badge: "Loyalty Rewards",
+                    sign_in: "Sign In",
+                    sign_out: "Sign out",
+                    my_bookings: "My bookings",
+                    favorites: "Favorites",
+                    hero_title: "Discover premium stays for every trip.",
+                    hero_text: "Browse hotels, apartments, and villas with smooth booking, secure access, and one elegant travel experience.",
+                    where_label: "Where",
+                    where_placeholder: "Search city or property",
+                    checkin_label: "Check in",
+                    checkout_label: "Check out",
+                    guests_label: "Guests",
+                    search_btn: "Search",
+                    cat_all: "All stays",
+                    cat_hotels: "Hotels",
+                    cat_apartments: "Apartments",
+                    cat_villas: "Villas",
+                    featured_title: "Featured properties",
+                    sort_featured: "Featured",
+                    sort_rating: "Top rated",
+                    sort_price_low: "Price: low to high",
+                    sort_price_high: "Price: high to low",
+                    clear_search: "Clear search",
+                    view_details: "View details",
+                    reserve_now: "Reserve now",
+                    night_suffix: "/night",
+                    no_results_title: "No properties found",
+                    no_results_text: "Try another city, category, or clear the search.",
+                    toast_added_favorite: "Added to favorites",
+                    toast_removed_favorite: "Removed from favorites",
+                    toast_login_required: "Please sign in first.",
+                    toast_signed_out: "You have been signed out.",
+                    auth_redirect_book: "Sign in to continue your booking.",
+                    auth_redirect_profile: "Sign in to access your profile.",
+                    bookings_modal_title: "My bookings",
+                    booking_checkin: "Check-in:",
+                    booking_checkout: "Check-out:",
+                    booking_guests: "Guests:",
+                    booking_total: "Total:",
+                    booking_status_confirmed: "Confirmed",
+                    chat_title: "Support chat",
+                    chat_subtitle: "We usually reply quickly",
+                    chat_welcome: "Hello, how can we help you today?",
+                    chat_empty: "Start a conversation with our support team.",
+                    chat_placeholder: "Type your message",
+                    chat_note: "For account issues, sign in first for a faster response.",
+                    send_message: "Send message",
+                    mobile_home: "Home",
+                    mobile_stays: "Stays",
+                    mobile_favorites: "Favorites",
+                    mobile_profile: "Profile",
+                    logged_in_as: "Signed in",
+                    guest_user: "Guest User",
+                    support_toast: "Message sent. Our team will reply soon.",
+                    home_auth_title: "Account",
+                    reserve_cta_signed_out: "Sign in to book"
+                },
 
-                    const getRating = (card) => {
-                        const txt = card.querySelector(".property-card-rating span")?.textContent || "0";
-                        return Number(txt) || 0;
-                    };
+                ar: {
+                    page_title: "OreBooking - إقامات مميزة",
+                    meta_description: "OreBooking – اكتشف واحجز فنادق وشقق وفلل مميزة بسهولة.",
+                    rewards_badge: "مكافآت الولاء",
+                    sign_in: "تسجيل الدخول",
+                    sign_out: "تسجيل الخروج",
+                    my_bookings: "حجوزاتي",
+                    favorites: "المفضلة",
+                    hero_title: "اكتشف إقامات مميزة لكل رحلة.",
+                    hero_text: "تصفح الفنادق والشقق والفلل مع تجربة حجز سلسة، ودخول آمن، وتجربة سفر أنيقة.",
+                    where_label: "إلى أين",
+                    where_placeholder: "ابحث عن مدينة أو عقار",
+                    checkin_label: "تسجيل الوصول",
+                    checkout_label: "تسجيل المغادرة",
+                    guests_label: "الضيوف",
+                    search_btn: "ابحث",
+                    cat_all: "كل الإقامات",
+                    cat_hotels: "فنادق",
+                    cat_apartments: "شقق",
+                    cat_villas: "فلل",
+                    featured_title: "العقارات المميزة",
+                    sort_featured: "المميزة",
+                    sort_rating: "الأعلى تقييمًا",
+                    sort_price_low: "السعر: من الأقل إلى الأعلى",
+                    sort_price_high: "السعر: من الأعلى إلى الأقل",
+                    clear_search: "مسح البحث",
+                    view_details: "عرض التفاصيل",
+                    reserve_now: "احجز الآن",
+                    night_suffix: "/ليلة",
+                    no_results_title: "لم يتم العثور على عقارات",
+                    no_results_text: "جرّب مدينة أخرى، أو فئة مختلفة، أو امسح البحث.",
+                    toast_added_favorite: "تمت الإضافة إلى المفضلة",
+                    toast_removed_favorite: "تمت الإزالة من المفضلة",
+                    toast_login_required: "يرجى تسجيل الدخول أولًا.",
+                    toast_signed_out: "تم تسجيل الخروج.",
+                    auth_redirect_book: "سجّل الدخول لإكمال الحجز.",
+                    auth_redirect_profile: "سجّل الدخول للوصول إلى حسابك.",
+                    bookings_modal_title: "حجوزاتي",
+                    booking_checkin: "تسجيل الوصول:",
+                    booking_checkout: "تسجيل المغادرة:",
+                    booking_guests: "الضيوف:",
+                    booking_total: "الإجمالي:",
+                    booking_status_confirmed: "مؤكد",
+                    chat_title: "دردشة الدعم",
+                    chat_subtitle: "نرد عادة بسرعة",
+                    chat_welcome: "مرحبًا، كيف يمكننا مساعدتك اليوم؟",
+                    chat_empty: "ابدأ محادثة مع فريق الدعم.",
+                    chat_placeholder: "اكتب رسالتك",
+                    chat_note: "بالنسبة لمشاكل الحساب، سجّل الدخول أولًا لتسريع المساعدة.",
+                    send_message: "إرسال الرسالة",
+                    mobile_home: "الرئيسية",
+                    mobile_stays: "الإقامات",
+                    mobile_favorites: "المفضلة",
+                    mobile_profile: "الحساب",
+                    logged_in_as: "تم تسجيل الدخول",
+                    guest_user: "زائر",
+                    support_toast: "تم إرسال الرسالة، وسيرد فريقنا قريبًا.",
+                    home_auth_title: "الحساب",
+                    reserve_cta_signed_out: "سجّل الدخول للحجز"
+                }
+            };
 
-                    cards.sort((a, b) => {
-                        switch (sortSelect.value) {
-                            case "price_asc":
-                                return getPrice(a) - getPrice(b);
-                            case "price_desc":
-                                return getPrice(b) - getPrice(a);
-                            case "rating":
-                                return getRating(b) - getRating(a);
-                            default:
-                                return 0;
-                        }
+            const listings = [
+                {
+                    id: "skyline-hotel",
+                    category: "hotel",
+                    title: { en: "Skyline Hotel", ar: "فندق سكاي لاين" },
+                    location: { en: "Algiers, Algeria", ar: "الجزائر العاصمة، الجزائر" },
+                    price: 180,
+                    rating: 4.8,
+                    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
+                    urgency: { en: "Only 2 rooms left", ar: "بقيت غرفتان فقط" }
+                },
+                {
+                    id: "sea-breeze-apartment",
+                    category: "apartment",
+                    title: { en: "Sea Breeze Apartment", ar: "شقة نسيم البحر" },
+                    location: { en: "Oran, Algeria", ar: "وهران، الجزائر" },
+                    price: 120,
+                    rating: 4.7,
+                    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
+                    urgency: { en: "Popular this week", ar: "مطلوب بكثرة هذا الأسبوع" }
+                },
+                {
+                    id: "palm-villa",
+                    category: "villa",
+                    title: { en: "Palm Villa Retreat", ar: "فيلا بالم ريتريت" },
+                    location: { en: "Annaba, Algeria", ar: "عنابة، الجزائر" },
+                    price: 320,
+                    rating: 4.9,
+                    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
+                    urgency: { en: "Weekend favorite", ar: "خيار مفضل لعطلة نهاية الأسبوع" }
+                },
+                {
+                    id: "city-loft",
+                    category: "apartment",
+                    title: { en: "City Loft Suites", ar: "أجنحة سيتي لوفت" },
+                    location: { en: "Sétif, Algeria", ar: "سطيف، الجزائر" },
+                    price: 95,
+                    rating: 4.6,
+                    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80",
+                    urgency: { en: "Great value", ar: "قيمة ممتازة" }
+                },
+                {
+                    id: "desert-grand",
+                    category: "hotel",
+                    title: { en: "Desert Grand Hotel", ar: "فندق ديزرت جراند" },
+                    location: { en: "Ghardaïa, Algeria", ar: "غرداية، الجزائر" },
+                    price: 210,
+                    rating: 4.5,
+                    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1200&q=80",
+                    urgency: { en: "Breakfast included", ar: "الإفطار مشمول" }
+                },
+                {
+                    id: "azure-villa",
+                    category: "villa",
+                    title: { en: "Azure Coast Villa", ar: "فيلا الساحل الأزرق" },
+                    location: { en: "Bejaia, Algeria", ar: "بجاية، الجزائر" },
+                    price: 390,
+                    rating: 5.0,
+                    image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1200&q=80",
+                    urgency: { en: "Luxury pick", ar: "خيار فاخر" }
+                }
+            ];
+
+            const els = {
+                html: document.documentElement,
+                body: document.body,
+                themeToggle: document.getElementById("theme-toggle"),
+                langToggle: document.getElementById("lang-toggle"),
+                authCta: document.getElementById("auth-cta"),
+                profileTrigger: document.getElementById("profile-trigger"),
+                profileDropdown: document.getElementById("profile-dropdown"),
+                profileName: document.getElementById("profile-name"),
+                profileEmail: document.getElementById("profile-email"),
+                openBookingsBtn: document.getElementById("open-bookings-btn"),
+                profileFavoritesBtn: document.getElementById("profile-favorites-btn"),
+                logoutBtn: document.getElementById("logout-btn"),
+                destinationInput: document.getElementById("destination-input"),
+                guestsInput: document.getElementById("guests-input"),
+                searchBtn: document.getElementById("search-btn"),
+                clearSearchBtn: document.getElementById("clear-search-btn"),
+                sortSelect: document.getElementById("sort-select"),
+                listingsGrid: document.getElementById("listings-grid"),
+                categoryButtons: Array.from(document.querySelectorAll(".category-item")),
+                scrollTopBtn: document.getElementById("scroll-top-btn"),
+                chatOpenBtn: document.getElementById("chat-open-btn"),
+                chatModal: document.getElementById("chat-modal"),
+                chatCloseBtn: document.getElementById("chat-close-btn"),
+                chatSendBtn: document.getElementById("chat-send-btn"),
+                chatTextarea: document.getElementById("chat-textarea"),
+                bookingsModal: document.getElementById("bookings-modal"),
+                closeBookingsBtn: document.getElementById("close-bookings-btn"),
+                favToast: document.getElementById("fav-toast"),
+                toastContainer: document.getElementById("toast-container"),
+                mobileFavBtn: document.getElementById("mob-fav-btn"),
+                mobileProfileBtn: document.getElementById("mob-profile-btn"),
+                mobileStaysBtn: document.getElementById("mob-stays-btn")
+            };
+
+            function t(key) {
+                return (i18n[state.lang] && i18n[state.lang][key]) || i18n.en[key] || key;
+            }
+
+            function safeGet(key, fallback) {
+                try {
+                    const value = localStorage.getItem(key);
+                    return value === null ? fallback : value;
+                } catch (_) {
+                    return fallback;
+                }
+            }
+
+            function safeSet(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                } catch (_) { }
+            }
+
+            function getCurrentPageUrl() {
+                const current = window.location.pathname.split("/").pop() || "index.html";
+                const search = window.location.search || "";
+                return current + search;
+            }
+
+            function buildAuthUrl(view) {
+                const base = "auth.html?redirect=" + encodeURIComponent(getCurrentPageUrl());
+                return view ? base + "#" + encodeURIComponent(view) : base;
+            }
+
+            function applyTheme() {
+                const isDark = state.theme === "dark";
+                els.body.classList.toggle("dark", isDark);
+                safeSet(STORAGE_KEYS.theme, state.theme);
+
+                const metaTheme = document.querySelector('meta[name="theme-color"]');
+                if (metaTheme) metaTheme.setAttribute("content", isDark ? "#020617" : "#435abf");
+
+                if (els.themeToggle) {
+                    els.themeToggle.innerHTML = isDark
+                        ? '<i class="ph ph-sun"></i>'
+                        : '<i class="ph ph-moon"></i>';
+                }
+            }
+
+            function updateTextNodes() {
+                document.querySelectorAll("[data-i18n]").forEach(el => {
+                    const key = el.getAttribute("data-i18n");
+                    if (key) el.textContent = t(key);
+                });
+
+                document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+                    const key = el.getAttribute("data-i18n-placeholder");
+                    if (key) el.setAttribute("placeholder", t(key));
+                });
+
+                document.title = t("page_title");
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) metaDesc.setAttribute("content", t("meta_description"));
+
+                if (els.langToggle) {
+                    els.langToggle.textContent = state.lang === "en" ? "AR" : "EN";
+                }
+
+                if (els.authCta) {
+                    const span = els.authCta.querySelector("span");
+                    if (span) span.textContent = t("sign_in");
+                }
+
+                document.getElementById("booking-demo-status").textContent = t("booking_status_confirmed");
+            }
+
+            function applyLanguage() {
+                els.html.lang = state.lang;
+                els.html.dir = state.lang === "ar" ? "rtl" : "ltr";
+                safeSet(STORAGE_KEYS.lang, state.lang);
+                updateTextNodes();
+                renderListings();
+                syncAuthLinks();
+            }
+
+            function showToast(text, type) {
+                const toast = document.createElement("div");
+                toast.className = "toast " + (type || "");
+                toast.textContent = text;
+                els.toastContainer.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 2600);
+            }
+
+            function showFavToast(text) {
+                els.favToast.textContent = text;
+                els.favToast.classList.add("show");
+                setTimeout(() => {
+                    els.favToast.classList.remove("show");
+                }, 1800);
+            }
+
+            function getFavorites() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEYS.favorites);
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (_) {
+                    return [];
+                }
+            }
+
+            function setFavorites(ids) {
+                try {
+                    localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(ids));
+                } catch (_) { }
+            }
+
+            function isFavorite(id) {
+                return getFavorites().includes(id);
+            }
+
+            function toggleFavorite(id) {
+                if (!state.user) {
+                    showToast(t("toast_login_required"), "error");
+                    window.location.href = buildAuthUrl("login");
+                    return;
+                }
+
+                const favs = getFavorites();
+                const exists = favs.includes(id);
+                const next = exists ? favs.filter(item => item !== id) : favs.concat(id);
+                setFavorites(next);
+                showFavToast(exists ? t("toast_removed_favorite") : t("toast_added_favorite"));
+                renderListings();
+            }
+
+            function filterListings() {
+                let items = listings.slice();
+
+                if (state.category !== "all") {
+                    items = items.filter(item => item.category === state.category);
+                }
+
+                const query = String(state.query || "").trim().toLowerCase();
+                if (query) {
+                    items = items.filter(item => {
+                        const title = item.title[state.lang].toLowerCase();
+                        const location = item.location[state.lang].toLowerCase();
+                        return title.includes(query) || location.includes(query);
+                    });
+                }
+
+                if (state.sort === "price-asc") items.sort((a, b) => a.price - b.price);
+                if (state.sort === "price-desc") items.sort((a, b) => b.price - a.price);
+                if (state.sort === "rating") items.sort((a, b) => b.rating - a.rating);
+
+                return items;
+            }
+
+            function renderListings() {
+                const items = filterListings();
+                els.listingsGrid.innerHTML = "";
+
+                if (!items.length) {
+                    els.listingsGrid.innerHTML = `
+                        <div class="listings-empty-state">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <strong>${t("no_results_title")}</strong>
+                            <p>${t("no_results_text")}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                items.forEach(item => {
+                    const card = document.createElement("article");
+                    card.className = "property-card animate-up";
+                    card.innerHTML = `
+                        <div class="property-card-media">
+                            <img src="${item.image}" alt="${escapeHtml(item.title[state.lang])}">
+                            <button class="favorite-btn ${isFavorite(item.id) ? "active" : ""}" type="button" data-favorite-id="${item.id}" aria-label="Favorite">
+                                <i class="ph-fill ph-heart"></i>
+                            </button>
+                            <div class="property-urgency">
+                                <i class="ph ph-fire"></i>
+                                <span>${escapeHtml(item.urgency[state.lang])}</span>
+                            </div>
+                        </div>
+
+                        <div class="property-card-body">
+                            <div class="property-card-top">
+                                <h3 class="property-card-title">${escapeHtml(item.title[state.lang])}</h3>
+                                <div class="property-card-rating">
+                                    <i class="ph-fill ph-star" style="color:#f59e0b;"></i>
+                                    <span>${item.rating.toFixed(1)}</span>
+                                </div>
+                            </div>
+
+                            <div class="property-card-location">
+                                <i class="ph ph-map-pin"></i>
+                                <span>${escapeHtml(item.location[state.lang])}</span>
+                            </div>
+
+                            <div class="property-card-price">
+                                $${item.price}
+                                <span>${t("night_suffix")}</span>
+                            </div>
+
+                            <div class="property-card-actions">
+                                <button type="button" class="details-btn" data-property-id="${item.id}">
+                                    ${t("view_details")}
+                                </button>
+                                <button type="button" class="reserve-btn primary" data-property-id="${item.id}">
+                                    ${state.user ? t("reserve_now") : t("reserve_cta_signed_out")}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    els.listingsGrid.appendChild(card);
+                });
+            }
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function syncCategoryButtons() {
+                els.categoryButtons.forEach(btn => {
+                    btn.classList.toggle("active", btn.dataset.category === state.category);
+                });
+            }
+
+            function syncAuthLinks() {
+                if (els.authCta) {
+                    els.authCta.href = buildAuthUrl("login");
+                }
+            }
+
+            function updateAuthUI(user) {
+                state.user = user || null;
+
+                if (state.user) {
+                    els.authCta.classList.add("hidden");
+                    els.profileTrigger.classList.remove("hidden");
+                    els.profileName.textContent = state.user.displayName || t("home_auth_title");
+                    els.profileEmail.textContent = state.user.email || t("logged_in_as");
+                } else {
+                    els.authCta.classList.remove("hidden");
+                    els.profileTrigger.classList.add("hidden");
+                    els.profileDropdown.classList.remove("active");
+                    els.profileName.textContent = t("guest_user");
+                    els.profileEmail.textContent = "guest@example.com";
+                }
+
+                renderListings();
+            }
+
+            function firebaseReady() {
+                try {
+                    const cfg = window.OREBOOKING_FIREBASE_CONFIG || {};
+                    const configured = ["apiKey", "authDomain", "projectId", "appId"].every(key => {
+                        return cfg[key] && !String(cfg[key]).includes("YOUR_");
                     });
 
-                    cards.forEach((card) => listingsGrid.appendChild(card));
+                    if (!configured || !window.firebase || !firebase.auth) return false;
+                    if (!firebase.apps.length) firebase.initializeApp(cfg);
+                    return true;
+                } catch (_) {
+                    return false;
+                }
+            }
+
+            function watchAuthState() {
+                if (!firebaseReady()) return;
+                firebase.auth().onAuthStateChanged(user => {
+                    updateAuthUI(user);
                 });
             }
 
-            if (profileBtn && profileDropdown) {
-                profileBtn.addEventListener("click", () => {
-                    const isActive = profileDropdown.classList.contains("active");
-                    profileBtn.setAttribute("aria-expanded", isActive ? "true" : "false");
+            function requireAuth(reason) {
+                showToast(reason || t("toast_login_required"), "error");
+                window.location.href = buildAuthUrl("login");
+            }
+
+            function bindEvents() {
+                els.themeToggle.addEventListener("click", () => {
+                    state.theme = state.theme === "dark" ? "light" : "dark";
+                    applyTheme();
                 });
 
-                document.addEventListener("click", () => {
-                    profileBtn.setAttribute("aria-expanded", profileDropdown.classList.contains("active") ? "true" : "false");
+                els.langToggle.addEventListener("click", () => {
+                    state.lang = state.lang === "en" ? "ar" : "en";
+                    applyLanguage();
+                });
+
+                els.searchBtn.addEventListener("click", () => {
+                    state.query = els.destinationInput.value.trim();
+                    els.clearSearchBtn.style.display = state.query ? "inline-flex" : "none";
+                    renderListings();
+                });
+
+                els.destinationInput.addEventListener("keydown", e => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        els.searchBtn.click();
+                    }
+                });
+
+                els.clearSearchBtn.addEventListener("click", () => {
+                    state.query = "";
+                    els.destinationInput.value = "";
+                    els.clearSearchBtn.style.display = "none";
+                    renderListings();
+                });
+
+                els.sortSelect.addEventListener("change", () => {
+                    state.sort = els.sortSelect.value;
+                    renderListings();
+                });
+
+                els.categoryButtons.forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        state.category = btn.dataset.category || "all";
+                        syncCategoryButtons();
+                        renderListings();
+                    });
+                });
+
+                document.addEventListener("click", e => {
+                    const favoriteBtn = e.target.closest("[data-favorite-id]");
+                    const reserveBtn = e.target.closest(".reserve-btn");
+                    const detailsBtn = e.target.closest(".details-btn");
+
+                    if (favoriteBtn) {
+                        toggleFavorite(favoriteBtn.dataset.favoriteId);
+                    }
+
+                    if (reserveBtn) {
+                        const propertyId = reserveBtn.dataset.propertyId;
+                        const item = listings.find(x => x.id === propertyId);
+                        if (!state.user) {
+                            requireAuth(t("auth_redirect_book"));
+                            return;
+                        }
+                        showToast((state.lang === "ar" ? "تم اختيار " : "Selected ") + (item ? item.title[state.lang] : ""), "success");
+                    }
+
+                    if (detailsBtn) {
+                        const propertyId = detailsBtn.dataset.propertyId;
+                        const item = listings.find(x => x.id === propertyId);
+                        if (item) {
+                            showToast(item.title[state.lang], "success");
+                        }
+                    }
+
+                    if (!e.target.closest(".profile-container")) {
+                        els.profileDropdown.classList.remove("active");
+                    }
+                });
+
+                els.profileTrigger.addEventListener("click", () => {
+                    els.profileDropdown.classList.toggle("active");
+                });
+
+                els.logoutBtn.addEventListener("click", async () => {
+                    try {
+                        if (firebaseReady()) {
+                            await firebase.auth().signOut();
+                        }
+                    } catch (_) { }
+                    updateAuthUI(null);
+                    showToast(t("toast_signed_out"), "success");
+                });
+
+                els.openBookingsBtn.addEventListener("click", () => {
+                    if (!state.user) {
+                        requireAuth(t("auth_redirect_profile"));
+                        return;
+                    }
+                    els.bookingsModal.classList.add("active");
+                    els.body.classList.add("modal-open");
+                });
+
+                els.profileFavoritesBtn.addEventListener("click", () => {
+                    if (!state.user) {
+                        requireAuth(t("auth_redirect_profile"));
+                        return;
+                    }
+                    state.query = "";
+                    state.category = "all";
+                    syncCategoryButtons();
+                    const favs = getFavorites();
+                    if (!favs.length) {
+                        showToast(t("no_results_text"), "error");
+                        return;
+                    }
+                    els.listingsGrid.innerHTML = "";
+                    const items = listings.filter(item => favs.includes(item.id));
+                    items.forEach(item => {
+                        const card = document.createElement("article");
+                        card.className = "property-card";
+                        card.innerHTML = `
+                            <div class="property-card-media">
+                                <img src="${item.image}" alt="${escapeHtml(item.title[state.lang])}">
+                                <button class="favorite-btn active" type="button" data-favorite-id="${item.id}">
+                                    <i class="ph-fill ph-heart"></i>
+                                </button>
+                                <div class="property-urgency">
+                                    <i class="ph ph-heart"></i>
+                                    <span>${t("favorites")}</span>
+                                </div>
+                            </div>
+
+                            <div class="property-card-body">
+                                <div class="property-card-top">
+                                    <h3 class="property-card-title">${escapeHtml(item.title[state.lang])}</h3>
+                                    <div class="property-card-rating">
+                                        <i class="ph-fill ph-star" style="color:#f59e0b;"></i>
+                                        <span>${item.rating.toFixed(1)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="property-card-location">
+                                    <i class="ph ph-map-pin"></i>
+                                    <span>${escapeHtml(item.location[state.lang])}</span>
+                                </div>
+
+                                <div class="property-card-price">
+                                    $${item.price}
+                                    <span>${t("night_suffix")}</span>
+                                </div>
+
+                                <div class="property-card-actions">
+                                    <button type="button" class="details-btn" data-property-id="${item.id}">
+                                        ${t("view_details")}
+                                    </button>
+                                    <button type="button" class="reserve-btn primary" data-property-id="${item.id}">
+                                        ${t("reserve_now")}
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        els.listingsGrid.appendChild(card);
+                    });
+                    els.profileDropdown.classList.remove("active");
+                });
+
+                els.closeBookingsBtn.addEventListener("click", () => {
+                    els.bookingsModal.classList.remove("active");
+                    els.body.classList.remove("modal-open");
+                });
+
+                els.bookingsModal.addEventListener("click", e => {
+                    if (e.target === els.bookingsModal) {
+                        els.bookingsModal.classList.remove("active");
+                        els.body.classList.remove("modal-open");
+                    }
+                });
+
+                els.chatOpenBtn.addEventListener("click", () => {
+                    els.chatModal.classList.add("active");
+                    els.body.classList.add("modal-open");
+                });
+
+                els.chatCloseBtn.addEventListener("click", () => {
+                    els.chatModal.classList.remove("active");
+                    els.body.classList.remove("modal-open");
+                });
+
+                els.chatModal.addEventListener("click", e => {
+                    if (e.target === els.chatModal) {
+                        els.chatModal.classList.remove("active");
+                        els.body.classList.remove("modal-open");
+                    }
+                });
+
+                els.chatSendBtn.addEventListener("click", () => {
+                    const value = els.chatTextarea.value.trim();
+                    if (!value) return;
+                    showToast(t("support_toast"), "success");
+                    els.chatTextarea.value = "";
+                });
+
+                els.scrollTopBtn.addEventListener("click", () => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                });
+
+                window.addEventListener("scroll", () => {
+                    if (window.scrollY > 320) {
+                        els.scrollTopBtn.classList.add("visible");
+                    } else {
+                        els.scrollTopBtn.classList.remove("visible");
+                    }
+                });
+
+                document.getElementById("mob-fav-btn").addEventListener("click", () => {
+                    if (!state.user) {
+                        requireAuth(t("auth_redirect_profile"));
+                        return;
+                    }
+                    els.profileFavoritesBtn.click();
+                });
+
+                document.getElementById("mob-profile-btn").addEventListener("click", () => {
+                    if (!state.user) {
+                        window.location.href = buildAuthUrl("login");
+                        return;
+                    }
+                    els.profileDropdown.classList.toggle("active");
+                });
+
+                document.getElementById("mob-stays-btn").addEventListener("click", () => {
+                    document.querySelector(".container").scrollIntoView({ behavior: "smooth", block: "start" });
                 });
             }
 
-            const openChat = () => {
-                if (!chatModal) return;
-                chatModal.classList.add("active");
-                document.body.classList.add("modal-open");
-                if (chatUnreadBadge) chatUnreadBadge.textContent = "0";
-            };
+            function init() {
+                applyTheme();
+                applyLanguage();
+                syncCategoryButtons();
+                syncAuthLinks();
+                renderListings();
+                bindEvents();
+                watchAuthState();
 
-            const closeChat = () => {
-                if (!chatModal) return;
-                chatModal.classList.remove("active");
-                document.body.classList.remove("modal-open");
-            };
-
-            if (chatOpenBtn) chatOpenBtn.addEventListener("click", openChat);
-            if (chatMenuBtn) {
-                chatMenuBtn.addEventListener("click", () => {
-                    if (profileDropdown) profileDropdown.classList.remove("active");
-                    if (profileBtn) profileBtn.setAttribute("aria-expanded", "false");
-                    openChat();
-                });
-            }
-            if (chatCloseBtn) chatCloseBtn.addEventListener("click", closeChat);
-
-            if (chatModal) {
-                chatModal.addEventListener("click", (e) => {
-                    if (e.target === chatModal) closeChat();
-                });
+                if (!firebaseReady()) {
+                    updateAuthUI(null);
+                }
             }
 
-            if (chatSendBtn && chatInput && chatMessages) {
-                chatSendBtn.addEventListener("click", () => {
-                    const message = chatInput.value.trim();
-                    if (!message) return;
-
-                    if (chatEmptyState) chatEmptyState.style.display = "none";
-
-                    const bubble = document.createElement("div");
-                    bubble.className = "chat-message customer";
-                    bubble.innerHTML = `
-            ${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
-            <span class="chat-meta">You · ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-          `;
-
-                    chatMessages.appendChild(bubble);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    chatInput.value = "";
-                });
-            }
-
-            setTimeout(() => {
-                const loading = document.getElementById("initial-listings-loading");
-                const cards = listingsGrid?.querySelectorAll(".property-card") || [];
-                if (loading && cards.length > 0) loading.remove();
-            }, 2500);
+            init();
         })();
     </script>
 </body>
