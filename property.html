@@ -165,7 +165,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            
             flex-shrink: 0;
         }
 
@@ -487,11 +486,11 @@
             overflow: hidden;
             aspect-ratio: 16 / 9;
             background: var(--bg-color);
-            cursor: grab;
+            cursor: default;
         }
 
         .slider-container:active {
-            cursor: grabbing;
+            cursor: default;
         }
 
         .slider-track {
@@ -617,7 +616,7 @@
         }
 
         .gallery-thumbs {
-            display: grid;
+            display: none;
             grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
             gap: 10px;
             margin-bottom: 30px;
@@ -1796,10 +1795,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .gallery-thumbs {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
             .booking-mini-stats {
                 grid-template-columns: 1fr 1fr;
             }
@@ -1828,10 +1823,6 @@
             .fav-property-btn,
             .contact-host-btn {
                 flex: 1;
-            }
-
-            .gallery-thumbs {
-                grid-template-columns: repeat(3, 1fr);
             }
 
             .booking-mini-stats {
@@ -2450,6 +2441,16 @@
             return Number.isFinite(n) ? n : fallback;
         }
 
+        function getLocalizedValue(data, keys) {
+            for (const key of keys) {
+                const value = data?.[key];
+                if (value !== undefined && value !== null && String(value).trim() !== '') {
+                    return String(value).trim();
+                }
+            }
+            return '';
+        }
+
         function normalizeFeatureLabel(feature) {
             const map = {
                 wifi: getText('واي فاي', 'Wi‑Fi'),
@@ -2490,13 +2491,27 @@
         }
 
         function getPropertyTypeText(data) {
-            const type = String(data?.type || data?.category || '').toLowerCase();
-            if (/villa/.test(type)) return getText('فيلا', 'Villa');
-            if (/apartment|flat/.test(type)) return getText('شقة', 'Apartment');
-            if (/resort/.test(type)) return getText('منتجع', 'Resort');
-            if (/hotel/.test(type)) return getText('فندق', 'Hotel');
-            if (/cabin/.test(type)) return getText('كوخ', 'Cabin');
-            return getText('إقامة مميزة', 'Premium stay');
+            const typeAr = getLocalizedValue(data, ['typeAr', 'typear', 'categoryAr', 'categoryar']);
+            const typeEn = getLocalizedValue(data, ['typeEn', 'typeen', 'categoryEn', 'categoryen']);
+            const genericType = getLocalizedValue(data, ['type', 'category']);
+            const localizedType = isArabic() ? (typeAr || typeEn || genericType) : (typeEn || typeAr || genericType);
+            const type = String(localizedType || '').toLowerCase();
+
+            if (isArabic()) {
+                if (/فيلا|villa/.test(type)) return 'فيلا';
+                if (/شقة|apartment|flat/.test(type)) return 'شقة';
+                if (/منتجع|resort/.test(type)) return 'منتجع';
+                if (/فندق|hotel/.test(type)) return 'فندق';
+                if (/كوخ|cabin/.test(type)) return 'كوخ';
+                return typeAr || (typeEn ? normalizeFeatureLabel(typeEn) : 'إقامة مميزة');
+            }
+
+            if (/villa|فيلا/.test(type)) return 'Villa';
+            if (/apartment|flat|شقة/.test(type)) return 'Apartment';
+            if (/resort|منتجع/.test(type)) return 'Resort';
+            if (/hotel|فندق/.test(type)) return 'Hotel';
+            if (/cabin|كوخ/.test(type)) return 'Cabin';
+            return typeEn || genericType || 'Premium stay';
         }
 
         function getGuestCountText(data) {
@@ -2512,40 +2527,69 @@
         }
 
         function getLocationText(data) {
-            return (isArabic() ? (data.locationAr || data.locationar) : (data.locationEn || data.locationen))
-                || data.locationEn || data.locationen || data.locationAr || data.locationar
-                || getText('موقع غير محدد', 'Unknown location');
+            const arValue = getLocalizedValue(data, ['locationAr', 'locationar', 'cityAr', 'cityar', 'addressAr', 'addressar']);
+            const enValue = getLocalizedValue(data, ['locationEn', 'locationen', 'cityEn', 'cityen', 'addressEn', 'addressen']);
+            const genericValue = getLocalizedValue(data, ['location', 'city', 'address']);
+
+            return isArabic()
+                ? (arValue || enValue || genericValue || 'موقع غير محدد')
+                : (enValue || arValue || genericValue || 'Unknown location');
         }
 
         function getTitleText(data) {
-            return (isArabic() ? (data.titleAr || data.titlear) : (data.titleEn || data.titleen))
-                || data.titleEn || data.titleen || data.titleAr || data.titlear
-                || getText('عقار بدون اسم', 'Unnamed property');
+            const arValue = getLocalizedValue(data, ['titleAr', 'titlear', 'nameAr', 'namear']);
+            const enValue = getLocalizedValue(data, ['titleEn', 'titleen', 'nameEn', 'nameen']);
+            const genericValue = getLocalizedValue(data, ['title', 'name']);
+
+            return isArabic()
+                ? (arValue || enValue || genericValue || 'عقار بدون اسم')
+                : (enValue || arValue || genericValue || 'Unnamed property');
         }
 
         function getDescText(data) {
-            return (isArabic() ? (data.descAr || data.descar) : (data.descEn || data.descen))
-                || data.descEn || data.descen || data.descAr || data.descar
-                || getText('لا يوجد وصف متاح حالياً.', 'No description available.');
+            const arValue = getLocalizedValue(data, ['descAr', 'descar', 'descriptionAr', 'descriptionar']);
+            const enValue = getLocalizedValue(data, ['descEn', 'descen', 'descriptionEn', 'descriptionen']);
+            const genericValue = getLocalizedValue(data, ['desc', 'description']);
+
+            return isArabic()
+                ? (arValue || enValue || genericValue || 'لا يوجد وصف متاح حالياً.')
+                : (enValue || arValue || genericValue || 'No description available.');
         }
 
         function getFeaturesArray(data) {
             const ar = data.featuresAr || data.featuresar;
             const en = data.featuresEn || data.featuresen;
             const generic = data.features;
+
             if (isArabic() && Array.isArray(ar) && ar.length) return ar;
             if (!isArabic() && Array.isArray(en) && en.length) return en;
-            if (Array.isArray(en) && en.length) return en;
+            if (isArabic() && Array.isArray(generic) && generic.length) return generic;
+            if (!isArabic() && Array.isArray(generic) && generic.length) return generic;
             if (Array.isArray(ar) && ar.length) return ar;
+            if (Array.isArray(en) && en.length) return en;
             if (Array.isArray(generic) && generic.length) return generic;
             return ['wifi', 'parking', 'ac', 'kitchen'];
         }
 
         function getPropertyImages(data) {
-            if (Array.isArray(data.images) && data.images.length) return data.images.filter(Boolean);
-            if (Array.isArray(data.gallery) && data.gallery.length) return data.gallery.filter(Boolean);
-            if (data.imageUrl) return [data.imageUrl];
-            if (data.image) return [data.image];
+            const imageSets = [
+                data?.images,
+                data?.gallery,
+                data?.photos,
+                data?.propertyImages
+            ];
+
+            for (const set of imageSets) {
+                if (Array.isArray(set) && set.length) {
+                    const validImages = set.filter(Boolean);
+                    if (validImages.length) return [validImages[0]];
+                }
+            }
+
+            if (data?.imageUrl) return [data.imageUrl];
+            if (data?.image) return [data.image];
+            if (data?.thumbnail) return [data.thumbnail];
+
             return ['images/placeholder.jpg'];
         }
 
@@ -2587,13 +2631,15 @@
             const chatEmptySubtitle = document.getElementById('chat-empty-subtitle');
             const chatNote = document.getElementById('chat-note');
             const sendChatText = document.getElementById('send-chat-text');
+            const chatInput = document.getElementById('chat-message-input');
+            const countBadge = document.getElementById('slider-count-badge');
 
             if (shareText) shareText.textContent = ar ? 'مشاركة' : 'Share';
-            if (favBtnText) favBtnText.textContent = ar ? 'حفظ' : 'Save';
+            if (favBtnText && !document.getElementById('property-fav-btn')?.classList.contains('active')) favBtnText.textContent = ar ? 'حفظ' : 'Save';
             if (hostSince) hostSince.textContent = ar ? 'مضيف منذ 2024' : 'Hosting since 2024';
             if (hostBadgeText) hostBadgeText.textContent = ar ? 'مضيف موثوق' : 'Verified Host';
             if (mapTitle) mapTitle.textContent = ar ? 'موقع العقار' : "Where you'll be";
-            if (openMapsText) openMapsText.textContent = ar ? 'فتح في خرائط قوقل' : 'Open in Google Maps';
+            if (openMapsText) openMapsText.textContent = ar ? 'فتح في خرائط Google' : 'Open in Google Maps';
 
             if (bookingInfoText) {
                 bookingInfoText.textContent = ar
@@ -2602,56 +2648,47 @@
             }
 
             if (perk1) perk1.textContent = ar ? 'إلغاء مجاني خلال 24 ساعة' : 'Free cancellation within 24h';
-            if (perk2) perk2.textContent = ar ? 'تأكيد أولي سريع' : 'Fast initial confirmation';
-            if (perk3) perk3.textContent = ar ? 'دعم متواصل طوال الوقت' : '24/7 support';
+            if (perk2) perk2.textContent = ar ? 'تأكيد أولي سريع' : 'Instant confirmation';
+            if (perk3) perk3.textContent = ar ? 'دعم على مدار الساعة' : '24/7 support';
 
             if (tipsTitle) tipsTitle.textContent = ar ? 'معلومات مهمة' : 'Good to know';
             if (trustNote) trustNote.textContent = ar
-                ? 'طلبك آمن، ويمكنك مراجعة كل تفاصيل الحجز قبل إنهاء الدفع.'
+                ? 'يبقى طلبك آمنًا ويمكنك مراجعة جميع تفاصيل الحجز قبل إتمام الدفع.'
                 : 'Your request stays secure and you can review all booking details before payment is finalized.';
 
-            if (highlightsTitle) highlightsTitle.textContent = ar ? 'لماذا قد يعجبك هذا المكان' : 'Why guests like it';
+            if (highlightsTitle) highlightsTitle.textContent = ar ? 'لماذا يعجب الضيوف بهذا العقار' : 'Why guests like it';
 
-            if (highlight1Title) highlight1Title.textContent = ar ? 'موقع مناسب' : 'Great location';
-            if (highlight1Desc) highlight1Desc.textContent = ar ? 'قريب من النقاط المهمة وسهل الوصول.' : 'Close to main points of interest and easy to reach.';
-            if (highlight2Title) highlight2Title.textContent = ar ? 'راحة ونظافة' : 'Clean and comfortable';
-            if (highlight2Desc) highlight2Desc.textContent = ar ? 'مهيأ لإقامة مريحة وتجربة سلسة.' : 'Prepared for a smooth and pleasant stay.';
-            if (highlight3Title) highlight3Title.textContent = ar ? 'استجابة سريعة' : 'Responsive support';
-            if (highlight3Desc) highlight3Desc.textContent = ar ? 'تواصل سريع قبل الإقامة وأثناءها.' : 'Fast communication before and during your stay.';
+            if (highlight1Title) highlight1Title.textContent = ar ? 'موقع ممتاز' : 'Great location';
+            if (highlight1Desc) highlight1Desc.textContent = ar ? 'قريب من أهم الأماكن ويسهل الوصول إليه.' : 'Close to main points of interest and easy to reach.';
+
+            if (highlight2Title) highlight2Title.textContent = ar ? 'نظيف ومريح' : 'Clean and comfortable';
+            if (highlight2Desc) highlight2Desc.textContent = ar ? 'مجهز لإقامة مريحة وسلسة.' : 'Prepared for a smooth and pleasant stay.';
+
+            if (highlight3Title) highlight3Title.textContent = ar ? 'دعم سريع الاستجابة' : 'Responsive support';
+            if (highlight3Desc) highlight3Desc.textContent = ar ? 'تواصل سريع قبل وأثناء الإقامة.' : 'Fast communication before and during your stay.';
+
             if (highlight4Title) highlight4Title.textContent = ar ? 'إعلان موثوق' : 'Trusted listing';
-            if (highlight4Desc) highlight4Desc.textContent = ar ? 'بيانات موثقة وتجربة حجز مستقرة.' : 'Managed with verified details and a consistent booking flow.';
+            if (highlight4Desc) highlight4Desc.textContent = ar ? 'يُدار ببيانات موثقة وتجربة حجز مستقرة.' : 'Managed with verified details and a consistent booking flow.';
 
-            if (tip1) tip1.textContent = ar
-                ? 'تفاصيل الحجز النهائية ومعلومات الضيوف تُستكمل في الخطوة التالية.'
-                : 'Booking details and final guest information are completed on the next step.';
-
-            if (tip2) tip2.textContent = ar
-                ? 'قد يعتمد السعر النهائي على التواريخ وعدد الضيوف وخيارات الحجز.'
-                : 'Final pricing may depend on dates, guests, and selected booking options.';
-
-            if (tip3) tip3.textContent = ar
-                ? 'يمكنك استخدام زر المشاركة لنسخ رابط العقار أو إرساله بسرعة.'
-                : 'Use the share button to copy or send the listing link quickly.';
+            if (tip1) tip1.textContent = ar ? 'يتم إكمال تفاصيل الحجز وبيانات الضيوف النهائية في الخطوة التالية.' : 'Booking details and final guest information are completed on the next step.';
+            if (tip2) tip2.textContent = ar ? 'قد يعتمد السعر النهائي على التواريخ وعدد الضيوف وخيارات الحجز المحددة.' : 'Final pricing may depend on dates, guests, and selected booking options.';
+            if (tip3) tip3.textContent = ar ? 'استخدم زر المشاركة لنسخ رابط العقار أو إرساله بسرعة.' : 'Use the share button to copy or send the listing link quickly.';
 
             if (chipVerified) chipVerified.textContent = ar ? 'إعلان موثوق' : 'Verified listing';
-            if (chipInstant) chipInstant.textContent = ar ? 'طلب حجز سريع' : 'Instant booking request';
+            if (chipInstant) chipInstant.textContent = ar ? 'طلب حجز فوري' : 'Instant booking request';
 
             if (contactHostText) contactHostText.textContent = ar ? 'تواصل مع المضيف' : 'Contact Host';
             if (hostChatText) hostChatText.textContent = ar ? 'مراسلة المضيف' : 'Message Host';
             if (bookingChatText) bookingChatText.textContent = ar ? 'اسأل عن هذا العقار' : 'Ask about this property';
 
-            if (chatTitle) chatTitle.textContent = ar ? 'دردشة الدعم' : 'Support Chat';
-            if (chatSubtitle) chatSubtitle.textContent = ar
-                ? 'اسأل عن هذا العقار أو التوفر أو تفاصيل الحجز.'
-                : 'Ask about this property, availability, or booking details.';
+            if (chatTitle) chatTitle.textContent = ar ? 'محادثة الدعم' : 'Support Chat';
+            if (chatSubtitle) chatSubtitle.textContent = ar ? 'اسأل عن هذا العقار أو التوفر أو تفاصيل الحجز.' : 'Ask about this property, availability, or booking details.';
             if (chatEmptyTitle) chatEmptyTitle.textContent = ar ? 'لا توجد رسائل بعد.' : 'No messages yet.';
-            if (chatEmptySubtitle) chatEmptySubtitle.textContent = ar
-                ? 'ابدأ المحادثة واذكر هذا العقار للتواصل مع الدعم.'
-                : 'Start the conversation and mention this property to contact support.';
-            if (chatNote) chatNote.textContent = ar
-                ? 'هذه الواجهة جاهزة للربط مع Firestore باستخدام معرف العقار الحالي.'
-                : 'This UI is ready to connect to Firestore conversations using the current property ID.';
+            if (chatEmptySubtitle) chatEmptySubtitle.textContent = ar ? 'ابدأ المحادثة واذكر هذا العقار للتواصل مع الدعم.' : 'Start the conversation and mention this property to contact support.';
+            if (chatNote) chatNote.textContent = ar ? 'هذه الواجهة جاهزة للربط مع محادثات Firestore باستخدام معرف العقار الحالي.' : 'This UI is ready to connect to Firestore conversations using the current property ID.';
             if (sendChatText) sendChatText.textContent = ar ? 'إرسال الرسالة' : 'Send Message';
+            if (chatInput) chatInput.placeholder = ar ? 'اكتب رسالتك هنا...' : 'Type your message here...';
+            if (countBadge) countBadge.textContent = '1 / 1';
         }
 
         function renderPropertyData(data) {
@@ -2691,13 +2728,16 @@
 
             if (chipGuests) chipGuests.textContent = guestsText;
             if (chipBedrooms) chipBedrooms.textContent = bedroomsText;
-            if (bookingGuests) bookingGuests.textContent = isArabic() ? `القدرة: ${guestsText}` : `Capacity: ${guestsText}`;
+            if (bookingGuests) bookingGuests.textContent = isArabic() ? `السعة: ${guestsText}` : `Capacity: ${guestsText}`;
             if (bookingType) bookingType.textContent = isArabic() ? `النوع: ${propType}` : `Type: ${propType}`;
 
             const hostName = document.getElementById('host-name');
             if (hostName) {
-                const host = data.hostName || data.host || data.ownerName;
-                hostName.textContent = host || 'OreBooking Host';
+                const hostAr = getLocalizedValue(data, ['hostNameAr', 'hostAr', 'ownerNameAr']);
+                const hostEn = getLocalizedValue(data, ['hostNameEn', 'hostEn', 'ownerNameEn']);
+                const hostGeneric = getLocalizedValue(data, ['hostName', 'host', 'ownerName']);
+                const host = isArabic() ? (hostAr || hostEn || hostGeneric) : (hostEn || hostAr || hostGeneric);
+                hostName.textContent = host || (isArabic() ? 'مضيف OreBooking' : 'OreBooking Host');
             }
 
             const featContainer = document.getElementById('prop-features-list');
@@ -2710,7 +2750,7 @@
                 });
             }
 
-            currentImages = images.length ? images : ['images/placeholder.jpg'];
+            currentImages = images.length ? [images[0]] : ['images/placeholder.jpg'];
             currentSlide = 0;
             setupSlider(currentImages);
             setupThumbs(currentImages);
@@ -2734,27 +2774,33 @@
         function setupSlider(images) {
             const track = document.getElementById('slider-track');
             const dotsContainer = document.getElementById('slider-dots');
+            const prevBtn = document.getElementById('gallery-prev-btn');
+            const nextBtn = document.getElementById('gallery-next-btn');
+            const badge = document.getElementById('slider-count-badge');
+            const fullscreenBtn = document.getElementById('gallery-fullscreen-btn');
+
             if (!track || !dotsContainer) return;
 
             track.innerHTML = '';
             dotsContainer.innerHTML = '';
 
-            images.forEach((src, idx) => {
+            const imageList = images.length ? [images[0]] : ['images/placeholder.jpg'];
+
+            imageList.forEach((src, idx) => {
                 const img = document.createElement('img');
                 img.src = src;
-                img.alt = `Property image ${idx + 1}`;
-                img.loading = idx === 0 ? 'eager' : 'lazy';
+                img.alt = isArabic() ? `صورة العقار ${idx + 1}` : `Property image ${idx + 1}`;
+                img.loading = 'eager';
                 img.onerror = function () { this.src = 'images/placeholder.jpg'; };
                 img.addEventListener('click', openLightbox);
                 track.appendChild(img);
-
-                const dot = document.createElement('button');
-                dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
-                dot.type = 'button';
-                dot.setAttribute('aria-label', `Go to image ${idx + 1}`);
-                dot.addEventListener('click', () => goToSlide(idx));
-                dotsContainer.appendChild(dot);
             });
+
+            if (prevBtn) prevBtn.style.display = 'none';
+            if (nextBtn) nextBtn.style.display = 'none';
+            if (dotsContainer) dotsContainer.style.display = 'none';
+            if (badge) badge.textContent = '1 / 1';
+            if (fullscreenBtn) fullscreenBtn.style.display = 'flex';
 
             goToSlide(0, false);
         }
@@ -2764,15 +2810,7 @@
             if (!thumbs) return;
 
             thumbs.innerHTML = '';
-            images.forEach((src, idx) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = `gallery-thumb ${idx === 0 ? 'active' : ''}`;
-                btn.setAttribute('aria-label', `Thumbnail ${idx + 1}`);
-                btn.innerHTML = `<img src="${src}" alt="Thumbnail ${idx + 1}" loading="lazy" onerror="this.src='images/placeholder.jpg'">`;
-                btn.addEventListener('click', () => goToSlide(idx));
-                thumbs.appendChild(btn);
-            });
+            thumbs.style.display = 'none';
         }
 
         function updateImageBadge(current, total) {
@@ -2782,52 +2820,50 @@
 
         function goToSlide(index, updateLightbox = true) {
             if (!currentImages.length) return;
-            currentSlide = (index + currentImages.length) % currentImages.length;
+
+            currentSlide = 0;
 
             const track = document.getElementById('slider-track');
             if (track) {
-                const direction = document.documentElement.dir === 'rtl' ? 1 : -1;
-                track.style.transform = `translateX(${direction * currentSlide * 100}%)`;
+                track.style.transform = 'translateX(0%)';
             }
 
-            document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
-                dot.classList.toggle('active', idx === currentSlide);
-            });
-
-            document.querySelectorAll('.gallery-thumb').forEach((thumb, idx) => {
-                thumb.classList.toggle('active', idx === currentSlide);
-            });
-
-            updateImageBadge(currentSlide, currentImages.length);
+            updateImageBadge(0, 1);
 
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
             if (updateLightbox && lightbox && lightbox.classList.contains('active') && lightboxImg) {
-                lightboxImg.src = currentImages[currentSlide];
+                lightboxImg.src = currentImages[0];
                 lightboxImg.classList.remove('zoomed');
             }
         }
 
         function nextSlide(e) {
             if (e) e.stopPropagation();
-            goToSlide(currentSlide + 1);
+            goToSlide(0);
         }
 
         function prevSlide(e) {
             if (e) e.stopPropagation();
-            goToSlide(currentSlide - 1);
+            goToSlide(0);
         }
 
         function openLightbox() {
             if (!currentImages.length) return;
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
+            const prevBtn = document.getElementById('lightbox-prev-btn');
+            const nextBtn = document.getElementById('lightbox-next-btn');
+
             if (!lightbox || !lightboxImg) return;
 
-            lightboxImg.src = currentImages[currentSlide];
+            lightboxImg.src = currentImages[0];
             lightboxImg.classList.remove('zoomed');
             lightbox.classList.add('active');
             document.body.classList.add('modal-open');
+
+            if (prevBtn) prevBtn.style.display = 'none';
+            if (nextBtn) nextBtn.style.display = 'none';
         }
 
         function closeLightbox() {
@@ -2978,20 +3014,17 @@
             updateFavButtonState();
 
             if (typeof window.showFavToast === 'function') {
-                window.showFavToast(exists
-                    ? (isArabic() ? 'تمت إزالة العقار من المفضلة' : 'Removed from favorites')
-                    : (isArabic() ? 'تمت إضافة العقار إلى المفضلة' : 'Added to favorites'));
+                window.showFavToast(exists ? (isArabic() ? 'تمت الإزالة من المحفوظات' : 'Removed from favorites') : (isArabic() ? 'تمت الإضافة إلى المحفوظات' : 'Added to favorites'));
             } else if (typeof window.showToast === 'function') {
-                window.showToast(exists
-                    ? (isArabic() ? 'تمت إزالة العقار من المفضلة' : 'Removed from favorites')
-                    : (isArabic() ? 'تمت إضافة العقار إلى المفضلة' : 'Added to favorites'), 'success');
+                window.showToast(exists ? (isArabic() ? 'تمت الإزالة من المحفوظات' : 'Removed from favorites') : (isArabic() ? 'تمت الإضافة إلى المحفوظات' : 'Added to favorites'), 'success');
             }
         }
 
         function openChatModal() {
             const modal = document.getElementById('chat-modal');
             if (!modal) return;
-            document.getElementById('chat-property-id').value = currentPropertyId || '';
+            const chatPropertyId = document.getElementById('chat-property-id');
+            if (chatPropertyId) chatPropertyId.value = currentPropertyId || '';
             modal.classList.add('active');
             document.body.classList.add('modal-open');
             const badge = document.getElementById('chat-unread-badge');
@@ -3016,120 +3049,126 @@
 
             if (empty) empty.style.display = 'none';
 
-            const title = document.getElementById('prop-title')?.textContent || '';
-            const enrichedText = `${text}${title ? `\n\n[Property: ${title}]` : ''}`;
+            const title = document.getElementById('prop-title')?.textContent;
+            const enrichedText = title
+                ? `${isArabic() ? 'العقار:' : 'Property:'} ${title}\n${text}`
+                : text;
 
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-message customer';
-            bubble.innerHTML = `
-        ${escapeHtml(enrichedText).replace(/\n/g, '<br>')}
-        <span class="chat-meta">${isArabic() ? 'أنت' : 'You'} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-      `;
+            const msg = document.createElement('div');
+            msg.className = 'chat-message customer';
+            msg.innerHTML = `${escapeHtml(enrichedText).replace(/\n/g, '<br>')}<span class="chat-meta">${new Date().toLocaleTimeString(isArabic() ? 'ar-DZ' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>`;
+            box.appendChild(msg);
 
-            box.appendChild(bubble);
-            box.scrollTop = box.scrollHeight;
             input.value = '';
+            box.scrollTop = box.scrollHeight;
+        }
 
-            if (window.showToast) {
-                window.showToast(
-                    isArabic() ? 'تمت إضافة الرسالة في الواجهة. اربطها لاحقًا مع Firestore.' : 'Message added to UI. Connect it to Firestore next.',
-                    'success'
-                );
+        function applyCurrentLanguageToPage() {
+            const lang = localStorage.getItem('ore_lang') || 'en';
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            currentLang = lang;
+
+            updateStaticTexts();
+
+            if (currentPropertyData) {
+                renderPropertyData(currentPropertyData);
             }
         }
 
         function bindEvents() {
-            document.getElementById('share-btn')?.addEventListener('click', handleShare);
-            document.getElementById('property-fav-btn')?.addEventListener('click', togglePropertyFavorite);
+            const shareBtn = document.getElementById('share-btn');
+            const favBtn = document.getElementById('property-fav-btn');
+            const contactHostBtn = document.getElementById('contact-host-btn');
+            const hostChatBtn = document.getElementById('host-chat-btn');
+            const bookingChatBtn = document.getElementById('booking-chat-btn');
+            const chatFabBtn = document.getElementById('chat-fab-btn');
+            const sendChatBtn = document.getElementById('send-chat-btn');
+            const closeChatBtn = document.getElementById('close-chat-btn');
 
-            document.getElementById('gallery-next-btn')?.addEventListener('click', nextSlide);
-            document.getElementById('gallery-prev-btn')?.addEventListener('click', prevSlide);
-            document.getElementById('gallery-fullscreen-btn')?.addEventListener('click', openLightbox);
-
-            document.getElementById('lightbox-next-btn')?.addEventListener('click', nextSlide);
-            document.getElementById('lightbox-prev-btn')?.addEventListener('click', prevSlide);
-            document.getElementById('close-lightbox-btn')?.addEventListener('click', closeLightbox);
-
-            document.getElementById('open-chat-btn')?.addEventListener('click', openChatModal);
-            document.getElementById('chat-fab-btn')?.addEventListener('click', openChatModal);
-            document.getElementById('contact-host-btn')?.addEventListener('click', openChatModal);
-            document.getElementById('host-chat-btn')?.addEventListener('click', openChatModal);
-            document.getElementById('booking-chat-btn')?.addEventListener('click', openChatModal);
-            document.getElementById('close-chat-btn')?.addEventListener('click', closeChatModal);
-            document.getElementById('send-chat-btn')?.addEventListener('click', sendChatMessage);
-
-            const chatModal = document.getElementById('chat-modal');
-            chatModal?.addEventListener('click', (e) => {
-                if (e.target === chatModal) closeChatModal();
-            });
+            const prevBtn = document.getElementById('gallery-prev-btn');
+            const nextBtn = document.getElementById('gallery-next-btn');
+            const fullBtn = document.getElementById('gallery-fullscreen-btn');
 
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
+            const closeLightboxBtn = document.getElementById('close-lightbox-btn');
+            const lightboxPrevBtn = document.getElementById('lightbox-prev-btn');
+            const lightboxNextBtn = document.getElementById('lightbox-next-btn');
 
-            lightbox?.addEventListener('click', function (e) {
-                if (e.target === lightbox) closeLightbox();
-            });
+            if (!window.__propertyEventsBound) {
+                shareBtn?.addEventListener('click', handleShare);
+                favBtn?.addEventListener('click', togglePropertyFavorite);
+                contactHostBtn?.addEventListener('click', openChatModal);
+                hostChatBtn?.addEventListener('click', openChatModal);
+                bookingChatBtn?.addEventListener('click', openChatModal);
+                chatFabBtn?.addEventListener('click', openChatModal);
+                sendChatBtn?.addEventListener('click', sendChatMessage);
+                closeChatBtn?.addEventListener('click', closeChatModal);
 
-            lightboxImg?.addEventListener('click', toggleZoom);
+                prevBtn?.addEventListener('click', prevSlide);
+                nextBtn?.addEventListener('click', nextSlide);
+                fullBtn?.addEventListener('click', openLightbox);
 
-            document.addEventListener('keydown', function (e) {
-                const lb = document.getElementById('lightbox');
-                const chat = document.getElementById('chat-modal');
+                closeLightboxBtn?.addEventListener('click', closeLightbox);
+                lightboxPrevBtn?.addEventListener('click', prevSlide);
+                lightboxNextBtn?.addEventListener('click', nextSlide);
 
-                if (e.key === 'Escape') {
-                    if (lb?.classList.contains('active')) closeLightbox();
-                    if (chat?.classList.contains('active')) closeChatModal();
-                }
-
-                if (lb && lb.classList.contains('active')) {
-                    if (e.key === 'ArrowRight') nextSlide();
-                    if (e.key === 'ArrowLeft') prevSlide();
-                }
-
-                if (chat?.classList.contains('active') && e.key === 'Enter' && !e.shiftKey) {
-                    const target = document.activeElement;
-                    if (target && target.id === 'chat-message-input') {
-                        e.preventDefault();
-                        sendChatMessage();
-                    }
-                }
-            });
-
-            let startX = 0;
-            let isDragging = false;
-            const slider = document.getElementById('slider-container');
-
-            slider?.addEventListener('touchstart', e => {
-                startX = e.touches[0].clientX;
-                isDragging = true;
-            }, { passive: true });
-
-            slider?.addEventListener('touchend', e => {
-                if (!isDragging) return;
-                const endX = e.changedTouches[0].clientX;
-                const diff = endX - startX;
-                if (Math.abs(diff) > 50) {
-                    if (diff < 0) nextSlide();
-                    else prevSlide();
-                }
-                isDragging = false;
-            }, { passive: true });
-
-            const profileBtn = document.getElementById('open-auth-btn');
-            const profileDropdown = document.getElementById('profile-dropdown');
-            if (profileBtn && profileDropdown) {
-                profileBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const active = profileDropdown.classList.toggle('active');
-                    profileBtn.setAttribute('aria-expanded', active ? 'true' : 'false');
+                lightbox?.addEventListener('click', function (e) {
+                    if (e.target === lightbox) closeLightbox();
                 });
 
-                document.addEventListener('click', (e) => {
-                    if (!profileDropdown.contains(e.target) && !profileBtn.contains(e.target)) {
-                        profileDropdown.classList.remove('active');
-                        profileBtn.setAttribute('aria-expanded', 'false');
+                lightboxImg?.addEventListener('click', toggleZoom);
+
+                document.addEventListener('keydown', function (e) {
+                    const lb = document.getElementById('lightbox');
+                    const chat = document.getElementById('chat-modal');
+
+                    if (e.key === 'Escape') {
+                        if (lb?.classList.contains('active')) closeLightbox();
+                        if (chat?.classList.contains('active')) closeChatModal();
+                    }
+
+                    if (chat?.classList.contains('active') && e.key === 'Enter' && !e.shiftKey) {
+                        const target = document.activeElement;
+                        if (target && target.id === 'chat-message-input') {
+                            e.preventDefault();
+                            sendChatMessage();
+                        }
                     }
                 });
+
+                const profileBtn = document.getElementById('open-auth-btn');
+                const profileDropdown = document.getElementById('profile-dropdown');
+                if (profileBtn && profileDropdown) {
+                    profileBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const active = profileDropdown.classList.toggle('active');
+                        profileBtn.setAttribute('aria-expanded', active ? 'true' : 'false');
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (!profileDropdown.contains(e.target) && !profileBtn.contains(e.target)) {
+                            profileDropdown.classList.remove('active');
+                            profileBtn.setAttribute('aria-expanded', 'false');
+                        }
+                    });
+                }
+
+                window.addEventListener('storage', function (e) {
+                    if (e.key === 'ore_lang') {
+                        applyCurrentLanguageToPage();
+                    }
+                });
+
+                const langToggle = document.getElementById('lang-toggle');
+                langToggle?.addEventListener('click', () => {
+                    setTimeout(() => {
+                        applyCurrentLanguageToPage();
+                    }, 50);
+                });
+
+                window.__propertyEventsBound = true;
             }
         }
 
