@@ -1,12 +1,11 @@
 /* =========================================================
-   booking.css — OreBooking v13.0
-   Updated for localized streamlined booking flow
-   Compatible with updated booking.html
-   RTL/LTR safe + responsive + auth modal support
+   booking.css — OreBooking v13.2
+   Fixed RTL/LTR language display issues
+   Compatible with updated booking.html + booking.js
    ========================================================= */
 
 /* ═══════════════════════════════════════════
-   Base Direction
+   Direction Helpers
 ═══════════════════════════════════════════ */
 html[dir="rtl"] .booking-page {
   direction: rtl;
@@ -20,8 +19,30 @@ html[dir="ltr"] .booking-page {
 
 html[dir="rtl"] .step-header,
 html[dir="rtl"] .social-logins,
-html[dir="rtl"] .payment-methods-grid {
+html[dir="rtl"] .payment-methods-grid,
+html[dir="rtl"] .review-card-header,
+html[dir="rtl"] .summary-row,
+html[dir="rtl"] .bank-row,
+html[dir="rtl"] .booking-alert,
+html[dir="rtl"] .prop-mini-card,
+html[dir="rtl"] .points-box,
+html[dir="rtl"] .checkbox-container,
+html[dir="rtl"] .auth-options {
   direction: rtl;
+}
+
+html[dir="ltr"] .step-header,
+html[dir="ltr"] .social-logins,
+html[dir="ltr"] .payment-methods-grid,
+html[dir="ltr"] .review-card-header,
+html[dir="ltr"] .summary-row,
+html[dir="ltr"] .bank-row,
+html[dir="ltr"] .booking-alert,
+html[dir="ltr"] .prop-mini-card,
+html[dir="ltr"] .points-box,
+html[dir="ltr"] .checkbox-container,
+html[dir="ltr"] .auth-options {
+  direction: ltr;
 }
 
 html[dir="rtl"] .dropdown-item,
@@ -41,9 +62,15 @@ html[dir="rtl"] .amenity-chip,
 html[dir="rtl"] .prop-mini-details h4,
 html[dir="rtl"] .prop-mini-details p,
 html[dir="rtl"] .rd-label,
+html[dir="rtl"] .rd-value,
 html[dir="rtl"] .step-title,
 html[dir="rtl"] .section-block h3,
-html[dir="rtl"] .sidebar-title {
+html[dir="rtl"] .sidebar-title,
+html[dir="rtl"] .review-data,
+html[dir="rtl"] .review-card-body,
+html[dir="rtl"] .dropdown-header,
+html[dir="rtl"] .auth-title,
+html[dir="rtl"] .auth-message {
   text-align: right;
 }
 
@@ -64,9 +91,15 @@ html[dir="ltr"] .amenity-chip,
 html[dir="ltr"] .prop-mini-details h4,
 html[dir="ltr"] .prop-mini-details p,
 html[dir="ltr"] .rd-label,
+html[dir="ltr"] .rd-value,
 html[dir="ltr"] .step-title,
 html[dir="ltr"] .section-block h3,
-html[dir="ltr"] .sidebar-title {
+html[dir="ltr"] .sidebar-title,
+html[dir="ltr"] .review-data,
+html[dir="ltr"] .review-card-body,
+html[dir="ltr"] .dropdown-header,
+html[dir="ltr"] .auth-title,
+html[dir="ltr"] .auth-message {
   text-align: left;
 }
 
@@ -83,15 +116,15 @@ html[dir="rtl"] .auth-options {
 }
 
 html[dir="rtl"] .bank-row strong,
-html[dir="rtl"] .rd-value,
 html[dir="rtl"] .summary-row span:last-child {
   text-align: left;
+  direction: ltr;
 }
 
 html[dir="ltr"] .bank-row strong,
-html[dir="ltr"] .rd-value,
 html[dir="ltr"] .summary-row span:last-child {
   text-align: right;
+  direction: ltr;
 }
 
 html[dir="rtl"] .step-actions .ph-arrow-right,
@@ -118,6 +151,40 @@ html[dir="rtl"] .dropdown-item:hover {
 html[dir="ltr"] .dropdown-item:hover {
   padding-inline-start: 22px;
   padding-inline-end: 16px;
+}
+
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] select {
+  text-align: right;
+}
+
+html[dir="ltr"] input,
+html[dir="ltr"] textarea,
+html[dir="ltr"] select {
+  text-align: left;
+}
+
+html[dir="rtl"] input[type="email"],
+html[dir="rtl"] input[type="tel"],
+html[dir="rtl"] input[type="number"],
+html[dir="rtl"] input[type="date"],
+html[dir="rtl"] input[type="time"],
+html[dir="rtl"] #bank-iban,
+html[dir="rtl"] #payment-reference {
+  direction: ltr;
+  text-align: left;
+}
+
+html[dir="ltr"] input[type="email"],
+html[dir="ltr"] input[type="tel"],
+html[dir="ltr"] input[type="number"],
+html[dir="ltr"] input[type="date"],
+html[dir="ltr"] input[type="time"],
+html[dir="ltr"] #bank-iban,
+html[dir="ltr"] #payment-reference {
+  direction: ltr;
+  text-align: left;
 }
 
 /* ═══════════════════════════════════════════
@@ -237,6 +304,10 @@ body.dark .rewards-badge,
 .back-home-btn span,
 .rewards-badge span {
   white-space: nowrap;
+}
+
+.lang-btn {
+  overflow: hidden;
 }
 
 .back-home-btn {
@@ -597,7 +668,7 @@ html[dir="ltr"] .booking-hero-card::before {
   border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
 
-.step-header>div:last-child {
+.step-header > div:last-child {
   min-width: 0;
   flex: 1;
 }
@@ -805,6 +876,7 @@ input[type="date"].form-control,
 input[type="number"].form-control,
 select.form-control {
   padding-inline-end: 14px;
+  padding-inline-start: 14px;
 }
 
 /* ═══════════════════════════════════════════
@@ -1208,12 +1280,12 @@ body.dark .review-card-header {
   transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
-.checkbox-container input:checked~.checkmark {
+.checkbox-container input:checked ~ .checkmark {
   background: var(--primary, #435abf);
   border-color: var(--primary, #435abf);
 }
 
-.checkbox-container input:checked~.checkmark::after {
+.checkbox-container input:checked ~ .checkmark::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -1581,7 +1653,6 @@ body.dark .review-card-header {
   color: var(--text-main, #0f172a);
   font-size: 1.5rem;
   font-weight: 800;
-  text-align: center;
 }
 
 .auth-subtitle {
@@ -1589,7 +1660,6 @@ body.dark .review-card-header {
   color: var(--text-muted, #64748b);
   font-size: 0.9rem;
   line-height: 1.6;
-  text-align: center;
 }
 
 .auth-message {
@@ -1599,7 +1669,6 @@ body.dark .review-card-header {
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 600;
-  text-align: center;
 }
 
 .auth-message.error {
@@ -1698,12 +1767,12 @@ body.dark .review-card-header {
   flex-shrink: 0;
 }
 
-.auth-check input:checked~.auth-checkmark {
+.auth-check input:checked ~ .auth-checkmark {
   background-color: var(--primary, #435abf);
   border-color: var(--primary, #435abf);
 }
 
-.auth-check input:checked~.auth-checkmark::after {
+.auth-check input:checked ~ .auth-checkmark::after {
   content: '';
   width: 5px;
   height: 10px;
@@ -1805,18 +1874,27 @@ body.dark .review-card-header {
   }
 
   #lang-toggle {
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 5px 10px;
     font-size: 0.78rem;
     white-space: nowrap;
-    border-radius: 8px;
-    min-width: fit-content;
+    border-radius: 999px;
+    min-width: auto;
+    max-width: none;
+  }
+
+  #lang-toggle span {
+    display: inline !important;
   }
 
   .profile-menu {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
   }
 
   .logo-img {
@@ -1866,6 +1944,11 @@ body.dark .review-card-header {
     text-align: center;
   }
 
+  html[dir="rtl"] .step-header,
+  html[dir="ltr"] .step-header {
+    direction: inherit;
+  }
+
   .step-actions {
     flex-direction: column-reverse;
   }
@@ -1913,15 +1996,32 @@ body.dark .review-card-header {
   }
 }
 
+@media (max-width: 560px) {
+  .nav-actions {
+    gap: 6px;
+  }
+
+  .lang-btn {
+    min-width: 44px;
+    padding-inline: 10px;
+  }
+
+  .lang-btn span {
+    display: inline !important;
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 480px) {
   .nav-actions .lang-btn span {
-    display: none;
+    display: inline !important;
   }
 
   #lang-toggle {
     font-size: 0.72rem;
     padding: 4px 8px;
     border-radius: var(--radius-full, 9999px);
+    min-width: 44px;
   }
 
   .icon-btn,
