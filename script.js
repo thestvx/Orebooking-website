@@ -73,17 +73,18 @@
     booking: safeGet("ore_booking_page", "booking.html")
   };
 
-  const FIREBASE_CONFIG =
-    window.OREBOOKING_FIREBASE_CONFIG ||
-    window.firebaseConfig || {
-      apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-      authDomain: "orebooking-website.firebaseapp.com",
-      projectId: "orebooking-website",
-      storageBucket: "orebooking-website.firebasestorage.app",
-      messagingSenderId: "1012887567747",
-      appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-      measurementId: "G-5GKMRMVHC3"
-    };
+  /* =========================================
+     2) FIREBASE
+  ========================================= */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+    authDomain: "orebooking-website.firebaseapp.com",
+    projectId: "orebooking-website",
+    storageBucket: "orebooking-website.firebasestorage.app",
+    messagingSenderId: "1012887567747",
+    appId: "1:1012887567747:web:153b57b60cb143d88acab6",
+    measurementId: "G-5GKMRMVHC3"
+  };
 
   /* =========================================
      3) STATE
@@ -110,7 +111,7 @@
   };
 
   /* =========================================
-     4) FIREBASE
+     4) FIREBASE INIT
   ========================================= */
   let firebaseReady = false;
   let auth = null;
@@ -125,10 +126,10 @@
   function initFirebase() {
     try {
       if (typeof window.firebase === "undefined") return false;
-      if (!isFirebaseConfigUsable(FIREBASE_CONFIG)) return false;
+      if (!isFirebaseConfigUsable(firebaseConfig)) return false;
 
       if (!firebase.apps.length) {
-        firebase.initializeApp(FIREBASE_CONFIG);
+        firebase.initializeApp(firebaseConfig);
       }
 
       auth = typeof firebase.auth === "function" ? firebase.auth() : null;
@@ -652,7 +653,7 @@
     const toast = document.createElement("div");
     toast.className =
       host === dom.toastContainer
-        ? `toast ${type}`
+        ? `toast toast-${type}`
         : `toast toast-${type}`;
     toast.textContent = message;
 
@@ -778,7 +779,9 @@
   }
 
   function getSourceProperties() {
-    const source = state.liveProperties.length ? state.liveProperties : fallbackProperties.map((p) => normalizeProperty(p, p.id, "fallback"));
+    const source = state.liveProperties.length
+      ? state.liveProperties
+      : fallbackProperties.map((p) => normalizeProperty(p, p.id, "fallback"));
     return source;
   }
 
