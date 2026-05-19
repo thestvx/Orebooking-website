@@ -13,7 +13,9 @@
     <link rel="icon" type="image/png" href="logos/orebooking.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap"
+        rel="stylesheet">
 
     <link rel="stylesheet" href="style.css?v=2.4">
 
@@ -96,6 +98,18 @@
             max-width: 1280px;
             margin: 0 auto;
             padding: 0 24px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
         }
 
         @keyframes slideUpFade {
@@ -443,6 +457,62 @@
             font-family: inherit;
         }
 
+        .search-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            inset-inline-start: 0;
+            width: min(100%, 430px);
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: var(--shadow-hover);
+            padding: 8px;
+            display: none;
+            max-height: 360px;
+            overflow-y: auto;
+            z-index: 120;
+        }
+
+        .search-dropdown.active {
+            display: block;
+            animation: scaleIn .18s ease;
+        }
+
+        .search-suggestion-item {
+            width: 100%;
+            display: block;
+            border: none;
+            background: transparent;
+            border-radius: 14px;
+            padding: 12px 14px;
+            text-align: start;
+            cursor: pointer;
+            color: var(--text-main);
+            transition: var(--transition-fast);
+            font-family: inherit;
+        }
+
+        .search-suggestion-item:hover {
+            background: rgba(67, 90, 191, 0.08);
+        }
+
+        .search-suggestion-main {
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .search-suggestion-sub {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 0.86rem;
+        }
+
+        .search-empty {
+            padding: 14px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
         .search-divider {
             width: 1px;
             height: 32px;
@@ -563,6 +633,8 @@
         .clear-search-btn {
             padding: 12px 18px;
             display: none;
+            align-items: center;
+            gap: 8px;
         }
 
         #listings-grid {
@@ -673,8 +745,8 @@
         }
 
         .property-card-actions button,
-        .property-card-actions a {
-            flex: 1;
+        .property-card-actions a,
+        .primary-btn {
             border-radius: 12px;
             padding: 12px 14px;
             border: 1px solid var(--border-color);
@@ -688,15 +760,22 @@
             transition: var(--transition-fast);
         }
 
+        .property-card-actions button,
+        .property-card-actions a {
+            flex: 1;
+        }
+
         .property-card-actions .primary,
-        .property-card-actions .reserve-btn.primary {
+        .property-card-actions .reserve-btn.primary,
+        .primary-btn {
             background: linear-gradient(135deg, var(--primary), var(--primary-hover));
             color: #fff;
             border-color: transparent;
         }
 
         .property-card-actions button:hover,
-        .property-card-actions a:hover {
+        .property-card-actions a:hover,
+        .primary-btn:hover {
             transform: translateY(-2px);
             border-color: var(--primary);
             box-shadow: var(--shadow-sm);
@@ -1200,10 +1279,6 @@
             color: var(--primary);
         }
 
-        .hidden {
-            display: none !important;
-        }
-
         @media (max-width: 1024px) {
             .search-bar {
                 flex-wrap: wrap;
@@ -1222,6 +1297,10 @@
                 border: 1px solid var(--border-color);
                 border-radius: 16px;
                 background: var(--bg-color);
+            }
+
+            .search-dropdown {
+                width: 100%;
             }
 
             .search-btn {
@@ -1306,8 +1385,8 @@
 
 <body>
     <header class="navbar">
-        <a class="logo" href="index.html" aria-label="OreBooking Home">
-            <img src="logos/orebooking.png" alt="OreBooking" class="logo-img">
+        <a id="home-logo-btn" class="logo" href="index.html" aria-label="OreBooking Home">
+            <img id="main-logo" src="logos/orebooking.png" alt="OreBooking" class="logo-img">
         </a>
 
         <div class="nav-actions">
@@ -1320,7 +1399,10 @@
                 <i class="ph ph-moon"></i>
             </button>
 
-            <button id="lang-toggle" class="lang-btn" type="button">AR</button>
+            <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
+                <i class="ph ph-translate"></i>
+                <span>AR</span>
+            </button>
 
             <a id="auth-cta" class="auth-link-btn" href="auth.html?redirect=index.html">
                 <i class="ph ph-sign-in"></i>
@@ -1335,7 +1417,7 @@
                 <div id="profile-dropdown">
                     <div class="dropdown-header">
                         <strong id="profile-name">Guest User</strong>
-                        <span id="profile-email" class="text-muted text-sm">guest@example.com</span>
+                        <span id="profile-email" class="text-muted text-sm"></span>
                     </div>
 
                     <div class="dropdown-body">
@@ -1360,14 +1442,15 @@
     </header>
 
     <main>
-        <section class="hero">
+        <section id="hero-section" class="hero">
             <h1 class="animate-up" data-i18n="hero_title">Discover premium stays for every trip.</h1>
             <p class="animate-up delay-1" data-i18n="hero_text">Browse hotels, apartments, and villas with smooth booking, secure access, and one elegant travel experience.</p>
 
             <div class="search-bar animate-up delay-2" role="search">
-                <div class="search-field">
+                <div id="search-location-wrapper" class="search-field">
                     <label for="destination-input" data-i18n="where_label">Where</label>
-                    <input id="destination-input" type="text" data-i18n-placeholder="where_placeholder" placeholder="Search city or property">
+                    <input id="destination-input" type="text" data-search="destination" data-i18n-placeholder="where_placeholder" placeholder="Search city or property" autocomplete="off">
+                    <div id="search-dropdown" class="search-dropdown" aria-live="polite"></div>
                 </div>
 
                 <div class="search-divider"></div>
@@ -1398,7 +1481,7 @@
             </div>
         </section>
 
-        <section class="categories">
+        <section id="categories-container" class="categories">
             <button class="category-item active" type="button" data-category="all">
                 <i class="ph ph-compass"></i>
                 <span data-i18n="cat_all">All stays</span>
@@ -1410,7 +1493,7 @@
             </button>
 
             <button class="category-item" type="button" data-category="apartment">
-                <i class="ph ph-house-line"></i>
+                <i class="ph ph-buildings-apartment"></i>
                 <span data-i18n="cat_apartments">Apartments</span>
             </button>
 
@@ -1422,26 +1505,34 @@
 
         <section class="container">
             <div class="section-header-wrapper">
-                <h2 data-i18n="featured_title">Featured properties</h2>
+                <h2 id="section-main-title" data-i18n="featured_title">Featured properties</h2>
 
                 <div class="section-header-controls">
-                    <select id="sort-select" class="sort-select" aria-label="Sort listings">
-                        <option value="featured" data-i18n="sort_featured">Featured</option>
-                        <option value="rating" data-i18n="sort_rating">Top rated</option>
-                        <option value="price-asc" data-i18n="sort_price_low">Price: low to high</option>
-                        <option value="price-desc" data-i18n="sort_price_high">Price: high to low</option>
+                    <select id="sort-select" class="sort-select" aria-label="Sort properties">
+                        <option value="featured">Featured</option>
+                        <option value="rating">Top rated</option>
+                        <option value="price-asc">Price: low to high</option>
+                        <option value="price-desc">Price: high to low</option>
                     </select>
 
-                    <button id="clear-search-btn" class="clear-search-btn" type="button" data-i18n="clear_search">Clear search</button>
+                    <button id="clear-search-btn" class="clear-search-btn" type="button">
+                        <i class="ph ph-x"></i>
+                        <span data-i18n="clear_search">Clear search</span>
+                    </button>
                 </div>
             </div>
 
-            <div id="listings-grid"></div>
+            <div id="listings-grid" aria-live="polite">
+                <div class="listings-empty-state">
+                    <i class="ph ph-circle-notch ph-spin"></i>
+                    <div>Loading properties...</div>
+                </div>
+            </div>
         </section>
     </main>
 
-    <button id="chat-open-btn" type="button" aria-label="Open chat">
-        <i class="ph-fill ph-chat-circle-dots"></i>
+    <button id="chat-open-btn" type="button" aria-label="Open support chat">
+        <i class="ph ph-chat-circle-dots"></i>
         <span class="chat-unread-badge">1</span>
     </button>
 
@@ -1450,44 +1541,33 @@
     </button>
 
     <div id="toast-container"></div>
-    <div id="fav-toast">Saved</div>
+    <div id="fav-toast"></div>
 
-    <div id="bookings-modal" class="bookings-modal">
+    <div id="bookings-modal" class="bookings-modal" aria-hidden="true">
         <div class="bookings-modal-dialog">
             <div class="bookings-modal-header">
-                <h3 data-i18n="bookings_modal_title">My bookings</h3>
-                <button id="close-bookings-btn" type="button" aria-label="Close bookings">
+                <h3 data-i18n="my_bookings">My bookings</h3>
+                <button id="close-bookings-btn" type="button" aria-label="Close bookings modal">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="bookings-modal-body" id="bookings-list">
-                <div class="booking-card">
-                    <div class="booking-card-head">
-                        <div>
-                            <h4 id="booking-demo-title">Skyline Hotel</h4>
-                            <div class="booking-card-sub" id="booking-demo-location">Algiers, Algeria</div>
-                        </div>
-                        <span class="booking-status confirmed" id="booking-demo-status">Confirmed</span>
-                    </div>
-
-                    <div class="booking-card-grid">
-                        <div><strong data-i18n="booking_checkin">Check-in:</strong> 2026-05-25</div>
-                        <div><strong data-i18n="booking_checkout">Check-out:</strong> 2026-05-28</div>
-                        <div><strong data-i18n="booking_guests">Guests:</strong> 2</div>
-                        <div><strong data-i18n="booking_total">Total:</strong> $540</div>
+            <div class="bookings-modal-body">
+                <div id="bookings-list" data-bookings-list>
+                    <div class="booking-card">
+                        <div class="booking-card-sub">Loading...</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="chat-modal" class="chat-modal">
+    <div id="chat-modal" class="chat-modal" aria-hidden="true">
         <div class="chat-modal-dialog">
             <div class="chat-modal-header">
                 <div class="chat-modal-title">
                     <div class="chat-avatar">
-                        <i class="ph-fill ph-headset"></i>
+                        <i class="ph ph-headset"></i>
                     </div>
                     <div class="chat-title-text">
                         <h3 data-i18n="chat_title">Support chat</h3>
@@ -1501,21 +1581,23 @@
             </div>
 
             <div class="chat-modal-body">
-                <div class="chat-message admin">
-                    <span data-i18n="chat_welcome">Hello, how can we help you today?</span>
-                    <span class="chat-meta">OreBooking</span>
+                <div class="chat-empty-state">
+                    <i class="ph ph-chat-circle-text" style="font-size: 2rem; margin-bottom: 8px;"></i>
+                    <p data-i18n="chat_subtitle">We usually reply quickly</p>
                 </div>
 
-                <div class="chat-empty-state">
-                    <i class="ph ph-chat-circle-text"></i>
-                    <div data-i18n="chat_empty">Start a conversation with our support team.</div>
+                <div class="chat-message admin">
+                    Welcome to OreBooking support.
+                    <span class="chat-meta">09:00</span>
                 </div>
             </div>
 
             <div class="chat-input-area">
-                <textarea id="chat-textarea" data-i18n-placeholder="chat_placeholder" placeholder="Type your message"></textarea>
+                <textarea id="chat-textarea" data-chat-textarea data-i18n-placeholder="chat_placeholder" placeholder="Type your message"></textarea>
+
                 <div class="chat-actions">
-                    <span class="chat-note" data-i18n="chat_note">For account issues, sign in first for a faster response.</span>
+                    <span class="chat-note">OreBooking</span>
+
                     <button id="chat-send-btn" class="primary-btn chat-send-btn" type="button">
                         <i class="ph ph-paper-plane-tilt"></i>
                         <span data-i18n="send_message">Send message</span>
@@ -1525,817 +1607,26 @@
         </div>
     </div>
 
-    <nav id="mobile-bottom-nav">
+    <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
         <div class="mobile-nav-inner">
-            <button class="mob-nav-btn active" type="button" id="mob-home-btn">
-                <i class="ph ph-house-line"></i>
-                <span data-i18n="mobile_home">Home</span>
-            </button>
-
-            <button class="mob-nav-btn" type="button" id="mob-stays-btn">
-                <i class="ph ph-buildings"></i>
+            <button id="mob-stays-btn" class="mob-nav-btn active" type="button">
+                <i class="ph ph-house"></i>
                 <span data-i18n="mobile_stays">Stays</span>
             </button>
 
-            <button class="mob-nav-btn" type="button" id="mob-fav-btn">
+            <button id="mob-fav-btn" class="mob-nav-btn" type="button">
                 <i class="ph ph-heart"></i>
                 <span data-i18n="mobile_favorites">Favorites</span>
             </button>
 
-            <button class="mob-nav-btn" type="button" id="mob-profile-btn">
-                <i class="ph ph-user"></i>
+            <button id="mob-profile-btn" class="mob-nav-btn" type="button">
+                <i class="ph ph-user-circle"></i>
                 <span data-i18n="mobile_profile">Profile</span>
             </button>
         </div>
     </nav>
 
-    <script>
-        window.OREBOOKING_FIREBASE_CONFIG = window.OREBOOKING_FIREBASE_CONFIG || {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            appId: "YOUR_APP_ID"
-        };
-    </script>
-
-    <script>
-        (function () {
-            "use strict";
-
-            const STORAGE_KEYS = {
-                theme: "ore_theme",
-                lang: "ore_lang",
-                favorites: "ore_favorites"
-            };
-
-            const state = {
-                theme: safeGet(STORAGE_KEYS.theme, "light"),
-                lang: safeGet(STORAGE_KEYS.lang, "en"),
-                user: null,
-                category: "all",
-                sort: "featured",
-                query: ""
-            };
-
-            const i18n = {
-                en: {
-                    page_title: "OreBooking - Premium Stays",
-                    meta_description: "OreBooking – Discover and book premium hotels, apartments, and villas.",
-                    rewards_badge: "Loyalty Rewards",
-                    sign_in: "Sign In",
-                    sign_out: "Sign out",
-                    my_bookings: "My bookings",
-                    favorites: "Favorites",
-                    hero_title: "Discover premium stays for every trip.",
-                    hero_text: "Browse hotels, apartments, and villas with smooth booking, secure access, and one elegant travel experience.",
-                    where_label: "Where",
-                    where_placeholder: "Search city or property",
-                    checkin_label: "Check in",
-                    checkout_label: "Check out",
-                    guests_label: "Guests",
-                    search_btn: "Search",
-                    cat_all: "All stays",
-                    cat_hotels: "Hotels",
-                    cat_apartments: "Apartments",
-                    cat_villas: "Villas",
-                    featured_title: "Featured properties",
-                    sort_featured: "Featured",
-                    sort_rating: "Top rated",
-                    sort_price_low: "Price: low to high",
-                    sort_price_high: "Price: high to low",
-                    clear_search: "Clear search",
-                    view_details: "View details",
-                    reserve_now: "Reserve now",
-                    night_suffix: "/night",
-                    no_results_title: "No properties found",
-                    no_results_text: "Try another city, category, or clear the search.",
-                    toast_added_favorite: "Added to favorites",
-                    toast_removed_favorite: "Removed from favorites",
-                    toast_login_required: "Please sign in first.",
-                    toast_signed_out: "You have been signed out.",
-                    auth_redirect_book: "Sign in to continue your booking.",
-                    auth_redirect_profile: "Sign in to access your profile.",
-                    bookings_modal_title: "My bookings",
-                    booking_checkin: "Check-in:",
-                    booking_checkout: "Check-out:",
-                    booking_guests: "Guests:",
-                    booking_total: "Total:",
-                    booking_status_confirmed: "Confirmed",
-                    chat_title: "Support chat",
-                    chat_subtitle: "We usually reply quickly",
-                    chat_welcome: "Hello, how can we help you today?",
-                    chat_empty: "Start a conversation with our support team.",
-                    chat_placeholder: "Type your message",
-                    chat_note: "For account issues, sign in first for a faster response.",
-                    send_message: "Send message",
-                    mobile_home: "Home",
-                    mobile_stays: "Stays",
-                    mobile_favorites: "Favorites",
-                    mobile_profile: "Profile",
-                    logged_in_as: "Signed in",
-                    guest_user: "Guest User",
-                    support_toast: "Message sent. Our team will reply soon.",
-                    home_auth_title: "Account",
-                    reserve_cta_signed_out: "Sign in to book"
-                },
-
-                ar: {
-                    page_title: "OreBooking - إقامات مميزة",
-                    meta_description: "OreBooking – اكتشف واحجز فنادق وشقق وفلل مميزة بسهولة.",
-                    rewards_badge: "مكافآت الولاء",
-                    sign_in: "تسجيل الدخول",
-                    sign_out: "تسجيل الخروج",
-                    my_bookings: "حجوزاتي",
-                    favorites: "المفضلة",
-                    hero_title: "اكتشف إقامات مميزة لكل رحلة.",
-                    hero_text: "تصفح الفنادق والشقق والفلل مع تجربة حجز سلسة، ودخول آمن، وتجربة سفر أنيقة.",
-                    where_label: "إلى أين",
-                    where_placeholder: "ابحث عن مدينة أو عقار",
-                    checkin_label: "تسجيل الوصول",
-                    checkout_label: "تسجيل المغادرة",
-                    guests_label: "الضيوف",
-                    search_btn: "ابحث",
-                    cat_all: "كل الإقامات",
-                    cat_hotels: "فنادق",
-                    cat_apartments: "شقق",
-                    cat_villas: "فلل",
-                    featured_title: "العقارات المميزة",
-                    sort_featured: "المميزة",
-                    sort_rating: "الأعلى تقييمًا",
-                    sort_price_low: "السعر: من الأقل إلى الأعلى",
-                    sort_price_high: "السعر: من الأعلى إلى الأقل",
-                    clear_search: "مسح البحث",
-                    view_details: "عرض التفاصيل",
-                    reserve_now: "احجز الآن",
-                    night_suffix: "/ليلة",
-                    no_results_title: "لم يتم العثور على عقارات",
-                    no_results_text: "جرّب مدينة أخرى، أو فئة مختلفة، أو امسح البحث.",
-                    toast_added_favorite: "تمت الإضافة إلى المفضلة",
-                    toast_removed_favorite: "تمت الإزالة من المفضلة",
-                    toast_login_required: "يرجى تسجيل الدخول أولًا.",
-                    toast_signed_out: "تم تسجيل الخروج.",
-                    auth_redirect_book: "سجّل الدخول لإكمال الحجز.",
-                    auth_redirect_profile: "سجّل الدخول للوصول إلى حسابك.",
-                    bookings_modal_title: "حجوزاتي",
-                    booking_checkin: "تسجيل الوصول:",
-                    booking_checkout: "تسجيل المغادرة:",
-                    booking_guests: "الضيوف:",
-                    booking_total: "الإجمالي:",
-                    booking_status_confirmed: "مؤكد",
-                    chat_title: "دردشة الدعم",
-                    chat_subtitle: "نرد عادة بسرعة",
-                    chat_welcome: "مرحبًا، كيف يمكننا مساعدتك اليوم؟",
-                    chat_empty: "ابدأ محادثة مع فريق الدعم.",
-                    chat_placeholder: "اكتب رسالتك",
-                    chat_note: "بالنسبة لمشاكل الحساب، سجّل الدخول أولًا لتسريع المساعدة.",
-                    send_message: "إرسال الرسالة",
-                    mobile_home: "الرئيسية",
-                    mobile_stays: "الإقامات",
-                    mobile_favorites: "المفضلة",
-                    mobile_profile: "الحساب",
-                    logged_in_as: "تم تسجيل الدخول",
-                    guest_user: "زائر",
-                    support_toast: "تم إرسال الرسالة، وسيرد فريقنا قريبًا.",
-                    home_auth_title: "الحساب",
-                    reserve_cta_signed_out: "سجّل الدخول للحجز"
-                }
-            };
-
-            const listings = [
-                {
-                    id: "skyline-hotel",
-                    category: "hotel",
-                    title: { en: "Skyline Hotel", ar: "فندق سكاي لاين" },
-                    location: { en: "Algiers, Algeria", ar: "الجزائر العاصمة، الجزائر" },
-                    price: 180,
-                    rating: 4.8,
-                    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
-                    urgency: { en: "Only 2 rooms left", ar: "بقيت غرفتان فقط" }
-                },
-                {
-                    id: "sea-breeze-apartment",
-                    category: "apartment",
-                    title: { en: "Sea Breeze Apartment", ar: "شقة نسيم البحر" },
-                    location: { en: "Oran, Algeria", ar: "وهران، الجزائر" },
-                    price: 120,
-                    rating: 4.7,
-                    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
-                    urgency: { en: "Popular this week", ar: "مطلوب بكثرة هذا الأسبوع" }
-                },
-                {
-                    id: "palm-villa",
-                    category: "villa",
-                    title: { en: "Palm Villa Retreat", ar: "فيلا بالم ريتريت" },
-                    location: { en: "Annaba, Algeria", ar: "عنابة، الجزائر" },
-                    price: 320,
-                    rating: 4.9,
-                    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
-                    urgency: { en: "Weekend favorite", ar: "خيار مفضل لعطلة نهاية الأسبوع" }
-                },
-                {
-                    id: "city-loft",
-                    category: "apartment",
-                    title: { en: "City Loft Suites", ar: "أجنحة سيتي لوفت" },
-                    location: { en: "Sétif, Algeria", ar: "سطيف، الجزائر" },
-                    price: 95,
-                    rating: 4.6,
-                    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80",
-                    urgency: { en: "Great value", ar: "قيمة ممتازة" }
-                },
-                {
-                    id: "desert-grand",
-                    category: "hotel",
-                    title: { en: "Desert Grand Hotel", ar: "فندق ديزرت جراند" },
-                    location: { en: "Ghardaïa, Algeria", ar: "غرداية، الجزائر" },
-                    price: 210,
-                    rating: 4.5,
-                    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1200&q=80",
-                    urgency: { en: "Breakfast included", ar: "الإفطار مشمول" }
-                },
-                {
-                    id: "azure-villa",
-                    category: "villa",
-                    title: { en: "Azure Coast Villa", ar: "فيلا الساحل الأزرق" },
-                    location: { en: "Bejaia, Algeria", ar: "بجاية، الجزائر" },
-                    price: 390,
-                    rating: 5.0,
-                    image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1200&q=80",
-                    urgency: { en: "Luxury pick", ar: "خيار فاخر" }
-                }
-            ];
-
-            const els = {
-                html: document.documentElement,
-                body: document.body,
-                themeToggle: document.getElementById("theme-toggle"),
-                langToggle: document.getElementById("lang-toggle"),
-                authCta: document.getElementById("auth-cta"),
-                profileTrigger: document.getElementById("profile-trigger"),
-                profileDropdown: document.getElementById("profile-dropdown"),
-                profileName: document.getElementById("profile-name"),
-                profileEmail: document.getElementById("profile-email"),
-                openBookingsBtn: document.getElementById("open-bookings-btn"),
-                profileFavoritesBtn: document.getElementById("profile-favorites-btn"),
-                logoutBtn: document.getElementById("logout-btn"),
-                destinationInput: document.getElementById("destination-input"),
-                guestsInput: document.getElementById("guests-input"),
-                searchBtn: document.getElementById("search-btn"),
-                clearSearchBtn: document.getElementById("clear-search-btn"),
-                sortSelect: document.getElementById("sort-select"),
-                listingsGrid: document.getElementById("listings-grid"),
-                categoryButtons: Array.from(document.querySelectorAll(".category-item")),
-                scrollTopBtn: document.getElementById("scroll-top-btn"),
-                chatOpenBtn: document.getElementById("chat-open-btn"),
-                chatModal: document.getElementById("chat-modal"),
-                chatCloseBtn: document.getElementById("chat-close-btn"),
-                chatSendBtn: document.getElementById("chat-send-btn"),
-                chatTextarea: document.getElementById("chat-textarea"),
-                bookingsModal: document.getElementById("bookings-modal"),
-                closeBookingsBtn: document.getElementById("close-bookings-btn"),
-                favToast: document.getElementById("fav-toast"),
-                toastContainer: document.getElementById("toast-container"),
-                mobileFavBtn: document.getElementById("mob-fav-btn"),
-                mobileProfileBtn: document.getElementById("mob-profile-btn"),
-                mobileStaysBtn: document.getElementById("mob-stays-btn")
-            };
-
-            function t(key) {
-                return (i18n[state.lang] && i18n[state.lang][key]) || i18n.en[key] || key;
-            }
-
-            function safeGet(key, fallback) {
-                try {
-                    const value = localStorage.getItem(key);
-                    return value === null ? fallback : value;
-                } catch (_) {
-                    return fallback;
-                }
-            }
-
-            function safeSet(key, value) {
-                try {
-                    localStorage.setItem(key, value);
-                } catch (_) { }
-            }
-
-            function getCurrentPageUrl() {
-                const current = window.location.pathname.split("/").pop() || "index.html";
-                const search = window.location.search || "";
-                return current + search;
-            }
-
-            function buildAuthUrl(view) {
-                const base = "auth.html?redirect=" + encodeURIComponent(getCurrentPageUrl());
-                return view ? base + "#" + encodeURIComponent(view) : base;
-            }
-
-            function applyTheme() {
-                const isDark = state.theme === "dark";
-                els.body.classList.toggle("dark", isDark);
-                safeSet(STORAGE_KEYS.theme, state.theme);
-
-                const metaTheme = document.querySelector('meta[name="theme-color"]');
-                if (metaTheme) metaTheme.setAttribute("content", isDark ? "#020617" : "#435abf");
-
-                if (els.themeToggle) {
-                    els.themeToggle.innerHTML = isDark
-                        ? '<i class="ph ph-sun"></i>'
-                        : '<i class="ph ph-moon"></i>';
-                }
-            }
-
-            function updateTextNodes() {
-                document.querySelectorAll("[data-i18n]").forEach(el => {
-                    const key = el.getAttribute("data-i18n");
-                    if (key) el.textContent = t(key);
-                });
-
-                document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-                    const key = el.getAttribute("data-i18n-placeholder");
-                    if (key) el.setAttribute("placeholder", t(key));
-                });
-
-                document.title = t("page_title");
-                const metaDesc = document.querySelector('meta[name="description"]');
-                if (metaDesc) metaDesc.setAttribute("content", t("meta_description"));
-
-                if (els.langToggle) {
-                    els.langToggle.textContent = state.lang === "en" ? "AR" : "EN";
-                }
-
-                if (els.authCta) {
-                    const span = els.authCta.querySelector("span");
-                    if (span) span.textContent = t("sign_in");
-                }
-
-                document.getElementById("booking-demo-status").textContent = t("booking_status_confirmed");
-            }
-
-            function applyLanguage() {
-                els.html.lang = state.lang;
-                els.html.dir = state.lang === "ar" ? "rtl" : "ltr";
-                safeSet(STORAGE_KEYS.lang, state.lang);
-                updateTextNodes();
-                renderListings();
-                syncAuthLinks();
-            }
-
-            function showToast(text, type) {
-                const toast = document.createElement("div");
-                toast.className = "toast " + (type || "");
-                toast.textContent = text;
-                els.toastContainer.appendChild(toast);
-
-                setTimeout(() => {
-                    toast.remove();
-                }, 2600);
-            }
-
-            function showFavToast(text) {
-                els.favToast.textContent = text;
-                els.favToast.classList.add("show");
-                setTimeout(() => {
-                    els.favToast.classList.remove("show");
-                }, 1800);
-            }
-
-            function getFavorites() {
-                try {
-                    const raw = localStorage.getItem(STORAGE_KEYS.favorites);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    return Array.isArray(parsed) ? parsed : [];
-                } catch (_) {
-                    return [];
-                }
-            }
-
-            function setFavorites(ids) {
-                try {
-                    localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(ids));
-                } catch (_) { }
-            }
-
-            function isFavorite(id) {
-                return getFavorites().includes(id);
-            }
-
-            function toggleFavorite(id) {
-                if (!state.user) {
-                    showToast(t("toast_login_required"), "error");
-                    window.location.href = buildAuthUrl("login");
-                    return;
-                }
-
-                const favs = getFavorites();
-                const exists = favs.includes(id);
-                const next = exists ? favs.filter(item => item !== id) : favs.concat(id);
-                setFavorites(next);
-                showFavToast(exists ? t("toast_removed_favorite") : t("toast_added_favorite"));
-                renderListings();
-            }
-
-            function filterListings() {
-                let items = listings.slice();
-
-                if (state.category !== "all") {
-                    items = items.filter(item => item.category === state.category);
-                }
-
-                const query = String(state.query || "").trim().toLowerCase();
-                if (query) {
-                    items = items.filter(item => {
-                        const title = item.title[state.lang].toLowerCase();
-                        const location = item.location[state.lang].toLowerCase();
-                        return title.includes(query) || location.includes(query);
-                    });
-                }
-
-                if (state.sort === "price-asc") items.sort((a, b) => a.price - b.price);
-                if (state.sort === "price-desc") items.sort((a, b) => b.price - a.price);
-                if (state.sort === "rating") items.sort((a, b) => b.rating - a.rating);
-
-                return items;
-            }
-
-            function renderListings() {
-                const items = filterListings();
-                els.listingsGrid.innerHTML = "";
-
-                if (!items.length) {
-                    els.listingsGrid.innerHTML = `
-                        <div class="listings-empty-state">
-                            <i class="ph ph-magnifying-glass"></i>
-                            <strong>${t("no_results_title")}</strong>
-                            <p>${t("no_results_text")}</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                items.forEach(item => {
-                    const card = document.createElement("article");
-                    card.className = "property-card animate-up";
-                    card.innerHTML = `
-                        <div class="property-card-media">
-                            <img src="${item.image}" alt="${escapeHtml(item.title[state.lang])}">
-                            <button class="favorite-btn ${isFavorite(item.id) ? "active" : ""}" type="button" data-favorite-id="${item.id}" aria-label="Favorite">
-                                <i class="ph-fill ph-heart"></i>
-                            </button>
-                            <div class="property-urgency">
-                                <i class="ph ph-fire"></i>
-                                <span>${escapeHtml(item.urgency[state.lang])}</span>
-                            </div>
-                        </div>
-
-                        <div class="property-card-body">
-                            <div class="property-card-top">
-                                <h3 class="property-card-title">${escapeHtml(item.title[state.lang])}</h3>
-                                <div class="property-card-rating">
-                                    <i class="ph-fill ph-star" style="color:#f59e0b;"></i>
-                                    <span>${item.rating.toFixed(1)}</span>
-                                </div>
-                            </div>
-
-                            <div class="property-card-location">
-                                <i class="ph ph-map-pin"></i>
-                                <span>${escapeHtml(item.location[state.lang])}</span>
-                            </div>
-
-                            <div class="property-card-price">
-                                $${item.price}
-                                <span>${t("night_suffix")}</span>
-                            </div>
-
-                            <div class="property-card-actions">
-                                <button type="button" class="details-btn" data-property-id="${item.id}">
-                                    ${t("view_details")}
-                                </button>
-                                <button type="button" class="reserve-btn primary" data-property-id="${item.id}">
-                                    ${state.user ? t("reserve_now") : t("reserve_cta_signed_out")}
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    els.listingsGrid.appendChild(card);
-                });
-            }
-
-            function escapeHtml(value) {
-                return String(value)
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
-
-            function syncCategoryButtons() {
-                els.categoryButtons.forEach(btn => {
-                    btn.classList.toggle("active", btn.dataset.category === state.category);
-                });
-            }
-
-            function syncAuthLinks() {
-                if (els.authCta) {
-                    els.authCta.href = buildAuthUrl("login");
-                }
-            }
-
-            function updateAuthUI(user) {
-                state.user = user || null;
-
-                if (state.user) {
-                    els.authCta.classList.add("hidden");
-                    els.profileTrigger.classList.remove("hidden");
-                    els.profileName.textContent = state.user.displayName || t("home_auth_title");
-                    els.profileEmail.textContent = state.user.email || t("logged_in_as");
-                } else {
-                    els.authCta.classList.remove("hidden");
-                    els.profileTrigger.classList.add("hidden");
-                    els.profileDropdown.classList.remove("active");
-                    els.profileName.textContent = t("guest_user");
-                    els.profileEmail.textContent = "guest@example.com";
-                }
-
-                renderListings();
-            }
-
-            function firebaseReady() {
-                try {
-                    const cfg = window.OREBOOKING_FIREBASE_CONFIG || {};
-                    const configured = ["apiKey", "authDomain", "projectId", "appId"].every(key => {
-                        return cfg[key] && !String(cfg[key]).includes("YOUR_");
-                    });
-
-                    if (!configured || !window.firebase || !firebase.auth) return false;
-                    if (!firebase.apps.length) firebase.initializeApp(cfg);
-                    return true;
-                } catch (_) {
-                    return false;
-                }
-            }
-
-            function watchAuthState() {
-                if (!firebaseReady()) return;
-                firebase.auth().onAuthStateChanged(user => {
-                    updateAuthUI(user);
-                });
-            }
-
-            function requireAuth(reason) {
-                showToast(reason || t("toast_login_required"), "error");
-                window.location.href = buildAuthUrl("login");
-            }
-
-            function bindEvents() {
-                els.themeToggle.addEventListener("click", () => {
-                    state.theme = state.theme === "dark" ? "light" : "dark";
-                    applyTheme();
-                });
-
-                els.langToggle.addEventListener("click", () => {
-                    state.lang = state.lang === "en" ? "ar" : "en";
-                    applyLanguage();
-                });
-
-                els.searchBtn.addEventListener("click", () => {
-                    state.query = els.destinationInput.value.trim();
-                    els.clearSearchBtn.style.display = state.query ? "inline-flex" : "none";
-                    renderListings();
-                });
-
-                els.destinationInput.addEventListener("keydown", e => {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
-                        els.searchBtn.click();
-                    }
-                });
-
-                els.clearSearchBtn.addEventListener("click", () => {
-                    state.query = "";
-                    els.destinationInput.value = "";
-                    els.clearSearchBtn.style.display = "none";
-                    renderListings();
-                });
-
-                els.sortSelect.addEventListener("change", () => {
-                    state.sort = els.sortSelect.value;
-                    renderListings();
-                });
-
-                els.categoryButtons.forEach(btn => {
-                    btn.addEventListener("click", () => {
-                        state.category = btn.dataset.category || "all";
-                        syncCategoryButtons();
-                        renderListings();
-                    });
-                });
-
-                document.addEventListener("click", e => {
-                    const favoriteBtn = e.target.closest("[data-favorite-id]");
-                    const reserveBtn = e.target.closest(".reserve-btn");
-                    const detailsBtn = e.target.closest(".details-btn");
-
-                    if (favoriteBtn) {
-                        toggleFavorite(favoriteBtn.dataset.favoriteId);
-                    }
-
-                    if (reserveBtn) {
-                        const propertyId = reserveBtn.dataset.propertyId;
-                        const item = listings.find(x => x.id === propertyId);
-                        if (!state.user) {
-                            requireAuth(t("auth_redirect_book"));
-                            return;
-                        }
-                        showToast((state.lang === "ar" ? "تم اختيار " : "Selected ") + (item ? item.title[state.lang] : ""), "success");
-                    }
-
-                    if (detailsBtn) {
-                        const propertyId = detailsBtn.dataset.propertyId;
-                        const item = listings.find(x => x.id === propertyId);
-                        if (item) {
-                            showToast(item.title[state.lang], "success");
-                        }
-                    }
-
-                    if (!e.target.closest(".profile-container")) {
-                        els.profileDropdown.classList.remove("active");
-                    }
-                });
-
-                els.profileTrigger.addEventListener("click", () => {
-                    els.profileDropdown.classList.toggle("active");
-                });
-
-                els.logoutBtn.addEventListener("click", async () => {
-                    try {
-                        if (firebaseReady()) {
-                            await firebase.auth().signOut();
-                        }
-                    } catch (_) { }
-                    updateAuthUI(null);
-                    showToast(t("toast_signed_out"), "success");
-                });
-
-                els.openBookingsBtn.addEventListener("click", () => {
-                    if (!state.user) {
-                        requireAuth(t("auth_redirect_profile"));
-                        return;
-                    }
-                    els.bookingsModal.classList.add("active");
-                    els.body.classList.add("modal-open");
-                });
-
-                els.profileFavoritesBtn.addEventListener("click", () => {
-                    if (!state.user) {
-                        requireAuth(t("auth_redirect_profile"));
-                        return;
-                    }
-                    state.query = "";
-                    state.category = "all";
-                    syncCategoryButtons();
-                    const favs = getFavorites();
-                    if (!favs.length) {
-                        showToast(t("no_results_text"), "error");
-                        return;
-                    }
-                    els.listingsGrid.innerHTML = "";
-                    const items = listings.filter(item => favs.includes(item.id));
-                    items.forEach(item => {
-                        const card = document.createElement("article");
-                        card.className = "property-card";
-                        card.innerHTML = `
-                            <div class="property-card-media">
-                                <img src="${item.image}" alt="${escapeHtml(item.title[state.lang])}">
-                                <button class="favorite-btn active" type="button" data-favorite-id="${item.id}">
-                                    <i class="ph-fill ph-heart"></i>
-                                </button>
-                                <div class="property-urgency">
-                                    <i class="ph ph-heart"></i>
-                                    <span>${t("favorites")}</span>
-                                </div>
-                            </div>
-
-                            <div class="property-card-body">
-                                <div class="property-card-top">
-                                    <h3 class="property-card-title">${escapeHtml(item.title[state.lang])}</h3>
-                                    <div class="property-card-rating">
-                                        <i class="ph-fill ph-star" style="color:#f59e0b;"></i>
-                                        <span>${item.rating.toFixed(1)}</span>
-                                    </div>
-                                </div>
-
-                                <div class="property-card-location">
-                                    <i class="ph ph-map-pin"></i>
-                                    <span>${escapeHtml(item.location[state.lang])}</span>
-                                </div>
-
-                                <div class="property-card-price">
-                                    $${item.price}
-                                    <span>${t("night_suffix")}</span>
-                                </div>
-
-                                <div class="property-card-actions">
-                                    <button type="button" class="details-btn" data-property-id="${item.id}">
-                                        ${t("view_details")}
-                                    </button>
-                                    <button type="button" class="reserve-btn primary" data-property-id="${item.id}">
-                                        ${t("reserve_now")}
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        els.listingsGrid.appendChild(card);
-                    });
-                    els.profileDropdown.classList.remove("active");
-                });
-
-                els.closeBookingsBtn.addEventListener("click", () => {
-                    els.bookingsModal.classList.remove("active");
-                    els.body.classList.remove("modal-open");
-                });
-
-                els.bookingsModal.addEventListener("click", e => {
-                    if (e.target === els.bookingsModal) {
-                        els.bookingsModal.classList.remove("active");
-                        els.body.classList.remove("modal-open");
-                    }
-                });
-
-                els.chatOpenBtn.addEventListener("click", () => {
-                    els.chatModal.classList.add("active");
-                    els.body.classList.add("modal-open");
-                });
-
-                els.chatCloseBtn.addEventListener("click", () => {
-                    els.chatModal.classList.remove("active");
-                    els.body.classList.remove("modal-open");
-                });
-
-                els.chatModal.addEventListener("click", e => {
-                    if (e.target === els.chatModal) {
-                        els.chatModal.classList.remove("active");
-                        els.body.classList.remove("modal-open");
-                    }
-                });
-
-                els.chatSendBtn.addEventListener("click", () => {
-                    const value = els.chatTextarea.value.trim();
-                    if (!value) return;
-                    showToast(t("support_toast"), "success");
-                    els.chatTextarea.value = "";
-                });
-
-                els.scrollTopBtn.addEventListener("click", () => {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                });
-
-                window.addEventListener("scroll", () => {
-                    if (window.scrollY > 320) {
-                        els.scrollTopBtn.classList.add("visible");
-                    } else {
-                        els.scrollTopBtn.classList.remove("visible");
-                    }
-                });
-
-                document.getElementById("mob-fav-btn").addEventListener("click", () => {
-                    if (!state.user) {
-                        requireAuth(t("auth_redirect_profile"));
-                        return;
-                    }
-                    els.profileFavoritesBtn.click();
-                });
-
-                document.getElementById("mob-profile-btn").addEventListener("click", () => {
-                    if (!state.user) {
-                        window.location.href = buildAuthUrl("login");
-                        return;
-                    }
-                    els.profileDropdown.classList.toggle("active");
-                });
-
-                document.getElementById("mob-stays-btn").addEventListener("click", () => {
-                    document.querySelector(".container").scrollIntoView({ behavior: "smooth", block: "start" });
-                });
-            }
-
-            function init() {
-                applyTheme();
-                applyLanguage();
-                syncCategoryButtons();
-                syncAuthLinks();
-                renderListings();
-                bindEvents();
-                watchAuthState();
-
-                if (!firebaseReady()) {
-                    updateAuthUI(null);
-                }
-            }
-
-            init();
-        })();
-    </script>
+    <script src="script.js?v=3.1"></script>
 </body>
 
 </html>
