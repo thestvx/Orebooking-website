@@ -1,5 +1,5 @@
 // =========================================
-//   booking.js — OreBooking v13.0
+//   booking.js — OreBooking v13.1
 //   Full booking flow + auth + payment
 //   Compatible with current booking.html
 // =========================================
@@ -551,7 +551,52 @@ function setTextPreservingIcon(el, text) {
   el.appendChild(document.createTextNode(` ${text}`));
 }
 
+function cacheOriginalLocalizedContent() {
+  document.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-option], [data-i18n-title]").forEach((el) => {
+    if (el.hasAttribute("data-i18n") && !el.dataset.i18nOriginalText) {
+      el.dataset.i18nOriginalText = el.textContent;
+    }
+    if (el.hasAttribute("data-i18n-placeholder") && !el.dataset.i18nOriginalPlaceholder) {
+      el.dataset.i18nOriginalPlaceholder = el.getAttribute("placeholder") || "";
+    }
+    if (el.hasAttribute("data-i18n-option") && !el.dataset.i18nOriginalOption) {
+      el.dataset.i18nOriginalOption = el.textContent;
+    }
+    if (el.hasAttribute("data-i18n-title") && !el.dataset.i18nOriginalTitle) {
+      el.dataset.i18nOriginalTitle = el.getAttribute("title") || "";
+    }
+  });
+}
+
+function resetLocalizedContentToOriginal() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    if (el.dataset.i18nOriginalText !== undefined) {
+      setTextPreservingIcon(el, el.dataset.i18nOriginalText);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    if (el.dataset.i18nOriginalPlaceholder !== undefined) {
+      el.setAttribute("placeholder", el.dataset.i18nOriginalPlaceholder);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-option]").forEach((el) => {
+    if (el.dataset.i18nOriginalOption !== undefined) {
+      el.textContent = el.dataset.i18nOriginalOption;
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    if (el.dataset.i18nOriginalTitle !== undefined) {
+      el.setAttribute("title", el.dataset.i18nOriginalTitle);
+    }
+  });
+}
+
 function applyTranslations() {
+  resetLocalizedContentToOriginal();
+
   const dict = window.bookingI18n?.[bookingState.lang];
   if (!dict) return;
 
@@ -586,6 +631,17 @@ function applyTranslations() {
   if (dict.pageTitle) {
     document.title = dict.pageTitle;
   }
+}
+
+function refreshLocalizedUI() {
+  updateDirection();
+  updateLangButton();
+  applyTranslations();
+  updateAuthUI(currentUser);
+  renderPropertySummary();
+  updatePaymentCardsUI();
+  updateSummary();
+  updateReview();
 }
 
 // ──────────────────────────────────────────
@@ -1298,7 +1354,7 @@ function validateStep1() {
   checks.push(validateRequiredField(bookingFields.guestChildren, parsePositiveInt(getFieldValue("guestChildren"), 0) >= 0));
   checks.push(validateRequiredField(bookingFields.stayPurpose, !!getFieldValue("stayPurpose")));
   checks.push(validateRequiredField(bookingFields.arrivalDate, !!bookingState.checkIn));
-  checks.push(validateRequiredField(bookingFields.departureDate, !!bookingState.checkOut));
+  checks.push(validateRequiredField(bookingFields.departureDate, !!bookingState.checkOut)));
   checks.push(validateRequiredField(bookingFields.arrivalTime, !!getFieldValue("arrivalTime")));
   checks.push(validateRequiredField(bookingFields.arrivalMethod, !!getFieldValue("arrivalMethod")));
   checks.push(validateRequiredField(bookingFields.additionalGuests, !!getFieldValue("additionalGuests")));
@@ -1338,7 +1394,7 @@ function validateStep2() {
   if (["ccp", "bank", "bank-transfer"].includes(selected.value)) {
     const senderValid = validateRequiredField(bookingFields.senderName, !!getFieldValue("senderName"));
     const amountValid = validateRequiredField(bookingFields.transferAmount, parsePositiveInt(getFieldValue("transferAmount"), 0) > 0);
-    const dateValid = validateRequiredField(bookingFields.transferDate, !!getFieldValue("transferDate"));
+    const dateValid = validateRequiredField(bookingFields.transferDate, !!getFieldValue("transferDate")));
 
     if (!senderValid || !amountValid || !dateValid) {
       showGlobalAlert(t("Please complete bank transfer details.", "يرجى إكمال تفاصيل التحويل البنكي."));
@@ -1677,12 +1733,7 @@ function bindGeneralEvents() {
   els.langToggle?.addEventListener("click", () => {
     bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
     safeSet("ore_lang", bookingState.lang);
-    updateDirection();
-    updateLangButton();
-    applyTranslations();
-    renderPropertySummary();
-    updateSummary();
-    updateReview();
+    refreshLocalizedUI();
   });
 
   els.themeToggle?.addEventListener("click", () => {
@@ -1959,10 +2010,8 @@ async function init() {
   if (bookingState.initialized) return;
   bookingState.initialized = true;
 
-  updateDirection();
-  applyTheme();
-  updateLangButton();
-  applyTranslations();
+  cacheOriginalLocalizedContent();
+  refreshLocalizedUI();
 
   bindGeneralEvents();
   bindAuthEvents();
