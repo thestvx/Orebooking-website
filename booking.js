@@ -1,6 +1,6 @@
 // =========================================
-//   booking.js — OreBooking v13.1
-//   Full booking flow + auth + payment
+//   booking.js — OreBooking v14.1
+//   Production-ready booking flow + auth + payment
 //   Compatible with current booking.html
 // =========================================
 
@@ -77,17 +77,103 @@ try {
 }
 
 // ──────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────
+function normalizeLang(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "ar" || raw === "arabic" || raw === "rtl") return "ar";
+  if (raw === "en" || raw === "english" || raw === "ltr") return "en";
+  return "ar";
+}
+
+function cleanText(value) {
+  return String(value ?? "").trim();
+}
+
+function escapeHtml(str = "") {
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanText(email));
+}
+
+function validatePhone(phone) {
+  const cleaned = cleanText(phone).replace(/[^\d+]/g, "");
+  return cleaned.length >= 8;
+}
+
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateInput(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function todayInputValue() {
+  return formatDateInput(new Date());
+}
+
+function addDays(dateStr, days) {
+  const d = parseDate(dateStr);
+  if (!d) return "";
+  d.setDate(d.getDate() + days);
+  return formatDateInput(d);
+}
+
+function getDiffNights(checkIn, checkOut) {
+  const inDate = parseDate(checkIn);
+  const outDate = parseDate(checkOut);
+  if (!inDate || !outDate) return 0;
+  const diff = Math.round((outDate - inDate) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : 0;
+}
+
+function parsePositiveInt(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? Math.floor(num) : fallback;
+}
+
+function setText(el, value) {
+  if (el) el.textContent = value;
+}
+
+function setValueIfEmpty(el, value) {
+  if (el && !cleanText(el.value) && cleanText(value)) {
+    el.value = value;
+  }
+}
+
+function safeCall(fn, label = "Unknown task") {
+  try {
+    return fn();
+  } catch (error) {
+    console.error(`${label} failed:`, error);
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────
 // State
 // ──────────────────────────────────────────
 let currentUser = null;
 
-const BOOKING_DRAFT_KEY = "ore_booking_draft_v3";
+const BOOKING_DRAFT_KEY = "ore_booking_draft_v4";
 const LOCAL_BOOKINGS_KEY = "ore_bookings_local_v1";
 
 const bookingState = {
   initialized: false,
   currentStep: 1,
-  lang: safeGet("ore_lang", "ar") || "ar",
+  lang: normalizeLang(safeGet("ore_lang", "ar")),
   theme: safeGet("ore_theme", "light") || "light",
 
   propertyId: null,
@@ -107,6 +193,26 @@ const bookingState = {
   rewardPoints: 0,
   bookingReference: ""
 };
+
+function t(en, ar) {
+  return bookingState.lang === "ar" ? ar : en;
+}
+
+function formatDateDisplay(dateStr) {
+  const d = parseDate(dateStr);
+  if (!d) return t("Not selected", "غير محدد");
+  return d.toLocaleDateString(
+    bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
+    { day: "2-digit", month: "short", year: "numeric" }
+  );
+}
+
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  return bookingState.lang === "ar"
+    ? `${amount.toLocaleString("ar-DZ")} د.ج`
+    : `${amount.toLocaleString("en-US")} DZD`;
+}
 
 // ──────────────────────────────────────────
 // DOM Helpers
@@ -222,7 +328,7 @@ const els = {
   reviewDocuments: getById("rev-documents", "review-payment-proof"),
   reviewBillings: getById("rev-billings", "review-billing-name"),
   reviewRoomPreferences: getById("rev-room-preferences", "review-special-notes"),
-  reviewPaymentMethod: getById("rev-payment-method", "review-payment-method"),
+  reviewPaymentMethod: getById("rev-payment-method"),
   reviewPoints: getById("rev-points", "review-points"),
 
   editStep1Btns: [
@@ -312,84 +418,8 @@ const bookingFields = {
   cashPaymentNote: getById("cash-payment-note")
 };
 
-// ──────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────
-function t(en, ar) {
-  return bookingState.lang === "ar" ? ar : en;
-}
-
-function cleanText(value) {
-  return String(value ?? "").trim();
-}
-
-function escapeHtml(str = "") {
-  const div = document.createElement("div");
-  div.textContent = String(str);
-  return div.innerHTML;
-}
-
-function validateEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanText(email));
-}
-
-function validatePhone(phone) {
-  const cleaned = cleanText(phone).replace(/[^\d+]/g, "");
-  return cleaned.length >= 8;
-}
-
-function parseDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(`${dateStr}T12:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function formatDateInput(date) {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
-  const y = date.getFullYear();
-  const m = `${date.getMonth() + 1}`.padStart(2, "0");
-  const d = `${date.getDate()}`.padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function todayInputValue() {
-  return formatDateInput(new Date());
-}
-
-function addDays(dateStr, days) {
-  const d = parseDate(dateStr);
-  if (!d) return "";
-  d.setDate(d.getDate() + days);
-  return formatDateInput(d);
-}
-
-function formatDateDisplay(dateStr) {
-  const d = parseDate(dateStr);
-  if (!d) return t("Not selected", "غير محدد");
-  return d.toLocaleDateString(
-    bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
-    { day: "2-digit", month: "short", year: "numeric" }
-  );
-}
-
-function getDiffNights(checkIn, checkOut) {
-  const inDate = parseDate(checkIn);
-  const outDate = parseDate(checkOut);
-  if (!inDate || !outDate) return 0;
-  const diff = Math.round((outDate - inDate) / (1000 * 60 * 60 * 24));
-  return diff > 0 ? diff : 0;
-}
-
-function parsePositiveInt(value, fallback = 0) {
-  const num = Number(value);
-  return Number.isFinite(num) && num >= 0 ? Math.floor(num) : fallback;
-}
-
-function formatCurrency(value) {
-  const amount = Number(value || 0);
-  return bookingState.lang === "ar"
-    ? `${amount.toLocaleString("ar-DZ")} د.ج`
-    : `${amount.toLocaleString("en-US")} DZD`;
+function getFieldValue(id, fallback = "") {
+  return cleanText(bookingFields[id]?.value) || fallback;
 }
 
 function getSelectedText(el, fallback = "") {
@@ -400,14 +430,13 @@ function getSelectedText(el, fallback = "") {
   return cleanText(el.value) || fallback;
 }
 
-function setText(el, value) {
-  if (el) el.textContent = value;
+function getFieldSelectedText(id, fallback = "") {
+  return getSelectedText(bookingFields[id], fallback);
 }
 
-function setHtml(el, value) {
-  if (el) el.innerHTML = value;
-}
-
+// ──────────────────────────────────────────
+// UI Helpers
+// ──────────────────────────────────────────
 function setButtonLoading(btn, loading, text = null) {
   if (!btn) return;
   if (loading) {
@@ -500,32 +529,20 @@ function getFallbackText() {
   return t("Not provided", "غير متوفر");
 }
 
-function setValueIfEmpty(el, value) {
-  if (el && !cleanText(el.value) && cleanText(value)) {
-    el.value = value;
-  }
-}
-
-function getFieldValue(id, fallback = "") {
-  return cleanText(bookingFields[id]?.value) || fallback;
-}
-
-function getFieldSelectedText(id, fallback = "") {
-  return getSelectedText(bookingFields[id], fallback);
-}
-
 // ──────────────────────────────────────────
 // Language / Theme / Direction
 // ──────────────────────────────────────────
 function updateDirection() {
+  if (!els.html) return;
   els.html.lang = bookingState.lang;
   els.html.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
 }
 
 function applyTheme() {
   const isDark = bookingState.theme === "dark";
-  els.body.classList.toggle("dark", isDark);
-  els.html.style.colorScheme = isDark ? "dark" : "light";
+  els.body?.classList.toggle("dark", isDark);
+  if (els.html) els.html.style.colorScheme = isDark ? "dark" : "light";
+
   const icon = els.themeToggle?.querySelector("i");
   if (icon) {
     icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
@@ -534,8 +551,8 @@ function applyTheme() {
 
 function updateLangButton() {
   const span = els.langToggle?.querySelector("span");
-  const text = bookingState.lang === "ar" ? "EN" : "AR";
-  if (span) span.textContent = text;
+  if (!span) return;
+  span.textContent = bookingState.lang === "ar" ? "EN" : "AR";
 }
 
 function setTextPreservingIcon(el, text) {
@@ -553,16 +570,16 @@ function setTextPreservingIcon(el, text) {
 
 function cacheOriginalLocalizedContent() {
   document.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-option], [data-i18n-title]").forEach((el) => {
-    if (el.hasAttribute("data-i18n") && !el.dataset.i18nOriginalText) {
+    if (el.hasAttribute("data-i18n") && !("i18nOriginalText" in el.dataset)) {
       el.dataset.i18nOriginalText = el.textContent;
     }
-    if (el.hasAttribute("data-i18n-placeholder") && !el.dataset.i18nOriginalPlaceholder) {
+    if (el.hasAttribute("data-i18n-placeholder") && !("i18nOriginalPlaceholder" in el.dataset)) {
       el.dataset.i18nOriginalPlaceholder = el.getAttribute("placeholder") || "";
     }
-    if (el.hasAttribute("data-i18n-option") && !el.dataset.i18nOriginalOption) {
+    if (el.hasAttribute("data-i18n-option") && !("i18nOriginalOption" in el.dataset)) {
       el.dataset.i18nOriginalOption = el.textContent;
     }
-    if (el.hasAttribute("data-i18n-title") && !el.dataset.i18nOriginalTitle) {
+    if (el.hasAttribute("data-i18n-title") && !("i18nOriginalTitle" in el.dataset)) {
       el.dataset.i18nOriginalTitle = el.getAttribute("title") || "";
     }
   });
@@ -570,34 +587,41 @@ function cacheOriginalLocalizedContent() {
 
 function resetLocalizedContentToOriginal() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
-    if (el.dataset.i18nOriginalText !== undefined) {
+    if ("i18nOriginalText" in el.dataset) {
       setTextPreservingIcon(el, el.dataset.i18nOriginalText);
     }
   });
 
   document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
-    if (el.dataset.i18nOriginalPlaceholder !== undefined) {
+    if ("i18nOriginalPlaceholder" in el.dataset) {
       el.setAttribute("placeholder", el.dataset.i18nOriginalPlaceholder);
     }
   });
 
   document.querySelectorAll("[data-i18n-option]").forEach((el) => {
-    if (el.dataset.i18nOriginalOption !== undefined) {
+    if ("i18nOriginalOption" in el.dataset) {
       el.textContent = el.dataset.i18nOriginalOption;
     }
   });
 
   document.querySelectorAll("[data-i18n-title]").forEach((el) => {
-    if (el.dataset.i18nOriginalTitle !== undefined) {
+    if ("i18nOriginalTitle" in el.dataset) {
       el.setAttribute("title", el.dataset.i18nOriginalTitle);
     }
   });
 }
 
+function getTranslationDictionary() {
+  const dict = window.bookingI18n;
+  if (!dict || typeof dict !== "object") return null;
+  if (bookingState.lang === "ar") return dict.ar || dict.arabic || null;
+  return dict.en || dict.english || null;
+}
+
 function applyTranslations() {
   resetLocalizedContentToOriginal();
 
-  const dict = window.bookingI18n?.[bookingState.lang];
+  const dict = getTranslationDictionary();
   if (!dict) return;
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {
@@ -1103,7 +1127,7 @@ function applyFieldValues(values = {}) {
       return;
     }
 
-    if (!cleanText(el.value) && value !== undefined && value !== null) {
+    if (value !== undefined && value !== null && cleanText(el.value) === "") {
       el.value = value;
     }
   });
@@ -1354,7 +1378,7 @@ function validateStep1() {
   checks.push(validateRequiredField(bookingFields.guestChildren, parsePositiveInt(getFieldValue("guestChildren"), 0) >= 0));
   checks.push(validateRequiredField(bookingFields.stayPurpose, !!getFieldValue("stayPurpose")));
   checks.push(validateRequiredField(bookingFields.arrivalDate, !!bookingState.checkIn));
-  checks.push(validateRequiredField(bookingFields.departureDate, !!bookingState.checkOut)));
+  checks.push(validateRequiredField(bookingFields.departureDate, !!bookingState.checkOut));
   checks.push(validateRequiredField(bookingFields.arrivalTime, !!getFieldValue("arrivalTime")));
   checks.push(validateRequiredField(bookingFields.arrivalMethod, !!getFieldValue("arrivalMethod")));
   checks.push(validateRequiredField(bookingFields.additionalGuests, !!getFieldValue("additionalGuests")));
@@ -1394,7 +1418,7 @@ function validateStep2() {
   if (["ccp", "bank", "bank-transfer"].includes(selected.value)) {
     const senderValid = validateRequiredField(bookingFields.senderName, !!getFieldValue("senderName"));
     const amountValid = validateRequiredField(bookingFields.transferAmount, parsePositiveInt(getFieldValue("transferAmount"), 0) > 0);
-    const dateValid = validateRequiredField(bookingFields.transferDate, !!getFieldValue("transferDate")));
+    const dateValid = validateRequiredField(bookingFields.transferDate, !!getFieldValue("transferDate"));
 
     if (!senderValid || !amountValid || !dateValid) {
       showGlobalAlert(t("Please complete bank transfer details.", "يرجى إكمال تفاصيل التحويل البنكي."));
@@ -1458,9 +1482,8 @@ function updatePaymentCardsUI() {
   const isBank = ["ccp", "bank", "bank-transfer"].includes(value);
 
   if (els.bankTransferBox) {
-    const active = isBank;
-    els.bankTransferBox.classList.toggle("active", active);
-    els.bankTransferBox.style.display = active ? "block" : "none";
+    els.bankTransferBox.classList.toggle("active", isBank);
+    els.bankTransferBox.style.display = isBank ? "block" : "none";
   }
 
   if (els.cashBox) {
@@ -2011,17 +2034,20 @@ async function init() {
   bookingState.initialized = true;
 
   cacheOriginalLocalizedContent();
-  refreshLocalizedUI();
+  updateDirection();
+  updateLangButton();
+  applyTheme();
+  applyTranslations();
 
   bindGeneralEvents();
   bindAuthEvents();
 
-  hydrateStayContext();
-  hydrateGuestBasics();
-  hydrateDraft();
+  safeCall(() => hydrateStayContext(), "Hydrate stay context");
+  safeCall(() => hydrateGuestBasics(), "Hydrate guest basics");
+  safeCall(() => hydrateDraft(), "Hydrate draft");
 
-  updateDateConstraints();
-  await loadPropertyData();
+  safeCall(() => updateDateConstraints(), "Update date constraints");
+  await safeCall(() => loadPropertyData(), "Load property data");
 
   bindPaymentEvents();
   bindBookingEvents();
