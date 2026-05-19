@@ -154,11 +154,18 @@
     a { color: inherit; text-decoration: none; }
     button, input { font: inherit; }
 
+    #auth-app {
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
     .auth-shell {
       position: relative;
       z-index: 1;
       width: 100%;
       max-width: 1120px;
+      margin: 0 auto;
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
       border-radius: 32px;
@@ -483,7 +490,7 @@
       font-size: .92rem;
       font-weight: 700;
       margin-bottom: 18px;
-      display: none;
+      display: flex;
       align-items: flex-start;
       gap: 10px;
       line-height: 1.7;
@@ -497,32 +504,26 @@
     }
 
     .auth-message.error {
-      display: flex;
       background: var(--error-bg);
       color: var(--error);
       border: 1px solid var(--error-border);
     }
 
     .auth-message.success {
-      display: flex;
       background: var(--success-bg);
       color: var(--success);
       border: 1px solid var(--success-border);
     }
 
     .auth-message.info {
-      display: flex;
       background: var(--info-bg);
       color: var(--info);
       border: 1px solid var(--info-border);
     }
 
     .auth-form {
-      display: none;
       animation: fadeIn .35s ease forwards;
     }
-
-    .auth-form.active { display: block; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -682,11 +683,9 @@
     }
 
     .password-strength {
-      display: none;
+      display: block;
       margin-top: 12px;
     }
-
-    .password-strength.active { display: block; }
 
     .strength-bars {
       display: grid;
@@ -701,6 +700,11 @@
       background: var(--border);
       transition: var(--transition);
     }
+
+    .str-bar.filled.weak { background: #ef4444; }
+    .str-bar.filled.fair { background: #f59e0b; }
+    .str-bar.filled.good { background: #3b82f6; }
+    .str-bar.filled.strong { background: #10b981; }
 
     .strength-label {
       font-size: .82rem;
@@ -770,6 +774,10 @@
       color: var(--primary);
       text-decoration: none;
       transition: var(--transition);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
     }
 
     .inline-link:hover,
@@ -867,11 +875,17 @@
       box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
     }
 
-    .social-btn:hover {
+    .social-btn:hover:not(:disabled) {
       background: var(--input-bg);
       transform: translateY(-1px);
       border-color: rgba(67, 90, 191, 0.18);
       color: var(--primary);
+    }
+
+    .social-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .social-btn img {
@@ -889,10 +903,15 @@
       font-weight: 600;
     }
 
-    .switch-form-text a {
+    .switch-form-text a,
+    .switch-form-text button {
       color: var(--primary);
       font-weight: 800;
       margin-inline-start: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
     }
 
     .legal-note {
@@ -975,298 +994,13 @@
   </style>
 </head>
 <body>
-  <main class="auth-shell" aria-label="OreBooking Authentication">
-    <section class="auth-brand-panel" aria-hidden="false">
-      <div class="brand-top">
-        <a href="index.html" class="brand-logo-link" aria-label="OreBooking Home">
-          <div class="brand-logo-badge">
-            <i class="ph-fill ph-buildings"></i>
-          </div>
-          <div class="brand-logo-copy">
-            <strong>OreBooking</strong>
-            <span data-i18n="brand_microcopy">Smart stays, smooth bookings, and one elegant account for everything.</span>
-          </div>
-        </a>
+  <div id="auth-app"></div>
 
-        <div class="auth-controls">
-          <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle Theme">
-            <i class="ph ph-moon"></i>
-          </button>
-          <button id="lang-toggle" class="lang-btn" type="button">EN</button>
-        </div>
-      </div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-      <div class="brand-middle">
-        <div class="brand-pill">
-          <i class="ph-fill ph-shield-check"></i>
-          <span data-i18n="brand_pill">Secure access for your bookings and rewards</span>
-        </div>
-
-        <h1 class="brand-title" data-i18n="brand_title">Your next stay starts with one clean, secure account.</h1>
-        <p class="brand-text" data-i18n="brand_text">
-          Sign in to manage reservations, track your booking history, save favorites, and enjoy a faster experience every time you return.
-        </p>
-
-        <div class="brand-feature-grid">
-          <div class="brand-feature">
-            <i class="ph ph-calendar-check"></i>
-            <strong data-i18n="feature_1_title">Booking access</strong>
-            <p data-i18n="feature_1_text">Review your reservations, check important trip details, and stay updated in one place.</p>
-          </div>
-
-          <div class="brand-feature">
-            <i class="ph ph-gift"></i>
-            <strong data-i18n="feature_2_title">Loyalty points</strong>
-            <p data-i18n="feature_2_text">Create an account and start collecting reward points from eligible bookings.</p>
-          </div>
-
-          <div class="brand-feature">
-            <i class="ph ph-heart-straight"></i>
-            <strong data-i18n="feature_3_title">Saved favorites</strong>
-            <p data-i18n="feature_3_text">Keep the properties you like ready for later without searching all over again.</p>
-          </div>
-
-          <div class="brand-feature">
-            <i class="ph ph-lock-key"></i>
-            <strong data-i18n="feature_4_title">Protected sign-in</strong>
-            <p data-i18n="feature_4_text">A professional and reliable authentication flow built for real users and real data.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="brand-bottom">
-        <div class="brand-stat-row">
-          <div class="brand-stat">
-            <strong>24/7</strong>
-            <span data-i18n="stat_1">Access to your account and reset tools whenever you need them.</span>
-          </div>
-          <div class="brand-stat">
-            <strong>1 Account</strong>
-            <span data-i18n="stat_2">Use one profile to manage bookings, rewards, and saved details.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="auth-panel">
-      <div class="auth-panel-inner">
-        <a href="index.html" class="mobile-brand-link" aria-label="OreBooking Home">
-          <div class="badge"><i class="ph-fill ph-buildings"></i></div>
-          <div>
-            <strong>OreBooking</strong>
-            <span data-i18n="mobile_brand_text">Professional authentication experience</span>
-          </div>
-        </a>
-
-        <div class="form-tabs" role="tablist" aria-label="Authentication forms">
-          <button type="button" class="form-tab active" id="tab-login" data-form-target="login-form" role="tab" aria-selected="true" data-i18n="sign_in">Sign In</button>
-          <button type="button" class="form-tab" id="tab-register" data-form-target="register-form" role="tab" aria-selected="false" data-i18n="sign_up_btn">Create Account</button>
-          <button type="button" class="form-tab" id="tab-forgot" data-form-target="forgot-form" role="tab" aria-selected="false" data-i18n="reset_short">Reset</button>
-        </div>
-
-        <div id="auth-message" class="auth-message" role="alert" aria-live="polite"></div>
-
-        <form id="login-form" class="auth-form active" novalidate>
-          <div class="auth-kicker">
-            <i class="ph ph-sign-in"></i>
-            <span data-i18n="welcome_back_small">Welcome back</span>
-          </div>
-
-          <h2 class="auth-title" data-i18n="welcome_back">Welcome back!</h2>
-          <p class="auth-subtitle" data-i18n="login_desc">Enter your details to access your account and enjoy exclusive offers.</p>
-
-          <div class="input-grid">
-            <div class="input-group">
-              <label for="login-email"><span data-i18n="email">Email Address</span> <span class="required-star">*</span></label>
-              <div class="input-icon-wrap">
-                <i class="ph ph-envelope"></i>
-                <input type="email" id="login-email" placeholder="name@example.com" required autocomplete="email" />
-              </div>
-            </div>
-
-            <div class="input-group">
-              <label for="login-password"><span data-i18n="password">Password</span> <span class="required-star">*</span></label>
-              <div class="input-icon-wrap password-field">
-                <i class="ph ph-lock"></i>
-                <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
-                <button type="button" class="pass-toggle" data-toggle-password="login-password" aria-label="Toggle password visibility">
-                  <i class="ph ph-eye"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="auth-options">
-            <label class="checkbox-container">
-              <input type="checkbox" id="remember-me" checked />
-              <span class="checkmark"></span>
-              <span data-i18n="remember_me">Remember me</span>
-            </label>
-
-            <a href="#" class="forgot-link" id="go-to-forgot" data-i18n="forgot_pass">Forgot password?</a>
-          </div>
-
-          <button type="submit" class="primary-btn" id="login-btn">
-            <i class="ph ph-sign-in"></i>
-            <span data-i18n="sign_in">Sign In</span>
-          </button>
-
-          <div class="auth-divider">
-            <span data-i18n="or_continue">Or continue with</span>
-          </div>
-
-          <div class="social-logins">
-            <button type="button" class="social-btn" id="google-btn">
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20" height="20" alt="Google" />
-              <span data-i18n="google">Google</span>
-            </button>
-
-            <button type="button" class="social-btn" id="apple-btn">
-              <i class="ph-fill ph-apple-logo"></i>
-              <span data-i18n="apple">Apple</span>
-            </button>
-          </div>
-
-          <p class="switch-form-text">
-            <span data-i18n="no_account">Don’t have an account?</span>
-            <a href="#" id="go-to-register" data-i18n="sign_up">Create one</a>
-          </p>
-
-          <p class="legal-note">
-            <span data-i18n="legal_note_login">By continuing, you agree to our platform terms and privacy guidelines.</span>
-          </p>
-        </form>
-
-        <form id="register-form" class="auth-form" novalidate>
-          <div class="auth-kicker">
-            <i class="ph ph-user-plus"></i>
-            <span data-i18n="create_account_small">Create your profile</span>
-          </div>
-
-          <h2 class="auth-title" data-i18n="create_account">Create new account</h2>
-          <p class="auth-subtitle" data-i18n="register_desc">Join OreBooking and start collecting loyalty points now.</p>
-
-          <div class="input-grid">
-            <div class="input-group">
-              <label for="reg-name"><span data-i18n="full_name">Full Name</span> <span class="required-star">*</span></label>
-              <div class="input-icon-wrap">
-                <i class="ph ph-user"></i>
-                <input type="text" id="reg-name" placeholder="John Doe" required autocomplete="name" />
-              </div>
-            </div>
-
-            <div class="two-cols">
-              <div class="input-group">
-                <label for="reg-email"><span data-i18n="email">Email Address</span> <span class="required-star">*</span></label>
-                <div class="input-icon-wrap">
-                  <i class="ph ph-envelope"></i>
-                  <input type="email" id="reg-email" placeholder="name@example.com" required autocomplete="email" />
-                </div>
-              </div>
-
-              <div class="input-group">
-                <label for="reg-phone"><span data-i18n="phone_optional">Phone Number (Optional)</span></label>
-                <div class="input-icon-wrap">
-                  <i class="ph ph-phone"></i>
-                  <input type="tel" id="reg-phone" placeholder="+213..." autocomplete="tel" />
-                </div>
-              </div>
-            </div>
-
-            <div class="input-group">
-              <label for="reg-password"><span data-i18n="password">Password</span> <span class="required-star">*</span></label>
-              <div class="input-icon-wrap password-field">
-                <i class="ph ph-lock"></i>
-                <input type="password" id="reg-password" placeholder="••••••••" required autocomplete="new-password" />
-                <button type="button" class="pass-toggle" data-toggle-password="reg-password" aria-label="Toggle password visibility">
-                  <i class="ph ph-eye"></i>
-                </button>
-              </div>
-
-              <div class="helper-row">
-                <span class="field-hint" data-i18n="password_hint">Use at least 8 characters with letters and numbers.</span>
-              </div>
-
-              <div class="password-strength" id="password-strength">
-                <div class="strength-bars">
-                  <div class="str-bar"></div>
-                  <div class="str-bar"></div>
-                  <div class="str-bar"></div>
-                  <div class="str-bar"></div>
-                </div>
-                <div class="strength-label" id="strength-label"></div>
-              </div>
-            </div>
-
-            <div class="input-group">
-              <label for="reg-confirm-password"><span data-i18n="confirm_password">Confirm Password</span> <span class="required-star">*</span></label>
-              <div class="input-icon-wrap password-field">
-                <i class="ph ph-password"></i>
-                <input type="password" id="reg-confirm-password" placeholder="••••••••" required autocomplete="new-password" />
-                <button type="button" class="pass-toggle" data-toggle-password="reg-confirm-password" aria-label="Toggle password visibility">
-                  <i class="ph ph-eye"></i>
-                </button>
-              </div>
-            </div>
-
-            <div class="input-group">
-              <label class="checkbox-container" style="align-items:flex-start;">
-                <input type="checkbox" id="agree-terms" />
-                <span class="checkmark"></span>
-                <span data-i18n="agree_terms">I agree to the Terms of Service and Privacy Policy.</span>
-              </label>
-            </div>
-          </div>
-
-          <button type="submit" class="primary-btn" id="register-btn" style="margin-top: 6px;">
-            <i class="ph ph-user-plus"></i>
-            <span data-i18n="sign_up_btn">Create Account</span>
-          </button>
-
-          <p class="switch-form-text">
-            <span data-i18n="has_account">Already have an account?</span>
-            <a href="#" id="go-to-login" data-i18n="sign_in">Sign In</a>
-          </p>
-
-          <p class="legal-note">
-            <span data-i18n="legal_note_register">We only use your account details to manage authentication, profile access, and booking-related services.</span>
-          </p>
-        </form>
-
-        <form id="forgot-form" class="auth-form" novalidate>
-          <div class="auth-kicker">
-            <i class="ph ph-key"></i>
-            <span data-i18n="reset_small">Password reset</span>
-          </div>
-
-          <h2 class="auth-title" data-i18n="reset_title">Reset your password</h2>
-          <p class="auth-subtitle" data-i18n="reset_desc">Enter your email address and we will send you a password reset link.</p>
-
-          <div class="input-grid">
-            <div class="input-group">
-              <label for="forgot-email"><span data-i18n="email">Email Address</span> <span class="required-star">*</span></label>
-              <div class="input-icon-wrap">
-                <i class="ph ph-envelope"></i>
-                <input type="email" id="forgot-email" placeholder="name@example.com" required autocomplete="email" />
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" class="primary-btn" id="forgot-btn">
-            <i class="ph ph-paper-plane-tilt"></i>
-            <span data-i18n="send_reset_link">Send reset link</span>
-          </button>
-
-          <p class="switch-form-text">
-            <span data-i18n="remembered_password">Remembered your password?</span>
-            <a href="#" id="back-to-login" data-i18n="sign_in">Sign In</a>
-          </p>
-        </form>
-      </div>
-    </section>
-  </main>
-
-  <script>
+  <script type="text/babel">
     const authI18n = {
       en: {
         page_title: "OreBooking - Sign In / Sign Up",
@@ -1285,6 +1019,7 @@
         stat_1: "Access to your account and reset tools whenever you need them.",
         stat_2: "Use one profile to manage bookings, rewards, and saved details.",
         mobile_brand_text: "Professional authentication experience",
+
         welcome_back_small: "Welcome back",
         create_account_small: "Create your profile",
         reset_small: "Password reset",
@@ -1321,48 +1056,49 @@
         apple: "Apple",
         reset_short: "Reset",
         lang_btn: "AR",
+
         firebase_missing: "Firebase configuration is missing. Add your project settings first.",
         invalid_email: "Please enter a valid email address.",
         invalid_name: "Please enter your full name.",
-        invalid_password: "Password must be at least 8 characters.",
-        invalid_confirm_password: "Passwords do not match.",
-        must_accept_terms: "You need to agree to the terms before creating your account.",
-        login_success: "Logged in successfully.",
-        register_success: "Account created successfully.",
-        reset_success: "Password reset link sent successfully.",
-        login_failed: "Unable to sign in. Please check your details.",
-        register_failed: "Unable to create account right now.",
-        reset_failed: "Unable to send reset email right now.",
-        google_not_ready: "Google sign-in is not available until Firebase is configured.",
-        apple_not_ready: "Apple sign-in is not enabled on this page yet.",
-        coming_soon: "Coming soon.",
-        loading: "Please wait...",
-        redirecting: "Redirecting...",
-        already_logged_in: "You are already signed in. Redirecting now.",
-        cancelled_popup: "Sign-in window was closed before completing the process."
+        invalid_password: "Password must be at least 8 characters and contain letters and numbers.",
+        password_mismatch: "Passwords do not match.",
+        terms_required: "You must agree to the terms before creating an account.",
+        login_success: "Signed in successfully. Redirecting...",
+        register_success: "Your account has been created successfully.",
+        reset_success: "Password reset email sent successfully.",
+        social_success: "Signed in successfully.",
+        apple_unavailable: "Apple sign-in is not connected yet.",
+        generic_error: "Something went wrong. Please try again.",
+        loading_login: "Signing in...",
+        loading_register: "Creating account...",
+        loading_reset: "Sending link...",
+        loading_google: "Connecting Google...",
+        back_home: "OreBooking Home"
       },
+
       ar: {
         page_title: "OreBooking - تسجيل الدخول / إنشاء حساب",
-        brand_microcopy: "إقامات ذكية وحجوزات سلسة وحساب أنيق واحد لكل شيء.",
-        brand_pill: "وصول آمن إلى حجوزاتك ومكافآتك",
-        brand_title: "إقامتك القادمة تبدأ من حساب واحد آمن ومنظم.",
-        brand_text: "سجّل الدخول لإدارة حجوزاتك، متابعة سجل الإقامات، حفظ المفضلة، والاستمتاع بتجربة أسرع في كل زيارة.",
+        brand_microcopy: "إقامات ذكية، حجوزات سلسة، وحساب واحد أنيق لكل شيء.",
+        brand_pill: "دخول آمن لحجوزاتك ومكافآتك",
+        brand_title: "إقامتك القادمة تبدأ بحساب واحد آمن وواضح.",
+        brand_text: "سجّل الدخول لإدارة الحجوزات، متابعة سجل الإقامات، حفظ المفضلة، والاستمتاع بتجربة أسرع في كل مرة تعود فيها.",
         feature_1_title: "الوصول إلى الحجوزات",
-        feature_1_text: "راجع حجوزاتك وتفاصيل رحلتك وكل التحديثات المهمة من مكان واحد.",
+        feature_1_text: "راجع حجوزاتك، وتحقق من تفاصيل الرحلة المهمة، وابقَ على اطلاع من مكان واحد.",
         feature_2_title: "نقاط الولاء",
-        feature_2_text: "أنشئ حسابك وابدأ بتجميع نقاط المكافآت من الحجوزات المؤهلة.",
+        feature_2_text: "أنشئ حسابًا وابدأ بجمع نقاط المكافآت من الحجوزات المؤهلة.",
         feature_3_title: "العقارات المفضلة",
-        feature_3_text: "احتفظ بالعقارات التي أعجبتك للعودة إليها لاحقًا بدون بحث متكرر.",
+        feature_3_text: "احتفظ بالعقارات التي أعجبتك للعودة إليها لاحقًا بسهولة.",
         feature_4_title: "تسجيل دخول محمي",
-        feature_4_text: "تجربة احترافية وموثوقة مبنية لمستخدمين حقيقيين وبيانات حقيقية.",
-        stat_1: "وصول إلى حسابك وأدوات الاستعادة في أي وقت تحتاجه.",
+        feature_4_text: "تجربة مصادقة احترافية وموثوقة مبنية لمستخدمين حقيقيين وبيانات حقيقية.",
+        stat_1: "إمكانية الوصول إلى حسابك وأدوات الاستعادة في أي وقت تحتاجه.",
         stat_2: "استخدم حسابًا واحدًا لإدارة الحجوزات والمكافآت والبيانات المحفوظة.",
         mobile_brand_text: "تجربة مصادقة احترافية",
+
         welcome_back_small: "مرحبًا بعودتك",
         create_account_small: "أنشئ ملفك الشخصي",
         reset_small: "استعادة كلمة المرور",
-        welcome_back: "مرحباً بعودتك!",
-        login_desc: "أدخل بياناتك للوصول إلى حسابك والاستمتاع بعروضنا الحصرية.",
+        welcome_back: "مرحبًا بعودتك!",
+        login_desc: "أدخل بياناتك للوصول إلى حسابك والاستفادة من العروض الحصرية.",
         email: "البريد الإلكتروني",
         password: "كلمة المرور",
         remember_me: "تذكرني",
@@ -1370,553 +1106,908 @@
         sign_in: "تسجيل الدخول",
         or_continue: "أو تابع باستخدام",
         no_account: "ليس لديك حساب؟",
-        sign_up: "إنشاء حساب جديد",
+        sign_up: "أنشئ حسابًا",
         create_account: "إنشاء حساب جديد",
-        register_desc: "انضم إلى OreBooking وابدأ بتجميع نقاط الولاء الآن.",
+        register_desc: "انضم إلى OreBooking وابدأ بجمع نقاط الولاء الآن.",
         full_name: "الاسم الكامل",
         phone_optional: "رقم الهاتف (اختياري)",
         sign_up_btn: "إنشاء حساب",
         has_account: "لديك حساب بالفعل؟",
-        reset_title: "إعادة تعيين كلمة المرور",
+        reset_title: "أعد تعيين كلمة المرور",
         reset_desc: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.",
-        send_reset_link: "إرسال رابط التعيين",
+        send_reset_link: "إرسال رابط الاستعادة",
         remembered_password: "تذكرت كلمة المرور؟",
         password_hint: "استخدم 8 أحرف على الأقل مع حروف وأرقام.",
         confirm_password: "تأكيد كلمة المرور",
         agree_terms: "أوافق على شروط الخدمة وسياسة الخصوصية.",
-        legal_note_login: "بمتابعة الاستخدام فأنت توافق على شروط المنصة وإرشادات الخصوصية.",
-        legal_note_register: "نستخدم بيانات حسابك فقط لإدارة تسجيل الدخول والوصول إلى الملف الشخصي والخدمات المرتبطة بالحجز.",
+        legal_note_login: "بمتابعتك، فإنك توافق على شروط المنصة وإرشادات الخصوصية.",
+        legal_note_register: "نستخدم بيانات حسابك فقط لإدارة تسجيل الدخول والوصول للملف الشخصي والخدمات المرتبطة بالحجز.",
         weak: "ضعيفة",
         fair: "مقبولة",
         good: "جيدة",
         strong: "قوية",
-        google: "Google",
-        apple: "Apple",
+        google: "جوجل",
+        apple: "آبل",
         reset_short: "استعادة",
         lang_btn: "EN",
-        firebase_missing: "إعدادات Firebase غير موجودة. أضف إعدادات مشروعك أولاً.",
+
+        firebase_missing: "إعدادات Firebase غير موجودة. أضف إعدادات مشروعك أولًا.",
         invalid_email: "يرجى إدخال بريد إلكتروني صحيح.",
         invalid_name: "يرجى إدخال الاسم الكامل.",
-        invalid_password: "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
-        invalid_confirm_password: "كلمتا المرور غير متطابقتين.",
-        must_accept_terms: "يجب الموافقة على الشروط قبل إنشاء الحساب.",
-        login_success: "تم تسجيل الدخول بنجاح.",
+        invalid_password: "يجب أن تكون كلمة المرور 8 أحرف على الأقل وتحتوي على حروف وأرقام.",
+        password_mismatch: "كلمتا المرور غير متطابقتين.",
+        terms_required: "يجب الموافقة على الشروط قبل إنشاء الحساب.",
+        login_success: "تم تسجيل الدخول بنجاح. جارٍ التحويل...",
         register_success: "تم إنشاء الحساب بنجاح.",
-        reset_success: "تم إرسال رابط إعادة التعيين بنجاح.",
-        login_failed: "تعذر تسجيل الدخول. تحقق من بياناتك.",
-        register_failed: "تعذر إنشاء الحساب حالياً.",
-        reset_failed: "تعذر إرسال بريد إعادة التعيين حالياً.",
-        google_not_ready: "تسجيل الدخول عبر Google غير متاح حتى تتم إضافة إعدادات Firebase.",
-        apple_not_ready: "تسجيل الدخول عبر Apple غير مفعّل في هذه الصفحة حالياً.",
-        coming_soon: "قريباً.",
-        loading: "يرجى الانتظار...",
-        redirecting: "جارٍ التحويل...",
-        already_logged_in: "أنت مسجل الدخول بالفعل. جارٍ تحويلك الآن.",
-        cancelled_popup: "تم إغلاق نافذة تسجيل الدخول قبل إكمال العملية."
+        reset_success: "تم إرسال رسالة استعادة كلمة المرور بنجاح.",
+        social_success: "تم تسجيل الدخول بنجاح.",
+        apple_unavailable: "تسجيل الدخول عبر آبل غير موصول بعد.",
+        generic_error: "حدث خطأ غير متوقع. حاول مرة أخرى.",
+        loading_login: "جارٍ تسجيل الدخول...",
+        loading_register: "جارٍ إنشاء الحساب...",
+        loading_reset: "جارٍ إرسال الرابط...",
+        loading_google: "جارٍ الاتصال بجوجل...",
+        back_home: "الرئيسية"
       }
     };
 
-    const state = {
-      lang: localStorage.getItem("ore_lang") || "en",
-      theme: localStorage.getItem("ore_theme") || "light",
-      authReady: false,
-      auth: null
+    const STORAGE = {
+      theme: "ore_theme",
+      lang: "ore_lang",
+      activeTab: "ore_auth_tab",
+      remember: "ore_auth_remember",
+      profilePrefix: "ore_profile_"
     };
 
-    const firebaseConfig = window.OREBOOKING_FIREBASE_CONFIG || {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    function t(key) {
-      return (authI18n[state.lang] && authI18n[state.lang][key]) || authI18n.en[key] || key;
+    function getSavedTheme() {
+      return localStorage.getItem(STORAGE.theme) || "light";
     }
 
-    function qs(id) {
-      return document.getElementById(id);
+    function getSavedLang() {
+      return localStorage.getItem(STORAGE.lang) || "en";
     }
 
-    function isFirebaseConfigured(cfg) {
-      if (!cfg || typeof cfg !== "object") return false;
-      const values = ["apiKey", "authDomain", "projectId", "appId"].map(k => String(cfg[k] || ""));
-      return values.every(v => v && !v.includes("YOUR_"));
-    }
-
-    function setTheme(theme) {
-      state.theme = theme;
-      localStorage.setItem("ore_theme", theme);
+    function applyTheme(theme) {
       document.body.classList.toggle("dark", theme === "dark");
-      document.documentElement.classList.toggle("preload-dark", theme === "dark");
-      const icon = qs("theme-toggle")?.querySelector("i");
-      if (icon) icon.className = theme === "dark" ? "ph ph-sun" : "ph ph-moon";
-      const themeMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeMeta) themeMeta.setAttribute("content", theme === "dark" ? "#081120" : "#435abf");
+      localStorage.setItem(STORAGE.theme, theme);
     }
 
-    function setLanguage(lang) {
-      state.lang = lang;
-      localStorage.setItem("ore_lang", lang);
+    function applyLang(lang, t) {
       document.documentElement.lang = lang;
       document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
-      applyTranslations();
-      updateStrengthMeter(qs("reg-password")?.value || "");
+      localStorage.setItem(STORAGE.lang, lang);
+      document.title = t.page_title;
     }
 
-    function applyTranslations() {
-      document.title = t("page_title");
-      document.querySelectorAll("[data-i18n]").forEach(el => {
-        const key = el.getAttribute("data-i18n");
-        if (key) el.textContent = t(key);
-      });
-      const langBtn = qs("lang-toggle");
-      if (langBtn) langBtn.textContent = t("lang_btn");
+    function safeFirebaseInit() {
+      try {
+        if (!window.firebase) return false;
+        if (firebase.apps && firebase.apps.length) return true;
+        if (window.firebaseConfig) {
+          firebase.initializeApp(window.firebaseConfig);
+          return true;
+        }
+        return false;
+      } catch (err) {
+        return false;
+      }
     }
 
-    function sanitizeText(value) {
-      return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    function hasAuthReady() {
+      try {
+        return !!(window.firebase && firebase.auth && firebase.apps && firebase.apps.length);
+      } catch (err) {
+        return false;
+      }
     }
 
-    function showMessage(type, text, icon = null) {
-      const box = qs("auth-message");
-      if (!box) return;
-      const iconClass = icon || (type === "success" ? "ph ph-check-circle" : type === "info" ? "ph ph-info" : "ph ph-warning-circle");
-      box.className = `auth-message ${type}`;
-      box.innerHTML = `<i class="${iconClass}"></i><span>${sanitizeText(text)}</span>`;
+    function getAuthInstance() {
+      try {
+        return hasAuthReady() ? firebase.auth() : null;
+      } catch (err) {
+        return null;
+      }
     }
 
-    function clearMessage() {
-      const box = qs("auth-message");
-      if (!box) return;
-      box.className = "auth-message";
-      box.innerHTML = "";
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
     }
 
-    function setActiveTab(formId) {
-      document.querySelectorAll(".form-tab").forEach(btn => {
-        const active = btn.dataset.formTarget === formId;
-        btn.classList.toggle("active", active);
-        btn.setAttribute("aria-selected", active ? "true" : "false");
-      });
+    function isStrongEnoughPassword(value) {
+      const password = String(value || "");
+      return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
     }
 
-    function showForm(formId) {
-      clearMessage();
-      document.querySelectorAll(".auth-form").forEach(form => {
-        form.classList.toggle("active", form.id === formId);
-      });
-      setActiveTab(formId);
-    }
-
-    function togglePass(inputId, btn) {
-      const input = qs(inputId);
-      const icon = btn?.querySelector("i");
-      if (!input || !icon) return;
-      const isPassword = input.type === "password";
-      input.type = isPassword ? "text" : "password";
-      icon.className = isPassword ? "ph ph-eye-slash" : "ph ph-eye";
-    }
-
-    function setLoading(button, loading) {
-      if (!button) return;
-      if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
-      button.disabled = !!loading;
-      button.innerHTML = loading
-        ? `<i class="ph ph-spinner-gap ph-spin"></i><span>${t("loading")}</span>`
-        : button.dataset.originalHtml;
-    }
-
-    function markInvalid(input, invalid) {
-      const wrap = input?.closest(".input-icon-wrap");
-      if (wrap) wrap.classList.toggle("invalid", !!invalid);
-    }
-
-    function clearInvalids(form) {
-      form?.querySelectorAll(".input-icon-wrap.invalid").forEach(el => el.classList.remove("invalid"));
-    }
-
-    function validEmail(email) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
-    }
-
-    function scorePassword(password) {
+    function passwordScore(value) {
+      const password = String(value || "");
       let score = 0;
       if (password.length >= 8) score++;
-      if (/[A-Z]/.test(password) || /[a-z]/.test(password)) score++;
-      if (/\d/.test(password)) score++;
+      if (/[A-Za-z]/.test(password) && /\d/.test(password)) score++;
+      if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
       if (/[^A-Za-z0-9]/.test(password) || password.length >= 12) score++;
-      return Math.min(score, 4);
+      return Math.max(0, Math.min(4, score));
     }
 
-    function updateStrengthMeter(password) {
-      const wrapper = qs("password-strength");
-      const label = qs("strength-label");
-      if (!wrapper || !label) return;
-
-      const bars = wrapper.querySelectorAll(".str-bar");
-      if (!password) {
-        wrapper.classList.remove("active");
-        bars.forEach(bar => bar.style.background = "var(--border)");
-        label.textContent = "";
-        return;
-      }
-
-      wrapper.classList.add("active");
-      const score = scorePassword(password);
-      const colors = ["#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
-      const textMap = ["weak", "fair", "good", "strong"];
-
-      bars.forEach((bar, index) => {
-        bar.style.background = index < score ? colors[Math.min(score - 1, colors.length - 1)] : "var(--border)";
-      });
-
-      label.textContent = t(textMap[Math.max(score - 1, 0)]);
-    }
-
-    function initFirebase() {
-      try {
-        if (!isFirebaseConfigured(firebaseConfig)) {
-          state.authReady = false;
-          state.auth = null;
-          return;
-        }
-
-        if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-        }
-
-        state.auth = firebase.auth();
-        state.authReady = true;
-      } catch (_) {
-        state.authReady = false;
-        state.auth = null;
-      }
-    }
-
-    function getErrorMessage(error, fallbackKey) {
-      const code = error?.code || "";
+    function humanFirebaseError(code, t) {
       const map = {
-        "auth/invalid-email": t("invalid_email"),
-        "auth/user-not-found": t("login_failed"),
-        "auth/wrong-password": t("login_failed"),
-        "auth/invalid-credential": t("login_failed"),
-        "auth/email-already-in-use": state.lang === "ar" ? "هذا البريد مستخدم بالفعل." : "This email is already in use.",
-        "auth/weak-password": t("invalid_password"),
-        "auth/popup-closed-by-user": t("cancelled_popup"),
-        "auth/cancelled-popup-request": t("cancelled_popup"),
-        "auth/too-many-requests": state.lang === "ar" ? "تمت محاولات كثيرة. حاول لاحقاً." : "Too many attempts. Please try again later.",
-        "auth/network-request-failed": state.lang === "ar" ? "تعذر الاتصال بالشبكة. تحقق من الإنترنت ثم أعد المحاولة." : "Network request failed. Please check your connection and try again."
+        "auth/invalid-email": t.invalid_email,
+        "auth/missing-email": t.invalid_email,
+        "auth/user-not-found": t.invalid_email,
+        "auth/wrong-password": t.generic_error,
+        "auth/invalid-credential": t.generic_error,
+        "auth/email-already-in-use": "This email is already in use.",
+        "auth/weak-password": t.invalid_password,
+        "auth/too-many-requests": "Too many attempts. Please try again later.",
+        "auth/popup-closed-by-user": "Popup was closed before completing sign-in.",
+        "auth/network-request-failed": "Network error. Check your connection and try again."
       };
-      return map[code] || t(fallbackKey);
+
+      const arMap = {
+        "This email is already in use.": "هذا البريد مستخدم بالفعل.",
+        "Too many attempts. Please try again later.": "عدد المحاولات كبير جدًا. حاول لاحقًا.",
+        "Popup was closed before completing sign-in.": "تم إغلاق النافذة قبل إكمال تسجيل الدخول.",
+        "Network error. Check your connection and try again.": "خطأ في الشبكة. تحقق من الاتصال وحاول مرة أخرى."
+      };
+
+      const message = map[code] || t.generic_error;
+      return getSavedLang() === "ar" && arMap[message] ? arMap[message] : message;
     }
 
     function getRedirectUrl() {
-      const params = new URLSearchParams(location.search);
-      const redirect = params.get("redirect") || params.get("returnUrl") || "index.html";
-      try {
-        const url = new URL(redirect, window.location.origin);
-        if (url.origin !== window.location.origin) return "index.html";
-        return url.pathname + url.search + url.hash;
-      } catch (_) {
-        return "index.html";
-      }
+      const params = new URLSearchParams(window.location.search);
+      return params.get("redirect") || "index.html";
     }
 
-    function redirectAfterAuth(delay = 700) {
-      showMessage("success", t("redirecting"), "ph ph-arrow-right");
-      setTimeout(() => {
-        window.location.href = getRedirectUrl();
-      }, delay);
+    function saveProfile(email, data) {
+      if (!email) return;
+      try {
+        localStorage.setItem(STORAGE.profilePrefix + email.toLowerCase(), JSON.stringify(data || {}));
+      } catch (err) {}
     }
 
-    async function handleLogin(event) {
-      event.preventDefault();
-      clearMessage();
-
-      const form = event.currentTarget;
-      clearInvalids(form);
-
-      const email = qs("login-email").value.trim();
-      const password = qs("login-password").value;
-      const btn = qs("login-btn");
-
-      let ok = true;
-
-      if (!validEmail(email)) {
-        markInvalid(qs("login-email"), true);
-        ok = false;
-      }
-
-      if (!password || password.length < 8) {
-        markInvalid(qs("login-password"), true);
-        ok = false;
-      }
-
-      if (!ok) {
-        showMessage("error", !validEmail(email) ? t("invalid_email") : t("invalid_password"));
-        return;
-      }
-
-      if (!state.authReady || !state.auth) {
-        showMessage("info", t("firebase_missing"));
-        return;
-      }
-
-      try {
-        setLoading(btn, true);
-
-        const persistence = qs("remember-me")?.checked
-          ? firebase.auth.Auth.Persistence.LOCAL
-          : firebase.auth.Auth.Persistence.SESSION;
-
-        await state.auth.setPersistence(persistence);
-        await state.auth.signInWithEmailAndPassword(email, password);
-        showMessage("success", t("login_success"));
-        redirectAfterAuth(850);
-      } catch (error) {
-        showMessage("error", getErrorMessage(error, "login_failed"));
-      } finally {
-        setLoading(btn, false);
-      }
+    function getGoogleIcon() {
+      return "https://www.svgrepo.com/show/475656/google-color.svg";
     }
 
-    async function handleRegister(event) {
-      event.preventDefault();
-      clearMessage();
+    function App() {
+      const [lang, setLang] = React.useState(getSavedLang());
+      const [theme, setTheme] = React.useState(getSavedTheme());
+      const [tab, setTab] = React.useState(localStorage.getItem(STORAGE.activeTab) || "login");
+      const [message, setMessage] = React.useState(null);
+      const [loading, setLoading] = React.useState({
+        login: false,
+        register: false,
+        forgot: false,
+        google: false
+      });
 
-      const form = event.currentTarget;
-      clearInvalids(form);
+      const [showPass, setShowPass] = React.useState({
+        login: false,
+        reg: false,
+        confirm: false
+      });
 
-      const name = qs("reg-name").value.trim();
-      const email = qs("reg-email").value.trim();
-      const phone = qs("reg-phone").value.trim();
-      const password = qs("reg-password").value;
-      const confirmPassword = qs("reg-confirm-password").value;
-      const agreed = qs("agree-terms").checked;
-      const btn = qs("register-btn");
+      const [loginForm, setLoginForm] = React.useState({
+        email: "",
+        password: "",
+        remember: localStorage.getItem(STORAGE.remember) !== "0"
+      });
 
-      let ok = true;
+      const [registerForm, setRegisterForm] = React.useState({
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+        agreeTerms: false
+      });
 
-      if (name.length < 3) {
-        markInvalid(qs("reg-name"), true);
-        ok = false;
+      const [forgotForm, setForgotForm] = React.useState({
+        email: ""
+      });
+
+      const t = authI18n[lang] || authI18n.en;
+      const strength = passwordScore(registerForm.password);
+
+      React.useEffect(() => {
+        safeFirebaseInit();
+      }, []);
+
+      React.useEffect(() => {
+        applyTheme(theme);
+      }, [theme]);
+
+      React.useEffect(() => {
+        applyLang(lang, t);
+      }, [lang]);
+
+      React.useEffect(() => {
+        localStorage.setItem(STORAGE.activeTab, tab);
+      }, [tab]);
+
+      React.useEffect(() => {
+        localStorage.setItem(STORAGE.remember, loginForm.remember ? "1" : "0");
+      }, [loginForm.remember]);
+
+      function openTab(nextTab) {
+        setTab(nextTab);
+        setMessage(null);
       }
 
-      if (!validEmail(email)) {
-        markInvalid(qs("reg-email"), true);
-        ok = false;
+      function flash(type, text) {
+        setMessage({ type, text });
       }
 
-      if (!password || password.length < 8) {
-        markInvalid(qs("reg-password"), true);
-        ok = false;
+      function toggleTheme() {
+        setTheme(prev => prev === "dark" ? "light" : "dark");
       }
 
-      if (password !== confirmPassword || !confirmPassword) {
-        markInvalid(qs("reg-confirm-password"), true);
-        ok = false;
+      function toggleLang() {
+        setLang(prev => prev === "ar" ? "en" : "ar");
       }
 
-      if (!ok) {
-        if (name.length < 3) showMessage("error", t("invalid_name"));
-        else if (!validEmail(email)) showMessage("error", t("invalid_email"));
-        else if (!password || password.length < 8) showMessage("error", t("invalid_password"));
-        else showMessage("error", t("invalid_confirm_password"));
-        return;
+      function updateLogin(field, value) {
+        setLoginForm(prev => ({ ...prev, [field]: value }));
       }
 
-      if (!agreed) {
-        showMessage("error", t("must_accept_terms"));
-        return;
+      function updateRegister(field, value) {
+        setRegisterForm(prev => ({ ...prev, [field]: value }));
       }
 
-      if (!state.authReady || !state.auth) {
-        showMessage("info", t("firebase_missing"));
-        return;
+      function updateForgot(field, value) {
+        setForgotForm(prev => ({ ...prev, [field]: value }));
       }
 
-      try {
-        setLoading(btn, true);
+      function togglePassword(fieldKey) {
+        setShowPass(prev => ({ ...prev, [fieldKey]: !prev[fieldKey] }));
+      }
 
-        const cred = await state.auth.createUserWithEmailAndPassword(email, password);
+      async function handleLogin(event) {
+        event.preventDefault();
+        setMessage(null);
 
-        if (cred.user) {
-          await cred.user.updateProfile({
-            displayName: name,
-            phoneNumber: phone || null
-          }).catch(() => {});
+        if (!isValidEmail(loginForm.email)) {
+          return flash("error", t.invalid_email);
         }
 
-        showMessage("success", t("register_success"));
-        redirectAfterAuth(950);
-      } catch (error) {
-        showMessage("error", getErrorMessage(error, "register_failed"));
-      } finally {
-        setLoading(btn, false);
-      }
-    }
+        if (!loginForm.password) {
+          return flash("error", t.invalid_password);
+        }
 
-    async function handleForgot(event) {
-      event.preventDefault();
-      clearMessage();
+        if (!safeFirebaseInit() || !hasAuthReady()) {
+          return flash("error", t.firebase_missing);
+        }
 
-      const form = event.currentTarget;
-      clearInvalids(form);
+        setLoading(prev => ({ ...prev, login: true }));
 
-      const email = qs("forgot-email").value.trim();
-      const btn = qs("forgot-btn");
+        try {
+          const auth = getAuthInstance();
+          const persistence = loginForm.remember
+            ? firebase.auth.Auth.Persistence.LOCAL
+            : firebase.auth.Auth.Persistence.SESSION;
 
-      if (!validEmail(email)) {
-        markInvalid(qs("forgot-email"), true);
-        showMessage("error", t("invalid_email"));
-        return;
-      }
+          await auth.setPersistence(persistence);
+          await auth.signInWithEmailAndPassword(loginForm.email.trim(), loginForm.password);
+          flash("success", t.login_success);
 
-      if (!state.authReady || !state.auth) {
-        showMessage("info", t("firebase_missing"));
-        return;
-      }
-
-      try {
-        setLoading(btn, true);
-        await state.auth.sendPasswordResetEmail(email);
-        showMessage("success", t("reset_success"));
-      } catch (error) {
-        showMessage("error", getErrorMessage(error, "reset_failed"));
-      } finally {
-        setLoading(btn, false);
-      }
-    }
-
-    async function handleGoogleLogin() {
-      clearMessage();
-
-      if (!state.authReady || !state.auth) {
-        showMessage("info", t("google_not_ready"));
-        return;
+          setTimeout(() => {
+            window.location.href = getRedirectUrl();
+          }, 900);
+        } catch (err) {
+          flash("error", humanFirebaseError(err.code, t));
+        } finally {
+          setLoading(prev => ({ ...prev, login: false }));
+        }
       }
 
-      const googleBtn = qs("google-btn");
+      async function handleRegister(event) {
+        event.preventDefault();
+        setMessage(null);
 
-      try {
-        setLoading(googleBtn, true);
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        await state.auth.signInWithPopup(provider);
-        showMessage("success", t("login_success"));
-        redirectAfterAuth(700);
-      } catch (error) {
-        showMessage("error", getErrorMessage(error, "login_failed"));
-      } finally {
-        setLoading(googleBtn, false);
-      }
-    }
+        if (!registerForm.name.trim()) {
+          return flash("error", t.invalid_name);
+        }
 
-    function bindTabButtons() {
-      document.querySelectorAll(".form-tab").forEach(btn => {
-        btn.addEventListener("click", () => {
-          showForm(btn.dataset.formTarget);
-        });
-      });
-    }
+        if (!isValidEmail(registerForm.email)) {
+          return flash("error", t.invalid_email);
+        }
 
-    function bindEvents() {
-      qs("theme-toggle")?.addEventListener("click", () => {
-        setTheme(state.theme === "dark" ? "light" : "dark");
-      });
+        if (!isStrongEnoughPassword(registerForm.password)) {
+          return flash("error", t.invalid_password);
+        }
 
-      qs("lang-toggle")?.addEventListener("click", () => {
-        setLanguage(state.lang === "en" ? "ar" : "en");
-      });
+        if (registerForm.password !== registerForm.confirmPassword) {
+          return flash("error", t.password_mismatch);
+        }
 
-      bindTabButtons();
+        if (!registerForm.agreeTerms) {
+          return flash("error", t.terms_required);
+        }
 
-      qs("go-to-register")?.addEventListener("click", e => {
-        e.preventDefault();
-        showForm("register-form");
-      });
+        if (!safeFirebaseInit() || !hasAuthReady()) {
+          return flash("error", t.firebase_missing);
+        }
 
-      qs("go-to-login")?.addEventListener("click", e => {
-        e.preventDefault();
-        showForm("login-form");
-      });
+        setLoading(prev => ({ ...prev, register: true }));
 
-      qs("go-to-forgot")?.addEventListener("click", e => {
-        e.preventDefault();
-        showForm("forgot-form");
-      });
+        try {
+          const auth = getAuthInstance();
+          const cred = await auth.createUserWithEmailAndPassword(registerForm.email.trim(), registerForm.password);
 
-      qs("back-to-login")?.addEventListener("click", e => {
-        e.preventDefault();
-        showForm("login-form");
-      });
-
-      document.querySelectorAll("[data-toggle-password]").forEach(btn => {
-        btn.addEventListener("click", () => togglePass(btn.dataset.togglePassword, btn));
-      });
-
-      qs("login-form")?.addEventListener("submit", handleLogin);
-      qs("register-form")?.addEventListener("submit", handleRegister);
-      qs("forgot-form")?.addEventListener("submit", handleForgot);
-
-      qs("google-btn")?.addEventListener("click", handleGoogleLogin);
-      qs("apple-btn")?.addEventListener("click", () => showMessage("info", t("apple_not_ready")));
-
-      qs("reg-password")?.addEventListener("input", e => {
-        markInvalid(e.target, false);
-        updateStrengthMeter(e.target.value);
-      });
-
-      [
-        "login-email",
-        "login-password",
-        "reg-name",
-        "reg-email",
-        "reg-phone",
-        "reg-password",
-        "reg-confirm-password",
-        "forgot-email"
-      ].forEach(id => {
-        qs(id)?.addEventListener("input", e => markInvalid(e.target, false));
-      });
-    }
-
-    function watchAuthState() {
-      if (!state.authReady || !state.auth) return;
-      state.auth.onAuthStateChanged(user => {
-        if (user) {
-          const params = new URLSearchParams(location.search);
-          const forceAuthPage = params.get("stay") === "1";
-          if (!forceAuthPage) {
-            showMessage("info", t("already_logged_in"));
-            setTimeout(() => {
-              window.location.href = getRedirectUrl();
-            }, 650);
+          if (cred.user && registerForm.name.trim()) {
+            await cred.user.updateProfile({ displayName: registerForm.name.trim() });
           }
+
+          saveProfile(registerForm.email, {
+            name: registerForm.name.trim(),
+            phone: registerForm.phone.trim(),
+            email: registerForm.email.trim()
+          });
+
+          flash("success", t.register_success);
+          setLoginForm(prev => ({
+            ...prev,
+            email: registerForm.email.trim(),
+            password: ""
+          }));
+
+          setRegisterForm({
+            name: "",
+            email: "",
+            phone: "",
+            password: "",
+            confirmPassword: "",
+            agreeTerms: false
+          });
+
+          setTimeout(() => {
+            openTab("login");
+          }, 700);
+        } catch (err) {
+          flash("error", humanFirebaseError(err.code, t));
+        } finally {
+          setLoading(prev => ({ ...prev, register: false }));
         }
-      });
-    }
-
-    function init() {
-      document.body.classList.toggle("dark", state.theme === "dark");
-      setTheme(state.theme);
-      setLanguage(state.lang);
-      initFirebase();
-      bindEvents();
-      watchAuthState();
-
-      if (!state.authReady) {
-        showMessage("info", t("firebase_missing"));
       }
+
+      async function handleForgot(event) {
+        event.preventDefault();
+        setMessage(null);
+
+        if (!isValidEmail(forgotForm.email)) {
+          return flash("error", t.invalid_email);
+        }
+
+        if (!safeFirebaseInit() || !hasAuthReady()) {
+          return flash("error", t.firebase_missing);
+        }
+
+        setLoading(prev => ({ ...prev, forgot: true }));
+
+        try {
+          const auth = getAuthInstance();
+          await auth.sendPasswordResetEmail(forgotForm.email.trim());
+          flash("success", t.reset_success);
+        } catch (err) {
+          flash("error", humanFirebaseError(err.code, t));
+        } finally {
+          setLoading(prev => ({ ...prev, forgot: false }));
+        }
+      }
+
+      async function handleGoogle() {
+        setMessage(null);
+
+        if (!safeFirebaseInit() || !hasAuthReady()) {
+          return flash("error", t.firebase_missing);
+        }
+
+        setLoading(prev => ({ ...prev, google: true }));
+
+        try {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: "select_account" });
+          const auth = getAuthInstance();
+          const result = await auth.signInWithPopup(provider);
+
+          const user = result.user;
+          if (user) {
+            saveProfile(user.email, {
+              name: user.displayName || "",
+              email: user.email || "",
+              phone: user.phoneNumber || ""
+            });
+          }
+
+          flash("success", t.social_success);
+          setTimeout(() => {
+            window.location.href = getRedirectUrl();
+          }, 800);
+        } catch (err) {
+          flash("error", humanFirebaseError(err.code, t));
+        } finally {
+          setLoading(prev => ({ ...prev, google: false }));
+        }
+      }
+
+      function handleApple() {
+        flash("info", t.apple_unavailable);
+      }
+
+      function renderStrengthLabel() {
+        if (!registerForm.password) return "";
+        if (strength <= 1) return t.weak;
+        if (strength === 2) return t.fair;
+        if (strength === 3) return t.good;
+        return t.strong;
+      }
+
+      function strengthClass(index) {
+        if (index >= strength) return "";
+        if (strength <= 1) return "filled weak";
+        if (strength === 2) return "filled fair";
+        if (strength === 3) return "filled good";
+        return "filled strong";
+      }
+
+      return (
+        <main className="auth-shell" aria-label="OreBooking Authentication">
+          <section className="auth-brand-panel" aria-hidden="false">
+            <div className="brand-top">
+              <a href="index.html" className="brand-logo-link" aria-label={t.back_home}>
+                <div className="brand-logo-badge">
+                  <i className="ph-fill ph-buildings"></i>
+                </div>
+                <div className="brand-logo-copy">
+                  <strong>OreBooking</strong>
+                  <span>{t.brand_microcopy}</span>
+                </div>
+              </a>
+
+              <div className="auth-controls">
+                <button
+                  id="theme-toggle"
+                  className="icon-btn"
+                  type="button"
+                  aria-label="Toggle Theme"
+                  onClick={toggleTheme}
+                >
+                  <i className={theme === "dark" ? "ph ph-sun" : "ph ph-moon"}></i>
+                </button>
+
+                <button
+                  id="lang-toggle"
+                  className="lang-btn"
+                  type="button"
+                  onClick={toggleLang}
+                >
+                  {t.lang_btn}
+                </button>
+              </div>
+            </div>
+
+            <div className="brand-middle">
+              <div className="brand-pill">
+                <i className="ph-fill ph-shield-check"></i>
+                <span>{t.brand_pill}</span>
+              </div>
+
+              <h1 className="brand-title">{t.brand_title}</h1>
+              <p className="brand-text">{t.brand_text}</p>
+
+              <div className="brand-feature-grid">
+                <div className="brand-feature">
+                  <i className="ph ph-calendar-check"></i>
+                  <strong>{t.feature_1_title}</strong>
+                  <p>{t.feature_1_text}</p>
+                </div>
+
+                <div className="brand-feature">
+                  <i className="ph ph-gift"></i>
+                  <strong>{t.feature_2_title}</strong>
+                  <p>{t.feature_2_text}</p>
+                </div>
+
+                <div className="brand-feature">
+                  <i className="ph ph-heart-straight"></i>
+                  <strong>{t.feature_3_title}</strong>
+                  <p>{t.feature_3_text}</p>
+                </div>
+
+                <div className="brand-feature">
+                  <i className="ph ph-lock-key"></i>
+                  <strong>{t.feature_4_title}</strong>
+                  <p>{t.feature_4_text}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="brand-bottom">
+              <div className="brand-stat-row">
+                <div className="brand-stat">
+                  <strong>24/7</strong>
+                  <span>{t.stat_1}</span>
+                </div>
+                <div className="brand-stat">
+                  <strong>{lang === "ar" ? "حساب واحد" : "1 Account"}</strong>
+                  <span>{t.stat_2}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="auth-panel">
+            <div className="auth-panel-inner">
+              <a href="index.html" className="mobile-brand-link" aria-label={t.back_home}>
+                <div className="badge"><i className="ph-fill ph-buildings"></i></div>
+                <div>
+                  <strong>OreBooking</strong>
+                  <span>{t.mobile_brand_text}</span>
+                </div>
+              </a>
+
+              <div className="form-tabs" role="tablist" aria-label="Authentication forms">
+                <button
+                  type="button"
+                  className={`form-tab ${tab === "login" ? "active" : ""}`}
+                  role="tab"
+                  aria-selected={tab === "login"}
+                  onClick={() => openTab("login")}
+                >
+                  {t.sign_in}
+                </button>
+
+                <button
+                  type="button"
+                  className={`form-tab ${tab === "register" ? "active" : ""}`}
+                  role="tab"
+                  aria-selected={tab === "register"}
+                  onClick={() => openTab("register")}
+                >
+                  {t.sign_up_btn}
+                </button>
+
+                <button
+                  type="button"
+                  className={`form-tab ${tab === "forgot" ? "active" : ""}`}
+                  role="tab"
+                  aria-selected={tab === "forgot"}
+                  onClick={() => openTab("forgot")}
+                >
+                  {t.reset_short}
+                </button>
+              </div>
+
+              {message && (
+                <div className={`auth-message ${message.type}`} role="alert" aria-live="polite">
+                  <i className={
+                    message.type === "success"
+                      ? "ph ph-check-circle"
+                      : message.type === "info"
+                      ? "ph ph-info"
+                      : "ph ph-warning-circle"
+                  }></i>
+                  <span>{message.text}</span>
+                </div>
+              )}
+
+              {tab === "login" && (
+                <form className="auth-form" onSubmit={handleLogin} noValidate>
+                  <div className="auth-kicker">
+                    <i className="ph ph-sign-in"></i>
+                    <span>{t.welcome_back_small}</span>
+                  </div>
+
+                  <h2 className="auth-title">{t.welcome_back}</h2>
+                  <p className="auth-subtitle">{t.login_desc}</p>
+
+                  <div className="input-grid">
+                    <div className="input-group">
+                      <label htmlFor="login-email">
+                        <span>{t.email}</span>
+                        <span className="required-star">*</span>
+                      </label>
+                      <div className="input-icon-wrap">
+                        <i className="ph ph-envelope"></i>
+                        <input
+                          type="email"
+                          id="login-email"
+                          placeholder="name@example.com"
+                          required
+                          autoComplete="email"
+                          value={loginForm.email}
+                          onChange={(e) => updateLogin("email", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label htmlFor="login-password">
+                        <span>{t.password}</span>
+                        <span className="required-star">*</span>
+                      </label>
+                      <div className="input-icon-wrap password-field">
+                        <i className="ph ph-lock"></i>
+                        <input
+                          type={showPass.login ? "text" : "password"}
+                          id="login-password"
+                          placeholder="••••••••"
+                          required
+                          autoComplete="current-password"
+                          value={loginForm.password}
+                          onChange={(e) => updateLogin("password", e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="pass-toggle"
+                          aria-label="Toggle password visibility"
+                          onClick={() => togglePassword("login")}
+                        >
+                          <i className={showPass.login ? "ph ph-eye-slash" : "ph ph-eye"}></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="auth-options">
+                    <label className="checkbox-container">
+                      <input
+                        type="checkbox"
+                        checked={loginForm.remember}
+                        onChange={(e) => updateLogin("remember", e.target.checked)}
+                      />
+                      <span className="checkmark"></span>
+                      <span>{t.remember_me}</span>
+                    </label>
+
+                    <button type="button" className="forgot-link" onClick={() => openTab("forgot")}>
+                      {t.forgot_pass}
+                    </button>
+                  </div>
+
+                  <button type="submit" className="primary-btn" disabled={loading.login}>
+                    <i className={loading.login ? "ph ph-spinner-gap ph-spin" : "ph ph-sign-in"}></i>
+                    <span>{loading.login ? t.loading_login : t.sign_in}</span>
+                  </button>
+
+                  <div className="auth-divider">
+                    <span>{t.or_continue}</span>
+                  </div>
+
+                  <div className="social-logins">
+                    <button type="button" className="social-btn" onClick={handleGoogle} disabled={loading.google}>
+                      <img src={getGoogleIcon()} width="20" height="20" alt="Google" />
+                      <span>{loading.google ? t.loading_google : t.google}</span>
+                    </button>
+
+                    <button type="button" className="social-btn" onClick={handleApple}>
+                      <i className="ph-fill ph-apple-logo"></i>
+                      <span>{t.apple}</span>
+                    </button>
+                  </div>
+
+                  <p className="switch-form-text">
+                    <span>{t.no_account}</span>
+                    <button type="button" onClick={() => openTab("register")}>{t.sign_up}</button>
+                  </p>
+
+                  <p className="legal-note">{t.legal_note_login}</p>
+                </form>
+              )}
+
+              {tab === "register" && (
+                <form className="auth-form" onSubmit={handleRegister} noValidate>
+                  <div className="auth-kicker">
+                    <i className="ph ph-user-plus"></i>
+                    <span>{t.create_account_small}</span>
+                  </div>
+
+                  <h2 className="auth-title">{t.create_account}</h2>
+                  <p className="auth-subtitle">{t.register_desc}</p>
+
+                  <div className="input-grid">
+                    <div className="input-group">
+                      <label htmlFor="reg-name">
+                        <span>{t.full_name}</span>
+                        <span className="required-star">*</span>
+                      </label>
+                      <div className="input-icon-wrap">
+                        <i className="ph ph-user"></i>
+                        <input
+                          type="text"
+                          id="reg-name"
+                          placeholder={lang === "ar" ? "الاسم الكامل" : "John Doe"}
+                          required
+                          autoComplete="name"
+                          value={registerForm.name}
+                          onChange={(e) => updateRegister("name", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="two-cols">
+                      <div className="input-group">
+                        <label htmlFor="reg-email">
+                          <span>{t.email}</span>
+                          <span className="required-star">*</span>
+                        </label>
+                        <div className="input-icon-wrap">
+                          <i className="ph ph-envelope"></i>
+                          <input
+                            type="email"
+                            id="reg-email"
+                            placeholder="name@example.com"
+                            required
+                            autoComplete="email"
+                            value={registerForm.email}
+                            onChange={(e) => updateRegister("email", e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="input-group">
+                        <label htmlFor="reg-phone">
+                          <span>{t.phone_optional}</span>
+                        </label>
+                        <div className="input-icon-wrap">
+                          <i className="ph ph-phone"></i>
+                          <input
+                            type="tel"
+                            id="reg-phone"
+                            placeholder="+213..."
+                            autoComplete="tel"
+                            value={registerForm.phone}
+                            onChange={(e) => updateRegister("phone", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label htmlFor="reg-password">
+                        <span>{t.password}</span>
+                        <span className="required-star">*</span>
+                      </label>
+                      <div className="input-icon-wrap password-field">
+                        <i className="ph ph-lock"></i>
+                        <input
+                          type={showPass.reg ? "text" : "password"}
+                          id="reg-password"
+                          placeholder="••••••••"
+                          required
+                          autoComplete="new-password"
+                          value={registerForm.password}
+                          onChange={(e) => updateRegister("password", e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="pass-toggle"
+                          aria-label="Toggle password visibility"
+                          onClick={() => togglePassword("reg")}
+                        >
+                          <i className={showPass.reg ? "ph ph-eye-slash" : "ph ph-eye"}></i>
+                        </button>
+                      </div>
+
+                      <div className="helper-row">
+                        <span className="field-hint">{t.password_hint}</span>
+                      </div>
+
+                      <div className="password-strength">
+                        <div className="strength-bars">
+                          <div className={`str-bar ${strengthClass(0)}`}></div>
+                          <div className={`str-bar ${strengthClass(1)}`}></div>
+                          <div className={`str-bar ${strengthClass(2)}`}></div>
+                          <div className={`str-bar ${strengthClass(3)}`}></div>
+                        </div>
+                        <div className="strength-label">{renderStrengthLabel()}</div>
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label htmlFor="reg-confirm-password">
+                        <span>{t.confirm_password}</span>
+                        <span className="required-star">*</span>
+                      </label>
+                      <div className="input-icon-wrap password-field">
+                        <i className="ph ph-password"></i>
+                        <input
+                          type={showPass.confirm ? "text" : "password"}
+                          id="reg-confirm-password"
+                          placeholder="••••••••"
+                          required
+                          autoComplete="new-password"
+                          value={registerForm.confirmPassword}
+                          onChange={(e) => updateRegister("confirmPassword", e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="pass-toggle"
+                          aria-label="Toggle password visibility"
+                          onClick={() => togglePassword("confirm")}
+                        >
+                          <i className={showPass.confirm ? "ph ph-eye-slash" : "ph ph-eye"}></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label className="checkbox-container" style={{ alignItems: "flex-start" }}>
+                        <input
+                          type="checkbox"
+                          checked={registerForm.agreeTerms}
+                          onChange={(e) => updateRegister("agreeTerms", e.target.checked)}
+                        />
+                        <span className="checkmark"></span>
+                        <span>{t.agree_terms}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="primary-btn" style={{ marginTop: "6px" }} disabled={loading.register}>
+                    <i className={loading.register ? "ph ph-spinner-gap ph-spin" : "ph ph-user-plus"}></i>
+                    <span>{loading.register ? t.loading_register : t.sign_up_btn}</span>
+                  </button>
+
+                  <p className="switch-form-text">
+                    <span>{t.has_account}</span>
+                    <button type="button" onClick={() => openTab("login")}>{t.sign_in}</button>
+                  </p>
+
+                  <p className="legal-note">{t.legal_note_register}</p>
+                </form>
+              )}
+
+              {tab === "forgot" && (
+                <form className="auth-form" onSubmit={handleForgot} noValidate>
+                  <div className="auth-kicker">
+                    <i className="ph ph-key"></i>
+                    <span>{t.reset_small}</span>
+                  </div>
+
+                  <h2 className="auth-title">{t.reset_title}</h2>
+                  <p className="auth-subtitle">{t.reset_desc}</p>
+
+                  <div className="input-grid">
+                    <div className="input-group">
+                      <label htmlFor="forgot-email">
+                        <span>{t.email}</span>
+                        <span className="required-star">*</span>
+                      </label>
+                      <div className="input-icon-wrap">
+                        <i className="ph ph-envelope"></i>
+                        <input
+                          type="email"
+                          id="forgot-email"
+                          placeholder="name@example.com"
+                          required
+                          autoComplete="email"
+                          value={forgotForm.email}
+                          onChange={(e) => updateForgot("email", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="primary-btn" disabled={loading.forgot}>
+                    <i className={loading.forgot ? "ph ph-spinner-gap ph-spin" : "ph ph-paper-plane-tilt"}></i>
+                    <span>{loading.forgot ? t.loading_reset : t.send_reset_link}</span>
+                  </button>
+
+                  <p className="switch-form-text">
+                    <span>{t.remembered_password}</span>
+                    <button type="button" onClick={() => openTab("login")}>{t.sign_in}</button>
+                  </p>
+                </form>
+              )}
+            </div>
+          </section>
+        </main>
+      );
     }
 
-    document.addEventListener("DOMContentLoaded", init);
+    const root = ReactDOM.createRoot(document.getElementById("auth-app"));
+    root.render(<App />);
   </script>
 </body>
 </html>
