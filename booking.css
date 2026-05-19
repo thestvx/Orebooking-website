@@ -1,7 +1,7 @@
 /* =========================================================
-   booking.css — OreBooking v12.0
-   Updated for simplified booking flow
-   Compatible with streamlined booking.html
+   booking.css — OreBooking v13.0
+   Updated for localized streamlined booking flow
+   Compatible with updated booking.html
    RTL/LTR safe + responsive + auth modal support
    ========================================================= */
 
@@ -16,19 +16,6 @@ html[dir="rtl"] .booking-page {
 html[dir="ltr"] .booking-page {
   direction: ltr;
   text-align: left;
-}
-
-html[dir="rtl"] .step-actions-between,
-html[dir="rtl"] .review-data.full-width,
-html[dir="rtl"] .summary-row,
-html[dir="rtl"] .review-card-header,
-html[dir="rtl"] .bank-row,
-html[dir="rtl"] .booking-alert,
-html[dir="rtl"] .prop-mini-card,
-html[dir="rtl"] .points-box,
-html[dir="rtl"] .checkbox-container,
-html[dir="rtl"] .auth-options {
-  flex-direction: row-reverse;
 }
 
 html[dir="rtl"] .step-header,
@@ -52,7 +39,11 @@ html[dir="rtl"] .file-upload-hint,
 html[dir="rtl"] .points-text p,
 html[dir="rtl"] .amenity-chip,
 html[dir="rtl"] .prop-mini-details h4,
-html[dir="rtl"] .prop-mini-details p {
+html[dir="rtl"] .prop-mini-details p,
+html[dir="rtl"] .rd-label,
+html[dir="rtl"] .step-title,
+html[dir="rtl"] .section-block h3,
+html[dir="rtl"] .sidebar-title {
   text-align: right;
 }
 
@@ -71,17 +62,35 @@ html[dir="ltr"] .file-upload-hint,
 html[dir="ltr"] .points-text p,
 html[dir="ltr"] .amenity-chip,
 html[dir="ltr"] .prop-mini-details h4,
-html[dir="ltr"] .prop-mini-details p {
+html[dir="ltr"] .prop-mini-details p,
+html[dir="ltr"] .rd-label,
+html[dir="ltr"] .step-title,
+html[dir="ltr"] .section-block h3,
+html[dir="ltr"] .sidebar-title {
   text-align: left;
 }
 
+html[dir="rtl"] .review-data.full-width,
+html[dir="rtl"] .summary-row,
+html[dir="rtl"] .review-card-header,
+html[dir="rtl"] .bank-row,
+html[dir="rtl"] .booking-alert,
+html[dir="rtl"] .prop-mini-card,
+html[dir="rtl"] .points-box,
+html[dir="rtl"] .checkbox-container,
+html[dir="rtl"] .auth-options {
+  flex-direction: row-reverse;
+}
+
 html[dir="rtl"] .bank-row strong,
-html[dir="rtl"] .rd-value {
+html[dir="rtl"] .rd-value,
+html[dir="rtl"] .summary-row span:last-child {
   text-align: left;
 }
 
 html[dir="ltr"] .bank-row strong,
-html[dir="ltr"] .rd-value {
+html[dir="ltr"] .rd-value,
+html[dir="ltr"] .summary-row span:last-child {
   text-align: right;
 }
 
@@ -89,6 +98,26 @@ html[dir="rtl"] .step-actions .ph-arrow-right,
 html[dir="rtl"] .step-actions .ph-arrow-left,
 html[dir="rtl"] .edit-btn .ph-pencil-simple {
   transform: scaleX(-1);
+}
+
+html[dir="rtl"] .profile-dropdown {
+  inset-inline-end: 0;
+  inset-inline-start: auto;
+}
+
+html[dir="ltr"] .profile-dropdown {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+
+html[dir="rtl"] .dropdown-item:hover {
+  padding-inline-start: 16px;
+  padding-inline-end: 22px;
+}
+
+html[dir="ltr"] .dropdown-item:hover {
+  padding-inline-start: 22px;
+  padding-inline-end: 16px;
 }
 
 /* ═══════════════════════════════════════════
@@ -104,16 +133,16 @@ html[dir="rtl"] .edit-btn .ph-pencil-simple {
   justify-content: space-between;
   gap: 14px;
   padding: 12px 20px;
-  background: rgba(255,255,255,.88);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-color, #e2e8f0);
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 body.dark .navbar,
 .dark .navbar {
-  background: rgba(15,23,42,.84);
+  background: rgba(15, 23, 42, 0.84);
 }
 
 .logo {
@@ -149,9 +178,9 @@ body.dark .navbar,
   min-height: 42px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(245,158,11,.1);
+  background: rgba(245, 158, 11, .1);
   color: #d97706;
-  border: 1px solid rgba(245,158,11,.18);
+  border: 1px solid rgba(245, 158, 11, .18);
   font-size: .85rem;
   font-weight: 800;
   white-space: nowrap;
@@ -180,11 +209,11 @@ body.dark .rewards-badge,
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   font-family: inherit;
   font-size: .92rem;
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,.05));
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, .05));
   text-decoration: none;
 }
 
@@ -225,24 +254,18 @@ body.dark .rewards-badge,
 .profile-dropdown {
   position: absolute;
   top: calc(100% + 10px);
-  inset-inline-end: 0;
   min-width: 240px;
   max-width: min(90vw, 320px);
   overflow: hidden;
   background: var(--surface-color, #fff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-xl, 1.5rem);
-  box-shadow: var(--shadow-soft, 0 10px 40px -10px rgba(0,0,0,.08));
+  box-shadow: var(--shadow-soft, 0 10px 40px -10px rgba(0, 0, 0, .08));
   opacity: 0;
   pointer-events: none;
   transform: translateY(-10px);
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   z-index: 1200;
-}
-
-html[dir="rtl"] .profile-dropdown {
-  inset-inline-start: 0;
-  inset-inline-end: auto;
 }
 
 .profile-dropdown.active {
@@ -283,47 +306,87 @@ html[dir="rtl"] .profile-dropdown {
   font-family: inherit;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .dropdown-item:hover {
   color: var(--primary, #435abf);
-  background: rgba(67,90,191,0.05);
-  padding-inline-start: 22px;
+  background: rgba(67, 90, 191, 0.05);
 }
 
 /* ═══════════════════════════════════════════
    Animations
 ═══════════════════════════════════════════ */
 @keyframes bk-fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes bk-slideUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes bk-slideSide {
-  from { opacity: 0; transform: translateX(14px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes bk-popIn {
-  from { opacity: 0; transform: scale(.97); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes bk-shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(67, 90, 191, .28); }
-  70% { box-shadow: 0 0 0 14px rgba(67, 90, 191, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(67, 90, 191, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(67, 90, 191, .28);
+  }
+
+  70% {
+    box-shadow: 0 0 0 14px rgba(67, 90, 191, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(67, 90, 191, 0);
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -343,12 +406,12 @@ html[dir="rtl"] .profile-dropdown {
 
 .booking-hero-card {
   background:
-    linear-gradient(180deg, rgba(67,90,191,0.06), rgba(67,90,191,0.015)),
+    linear-gradient(180deg, rgba(67, 90, 191, 0.06), rgba(67, 90, 191, 0.015)),
     var(--surface-color, #fff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-2xl, 2rem);
   padding: 28px;
-  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,.05));
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, .05));
   position: relative;
   overflow: hidden;
 }
@@ -356,12 +419,12 @@ html[dir="rtl"] .profile-dropdown {
 .booking-hero-card::before {
   content: "";
   position: absolute;
-  inset-inline-end: -40px;
   top: -40px;
+  inset-inline-end: -40px;
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(101,123,224,0.18), transparent 70%);
+  background: radial-gradient(circle, rgba(101, 123, 224, 0.18), transparent 70%);
   pointer-events: none;
 }
 
@@ -426,7 +489,7 @@ html[dir="ltr"] .booking-hero-card::before {
   min-width: 100px;
   flex-shrink: 0;
   opacity: .45;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .step-indicator.active,
@@ -447,14 +510,14 @@ html[dir="ltr"] .booking-hero-card::before {
   font-weight: 800;
   font-size: 0.95rem;
   position: relative;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .step-indicator.active .step-num {
   background: linear-gradient(135deg, var(--primary, #435abf), var(--accent, #657be0));
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 0 0 4px rgba(67,90,191,0.18);
+  box-shadow: 0 0 0 4px rgba(67, 90, 191, 0.18);
   animation: pulse-glow 2s infinite;
 }
 
@@ -534,7 +597,7 @@ html[dir="ltr"] .booking-hero-card::before {
   border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
 
-.step-header > div:last-child {
+.step-header>div:last-child {
   min-width: 0;
   flex: 1;
 }
@@ -544,7 +607,7 @@ html[dir="ltr"] .booking-hero-card::before {
   height: 54px;
   min-width: 54px;
   border-radius: 16px;
-  background: rgba(67,90,191,0.1);
+  background: rgba(67, 90, 191, 0.1);
   color: var(--primary, #435abf);
   display: flex;
   align-items: center;
@@ -555,7 +618,7 @@ html[dir="ltr"] .booking-hero-card::before {
 
 .dark .step-header-icon,
 body.dark .step-header-icon {
-  background: rgba(67,90,191,0.18);
+  background: rgba(67, 90, 191, 0.18);
 }
 
 .step-title {
@@ -597,27 +660,27 @@ body.dark .step-header-icon {
 }
 
 .booking-alert.error {
-  background: rgba(239,68,68,.1);
+  background: rgba(239, 68, 68, .1);
   color: var(--error, #ef4444);
-  border-color: rgba(239,68,68,.2);
+  border-color: rgba(239, 68, 68, .2);
 }
 
 .booking-alert.success {
-  background: rgba(16,185,129,.1);
+  background: rgba(16, 185, 129, .1);
   color: var(--success, #10b981);
-  border-color: rgba(16,185,129,.2);
+  border-color: rgba(16, 185, 129, .2);
 }
 
 .booking-alert.info {
-  background: rgba(14,165,233,.1);
+  background: rgba(14, 165, 233, .1);
   color: #0ea5e9;
-  border-color: rgba(14,165,233,.2);
+  border-color: rgba(14, 165, 233, .2);
 }
 
 .booking-alert.warning {
-  background: rgba(245,158,11,.1);
+  background: rgba(245, 158, 11, .1);
   color: #b45309;
-  border-color: rgba(245,158,11,.2);
+  border-color: rgba(245, 158, 11, .2);
 }
 
 #booking-global-alert {
@@ -634,13 +697,13 @@ body.dark .step-header-icon {
   padding: 22px;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg, 1rem);
-  background: linear-gradient(180deg, rgba(67,90,191,0.02), transparent);
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  background: linear-gradient(180deg, rgba(67, 90, 191, 0.02), transparent);
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .section-block:hover {
-  border-color: rgba(67,90,191,0.22);
-  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,.05));
+  border-color: rgba(67, 90, 191, 0.22);
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, .05));
 }
 
 .section-block h3 {
@@ -709,7 +772,7 @@ body.dark .step-header-icon {
   border-radius: 12px;
   font-family: inherit;
   font-size: 0.97rem;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   appearance: none;
 }
 
@@ -722,13 +785,13 @@ body.dark .step-header-icon {
   outline: none;
   background: var(--surface-color, #fff);
   border-color: var(--primary, #435abf);
-  box-shadow: 0 0 0 4px rgba(67,90,191,0.1);
+  box-shadow: 0 0 0 4px rgba(67, 90, 191, 0.1);
 }
 
 .form-control.invalid,
 .form-control[aria-invalid="true"] {
   border-color: var(--error, #ef4444);
-  box-shadow: 0 0 0 4px rgba(239,68,68,.08);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, .08);
 }
 
 textarea.form-control {
@@ -796,20 +859,20 @@ select.form-control {
   background: var(--surface-color, #fff);
   border: 1.5px solid var(--border-color, #e2e8f0);
   border-radius: 16px;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   overflow: hidden;
 }
 
 .payment-method-card:hover {
   border-color: var(--primary, #435abf);
-  background: rgba(67,90,191,0.02);
+  background: rgba(67, 90, 191, 0.02);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,.05));
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, .05));
 }
 
 .payment-method-card.selected {
   border-color: var(--primary, #435abf);
-  background: rgba(67,90,191,0.05);
+  background: rgba(67, 90, 191, 0.05);
   box-shadow: 0 0 0 1.5px var(--primary, #435abf);
 }
 
@@ -823,17 +886,17 @@ select.form-control {
   border: 2px solid var(--border-color, #e2e8f0);
   border-radius: 50%;
   background: transparent;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .payment-method-card.selected::after {
   border-color: var(--primary, #435abf);
   background: var(--primary, #435abf);
-  box-shadow: 0 0 0 4px rgba(67,90,191,.14);
+  box-shadow: 0 0 0 4px rgba(67, 90, 191, .14);
 }
 
 .payment-method-card:focus-within {
-  outline: 2px solid rgba(67,90,191,.18);
+  outline: 2px solid rgba(67, 90, 191, .18);
   outline-offset: 2px;
 }
 
@@ -917,13 +980,13 @@ select.form-control {
   background: var(--surface-color, #fff);
   border: 2px dashed var(--border-color, #e2e8f0);
   border-radius: 16px;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .file-upload-wrapper:hover,
 .file-upload-wrapper.drag-over {
   border-color: var(--primary, #435abf);
-  background: rgba(67,90,191,0.03);
+  background: rgba(67, 90, 191, 0.03);
 }
 
 .file-upload-icon {
@@ -968,13 +1031,13 @@ select.form-control {
   border: 1.5px solid var(--border-color, #e2e8f0);
   border-radius: 16px;
   overflow: hidden;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   min-width: 0;
 }
 
 .review-card:hover {
   border-color: var(--primary, #435abf);
-  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,.05));
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, .05));
 }
 
 .review-card.full-width {
@@ -988,13 +1051,13 @@ select.form-control {
   gap: 12px;
   flex-wrap: wrap;
   padding: 16px 20px;
-  background: rgba(67,90,191,0.05);
+  background: rgba(67, 90, 191, 0.05);
   border-bottom: 1.5px solid var(--border-color, #e2e8f0);
 }
 
 .dark .review-card-header,
 body.dark .review-card-header {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .review-card-header h3 {
@@ -1025,11 +1088,11 @@ body.dark .review-card-header {
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 800;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .edit-btn:hover {
-  background: rgba(67,90,191,0.1);
+  background: rgba(67, 90, 191, 0.1);
 }
 
 .review-card-body {
@@ -1080,8 +1143,8 @@ body.dark .review-card-header {
   gap: 16px;
   margin-bottom: 22px;
   padding: 16px 20px;
-  background: rgba(101,123,224,0.08);
-  border: 1px solid rgba(101,123,224,0.18);
+  background: rgba(101, 123, 224, 0.08);
+  border: 1px solid rgba(101, 123, 224, 0.18);
   border-radius: 16px;
 }
 
@@ -1116,8 +1179,8 @@ body.dark .review-card-header {
 
 .policy-agreement {
   padding: 20px;
-  background: rgba(245,158,11,0.08);
-  border: 1.5px solid rgba(245,158,11,0.2);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1.5px solid rgba(245, 158, 11, 0.2);
   border-radius: 16px;
 }
 
@@ -1142,15 +1205,15 @@ body.dark .review-card-header {
   border: 2px solid var(--text-muted, #64748b);
   border-radius: 6px;
   background: var(--surface-color, #fff);
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
-.checkbox-container input:checked ~ .checkmark {
+.checkbox-container input:checked~.checkmark {
   background: var(--primary, #435abf);
   border-color: var(--primary, #435abf);
 }
 
-.checkbox-container input:checked ~ .checkmark::after {
+.checkbox-container input:checked~.checkmark::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -1209,19 +1272,19 @@ body.dark .review-card-header {
   gap: 10px;
   white-space: nowrap;
   cursor: pointer;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .primary-btn {
   border: none;
   color: #fff;
   background: linear-gradient(135deg, var(--primary, #435abf), var(--primary-hover, #34459c));
-  box-shadow: 0 6px 16px rgba(67,90,191,0.3);
+  box-shadow: 0 6px 16px rgba(67, 90, 191, 0.3);
 }
 
 .primary-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(67,90,191,0.2);
+  box-shadow: 0 14px 28px rgba(67, 90, 191, 0.2);
 }
 
 .primary-btn:disabled,
@@ -1234,7 +1297,7 @@ body.dark .review-card-header {
 
 .primary-btn.green-btn {
   background: linear-gradient(135deg, var(--success, #10b981), #059669);
-  box-shadow: 0 6px 16px rgba(16,185,129,0.28);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
 }
 
 .ghost-btn {
@@ -1256,11 +1319,11 @@ body.dark .review-card-header {
   position: sticky;
   top: 92px;
   padding: 24px;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .booking-summary-sidebar:hover {
-  box-shadow: 0 18px 34px rgba(15,23,42,0.1);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.1);
 }
 
 .sidebar-title {
@@ -1385,12 +1448,10 @@ body.dark .review-card-header {
 
 .loading-skeleton {
   border-radius: 18px;
-  background: linear-gradient(
-    90deg,
-    rgba(148,163,184,0.16) 25%,
-    rgba(148,163,184,0.3) 37%,
-    rgba(148,163,184,0.16) 63%
-  );
+  background: linear-gradient(90deg,
+      rgba(148, 163, 184, 0.16) 25%,
+      rgba(148, 163, 184, 0.3) 37%,
+      rgba(148, 163, 184, 0.16) 63%);
   background-size: 400% 100%;
   animation: bk-shimmer 1.2s ease-in-out infinite;
 }
@@ -1447,7 +1508,7 @@ body.dark .review-card-header {
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-xl, 1.5rem);
   background: var(--surface-color, #fff);
-  box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
   transform: translateY(20px) scale(.96);
   transition: .35s cubic-bezier(.16, 1, .3, 1);
   scrollbar-width: none;
@@ -1481,7 +1542,7 @@ body.dark .review-card-header {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .close-modal-btn:hover {
@@ -1543,16 +1604,16 @@ body.dark .review-card-header {
 
 .auth-message.error {
   display: block;
-  background: rgba(239,68,68,0.1);
+  background: rgba(239, 68, 68, 0.1);
   color: var(--error, #ef4444);
-  border: 1px solid rgba(239,68,68,0.2);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .auth-message.success {
   display: block;
-  background: rgba(16,185,129,0.1);
+  background: rgba(16, 185, 129, 0.1);
   color: var(--success, #10b981);
-  border: 1px solid rgba(16,185,129,0.2);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .input-group {
@@ -1579,14 +1640,14 @@ body.dark .review-card-header {
   outline: none;
   font-family: inherit;
   font-size: 0.95rem;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
 }
 
 .input-group input:focus,
 .input-group select:focus {
   background: var(--surface-color, #fff);
   border-color: var(--primary, #435abf);
-  box-shadow: 0 0 0 4px rgba(67,90,191,0.15);
+  box-shadow: 0 0 0 4px rgba(67, 90, 191, 0.15);
 }
 
 .auth-options {
@@ -1632,17 +1693,17 @@ body.dark .review-card-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   background: var(--surface-color, #fff);
   flex-shrink: 0;
 }
 
-.auth-check input:checked ~ .auth-checkmark {
+.auth-check input:checked~.auth-checkmark {
   background-color: var(--primary, #435abf);
   border-color: var(--primary, #435abf);
 }
 
-.auth-check input:checked ~ .auth-checkmark::after {
+.auth-check input:checked~.auth-checkmark::after {
   content: '';
   width: 5px;
   height: 10px;
@@ -1672,14 +1733,14 @@ body.dark .review-card-header {
   font-weight: 700;
   color: var(--text-main, #0f172a);
   cursor: pointer;
-  transition: var(--transition, all .3s cubic-bezier(.16,1,.3,1));
+  transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   min-height: 44px;
 }
 
 .social-btn:hover {
   background-color: var(--surface-color, #fff);
   border-color: var(--primary, #435abf);
-  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,.05));
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, .05));
 }
 
 .switch-form-text {
@@ -1809,6 +1870,10 @@ body.dark .review-card-header {
     flex-direction: column-reverse;
   }
 
+  .step-actions-between {
+    justify-content: flex-start;
+  }
+
   .step-actions .ghost-btn,
   .step-actions .primary-btn {
     width: 100%;
@@ -1893,5 +1958,9 @@ body.dark .review-card-header {
   .input-group input,
   .input-group select {
     border-radius: 10px;
+  }
+
+  .profile-dropdown {
+    min-width: min(88vw, 280px);
   }
 }
