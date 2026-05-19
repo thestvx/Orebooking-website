@@ -1,7 +1,7 @@
 // =========================================
-//   booking.js — OreBooking v12.0
-//   Simplified booking flow + auth + payment
-//   Compatible with streamlined booking.html
+//   booking.js — OreBooking v13.0
+//   Full booking flow + auth + payment
+//   Compatible with current booking.html
 // =========================================
 
 "use strict";
@@ -62,7 +62,6 @@ const firebaseConfig = {
 let db = null;
 let auth = null;
 let storage = null;
-let firebaseReady = false;
 
 try {
   if (typeof firebase !== "undefined") {
@@ -72,7 +71,6 @@ try {
     if (typeof firebase.firestore === "function") db = firebase.firestore();
     if (typeof firebase.auth === "function") auth = firebase.auth();
     if (typeof firebase.storage === "function") storage = firebase.storage();
-    firebaseReady = true;
   }
 } catch (error) {
   console.error("Firebase init error:", error);
@@ -82,6 +80,9 @@ try {
 // State
 // ──────────────────────────────────────────
 let currentUser = null;
+
+const BOOKING_DRAFT_KEY = "ore_booking_draft_v3";
+const LOCAL_BOOKINGS_KEY = "ore_bookings_local_v1";
 
 const bookingState = {
   initialized: false,
@@ -98,18 +99,14 @@ const bookingState = {
   nights: 0,
 
   paymentMethod: "Bank Transfer",
-  paymentValue: "bank-transfer",
+  paymentValue: "ccp",
   paymentProofUrl: null,
   paymentProofName: "",
   paymentProofUploading: false,
 
   rewardPoints: 0,
-  bookingReference: "",
-  lastDraftSavedAt: null
+  bookingReference: ""
 };
-
-const BOOKING_DRAFT_KEY = "ore_booking_draft_v2";
-const LOCAL_BOOKINGS_KEY = "ore_bookings_local_v1";
 
 // ──────────────────────────────────────────
 // DOM Helpers
@@ -122,12 +119,12 @@ function getById(...ids) {
   return null;
 }
 
-function qsa(selector, root = document) {
-  return Array.from(root.querySelectorAll(selector));
-}
-
 function qs(selector, root = document) {
   return root.querySelector(selector);
+}
+
+function qsa(selector, root = document) {
+  return Array.from(root.querySelectorAll(selector));
 }
 
 // ──────────────────────────────────────────
@@ -162,7 +159,6 @@ const els = {
   logoutBtn: getById("logout-btn"),
   myBookingsBtn: getById("my-bookings-btn"),
   myFavoritesBtn: getById("my-favorites-btn"),
-
   userPoints: getById("user-points"),
 
   globalAlert: getById("booking-global-alert"),
@@ -174,11 +170,60 @@ const els = {
   connector2: getById("connector-2"),
   indicators: qsa(".step-indicator"),
 
-  btnNext1: getById("go-step-2", "btn-next-1"),
-  btnNext2: getById("go-step-3", "btn-next-2"),
-  btnPrev2: getById("back-step-1", "btn-prev-2"),
-  btnPrev3: getById("back-step-2", "btn-prev-3"),
-  btnConfirmBooking: getById("confirm-booking-btn", "btn-confirm-booking"),
+  btnNext1: getById("btn-next-1"),
+  btnNext2: getById("btn-next-2"),
+  btnPrev2: getById("btn-prev-2"),
+  btnPrev3: getById("btn-prev-3"),
+  btnConfirmBooking: getById("btn-confirm-booking"),
+
+  paymentCards: qsa(".payment-method-card"),
+  paymentRadios: qsa('input[name="paymentmethod"], input[name="payment-method"]'),
+  bankTransferBox: getById("ccp-details", "bank-transfer-box"),
+  cashBox: getById("cash-details", "cash-box"),
+  cardBox: getById("card-details", "card-box"),
+  paymentProof: getById("receipt-upload", "payment-proof"),
+  uploadText: getById("upload-text"),
+
+  checkInDate: getById("arrival-date", "check-in-date"),
+  checkOutDate: getById("departure-date", "check-out-date"),
+  adults: getById("guest-adults", "guest-count"),
+  children: getById("guest-children"),
+  infants: getById("guest-infants"),
+
+  agreePolicy: getById("agree-policy"),
+
+  copyIbanBtn: getById("copy-rib-btn", "copy-iban-btn"),
+  copyReferenceBtn: getById("copy-reference-btn"),
+  bankIban: getById("bank-iban"),
+  paymentReference: getById("payment-reference", "booking-reference-code"),
+
+  propMiniImg: getById("prop-mini-img", "summary-prop-img"),
+  propMiniTitle: getById("prop-mini-title", "summary-prop-title"),
+  propMiniLoc: getById("prop-mini-loc", "summary-prop-location"),
+  propMiniType: getById("prop-mini-type", "summary-prop-type"),
+
+  summaryPriceNight: getById("sb-night-price", "summary-price-night"),
+  summaryNights: getById("sb-nights-count", "summary-nights"),
+  summaryServiceFee: getById("sb-fee-amount", "summary-service-fee"),
+  summaryTaxes: getById("sb-addons-amount", "summary-taxes"),
+  summaryTotal: getById("sb-final-total", "summary-total"),
+  summaryCheckin: getById("summary-checkin"),
+  summaryCheckout: getById("summary-checkout"),
+  summaryGuests: getById("summary-guests"),
+
+  reviewGuestName: getById("rev-name", "review-guest-name"),
+  reviewGuestEmail: getById("rev-email", "review-guest-email"),
+  reviewGuestPhone: getById("rev-phone", "review-guest-phone"),
+  reviewNationalityGender: getById("rev-nationality-gender", "rev-nationality-genders"),
+  reviewStayDates: getById("rev-dates", "review-stay-dates"),
+  reviewGuests: getById("rev-guests", "review-guests"),
+  reviewPurposeArrival: getById("rev-purpose-arrival"),
+  reviewAdditionalGuests: getById("rev-additional-guests"),
+  reviewDocuments: getById("rev-documents", "review-payment-proof"),
+  reviewBillings: getById("rev-billings", "review-billing-name"),
+  reviewRoomPreferences: getById("rev-room-preferences", "review-special-notes"),
+  reviewPaymentMethod: getById("rev-payment-method", "review-payment-method"),
+  reviewPoints: getById("rev-points", "review-points"),
 
   editStep1Btns: [
     getById("btn-edit-guest"),
@@ -187,61 +232,84 @@ const els = {
   ].filter(Boolean),
   editStep2Btns: [
     getById("btn-edit-payment")
-  ].filter(Boolean),
+  ].filter(Boolean)
+};
 
-  guestName: getById("guest-name", "full-name"),
+// ──────────────────────────────────────────
+// Field Registry
+// ──────────────────────────────────────────
+const bookingFields = {
+  guestName: getById("guest-name"),
+  guestFatherName: getById("guest-father-name"),
+  guestFamilyName: getById("guest-family-name"),
+  guestGender: getById("guest-gender"),
+  guestDob: getById("guest-dob"),
+  guestNationality: getById("guest-nationality"),
+  guestOccupation: getById("guest-occupation"),
+  guestMaritalStatus: getById("guest-marital-status"),
+
   guestEmail: getById("guest-email"),
   guestPhone: getById("guest-phone"),
-  billingName: getById("billing-name", "sender-name", "cash-payer-name"),
-  specialNotes: getById("special-notes", "special-requests", "cash-payment-note"),
+  guestWhatsapp: getById("guest-whatsapp"),
+  guestAltPhone: getById("guest-alt-phone"),
+  guestAddress: getById("guest-address"),
+  guestCity: getById("guest-city"),
+  guestState: getById("guest-state"),
+  guestPostal: getById("guest-postal"),
+  guestCountry: getById("guest-country"),
 
-  checkInDate: getById("arrival-date", "check-in-date"),
-  checkOutDate: getById("departure-date", "check-out-date"),
-  guestCount: getById("guest-count", "guests-count", "adult-count", "guest-adults"),
+  guestIdType: getById("guest-id-type"),
+  guestIdNumber: getById("guest-id-number"),
+  guestIdIssuePlace: getById("guest-id-issue-place"),
+  guestIdIssueDate: getById("guest-id-issue-date"),
+  guestIdExpiry: getById("guest-id-expiry"),
+  guestIdUpload: getById("guest-id-upload"),
 
-  paymentCards: qsa(".payment-method-card"),
-  paymentRadios: qsa('input[name="payment-method"], input[name="paymentmethod"]'),
-  bankTransferBox: getById("bank-transfer-box", "ccp-details"),
-  cashBox: getById("cash-box", "cash-details"),
-  cardBox: getById("card-box", "card-details"),
+  roomType: getById("room-type"),
+  bedType: getById("bed-type"),
+  roomView: getById("room-view"),
+  floorPreference: getById("floor-preference"),
+  smokingPreference: getById("smoking-preference"),
+  quietRoom: getById("quiet-room"),
+  nearElevator: getById("near-elevator"),
+  connectedRooms: getById("connected-rooms"),
 
-  copyIbanBtn: getById("copy-iban-btn", "copy-rib-btn"),
-  copyReferenceBtn: getById("copy-reference-btn"),
-  paymentProof: getById("payment-proof", "receipt-upload"),
-  selectedFileBox: getById("selected-file-box", "receipt-selected-box"),
-  selectedFileName: getById("selected-file-name", "receipt-selected-name"),
+  guestAdults: getById("guest-adults"),
+  guestChildren: getById("guest-children"),
+  guestInfants: getById("guest-infants"),
+  stayPurpose: getById("stay-purpose"),
+  arrivalDate: getById("arrival-date"),
+  departureDate: getById("departure-date"),
+  arrivalTime: getById("arrival-time"),
+  arrivalMethod: getById("arrival-method"),
+  vehiclePlate: getById("vehicle-plate"),
+  checkinContactPerson: getById("checkin-contact-person"),
+  additionalGuests: getById("additional-guests"),
 
-  bankIban: getById("bank-iban"),
-  paymentReference: getById("booking-reference-code", "payment-reference"),
+  breakfastOption: getById("breakfast-option"),
+  airportTransfer: getById("airport-transfer"),
+  extraBed: getById("extra-bed"),
+  lateCheckout: getById("late-checkout"),
+  earlyCheckin: getById("early-checkin"),
+  housekeeping: getById("housekeeping"),
+  babyCrib: getById("baby-crib"),
+  accessibilityNeed: getById("accessibility-need"),
+  emergencyName: getById("emergency-name"),
+  emergencyPhone: getById("emergency-phone"),
+  medicalCondition: getById("medical-condition"),
+  specialRequests: getById("special-requests"),
 
-  summaryCheckin: getById("summary-checkin"),
-  summaryCheckout: getById("summary-checkout"),
-  summaryGuests: getById("summary-guests"),
-  summaryNights: getById("summary-nights", "sb-nights-count"),
+  billingName: getById("billing-name"),
+  billingNote: getById("billing-note"),
 
-  propMiniImg: getById("summary-prop-img", "prop-mini-img"),
-  propMiniTitle: getById("summary-prop-title", "prop-mini-title"),
-  propMiniLoc: getById("summary-prop-location", "prop-mini-loc"),
-  propMiniType: getById("summary-prop-type", "prop-mini-type"),
+  senderName: getById("sender-name"),
+  transferAmount: getById("transfer-amount"),
+  transferDate: getById("transfer-date"),
+  transferTime: getById("transfer-time"),
 
-  summaryPriceNight: getById("summary-price-night", "sb-night-price"),
-  summarySubtotal: getById("summary-subtotal"),
-  summaryServiceFee: getById("summary-service-fee", "sb-fee-amount"),
-  summaryTaxes: getById("summary-taxes", "sb-addons-amount"),
-  summaryTotal: getById("summary-total", "sb-final-total"),
-
-  reviewGuestName: getById("review-guest-name", "rev-name"),
-  reviewGuestEmail: getById("review-guest-email", "rev-email"),
-  reviewGuestPhone: getById("review-guest-phone", "rev-phone"),
-  reviewBillingName: getById("review-billing-name", "rev-billings", "rev-billing"),
-  reviewSpecialNotes: getById("review-special-notes", "review-special-requests", "rev-room-preferences"),
-  reviewStayDates: getById("review-stay-dates", "rev-dates"),
-  reviewGuests: getById("review-guests", "rev-guests"),
-  reviewPaymentMethod: getById("review-payment-method", "rev-payment-method"),
-  reviewPaymentProof: getById("review-payment-proof", "rev-documents"),
-  reviewPoints: getById("review-points", "rev-points"),
-
-  agreePolicy: getById("agree-policy")
+  cashPayerName: getById("cash-payer-name"),
+  cashCurrency: getById("cash-currency"),
+  cashPaymentNote: getById("cash-payment-note")
 };
 
 // ──────────────────────────────────────────
@@ -262,11 +330,11 @@ function escapeHtml(str = "") {
 }
 
 function validateEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanText(email));
 }
 
 function validatePhone(phone) {
-  const cleaned = String(phone || "").replace(/[^\d+]/g, "");
+  const cleaned = cleanText(phone).replace(/[^\d+]/g, "");
   return cleaned.length >= 8;
 }
 
@@ -324,6 +392,22 @@ function formatCurrency(value) {
     : `${amount.toLocaleString("en-US")} DZD`;
 }
 
+function getSelectedText(el, fallback = "") {
+  if (!el) return fallback;
+  if (el.tagName === "SELECT" && el.selectedOptions?.length) {
+    return cleanText(el.selectedOptions[0].textContent) || fallback;
+  }
+  return cleanText(el.value) || fallback;
+}
+
+function setText(el, value) {
+  if (el) el.textContent = value;
+}
+
+function setHtml(el, value) {
+  if (el) el.innerHTML = value;
+}
+
 function setButtonLoading(btn, loading, text = null) {
   if (!btn) return;
   if (loading) {
@@ -342,14 +426,14 @@ function showToast(message, type = "info") {
     host = document.createElement("div");
     host.id = "booking-toast-host";
     host.style.cssText = `
-      position:fixed;
-      top:18px;
-      left:18px;
-      z-index:5000;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      max-width:min(92vw,380px);
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(92vw,380px);
     `;
     document.body.appendChild(host);
   }
@@ -363,17 +447,17 @@ function showToast(message, type = "info") {
   const cfg = types[type] || types.info;
   const toast = document.createElement("div");
   toast.style.cssText = `
-    background:${cfg.bg};
-    border:1px solid ${cfg.border};
-    color:${cfg.color};
-    padding:14px 16px;
-    border-radius:16px;
-    box-shadow:0 14px 28px rgba(15,23,42,.12);
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-    font-weight:700;
-    line-height:1.6;
+    background: ${cfg.bg};
+    border: 1px solid ${cfg.border};
+    color: ${cfg.color};
+    padding: 14px 16px;
+    border-radius: 16px;
+    box-shadow: 0 14px 28px rgba(15,23,42,.12);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-weight: 700;
+    line-height: 1.6;
   `;
   toast.innerHTML = `<i class="ph ${cfg.icon}" style="font-size:1.15rem;flex-shrink:0;margin-top:2px;"></i><span>${escapeHtml(message)}</span>`;
   host.appendChild(toast);
@@ -412,6 +496,265 @@ function hideGlobalAlert() {
   els.globalAlert?.classList.add("d-none");
 }
 
+function getFallbackText() {
+  return t("Not provided", "غير متوفر");
+}
+
+function setValueIfEmpty(el, value) {
+  if (el && !cleanText(el.value) && cleanText(value)) {
+    el.value = value;
+  }
+}
+
+function getFieldValue(id, fallback = "") {
+  return cleanText(bookingFields[id]?.value) || fallback;
+}
+
+function getFieldSelectedText(id, fallback = "") {
+  return getSelectedText(bookingFields[id], fallback);
+}
+
+// ──────────────────────────────────────────
+// Language / Theme / Direction
+// ──────────────────────────────────────────
+function updateDirection() {
+  els.html.lang = bookingState.lang;
+  els.html.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
+}
+
+function applyTheme() {
+  const isDark = bookingState.theme === "dark";
+  els.body.classList.toggle("dark", isDark);
+  els.html.style.colorScheme = isDark ? "dark" : "light";
+  const icon = els.themeToggle?.querySelector("i");
+  if (icon) {
+    icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
+  }
+}
+
+function updateLangButton() {
+  const span = els.langToggle?.querySelector("span");
+  const text = bookingState.lang === "ar" ? "EN" : "AR";
+  if (span) span.textContent = text;
+}
+
+function setTextPreservingIcon(el, text) {
+  if (!el) return;
+  const icon = Array.from(el.children).find((child) => child.tagName === "I");
+  if (!icon) {
+    el.textContent = text;
+    return;
+  }
+  const clone = icon.cloneNode(true);
+  el.innerHTML = "";
+  el.appendChild(clone);
+  el.appendChild(document.createTextNode(` ${text}`));
+}
+
+function applyTranslations() {
+  const dict = window.bookingI18n?.[bookingState.lang];
+  if (!dict) return;
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (key && dict[key] !== undefined) {
+      setTextPreservingIcon(el, dict[key]);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (key && dict[key] !== undefined) {
+      el.setAttribute("placeholder", dict[key]);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-option]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-option");
+    if (key && dict[key] !== undefined) {
+      el.textContent = dict[key];
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    if (key && dict[key] !== undefined) {
+      el.setAttribute("title", dict[key]);
+    }
+  });
+
+  if (dict.pageTitle) {
+    document.title = dict.pageTitle;
+  }
+}
+
+// ──────────────────────────────────────────
+// Auth Modal / Profile
+// ──────────────────────────────────────────
+function switchAuthForm(form) {
+  const forms = {
+    login: els.loginForm,
+    register: els.registerForm,
+    forgot: els.forgotForm
+  };
+
+  Object.entries(forms).forEach(([key, el]) => {
+    if (!el) return;
+    el.classList.toggle("active", key === form);
+  });
+}
+
+function openAuthModal(form = "login") {
+  switchAuthForm(form);
+  clearAuthMessage();
+  els.authModal?.classList.add("active");
+  document.body.classList.add("modal-open");
+}
+
+function closeAuthModal() {
+  els.authModal?.classList.remove("active");
+  document.body.classList.remove("modal-open");
+}
+
+function toggleProfileDropdown(force = null) {
+  if (!els.profileDropdown) return;
+  const active = typeof force === "boolean"
+    ? force
+    : !els.profileDropdown.classList.contains("active");
+
+  els.profileDropdown.classList.toggle("active", active);
+  els.openAuthBtn?.setAttribute("aria-expanded", active ? "true" : "false");
+}
+
+function updateAuthUI(user) {
+  currentUser = user || null;
+
+  const guestBasics = safeJsonGet("ore_guest_basics", {});
+  const name =
+    cleanText(user?.displayName) ||
+    cleanText(guestBasics?.guestName) ||
+    t("Guest User", "زائر");
+  const email =
+    cleanText(user?.email) ||
+    t("Sign in to continue", "سجل الدخول للمتابعة");
+
+  setText(els.dropdownUserName, name);
+  setText(els.dropdownUserEmail, email);
+
+  const icon = els.openAuthBtn?.querySelector("i");
+  if (icon) {
+    icon.className = user ? "ph ph-user-circle-check" : "ph ph-user";
+  }
+}
+
+function getAuthErrorMessage(error, context = "login") {
+  const code = cleanText(error?.code || "");
+  const map = {
+    "auth/invalid-email": t("Invalid email address.", "عنوان البريد الإلكتروني غير صالح."),
+    "auth/missing-password": t("Please enter your password.", "يرجى إدخال كلمة المرور."),
+    "auth/user-not-found": t("No account found with this email.", "لا يوجد حساب بهذا البريد الإلكتروني."),
+    "auth/wrong-password": t("Incorrect password.", "كلمة المرور غير صحيحة."),
+    "auth/invalid-credential": t("Incorrect login credentials.", "بيانات تسجيل الدخول غير صحيحة."),
+    "auth/email-already-in-use": t("This email is already registered.", "هذا البريد مستخدم بالفعل."),
+    "auth/weak-password": t("Password is too weak.", "كلمة المرور ضعيفة."),
+    "auth/popup-closed-by-user": t("Google sign-in popup was closed.", "تم إغلاق نافذة Google قبل الإكمال."),
+    "auth/network-request-failed": t("Network error. Check your connection.", "خطأ في الشبكة. تحقق من الاتصال.")
+  };
+
+  if (map[code]) return map[code];
+  if (context === "register") return t("Registration failed. Try another email.", "فشل التسجيل. جرّب بريدًا آخر.");
+  if (context === "forgot") return t("Failed to send reset link.", "تعذر إرسال رابط الاستعادة.");
+  if (context === "google") return t("Google sign-in failed.", "فشل تسجيل الدخول عبر Google.");
+  return t("Login failed. Please check your credentials.", "فشل تسجيل الدخول. تحقق من البيانات.");
+}
+
+async function loginWithEmail(email, password) {
+  if (!auth) {
+    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    setButtonLoading(getById("login-submit-btn"), true, t("Signing in...", "جارٍ تسجيل الدخول..."));
+    await auth.signInWithEmailAndPassword(email, password);
+    closeAuthModal();
+    showToast(t("Logged in successfully.", "تم تسجيل الدخول بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "login"), "error");
+  } finally {
+    setButtonLoading(getById("login-submit-btn"), false);
+  }
+}
+
+async function registerWithEmail(name, email, password) {
+  if (!auth) {
+    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    setButtonLoading(getById("register-submit-btn"), true, t("Creating account...", "جارٍ إنشاء الحساب..."));
+    const result = await auth.createUserWithEmailAndPassword(email, password);
+    if (result?.user && name) {
+      await result.user.updateProfile({ displayName: name });
+    }
+    closeAuthModal();
+    showToast(t("Account created successfully.", "تم إنشاء الحساب بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "register"), "error");
+  } finally {
+    setButtonLoading(getById("register-submit-btn"), false);
+  }
+}
+
+async function sendResetEmail(email) {
+  if (!auth) {
+    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    await auth.sendPasswordResetEmail(email);
+    showAuthMessage(t("Reset link sent successfully.", "تم إرسال رابط الاستعادة بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "forgot"), "error");
+  }
+}
+
+async function signInWithGoogle() {
+  if (!auth || typeof firebase === "undefined" || typeof firebase.auth?.GoogleAuthProvider !== "function") {
+    showAuthMessage(t("Google sign-in is unavailable.", "تسجيل الدخول عبر Google غير متاح."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    closeAuthModal();
+    showToast(t("Logged in with Google successfully.", "تم تسجيل الدخول عبر Google بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "google"), "error");
+  }
+}
+
+async function logoutUser() {
+  try {
+    if (auth) await auth.signOut();
+    toggleProfileDropdown(false);
+    showToast(t("Logged out successfully.", "تم تسجيل الخروج بنجاح."), "success");
+  } catch (error) {
+    console.error("Logout error:", error);
+    showToast(t("Failed to log out.", "تعذر تسجيل الخروج."), "error");
+  }
+}
+
+// ──────────────────────────────────────────
+// Property / Query Context
+// ──────────────────────────────────────────
 function resolvePropertyId() {
   const params = new URLSearchParams(window.location.search);
   const id =
@@ -419,7 +762,6 @@ function resolvePropertyId() {
     params.get("propertyId") ||
     params.get("listingId") ||
     safeGet("selectedPropertyId");
-
   return id ? String(id).trim() : null;
 }
 
@@ -439,309 +781,6 @@ function getQueryOrStorage(paramNames, storageKeys = [], fallback = "") {
   return fallback;
 }
 
-function updateDirection() {
-  els.html.lang = bookingState.lang;
-  els.html.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
-}
-
-function applyTheme() {
-  const isDark = bookingState.theme === "dark";
-  els.body.classList.toggle("dark", isDark);
-  els.html.style.colorScheme = isDark ? "dark" : "light";
-  const icon = els.themeToggle?.querySelector("i");
-  if (icon) icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
-}
-
-function updateLangButton() {
-  const span = els.langToggle?.querySelector("span");
-  const text = bookingState.lang === "ar" ? "EN" : "AR";
-  if (span) span.textContent = text;
-  else if (els.langToggle) els.langToggle.textContent = text;
-}
-
-function openAuthModal(form = "login") {
-  switchAuthForm(form);
-  clearAuthMessage();
-  els.authModal?.classList.add("active");
-  document.body.classList.add("modal-open");
-}
-
-function closeAuthModal() {
-  els.authModal?.classList.remove("active");
-  document.body.classList.remove("modal-open");
-}
-
-function switchAuthForm(form) {
-  const forms = {
-    login: els.loginForm,
-    register: els.registerForm,
-    forgot: els.forgotForm
-  };
-
-  Object.entries(forms).forEach(([key, el]) => {
-    if (!el) return;
-    el.classList.toggle("active", key === form);
-  });
-}
-
-function toggleProfileDropdown(force = null) {
-  if (!els.profileDropdown) return;
-  const active = typeof force === "boolean"
-    ? force
-    : !els.profileDropdown.classList.contains("active");
-
-  els.profileDropdown.classList.toggle("active", active);
-  els.openAuthBtn?.setAttribute("aria-expanded", active ? "true" : "false");
-}
-
-function getSelectedPaymentRadio() {
-  return document.querySelector('input[name="payment-method"]:checked, input[name="paymentmethod"]:checked');
-}
-
-function getSelectedPaymentValue() {
-  return getSelectedPaymentRadio()?.value || "bank-transfer";
-}
-
-function getPaymentMethodLabel(value) {
-  switch (value) {
-    case "cash":
-      return t("Cash on Arrival", "الدفع نقدًا عند الوصول");
-    case "card":
-      return t("Card Request", "طلب دفع بالبطاقة");
-    case "ccp":
-    case "bank":
-    case "bank-transfer":
-    default:
-      return t("Bank Transfer", "تحويل بنكي");
-  }
-}
-
-function getPaymentIconClass(value) {
-  switch (value) {
-    case "cash":
-      return "ph-money";
-    case "card":
-      return "ph-credit-card";
-    default:
-      return "ph-bank";
-  }
-}
-
-function getFallbackText() {
-  return t("Not provided", "غير متوفر");
-}
-
-function getSelectedText(el, fallback = "") {
-  if (!el) return fallback;
-  if (el.tagName === "SELECT" && el.selectedOptions?.length) {
-    return cleanText(el.selectedOptions[0].textContent) || fallback;
-  }
-  return cleanText(el.value) || fallback;
-}
-
-function setText(el, value) {
-  if (el) el.textContent = value;
-}
-
-function setHtml(el, value) {
-  if (el) el.innerHTML = value;
-}
-
-function persistGuestBasics() {
-  safeJsonSet("ore_guest_basics", {
-    guestName: cleanText(els.guestName?.value),
-    guestEmail: cleanText(els.guestEmail?.value),
-    guestPhone: cleanText(els.guestPhone?.value),
-    billingName: cleanText(els.billingName?.value)
-  });
-}
-
-function hydrateGuestBasics() {
-  const saved = safeJsonGet("ore_guest_basics", {});
-  if (els.guestName && !els.guestName.value && saved?.guestName) els.guestName.value = saved.guestName;
-  if (els.guestEmail && !els.guestEmail.value && saved?.guestEmail) els.guestEmail.value = saved.guestEmail;
-  if (els.guestPhone && !els.guestPhone.value && saved?.guestPhone) els.guestPhone.value = saved.guestPhone;
-  if (els.billingName && !els.billingName.value && saved?.billingName) els.billingName.value = saved.billingName;
-}
-
-function setValueIfEmpty(el, value) {
-  if (el && !cleanText(el.value) && cleanText(value)) {
-    el.value = value;
-  }
-}
-
-// ──────────────────────────────────────────
-// i18n
-// ──────────────────────────────────────────
-function setTextPreservingIcon(el, text) {
-  if (!el) return;
-  const icon = Array.from(el.children).find(child => child.tagName === "I");
-  if (!icon) {
-    el.textContent = text;
-    return;
-  }
-  const iconClone = icon.cloneNode(true);
-  el.innerHTML = "";
-  el.appendChild(iconClone);
-  el.appendChild(document.createTextNode(` ${text}`));
-}
-
-function applyTranslations() {
-  const dict = window.bookingI18n?.[bookingState.lang];
-  if (!dict) return;
-
-  document.querySelectorAll("[data-i18n]").forEach(el => {
-    const key = el.getAttribute("data-i18n");
-    if (key && dict[key] !== undefined) {
-      setTextPreservingIcon(el, dict[key]);
-    }
-  });
-
-  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-    const key = el.getAttribute("data-i18n-placeholder");
-    if (key && dict[key] !== undefined) {
-      el.setAttribute("placeholder", dict[key]);
-    }
-  });
-
-  document.querySelectorAll("[data-i18n-option]").forEach(el => {
-    const key = el.getAttribute("data-i18n-option");
-    if (key && dict[key] !== undefined) {
-      el.textContent = dict[key];
-    }
-  });
-
-  document.querySelectorAll("[data-i18n-title]").forEach(el => {
-    const key = el.getAttribute("data-i18n-title");
-    if (key && dict[key] !== undefined) {
-      el.setAttribute("title", dict[key]);
-    }
-  });
-
-  if (dict.pageTitle) document.title = dict.pageTitle;
-}
-
-// ──────────────────────────────────────────
-// Stay Context
-// ──────────────────────────────────────────
-function generateBookingReference() {
-  if (bookingState.bookingReference) return bookingState.bookingReference;
-  const propPart = cleanText(bookingState.propertyId || "ORE").slice(0, 6).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  bookingState.bookingReference = `ORE-${propPart}-${rand}`;
-  return bookingState.bookingReference;
-}
-
-function hydrateStayContext() {
-  bookingState.checkIn = getQueryOrStorage(
-    ["checkIn", "checkin", "arrival"],
-    ["booking_check_in", "selectedCheckIn", "ore_booking_check_in"],
-    bookingState.checkIn
-  );
-
-  bookingState.checkOut = getQueryOrStorage(
-    ["checkOut", "checkout", "departure"],
-    ["booking_check_out", "selectedCheckOut", "ore_booking_check_out"],
-    bookingState.checkOut
-  );
-
-  const guests = getQueryOrStorage(
-    ["guests", "guestCount", "adults"],
-    ["booking_guests", "selectedGuests", "booking_adults"],
-    ""
-  );
-
-  bookingState.guestCount = Math.max(1, parsePositiveInt(guests || 1, 1));
-  bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
-
-  if (els.checkInDate && bookingState.checkIn) els.checkInDate.value = bookingState.checkIn;
-  if (els.checkOutDate && bookingState.checkOut) els.checkOutDate.value = bookingState.checkOut;
-  if (els.guestCount && !els.guestCount.value) els.guestCount.value = String(bookingState.guestCount);
-}
-
-function persistStayContext() {
-  safeSet("booking_check_in", bookingState.checkIn || "");
-  safeSet("booking_check_out", bookingState.checkOut || "");
-  safeSet("booking_guests", String(bookingState.guestCount || 1));
-}
-
-function updateDateConstraints() {
-  const today = todayInputValue();
-
-  if (els.checkInDate) {
-    els.checkInDate.min = today;
-  }
-
-  if (els.checkOutDate) {
-    els.checkOutDate.min = bookingState.checkIn ? addDays(bookingState.checkIn, 1) : today;
-  }
-
-  if (bookingState.checkIn && bookingState.checkOut) {
-    const nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
-    if (nights < 1) {
-      bookingState.checkOut = "";
-      if (els.checkOutDate) els.checkOutDate.value = "";
-    }
-  }
-}
-
-function saveDraft() {
-  const draft = {
-    propertyId: bookingState.propertyId || "",
-    checkIn: cleanText(els.checkInDate?.value) || bookingState.checkIn,
-    checkOut: cleanText(els.checkOutDate?.value) || bookingState.checkOut,
-    guestCount: parsePositiveInt(els.guestCount?.value, bookingState.guestCount),
-
-    guestName: cleanText(els.guestName?.value),
-    guestEmail: cleanText(els.guestEmail?.value),
-    guestPhone: cleanText(els.guestPhone?.value),
-    billingName: cleanText(els.billingName?.value),
-    specialNotes: cleanText(els.specialNotes?.value),
-
-    paymentValue: getSelectedPaymentValue(),
-    paymentProofName: bookingState.paymentProofName || "",
-    paymentProofUrl: bookingState.paymentProofUrl || "",
-    savedAt: new Date().toISOString()
-  };
-
-  safeJsonSet(BOOKING_DRAFT_KEY, draft);
-  bookingState.lastDraftSavedAt = draft.savedAt;
-  persistGuestBasics();
-}
-
-function hydrateDraft() {
-  const draft = safeJsonGet(BOOKING_DRAFT_KEY, null);
-  if (!draft) return;
-  if (draft.propertyId && bookingState.propertyId && draft.propertyId !== bookingState.propertyId) return;
-
-  setValueIfEmpty(els.checkInDate, draft.checkIn);
-  setValueIfEmpty(els.checkOutDate, draft.checkOut);
-  setValueIfEmpty(els.guestCount, String(parsePositiveInt(draft.guestCount, 1)));
-
-  setValueIfEmpty(els.guestName, draft.guestName);
-  setValueIfEmpty(els.guestEmail, draft.guestEmail);
-  setValueIfEmpty(els.guestPhone, draft.guestPhone);
-  setValueIfEmpty(els.billingName, draft.billingName);
-  setValueIfEmpty(els.specialNotes, draft.specialNotes);
-
-  if (draft.paymentValue) {
-    const selector =
-      `input[name="payment-method"][value="${draft.paymentValue}"],` +
-      `input[name="paymentmethod"][value="${draft.paymentValue}"]`;
-    const target = qs(selector);
-    if (target) target.checked = true;
-  }
-
-  if (draft.paymentProofName) {
-    bookingState.paymentProofName = draft.paymentProofName;
-    bookingState.paymentProofUrl = draft.paymentProofUrl || null;
-    showSelectedFile(draft.paymentProofName);
-  }
-}
-
-// ──────────────────────────────────────────
-// Property Data
-// ──────────────────────────────────────────
 function buildFallbackProperty(id = null) {
   return {
     id,
@@ -846,12 +885,111 @@ function renderPropertySummary() {
 }
 
 // ──────────────────────────────────────────
-// Summary / Review
+// Stay / Payment State
 // ──────────────────────────────────────────
+function getSelectedPaymentRadio() {
+  return document.querySelector('input[name="paymentmethod"]:checked, input[name="payment-method"]:checked');
+}
+
+function getSelectedPaymentValue() {
+  return getSelectedPaymentRadio()?.value || "ccp";
+}
+
+function getPaymentMethodLabel(value) {
+  switch (value) {
+    case "cash":
+      return t("Cash on Arrival", "الدفع نقدًا عند الوصول");
+    case "card":
+      return t("Card Request", "طلب دفع بالبطاقة");
+    case "ccp":
+    case "bank":
+    case "bank-transfer":
+    default:
+      return t("Bank Transfer", "تحويل بنكي");
+  }
+}
+
+function getPaymentIconClass(value) {
+  switch (value) {
+    case "cash":
+      return "ph-money";
+    case "card":
+      return "ph-credit-card";
+    default:
+      return "ph-bank";
+  }
+}
+
+function hydrateStayContext() {
+  bookingState.checkIn = getQueryOrStorage(
+    ["checkIn", "checkin", "arrival"],
+    ["booking_check_in", "selectedCheckIn", "ore_booking_check_in"],
+    bookingState.checkIn
+  );
+
+  bookingState.checkOut = getQueryOrStorage(
+    ["checkOut", "checkout", "departure"],
+    ["booking_check_out", "selectedCheckOut", "ore_booking_check_out"],
+    bookingState.checkOut
+  );
+
+  const guests = getQueryOrStorage(
+    ["guests", "guestCount", "adults"],
+    ["booking_guests", "selectedGuests", "booking_adults"],
+    ""
+  );
+
+  bookingState.guestCount = Math.max(1, parsePositiveInt(guests || 1, 1));
+  bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
+
+  if (bookingFields.arrivalDate && bookingState.checkIn) bookingFields.arrivalDate.value = bookingState.checkIn;
+  if (bookingFields.departureDate && bookingState.checkOut) bookingFields.departureDate.value = bookingState.checkOut;
+  if (bookingFields.guestAdults && !bookingFields.guestAdults.value) bookingFields.guestAdults.value = String(bookingState.guestCount);
+}
+
+function persistStayContext() {
+  safeSet("booking_check_in", bookingState.checkIn || "");
+  safeSet("booking_check_out", bookingState.checkOut || "");
+  safeSet("booking_guests", String(bookingState.guestCount || 1));
+}
+
+function updateDateConstraints() {
+  const today = todayInputValue();
+
+  if (bookingFields.arrivalDate) {
+    bookingFields.arrivalDate.min = today;
+  }
+
+  if (bookingFields.departureDate) {
+    bookingFields.departureDate.min = bookingState.checkIn ? addDays(bookingState.checkIn, 1) : today;
+  }
+
+  if (bookingState.checkIn && bookingState.checkOut) {
+    const nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
+    if (nights < 1) {
+      bookingState.checkOut = "";
+      if (bookingFields.departureDate) bookingFields.departureDate.value = "";
+    }
+  }
+}
+
+function generateBookingReference() {
+  if (bookingState.bookingReference) return bookingState.bookingReference;
+  const propPart = cleanText(bookingState.propertyId || "ORE").slice(0, 6).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  bookingState.bookingReference = `ORE-${propPart}-${rand}`;
+  return bookingState.bookingReference;
+}
+
 function updateBookingStateFromInputs() {
-  bookingState.checkIn = cleanText(els.checkInDate?.value) || "";
-  bookingState.checkOut = cleanText(els.checkOutDate?.value) || "";
-  bookingState.guestCount = Math.max(1, parsePositiveInt(els.guestCount?.value, bookingState.guestCount || 1));
+  bookingState.checkIn = getFieldValue("arrivalDate");
+  bookingState.checkOut = getFieldValue("departureDate");
+
+  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
+  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0));
+  const infants = Math.max(0, parsePositiveInt(getFieldValue("guestInfants", "0"), 0));
+
+  bookingState.guestCount = adults + children + infants;
   bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
   bookingState.paymentValue = getSelectedPaymentValue();
   bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
@@ -880,6 +1018,97 @@ function getEstimatedTotal() {
   return getEstimatedSubtotal() + getEstimatedServiceFee() + getEstimatedTaxes();
 }
 
+// ──────────────────────────────────────────
+// Draft / Hydration
+// ──────────────────────────────────────────
+function collectFieldValues() {
+  const data = {};
+  Object.keys(bookingFields).forEach((key) => {
+    const el = bookingFields[key];
+    if (!el) return;
+
+    if (el.type === "file") return;
+    if (el.type === "checkbox") {
+      data[key] = !!el.checked;
+      return;
+    }
+    data[key] = cleanText(el.value);
+  });
+  return data;
+}
+
+function applyFieldValues(values = {}) {
+  Object.entries(values).forEach(([key, value]) => {
+    const el = bookingFields[key];
+    if (!el || el.type === "file") return;
+
+    if (el.type === "checkbox") {
+      el.checked = !!value;
+      return;
+    }
+
+    if (!cleanText(el.value) && value !== undefined && value !== null) {
+      el.value = value;
+    }
+  });
+}
+
+function persistGuestBasics() {
+  safeJsonSet("ore_guest_basics", {
+    guestName: getFieldValue("guestName"),
+    guestEmail: getFieldValue("guestEmail"),
+    guestPhone: getFieldValue("guestPhone"),
+    billingName: getFieldValue("billingName")
+  });
+}
+
+function hydrateGuestBasics() {
+  const saved = safeJsonGet("ore_guest_basics", {});
+  setValueIfEmpty(bookingFields.guestName, saved?.guestName);
+  setValueIfEmpty(bookingFields.guestEmail, saved?.guestEmail);
+  setValueIfEmpty(bookingFields.guestPhone, saved?.guestPhone);
+  setValueIfEmpty(bookingFields.billingName, saved?.billingName);
+}
+
+function saveDraft() {
+  const draft = {
+    propertyId: bookingState.propertyId || "",
+    paymentValue: getSelectedPaymentValue(),
+    paymentProofName: bookingState.paymentProofName || "",
+    paymentProofUrl: bookingState.paymentProofUrl || "",
+    values: collectFieldValues(),
+    savedAt: new Date().toISOString()
+  };
+
+  safeJsonSet(BOOKING_DRAFT_KEY, draft);
+  persistGuestBasics();
+}
+
+function hydrateDraft() {
+  const draft = safeJsonGet(BOOKING_DRAFT_KEY, null);
+  if (!draft) return;
+  if (draft.propertyId && bookingState.propertyId && draft.propertyId !== bookingState.propertyId) return;
+
+  applyFieldValues(draft.values || {});
+
+  if (draft.paymentValue) {
+    const selector =
+      `input[name="paymentmethod"][value="${draft.paymentValue}"],` +
+      `input[name="payment-method"][value="${draft.paymentValue}"]`;
+    const target = qs(selector);
+    if (target) target.checked = true;
+  }
+
+  if (draft.paymentProofName) {
+    bookingState.paymentProofName = draft.paymentProofName;
+    bookingState.paymentProofUrl = draft.paymentProofUrl || null;
+    showSelectedFile(draft.paymentProofName);
+  }
+}
+
+// ──────────────────────────────────────────
+// Summary / Review
+// ──────────────────────────────────────────
 function updateSummary() {
   updateBookingStateFromInputs();
 
@@ -889,7 +1118,6 @@ function updateSummary() {
   setText(els.summaryNights, String(bookingState.nights || 0));
 
   setText(els.summaryPriceNight, formatCurrency(getPropertyPrice()));
-  setText(els.summarySubtotal, formatCurrency(getEstimatedSubtotal()));
   setText(els.summaryServiceFee, formatCurrency(getEstimatedServiceFee()));
   setText(els.summaryTaxes, formatCurrency(getEstimatedTaxes()));
   setText(els.summaryTotal, formatCurrency(getEstimatedTotal()));
@@ -899,32 +1127,92 @@ function updateSummary() {
   }
 }
 
+function buildGuestFullName() {
+  const parts = [
+    getFieldValue("guestName"),
+    getFieldValue("guestFatherName"),
+    getFieldValue("guestFamilyName")
+  ].filter(Boolean);
+  return parts.join(" ") || getFallbackText();
+}
+
+function buildNationalityGenderText() {
+  const nationality = getFieldValue("guestNationality");
+  const gender = getFieldSelectedText("guestGender");
+  const items = [nationality, gender].filter(Boolean);
+  return items.join(" — ") || getFallbackText();
+}
+
+function buildPurposeArrivalText() {
+  const purpose = getFieldSelectedText("stayPurpose");
+  const arrivalTime = getFieldSelectedText("arrivalTime");
+  const arrivalMethod = getFieldSelectedText("arrivalMethod");
+  const items = [purpose, arrivalTime, arrivalMethod].filter(Boolean);
+  return items.join(" — ") || getFallbackText();
+}
+
+function buildDocumentsText() {
+  const docType = getFieldSelectedText("guestIdType");
+  const docNumber = getFieldValue("guestIdNumber");
+  const transferDoc =
+    bookingState.paymentProofName ||
+    (bookingState.paymentValue === "cash"
+      ? t("No transfer file required", "لا يلزم ملف تحويل")
+      : t("No file uploaded", "لم يتم رفع ملف"));
+
+  const items = [];
+  if (docType || docNumber) {
+    items.push([docType, docNumber].filter(Boolean).join(": "));
+  }
+  if (transferDoc) {
+    items.push(transferDoc);
+  }
+
+  return items.join(" — ") || getFallbackText();
+}
+
+function buildBillingText() {
+  const items = [
+    getFieldValue("billingName"),
+    getFieldValue("senderName"),
+    getFieldValue("cashPayerName"),
+    getFieldValue("billingNote")
+  ].filter(Boolean);
+
+  return items.join(" — ") || getFallbackText();
+}
+
+function buildRoomPreferencesText() {
+  const items = [
+    getFieldSelectedText("roomType"),
+    getFieldSelectedText("bedType"),
+    getFieldSelectedText("roomView"),
+    getFieldSelectedText("floorPreference"),
+    getFieldSelectedText("smokingPreference"),
+    getFieldValue("specialRequests"),
+    getFieldValue("cashPaymentNote")
+  ].filter(Boolean);
+
+  return items.join(" — ") || getFallbackText();
+}
+
 function updateReview() {
   updateBookingStateFromInputs();
 
-  const fullName = cleanText(els.guestName?.value) || getFallbackText();
-  const email = cleanText(els.guestEmail?.value) || getFallbackText();
-  const phone = cleanText(els.guestPhone?.value) || getFallbackText();
-  const billingName = cleanText(els.billingName?.value) || getFallbackText();
-  const specialNotes = cleanText(els.specialNotes?.value) || t("None", "لا يوجد");
-  const paymentProofName =
-    bookingState.paymentProofName ||
-    els.paymentProof?.files?.[0]?.name ||
-    (bookingState.paymentValue === "bank-transfer"
-      ? t("No file uploaded", "لم يتم رفع ملف")
-      : t("Not required", "غير مطلوب"));
-
-  setText(els.reviewGuestName, fullName);
-  setText(els.reviewGuestEmail, email);
-  setText(els.reviewGuestPhone, phone);
-  setText(els.reviewBillingName, billingName);
-  setText(els.reviewSpecialNotes, specialNotes);
+  setText(els.reviewGuestName, buildGuestFullName());
+  setText(els.reviewGuestEmail, getFieldValue("guestEmail") || getFallbackText());
+  setText(els.reviewGuestPhone, getFieldValue("guestPhone") || getFallbackText());
+  setText(els.reviewNationalityGender, buildNationalityGenderText());
   setText(
     els.reviewStayDates,
     `${formatDateDisplay(bookingState.checkIn)} — ${formatDateDisplay(bookingState.checkOut)}`
   );
   setText(els.reviewGuests, String(bookingState.guestCount || 1));
-  setText(els.reviewPaymentProof, paymentProofName);
+  setText(els.reviewPurposeArrival, buildPurposeArrivalText());
+  setText(els.reviewAdditionalGuests, getFieldValue("additionalGuests") || getFallbackText());
+  setText(els.reviewDocuments, buildDocumentsText());
+  setText(els.reviewBillings, buildBillingText());
+  setText(els.reviewRoomPreferences, buildRoomPreferencesText());
   setText(els.reviewPoints, String(bookingState.rewardPoints || 0));
 
   if (els.reviewPaymentMethod) {
@@ -960,41 +1248,70 @@ function setStep(stepNumber) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// ──────────────────────────────────────────
+// Validation
+// ──────────────────────────────────────────
+function markInvalid(el, invalid) {
+  if (!el) return;
+  el.classList.toggle("invalid", !!invalid);
+  el.setAttribute("aria-invalid", invalid ? "true" : "false");
+}
+
+function validateRequiredField(el, condition) {
+  markInvalid(el, !condition);
+  return !!condition;
+}
+
 function validateStep1() {
   hideGlobalAlert();
   updateBookingStateFromInputs();
 
-  const name = cleanText(els.guestName?.value);
-  const email = cleanText(els.guestEmail?.value);
-  const phone = cleanText(els.guestPhone?.value);
+  const checks = [];
 
-  if (!name) {
-    showGlobalAlert(t("Please enter your full name.", "يرجى إدخال الاسم الكامل."));
-    return false;
-  }
+  checks.push(validateRequiredField(bookingFields.guestName, !!getFieldValue("guestName")));
+  checks.push(validateRequiredField(bookingFields.guestFatherName, !!getFieldValue("guestFatherName")));
+  checks.push(validateRequiredField(bookingFields.guestFamilyName, !!getFieldValue("guestFamilyName")));
+  checks.push(validateRequiredField(bookingFields.guestGender, !!getFieldValue("guestGender")));
+  checks.push(validateRequiredField(bookingFields.guestDob, !!getFieldValue("guestDob")));
+  checks.push(validateRequiredField(bookingFields.guestNationality, !!getFieldValue("guestNationality")));
+  checks.push(validateRequiredField(bookingFields.guestOccupation, !!getFieldValue("guestOccupation")));
+  checks.push(validateRequiredField(bookingFields.guestMaritalStatus, !!getFieldValue("guestMaritalStatus")));
 
-  if (!email || !validateEmail(email)) {
-    showGlobalAlert(t("Please enter a valid email address.", "يرجى إدخال بريد إلكتروني صحيح."));
-    return false;
-  }
+  checks.push(validateRequiredField(bookingFields.guestEmail, validateEmail(getFieldValue("guestEmail"))));
+  checks.push(validateRequiredField(bookingFields.guestPhone, validatePhone(getFieldValue("guestPhone"))));
+  checks.push(validateRequiredField(bookingFields.guestWhatsapp, validatePhone(getFieldValue("guestWhatsapp"))));
+  checks.push(validateRequiredField(bookingFields.guestAddress, !!getFieldValue("guestAddress")));
+  checks.push(validateRequiredField(bookingFields.guestCity, !!getFieldValue("guestCity")));
+  checks.push(validateRequiredField(bookingFields.guestState, !!getFieldValue("guestState")));
+  checks.push(validateRequiredField(bookingFields.guestCountry, !!getFieldValue("guestCountry")));
 
-  if (!phone || !validatePhone(phone)) {
-    showGlobalAlert(t("Please enter a valid phone number.", "يرجى إدخال رقم هاتف صحيح."));
-    return false;
-  }
+  checks.push(validateRequiredField(bookingFields.guestIdType, !!getFieldValue("guestIdType")));
+  checks.push(validateRequiredField(bookingFields.guestIdNumber, !!getFieldValue("guestIdNumber")));
+  checks.push(validateRequiredField(bookingFields.guestIdIssuePlace, !!getFieldValue("guestIdIssuePlace")));
+  checks.push(validateRequiredField(bookingFields.guestIdIssueDate, !!getFieldValue("guestIdIssueDate")));
+  checks.push(validateRequiredField(bookingFields.guestIdExpiry, !!getFieldValue("guestIdExpiry")));
 
-  if (!bookingState.checkIn || !bookingState.checkOut) {
-    showGlobalAlert(t("Please select check-in and check-out dates.", "يرجى تحديد تاريخ الدخول والخروج."));
-    return false;
-  }
+  checks.push(validateRequiredField(bookingFields.roomType, !!getFieldValue("roomType")));
+  checks.push(validateRequiredField(bookingFields.smokingPreference, !!getFieldValue("smokingPreference")));
+
+  checks.push(validateRequiredField(bookingFields.guestAdults, parsePositiveInt(getFieldValue("guestAdults"), 0) >= 1));
+  checks.push(validateRequiredField(bookingFields.guestChildren, parsePositiveInt(getFieldValue("guestChildren"), 0) >= 0));
+  checks.push(validateRequiredField(bookingFields.stayPurpose, !!getFieldValue("stayPurpose")));
+  checks.push(validateRequiredField(bookingFields.arrivalDate, !!bookingState.checkIn));
+  checks.push(validateRequiredField(bookingFields.departureDate, !!bookingState.checkOut));
+  checks.push(validateRequiredField(bookingFields.arrivalTime, !!getFieldValue("arrivalTime")));
+  checks.push(validateRequiredField(bookingFields.arrivalMethod, !!getFieldValue("arrivalMethod")));
+  checks.push(validateRequiredField(bookingFields.additionalGuests, !!getFieldValue("additionalGuests")));
 
   if (getDiffNights(bookingState.checkIn, bookingState.checkOut) < 1) {
+    markInvalid(bookingFields.arrivalDate, true);
+    markInvalid(bookingFields.departureDate, true);
     showGlobalAlert(t("Check-out must be after check-in.", "يجب أن يكون تاريخ الخروج بعد تاريخ الدخول."));
     return false;
   }
 
-  if (bookingState.guestCount < 1) {
-    showGlobalAlert(t("Please enter a valid guest count.", "يرجى إدخال عدد ضيوف صحيح."));
+  if (checks.some((item) => !item)) {
+    showGlobalAlert(t("Please complete all required booking details correctly.", "يرجى إكمال جميع بيانات الحجز المطلوبة بشكل صحيح."));
     return false;
   }
 
@@ -1011,9 +1328,35 @@ function validateStep2() {
     return false;
   }
 
-  if (selected.value === "bank-transfer" || selected.value === "ccp" || selected.value === "bank") {
-    if (!bookingState.paymentProofUrl && !els.paymentProof?.files?.length) {
+  const billingValid = validateRequiredField(bookingFields.billingName, !!getFieldValue("billingName"));
+
+  if (!billingValid) {
+    showGlobalAlert(t("Please enter the billing name.", "يرجى إدخال اسم الفوترة."));
+    return false;
+  }
+
+  if (["ccp", "bank", "bank-transfer"].includes(selected.value)) {
+    const senderValid = validateRequiredField(bookingFields.senderName, !!getFieldValue("senderName"));
+    const amountValid = validateRequiredField(bookingFields.transferAmount, parsePositiveInt(getFieldValue("transferAmount"), 0) > 0);
+    const dateValid = validateRequiredField(bookingFields.transferDate, !!getFieldValue("transferDate"));
+
+    if (!senderValid || !amountValid || !dateValid) {
+      showGlobalAlert(t("Please complete bank transfer details.", "يرجى إكمال تفاصيل التحويل البنكي."));
+      return false;
+    }
+
+    if (!bookingState.paymentProofUrl && !els.paymentProof?.files?.length && !bookingState.paymentProofName) {
       showGlobalAlert(t("Please upload payment proof for bank transfer.", "يرجى رفع إثبات التحويل البنكي."));
+      return false;
+    }
+  }
+
+  if (selected.value === "cash") {
+    const payerValid = validateRequiredField(bookingFields.cashPayerName, !!getFieldValue("cashPayerName"));
+    const currencyValid = validateRequiredField(bookingFields.cashCurrency, !!getFieldValue("cashCurrency"));
+
+    if (!payerValid || !currencyValid) {
+      showGlobalAlert(t("Please complete cash payment details.", "يرجى إكمال تفاصيل الدفع النقدي."));
       return false;
     }
   }
@@ -1035,6 +1378,12 @@ function validateStep3() {
 // ──────────────────────────────────────────
 // Payment UI
 // ──────────────────────────────────────────
+function showSelectedFile(name) {
+  if (els.uploadText && cleanText(name)) {
+    els.uploadText.textContent = name;
+  }
+}
+
 function syncPaymentMethodFromSelection() {
   const selectedValue = getSelectedPaymentValue();
   bookingState.paymentValue = selectedValue;
@@ -1044,13 +1393,13 @@ function syncPaymentMethodFromSelection() {
 }
 
 function updatePaymentCardsUI() {
-  els.paymentCards.forEach(card => {
+  els.paymentCards.forEach((card) => {
     const radio = card.querySelector('input[type="radio"]');
     card.classList.toggle("selected", !!radio?.checked);
   });
 
   const value = getSelectedPaymentValue();
-  const isBank = value === "bank-transfer" || value === "ccp" || value === "bank";
+  const isBank = ["ccp", "bank", "bank-transfer"].includes(value);
 
   if (els.bankTransferBox) {
     const active = isBank;
@@ -1071,16 +1420,6 @@ function updatePaymentCardsUI() {
   }
 
   syncPaymentMethodFromSelection();
-}
-
-function showSelectedFile(name) {
-  if (els.selectedFileBox) {
-    els.selectedFileBox.style.display = "flex";
-    els.selectedFileBox.classList.add("show", "visible");
-  }
-  if (els.selectedFileName) {
-    els.selectedFileName.textContent = name;
-  }
 }
 
 async function handlePaymentProofUpload(file) {
@@ -1137,145 +1476,7 @@ async function handlePaymentProofUpload(file) {
 }
 
 // ──────────────────────────────────────────
-// Auth
-// ──────────────────────────────────────────
-function getAuthErrorMessage(error, context = "login") {
-  const code = cleanText(error?.code || "");
-  const map = {
-    "auth/invalid-email": t("Invalid email address.", "عنوان البريد الإلكتروني غير صالح."),
-    "auth/missing-password": t("Please enter your password.", "يرجى إدخال كلمة المرور."),
-    "auth/user-not-found": t("No account found with this email.", "لا يوجد حساب بهذا البريد الإلكتروني."),
-    "auth/wrong-password": t("Incorrect password.", "كلمة المرور غير صحيحة."),
-    "auth/invalid-credential": t("Incorrect login credentials.", "بيانات تسجيل الدخول غير صحيحة."),
-    "auth/email-already-in-use": t("This email is already registered.", "هذا البريد مستخدم بالفعل."),
-    "auth/weak-password": t("Password is too weak.", "كلمة المرور ضعيفة."),
-    "auth/popup-closed-by-user": t("Google sign-in popup was closed.", "تم إغلاق نافذة Google قبل الإكمال."),
-    "auth/network-request-failed": t("Network error. Check your connection.", "خطأ في الشبكة. تحقق من الاتصال.")
-  };
-
-  if (map[code]) return map[code];
-
-  if (context === "register") {
-    return t("Registration failed. Try another email.", "فشل التسجيل. جرّب بريدًا آخر.");
-  }
-  if (context === "forgot") {
-    return t("Failed to send reset link.", "تعذر إرسال رابط الاستعادة.");
-  }
-  if (context === "google") {
-    return t("Google sign-in failed.", "فشل تسجيل الدخول عبر Google.");
-  }
-
-  return t("Login failed. Please check your credentials.", "فشل تسجيل الدخول. تحقق من البيانات.");
-}
-
-function updateAuthUI(user) {
-  currentUser = user || null;
-
-  const name =
-    cleanText(user?.displayName) ||
-    cleanText(safeJsonGet("ore_guest_basics", {})?.guestName) ||
-    t("Guest User", "زائر");
-  const email =
-    cleanText(user?.email) ||
-    t("Sign in to continue", "سجل الدخول للمتابعة");
-
-  setText(els.dropdownUserName, name);
-  setText(els.dropdownUserEmail, email);
-
-  if (els.openAuthBtn) {
-    const icon = els.openAuthBtn.querySelector("i");
-    if (icon) {
-      icon.className = user ? "ph ph-user-circle-check" : "ph ph-user";
-    }
-  }
-}
-
-async function loginWithEmail(email, password) {
-  if (!auth) {
-    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
-    return;
-  }
-
-  try {
-    clearAuthMessage();
-    setButtonLoading(qs("#login-submit-btn"), true, t("Signing in...", "جارٍ تسجيل الدخول..."));
-    await auth.signInWithEmailAndPassword(email, password);
-    closeAuthModal();
-    showToast(t("Logged in successfully.", "تم تسجيل الدخول بنجاح."), "success");
-  } catch (error) {
-    showAuthMessage(getAuthErrorMessage(error, "login"), "error");
-  } finally {
-    setButtonLoading(qs("#login-submit-btn"), false);
-  }
-}
-
-async function registerWithEmail(name, email, password) {
-  if (!auth) {
-    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
-    return;
-  }
-
-  try {
-    clearAuthMessage();
-    setButtonLoading(qs("#register-submit-btn"), true, t("Creating account...", "جارٍ إنشاء الحساب..."));
-    const result = await auth.createUserWithEmailAndPassword(email, password);
-    if (result?.user && name) {
-      await result.user.updateProfile({ displayName: name });
-    }
-    closeAuthModal();
-    showToast(t("Account created successfully.", "تم إنشاء الحساب بنجاح."), "success");
-  } catch (error) {
-    showAuthMessage(getAuthErrorMessage(error, "register"), "error");
-  } finally {
-    setButtonLoading(qs("#register-submit-btn"), false);
-  }
-}
-
-async function sendResetEmail(email) {
-  if (!auth) {
-    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
-    return;
-  }
-
-  try {
-    clearAuthMessage();
-    await auth.sendPasswordResetEmail(email);
-    showAuthMessage(t("Reset link sent successfully.", "تم إرسال رابط الاستعادة بنجاح."), "success");
-  } catch (error) {
-    showAuthMessage(getAuthErrorMessage(error, "forgot"), "error");
-  }
-}
-
-async function signInWithGoogle() {
-  if (!auth || typeof firebase === "undefined" || typeof firebase.auth?.GoogleAuthProvider !== "function") {
-    showAuthMessage(t("Google sign-in is unavailable.", "تسجيل الدخول عبر Google غير متاح."));
-    return;
-  }
-
-  try {
-    clearAuthMessage();
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-    closeAuthModal();
-    showToast(t("Logged in with Google successfully.", "تم تسجيل الدخول عبر Google بنجاح."), "success");
-  } catch (error) {
-    showAuthMessage(getAuthErrorMessage(error, "google"), "error");
-  }
-}
-
-async function logoutUser() {
-  try {
-    if (auth) await auth.signOut();
-    toggleProfileDropdown(false);
-    showToast(t("Logged out successfully.", "تم تسجيل الخروج بنجاح."), "success");
-  } catch (error) {
-    console.error("Logout error:", error);
-    showToast(t("Failed to log out.", "تعذر تسجيل الخروج."), "error");
-  }
-}
-
-// ──────────────────────────────────────────
-// Booking Submit
+// Booking Payload
 // ──────────────────────────────────────────
 function buildBookingPayload() {
   updateBookingStateFromInputs();
@@ -1289,21 +1490,77 @@ function buildBookingPayload() {
     propertyImage: getPropertyImage(),
 
     userId: currentUser?.uid || null,
-    userEmail: currentUser?.email || cleanText(els.guestEmail?.value),
+    userEmail: currentUser?.email || getFieldValue("guestEmail"),
 
     guest: {
-      name: cleanText(els.guestName?.value),
-      email: cleanText(els.guestEmail?.value),
-      phone: cleanText(els.guestPhone?.value),
-      billingName: cleanText(els.billingName?.value),
-      specialNotes: cleanText(els.specialNotes?.value)
+      firstName: getFieldValue("guestName"),
+      fatherName: getFieldValue("guestFatherName"),
+      familyName: getFieldValue("guestFamilyName"),
+      fullName: buildGuestFullName(),
+      gender: getFieldValue("guestGender"),
+      dob: getFieldValue("guestDob"),
+      nationality: getFieldValue("guestNationality"),
+      occupation: getFieldValue("guestOccupation"),
+      maritalStatus: getFieldValue("guestMaritalStatus"),
+      email: getFieldValue("guestEmail"),
+      phone: getFieldValue("guestPhone"),
+      whatsapp: getFieldValue("guestWhatsapp"),
+      altPhone: getFieldValue("guestAltPhone"),
+      address: getFieldValue("guestAddress"),
+      city: getFieldValue("guestCity"),
+      state: getFieldValue("guestState"),
+      postal: getFieldValue("guestPostal"),
+      country: getFieldValue("guestCountry")
+    },
+
+    identity: {
+      type: getFieldValue("guestIdType"),
+      number: getFieldValue("guestIdNumber"),
+      issuePlace: getFieldValue("guestIdIssuePlace"),
+      issueDate: getFieldValue("guestIdIssueDate"),
+      expiryDate: getFieldValue("guestIdExpiry")
+    },
+
+    roomPreferences: {
+      roomType: getFieldValue("roomType"),
+      bedType: getFieldValue("bedType"),
+      roomView: getFieldValue("roomView"),
+      floorPreference: getFieldValue("floorPreference"),
+      smokingPreference: getFieldValue("smokingPreference"),
+      quietRoom: getFieldValue("quietRoom"),
+      nearElevator: getFieldValue("nearElevator"),
+      connectedRooms: getFieldValue("connectedRooms")
     },
 
     stay: {
       checkIn: bookingState.checkIn,
       checkOut: bookingState.checkOut,
       nights: bookingState.nights,
-      guests: bookingState.guestCount
+      adults: parsePositiveInt(getFieldValue("guestAdults"), 1),
+      children: parsePositiveInt(getFieldValue("guestChildren"), 0),
+      infants: parsePositiveInt(getFieldValue("guestInfants"), 0),
+      guests: bookingState.guestCount,
+      purpose: getFieldValue("stayPurpose"),
+      arrivalTime: getFieldValue("arrivalTime"),
+      arrivalMethod: getFieldValue("arrivalMethod"),
+      vehiclePlate: getFieldValue("vehiclePlate"),
+      checkinContactPerson: getFieldValue("checkinContactPerson"),
+      additionalGuests: getFieldValue("additionalGuests")
+    },
+
+    services: {
+      breakfastOption: getFieldValue("breakfastOption"),
+      airportTransfer: getFieldValue("airportTransfer"),
+      extraBed: getFieldValue("extraBed"),
+      lateCheckout: getFieldValue("lateCheckout"),
+      earlyCheckin: getFieldValue("earlyCheckin"),
+      housekeeping: getFieldValue("housekeeping"),
+      babyCrib: getFieldValue("babyCrib"),
+      accessibilityNeed: getFieldValue("accessibilityNeed"),
+      emergencyName: getFieldValue("emergencyName"),
+      emergencyPhone: getFieldValue("emergencyPhone"),
+      medicalCondition: getFieldValue("medicalCondition"),
+      specialRequests: getFieldValue("specialRequests")
     },
 
     pricing: {
@@ -1314,9 +1571,21 @@ function buildBookingPayload() {
       total: getEstimatedTotal()
     },
 
+    billing: {
+      billingName: getFieldValue("billingName"),
+      billingNote: getFieldValue("billingNote")
+    },
+
     payment: {
       methodValue: bookingState.paymentValue,
       methodLabel: bookingState.paymentMethod,
+      senderName: getFieldValue("senderName"),
+      transferAmount: getFieldValue("transferAmount"),
+      transferDate: getFieldValue("transferDate"),
+      transferTime: getFieldValue("transferTime"),
+      cashPayerName: getFieldValue("cashPayerName"),
+      cashCurrency: getFieldValue("cashCurrency"),
+      cashPaymentNote: getFieldValue("cashPaymentNote"),
       proofName: bookingState.paymentProofName || "",
       proofUrl: bookingState.paymentProofUrl || null
     },
@@ -1371,6 +1640,7 @@ async function confirmBooking() {
 
   try {
     setButtonLoading(els.btnConfirmBooking, true, t("Confirming booking...", "جارٍ تأكيد الحجز..."));
+
     const payload = buildBookingPayload();
     const bookingId = await saveBooking(payload);
 
@@ -1474,11 +1744,9 @@ function bindGeneralEvents() {
   });
 
   els.logoutBtn?.addEventListener("click", logoutUser);
-
   els.myBookingsBtn?.addEventListener("click", () => {
     window.location.href = "my-bookings.html";
   });
-
   els.myFavoritesBtn?.addEventListener("click", () => {
     window.location.href = "favorites.html";
   });
@@ -1487,6 +1755,7 @@ function bindGeneralEvents() {
 function bindAuthEvents() {
   els.loginForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const email = cleanText(els.loginEmail?.value);
     const password = cleanText(els.loginPassword?.value);
 
@@ -1505,6 +1774,7 @@ function bindAuthEvents() {
 
   els.registerForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const name = cleanText(els.regName?.value);
     const email = cleanText(els.regEmail?.value);
     const password = cleanText(els.regPassword?.value);
@@ -1529,8 +1799,8 @@ function bindAuthEvents() {
 
   els.forgotForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = cleanText(els.forgotEmail?.value);
 
+    const email = cleanText(els.forgotEmail?.value);
     if (!validateEmail(email)) {
       showAuthMessage(t("Please enter a valid email.", "يرجى إدخال بريد صالح."));
       return;
@@ -1545,12 +1815,14 @@ function bindAuthEvents() {
   if (auth) {
     auth.onAuthStateChanged((user) => {
       updateAuthUI(user);
-      if (user?.email && els.guestEmail && !els.guestEmail.value) {
-        els.guestEmail.value = user.email;
+
+      if (user?.email && bookingFields.guestEmail && !bookingFields.guestEmail.value) {
+        bookingFields.guestEmail.value = user.email;
       }
-      if (user?.displayName && els.guestName && !els.guestName.value) {
-        els.guestName.value = user.displayName;
+      if (user?.displayName && bookingFields.guestName && !bookingFields.guestName.value) {
+        bookingFields.guestName.value = user.displayName;
       }
+
       updateSummary();
       updateReview();
     });
@@ -1560,7 +1832,7 @@ function bindAuthEvents() {
 }
 
 function bindPaymentEvents() {
-  els.paymentCards.forEach(card => {
+  els.paymentCards.forEach((card) => {
     card.addEventListener("click", () => {
       const radio = card.querySelector('input[type="radio"]');
       if (!radio) return;
@@ -1570,7 +1842,7 @@ function bindPaymentEvents() {
     });
   });
 
-  els.paymentRadios.forEach(radio => {
+  els.paymentRadios.forEach((radio) => {
     radio.addEventListener("change", () => {
       updatePaymentCardsUI();
       saveDraft();
@@ -1584,12 +1856,15 @@ function bindPaymentEvents() {
   });
 
   els.copyIbanBtn?.addEventListener("click", async () => {
-    const value = cleanText(els.bankIban?.textContent);
+    const bankBox = els.bankTransferBox;
+    const strongValues = bankBox ? qsa(".bank-row strong", bankBox).map((el) => cleanText(el.textContent)).filter(Boolean) : [];
+    const value = cleanText(els.bankIban?.textContent) || strongValues[1] || strongValues[0] || "";
+
     if (!value) return;
 
     try {
       await navigator.clipboard.writeText(value);
-      showToast(t("IBAN copied.", "تم نسخ رقم الحساب."), "success");
+      showToast(t("Bank account copied.", "تم نسخ رقم الحساب."), "success");
     } catch (_) {
       showToast(t("Failed to copy.", "تعذر النسخ."), "error");
     }
@@ -1608,18 +1883,13 @@ function bindPaymentEvents() {
 
 function bindBookingEvents() {
   const liveInputs = [
-    els.guestName,
-    els.guestEmail,
-    els.guestPhone,
-    els.billingName,
-    els.specialNotes,
-    els.checkInDate,
-    els.checkOutDate,
-    els.guestCount
+    ...Object.values(bookingFields),
+    els.agreePolicy
   ].filter(Boolean);
 
-  liveInputs.forEach(input => {
+  liveInputs.forEach((input) => {
     const eventName = ["SELECT", "INPUT", "TEXTAREA"].includes(input.tagName) ? "input" : "change";
+
     input.addEventListener(eventName, () => {
       updateSummary();
       updateReview();
@@ -1633,6 +1903,20 @@ function bindBookingEvents() {
         hideGlobalAlert();
       });
     }
+  });
+
+  bookingFields.arrivalDate?.addEventListener("change", () => {
+    bookingState.checkIn = getFieldValue("arrivalDate");
+    updateDateConstraints();
+    updateSummary();
+    updateReview();
+  });
+
+  bookingFields.departureDate?.addEventListener("change", () => {
+    bookingState.checkOut = getFieldValue("departureDate");
+    updateDateConstraints();
+    updateSummary();
+    updateReview();
   });
 
   els.btnNext1?.addEventListener("click", () => {
@@ -1657,10 +1941,10 @@ function bindBookingEvents() {
 
   els.btnConfirmBooking?.addEventListener("click", confirmBooking);
 
-  els.editStep1Btns.forEach(btn => btn.addEventListener("click", () => setStep(1)));
-  els.editStep2Btns.forEach(btn => btn.addEventListener("click", () => setStep(2)));
+  els.editStep1Btns.forEach((btn) => btn.addEventListener("click", () => setStep(1)));
+  els.editStep2Btns.forEach((btn) => btn.addEventListener("click", () => setStep(2)));
 
-  document.querySelectorAll("[data-edit-step]").forEach(btn => {
+  document.querySelectorAll("[data-edit-step]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const step = parsePositiveInt(btn.getAttribute("data-edit-step"), 1);
       setStep(Math.min(3, Math.max(1, step)));
@@ -1679,6 +1963,7 @@ async function init() {
   applyTheme();
   updateLangButton();
   applyTranslations();
+
   bindGeneralEvents();
   bindAuthEvents();
 
