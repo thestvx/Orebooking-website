@@ -102,7 +102,10 @@
     oreSelectedProperty: "ore_selected_property",
     bookingPropertySnapshot: "booking_property_snapshot",
     bookingContext: "booking_context",
-    chatGuest: "ore_chat_guest"
+    chatGuest: "ore_chat_guest",
+    chatUserPrefix: "ore_chat_user_",
+    unreadGuest: "ore_chat_unread_guest",
+    unreadUserPrefix: "ore_chat_unread_user_"
   };
 
   const STORAGE_ALIASES = {
@@ -117,8 +120,8 @@
   };
 
   const ROUTES = {
-    home: "index.html",
-    auth: "auth.html",
+    home: safeGet("ore_home_page", "index.html"),
+    auth: safeGet("ore_auth_page", "auth.html"),
     details: safeGet("ore_property_page", "property.html"),
     booking: safeGet("ore_booking_page", "booking.html"),
     favorites: safeGet("ore_favorites_page", "favorites.html"),
@@ -136,6 +139,8 @@
   };
 
   const BOOKINGS_COLLECTION_CANDIDATES = ["bookings", "reservations", "userBookings"];
+  const PROPERTY_COLLECTION_CANDIDATES = ["properties", "listings", "propertyListings", "stays", "hotels"];
+  const SUPPORT_COLLECTION_CANDIDATES = ["supportMessages", "supportInbox", "conversations"];
   const CHAT_REPLY_DELAY = 900;
   const MAX_CHAT_MESSAGE_LENGTH = 1200;
 
@@ -155,19 +160,27 @@
     loadingProperties: false,
     propertiesLoaded: false,
     currentCollection: "",
-    propertyCollectionCandidates: ["properties", "listings", "propertyListings", "stays", "hotels"],
+    propertyCollectionCandidates: [...PROPERTY_COLLECTION_CANDIDATES],
     authReady: false,
     firestoreReady: false,
     loadingBookings: false,
     bookings: [],
     chatMessages: [],
-    favorites: []
+    favorites: [],
+    selectedProperty: null,
+    galleryImages: [],
+    galleryIndex: 0,
+    propertyMapInstance: null,
+    currentChatPropertyId: "",
+    profileDropdownOpen: false
   };
 
   let firebaseReady = false;
   let auth = null;
   let db = null;
   let googleProvider = null;
+  let authObserverAttached = false;
+  let autoReplyTimer = null;
 
   /* =========================================
      4) TRANSLATIONS
@@ -256,8 +269,102 @@
       bookings_load_error: "Could not load your bookings.",
       loading_bookings: "Loading bookings...",
       message_required: "Please type a message first.",
+      message_too_long: "Message is too long.",
       home: "Home",
-      pts: "Pts"
+      pts: "Pts",
+      supportchat: "Support Chat",
+      backhome: "Back to Home",
+      aboutprop: "About this space",
+      whatoffers: "What this place offers",
+      booknow: "Reserve Now",
+      wontcharged: "You won't be charged yet",
+      welcomeback: "Welcome back",
+      logindesc: "Enter your details to access your account.",
+      noaccount: "Don't have an account?",
+      signup: "Sign up",
+      createaccount: "Create an account",
+      registerdesc: "Join OreBooking to unlock premium features.",
+      signupbtn: "Create Account",
+      hasaccount: "Already have an account?",
+      resetpasstitle: "Reset Password",
+      resetpassdesc: "Enter your email and we'll send you a reset link.",
+      backtologin: "Back to login",
+      support_chat: "Support Chat",
+      contact_host: "Contact Host",
+      message_host: "Message Host",
+      ask_about_property: "Ask about this property",
+      verified_host: "Verified Host",
+      hosting_since: "Hosting since 2024",
+      share: "Share",
+      save: "Save",
+      saved: "Saved",
+      why_guests_like_it: "Why guests like it",
+      where_youll_be: "Where you'll be",
+      open_google_maps: "Open in Google Maps",
+      good_to_know: "Good to know",
+      trusted_listing: "Trusted listing",
+      responsive_support: "Responsive support",
+      clean_and_comfortable: "Clean and comfortable",
+      great_location: "Great location",
+      trusted_listing_desc: "Managed with verified details and a consistent booking flow.",
+      responsive_support_desc: "Fast communication before and during your stay.",
+      clean_and_comfortable_desc: "Prepared for a smooth and pleasant stay.",
+      great_location_desc: "Close to main points of interest and easy to reach.",
+      free_cancellation_24h: "Free cancellation within 24h",
+      instant_confirmation: "Instant confirmation",
+      support_247: "24/7 support",
+      choose_dates_next_page:
+        "Choose your dates and number of guests on the next page to see the final price.",
+      trust_note:
+        "Your request stays secure and you can review full booking details before payment is finalized.",
+      instant_booking_request: "Instant booking request",
+      verified_listing: "Verified listing",
+      up_to_guests: "Up to {n} guests",
+      bedrooms_count_one: "{n} Bedroom",
+      bedrooms_count_many: "{n} Bedrooms",
+      capacity_label: "Capacity: {n} guests",
+      type_label: "Type: {type}",
+      premium_stay: "Premium stay",
+      hotel: "Hotel",
+      apartment: "Apartment",
+      villa: "Villa",
+      resort: "Resort",
+      cabin: "Cabin",
+      unknown_location: "Unknown location",
+      unnamed_property: "Unnamed property",
+      no_description: "No description available.",
+      wifi: "Wi‑Fi",
+      pool: "Pool",
+      parking: "Parking",
+      gym: "Gym",
+      restaurant: "Restaurant",
+      spa: "Spa",
+      kitchen: "Kitchen",
+      ac: "Air conditioning",
+      balcony: "Balcony",
+      breakfast: "Breakfast",
+      security: "Security",
+      tv: "TV",
+      beach: "Beach access",
+      save_property: "Save property",
+      property_link_copied: "Link copied to clipboard!",
+      copy_failed: "Could not copy link.",
+      property_not_found: "Property not found.",
+      no_property_id: "No property ID found.",
+      loading_property: "Loading property...",
+      you: "You",
+      support_agent: "Support",
+      no_messages_yet: "No messages yet.",
+      start_chat_hint: "Start the conversation and mention this property to contact support.",
+      chat_ready_note: "This chat works now and can also be connected to Firestore later.",
+      quick_auto_reply:
+        "Thanks for your message. We received your request and will get back to you shortly.",
+      details: "Details",
+      choose_dates: "Choose dates",
+      date_not_available: "—",
+      sign_in_google_failed: "Google sign-in could not be completed.",
+      account: "Account",
+      stays: "Stays"
     },
     ar: {
       page_title: "OreBooking - إقامات مميزة",
@@ -342,8 +449,102 @@
       bookings_load_error: "تعذر تحميل الحجوزات.",
       loading_bookings: "جارٍ تحميل الحجوزات...",
       message_required: "اكتب رسالة أولًا.",
+      message_too_long: "الرسالة طويلة جدًا.",
       home: "الرئيسية",
-      pts: "نقطة"
+      pts: "نقطة",
+      supportchat: "دردشة الدعم",
+      backhome: "العودة للرئيسية",
+      aboutprop: "حول هذا المكان",
+      whatoffers: "ماذا يوفر هذا المكان",
+      booknow: "احجز الآن",
+      wontcharged: "لن يتم خصم أي مبلغ الآن",
+      welcomeback: "مرحبًا بعودتك",
+      logindesc: "أدخل بياناتك للوصول إلى حسابك.",
+      noaccount: "ليس لديك حساب؟",
+      signup: "إنشاء حساب",
+      createaccount: "إنشاء حساب",
+      registerdesc: "انضم إلى OreBooking للوصول إلى ميزات إضافية.",
+      signupbtn: "إنشاء الحساب",
+      hasaccount: "لديك حساب بالفعل؟",
+      resetpasstitle: "استعادة كلمة المرور",
+      resetpassdesc: "أدخل بريدك الإلكتروني وسنرسل لك رابط الاستعادة.",
+      backtologin: "العودة لتسجيل الدخول",
+      support_chat: "دردشة الدعم",
+      contact_host: "تواصل مع المضيف",
+      message_host: "مراسلة المضيف",
+      ask_about_property: "اسأل عن هذا العقار",
+      verified_host: "مضيف موثّق",
+      hosting_since: "يستضيف منذ 2024",
+      share: "مشاركة",
+      save: "حفظ",
+      saved: "تم الحفظ",
+      why_guests_like_it: "لماذا يحب الضيوف هذا المكان",
+      where_youll_be: "مكان الإقامة",
+      open_google_maps: "فتح في خرائط Google",
+      good_to_know: "معلومات مهمة",
+      trusted_listing: "إعلان موثوق",
+      responsive_support: "دعم سريع",
+      clean_and_comfortable: "نظيف ومريح",
+      great_location: "موقع ممتاز",
+      trusted_listing_desc: "تتم إدارة هذا العقار ببيانات موثقة وتجربة حجز مستقرة.",
+      responsive_support_desc: "تواصل سريع قبل الإقامة وأثناءها.",
+      clean_and_comfortable_desc: "تم تجهيز المكان لإقامة مريحة وسلسة.",
+      great_location_desc: "قريب من أهم الأماكن ويسهل الوصول إليه.",
+      free_cancellation_24h: "إلغاء مجاني خلال 24 ساعة",
+      instant_confirmation: "تأكيد أولي سريع",
+      support_247: "دعم على مدار الساعة",
+      choose_dates_next_page:
+        "اختر التواريخ وعدد الضيوف في الصفحة التالية لرؤية السعر النهائي.",
+      trust_note:
+        "يبقى طلبك آمنًا ويمكنك مراجعة تفاصيل الحجز كاملة قبل تثبيت الدفع.",
+      instant_booking_request: "طلب حجز فوري",
+      verified_listing: "إعلان موثّق",
+      up_to_guests: "حتى {n} ضيوف",
+      bedrooms_count_one: "{n} غرفة نوم",
+      bedrooms_count_many: "{n} غرف نوم",
+      capacity_label: "السعة: {n} ضيوف",
+      type_label: "النوع: {type}",
+      premium_stay: "إقامة مميزة",
+      hotel: "فندق",
+      apartment: "شقة",
+      villa: "فيلا",
+      resort: "منتجع",
+      cabin: "كوخ",
+      unknown_location: "موقع غير معروف",
+      unnamed_property: "عقار بدون اسم",
+      no_description: "لا يوجد وصف متاح.",
+      wifi: "واي فاي",
+      pool: "مسبح",
+      parking: "موقف سيارات",
+      gym: "قاعة رياضية",
+      restaurant: "مطعم",
+      spa: "سبا",
+      kitchen: "مطبخ",
+      ac: "تكييف",
+      balcony: "شرفة",
+      breakfast: "إفطار",
+      security: "حماية",
+      tv: "تلفاز",
+      beach: "وصول للشاطئ",
+      save_property: "حفظ العقار",
+      property_link_copied: "تم نسخ الرابط.",
+      copy_failed: "تعذر نسخ الرابط.",
+      property_not_found: "العقار غير موجود.",
+      no_property_id: "لم يتم العثور على معرف العقار.",
+      loading_property: "جارٍ تحميل العقار...",
+      you: "أنت",
+      support_agent: "الدعم",
+      no_messages_yet: "لا توجد رسائل بعد.",
+      start_chat_hint: "ابدأ المحادثة واذكر هذا العقار للتواصل مع الدعم.",
+      chat_ready_note: "هذه الدردشة تعمل الآن ويمكن ربطها بـ Firestore لاحقًا.",
+      quick_auto_reply:
+        "شكرًا لرسالتك. تم استلام طلبك وسنرد عليك في أقرب وقت.",
+      details: "التفاصيل",
+      choose_dates: "اختر التواريخ",
+      date_not_available: "—",
+      sign_in_google_failed: "تعذر إكمال تسجيل الدخول عبر Google.",
+      account: "الحساب",
+      stays: "الإقامات"
     }
   };
 
@@ -375,7 +576,12 @@
       signintocontinue: "sign_in_to_continue",
       emailaddress: "email",
       reservenow: "reserve_now",
-      viewdetails: "view_details"
+      viewdetails: "view_details",
+      supportchat: "support_chat",
+      backhome: "backhome",
+      booknow: "booknow",
+      wontcharged: "wontcharged",
+      welcomeback: "welcomeback"
     };
 
     if (custom[k]) aliases.add(custom[k]);
@@ -395,8 +601,14 @@
     return null;
   }
 
-  function t(key) {
-    return translateOptional(key) ?? key;
+  function t(key, vars = null) {
+    let text = translateOptional(key) ?? key;
+    if (vars && typeof vars === "object") {
+      Object.keys(vars).forEach((k) => {
+        text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(vars[k]));
+      });
+    }
+    return text;
   }
 
   /* =========================================
@@ -418,7 +630,13 @@
       typeEn: "Hotel",
       typeAr: "فندق",
       desc_en: "Elegant city stay with fast check-in and premium comfort.",
-      desc_ar: "إقامة أنيقة داخل المدينة مع تسجيل دخول سريع وراحة مميزة."
+      desc_ar: "إقامة أنيقة داخل المدينة مع تسجيل دخول سريع وراحة مميزة.",
+      maxGuests: 4,
+      bedrooms: 2,
+      lat: 36.7538,
+      lng: 3.0588,
+      features_en: ["wifi", "breakfast", "parking", "security"],
+      features_ar: ["واي فاي", "إفطار", "موقف سيارات", "حماية"]
     },
     {
       id: "sea-breeze-apartment",
@@ -435,7 +653,13 @@
       typeEn: "Apartment",
       typeAr: "شقة",
       desc_en: "A bright apartment close to the coast and city center.",
-      desc_ar: "شقة مشرقة قريبة من الساحل ووسط المدينة."
+      desc_ar: "شقة مشرقة قريبة من الساحل ووسط المدينة.",
+      maxGuests: 4,
+      bedrooms: 2,
+      lat: 35.6971,
+      lng: -0.6308,
+      features_en: ["wifi", "kitchen", "ac", "balcony"],
+      features_ar: ["واي فاي", "مطبخ", "تكييف", "شرفة"]
     },
     {
       id: "palm-villa",
@@ -452,7 +676,13 @@
       typeEn: "Villa",
       typeAr: "فيلا",
       desc_en: "Private villa with space, privacy, and premium amenities.",
-      desc_ar: "فيلا خاصة بمساحة واسعة وخصوصية ومرافق مميزة."
+      desc_ar: "فيلا خاصة بمساحة واسعة وخصوصية ومرافق مميزة.",
+      maxGuests: 8,
+      bedrooms: 4,
+      lat: 36.9,
+      lng: 7.7667,
+      features_en: ["pool", "parking", "kitchen", "tv"],
+      features_ar: ["مسبح", "موقف سيارات", "مطبخ", "تلفاز"]
     },
     {
       id: "city-loft",
@@ -469,7 +699,13 @@
       typeEn: "Apartment",
       typeAr: "شقة",
       desc_en: "A clean modern stay ideal for short city trips.",
-      desc_ar: "إقامة عصرية ونظيفة مناسبة للرحلات القصيرة داخل المدينة."
+      desc_ar: "إقامة عصرية ونظيفة مناسبة للرحلات القصيرة داخل المدينة.",
+      maxGuests: 3,
+      bedrooms: 1,
+      lat: 36.1904,
+      lng: 5.4137,
+      features_en: ["wifi", "ac", "kitchen", "security"],
+      features_ar: ["واي فاي", "تكييف", "مطبخ", "حماية"]
     },
     {
       id: "desert-grand",
@@ -486,7 +722,13 @@
       typeEn: "Hotel",
       typeAr: "فندق",
       desc_en: "Classic hotel with comfortable rooms and breakfast included.",
-      desc_ar: "فندق مريح بغرف أنيقة مع إفطار مشمول."
+      desc_ar: "فندق مريح بغرف أنيقة مع إفطار مشمول.",
+      maxGuests: 2,
+      bedrooms: 1,
+      lat: 32.4902,
+      lng: 3.6735,
+      features_en: ["breakfast", "restaurant", "parking", "wifi"],
+      features_ar: ["إفطار", "مطعم", "موقف سيارات", "واي فاي"]
     },
     {
       id: "azure-villa",
@@ -503,7 +745,13 @@
       typeEn: "Villa",
       typeAr: "فيلا",
       desc_en: "Luxury beachfront villa for premium family getaways.",
-      desc_ar: "فيلا فاخرة على الساحل لعطلات عائلية مميزة."
+      desc_ar: "فيلا فاخرة على الساحل لعطلات عائلية مميزة.",
+      maxGuests: 10,
+      bedrooms: 5,
+      lat: 36.7515,
+      lng: 5.0557,
+      features_en: ["pool", "beach", "tv", "security"],
+      features_ar: ["مسبح", "وصول للشاطئ", "تلفاز", "حماية"]
     }
   ];
 
@@ -533,11 +781,12 @@
   }
 
   function currentPageWithSearch() {
-    return currentPage() + (window.location.search || "");
+    return currentPage() + (window.location.search || "") + (window.location.hash || "");
   }
 
   function isAuthPage() {
-    return currentPage().toLowerCase() === ROUTES.auth.toLowerCase() || /auth/i.test(currentPage());
+    const page = currentPage().toLowerCase();
+    return page === ROUTES.auth.toLowerCase() || /auth/i.test(page);
   }
 
   function detectCurrentView() {
@@ -545,6 +794,9 @@
     const bodyView = String(document.body?.dataset?.view || "").toLowerCase();
 
     if (bodyView.includes("favorite") || page.includes("favorite")) return "favorites";
+    if (bodyView.includes("property") || page.includes("property") || page.includes("details")) return "property";
+    if (bodyView.includes("auth") || page.includes("auth")) return "auth";
+    if (bodyView.includes("booking") || page.includes("booking")) return "booking";
     return "home";
   }
 
@@ -596,13 +848,14 @@
       bookingsList: firstExisting(["#bookings-list", "[data-bookings-list]"]),
 
       chatModal: firstExisting(["#chat-modal", ".chat-modal"]),
-      chatOpenBtn: firstExisting(["#chat-open-btn", "[data-chat-open]", ".chat-fab-btn"]),
+      chatOpenBtn: firstExisting(["#chat-open-btn", "[data-chat-open]", ".chat-fab-btn", "#open-chat-btn"]),
       chatCloseBtn: firstExisting(["#chat-close-btn", "#close-chat-btn", "[data-chat-close]"]),
       chatSendBtn: firstExisting(["#chat-send-btn", "#send-chat-btn", "[data-chat-send]"]),
       chatTextarea: firstExisting(["#chat-textarea", "#chat-message-input", "[data-chat-textarea]"]),
       chatMessages: firstExisting(["#chat-messages", "[data-chat-messages]"]),
       chatEmptyState: firstExisting(["#chat-empty-state", "[data-chat-empty]"]),
       chatPropertyId: firstExisting(["#chat-property-id"]),
+      chatUnreadBadge: firstExisting(["#chat-unread-badge"]),
 
       scrollTopBtn: firstExisting(["#scroll-top-btn", "[data-scroll-top]"]),
       favToast: firstExisting(["#fav-toast"]),
@@ -610,7 +863,29 @@
 
       mobileFavBtn: firstExisting(["#mob-fav-btn"]),
       mobileProfileBtn: firstExisting(["#mob-profile-btn"]),
-      mobileStaysBtn: firstExisting(["#mob-stays-btn"])
+      mobileStaysBtn: firstExisting(["#mob-stays-btn"]),
+
+      propertySkeleton: firstExisting(["#prop-skeleton"]),
+      propertyContent: firstExisting(["#prop-real-content"]),
+      propertyFavBtn: firstExisting(["#property-fav-btn"]),
+      shareBtn: firstExisting(["#share-btn"]),
+      contactHostBtn: firstExisting(["#contact-host-btn", "#host-chat-btn", "#booking-chat-btn"]),
+      bookNowLink: firstExisting(["#book-now-link"]),
+      mapEl: firstExisting(["#property-map"]),
+      mapOpenLink: firstExisting(["#map-open-link"]),
+      galleryTrack: firstExisting(["#slider-track"]),
+      galleryThumbs: firstExisting(["#gallery-thumbs"]),
+      galleryDots: firstExisting(["#slider-dots"]),
+      galleryCount: firstExisting(["#slider-count-badge"]),
+      galleryPrev: firstExisting(["#gallery-prev-btn"]),
+      galleryNext: firstExisting(["#gallery-next-btn"]),
+      galleryFullscreen: firstExisting(["#gallery-fullscreen-btn"]),
+
+      lightbox: firstExisting(["#lightbox"]),
+      lightboxImg: firstExisting(["#lightbox-img"]),
+      lightboxClose: firstExisting(["#close-lightbox-btn"]),
+      lightboxPrev: firstExisting(["#lightbox-prev-btn"]),
+      lightboxNext: firstExisting(["#lightbox-next-btn"])
     };
   }
 
@@ -638,16 +913,30 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeText(email));
   }
 
+  function safeNumber(value, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
   function formatCurrency(value) {
     const locale = state.lang === "ar" ? "ar-DZ" : "en-US";
     return `${Number(value || 0).toLocaleString(locale)} DZD`;
   }
 
   function formatDate(value) {
-    if (!value) return "—";
+    if (!value) return t("date_not_available");
     const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "—";
+    if (Number.isNaN(date.getTime())) return t("date_not_available");
     return date.toLocaleDateString(state.lang === "ar" ? "ar-DZ" : "en-GB");
+  }
+
+  function formatTime(value) {
+    const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleTimeString(state.lang === "ar" ? "ar-DZ" : "en-GB", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
   function debounce(fn, delay = 220) {
@@ -665,6 +954,29 @@
       console.error(err);
       return null;
     }
+  }
+
+  function truncate(str, length = 80) {
+    const clean = normalizeText(str);
+    if (clean.length <= length) return clean;
+    return `${clean.slice(0, length - 1)}…`;
+  }
+
+  function getInitials(name) {
+    const parts = normalizeText(name).split(/\s+/).filter(Boolean);
+    if (!parts.length) return "U";
+    return parts
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join("");
+  }
+
+  function syncPhosphorIcons() {
+    safeCall(() => {
+      if (window.PhosphorIcons && typeof window.PhosphorIcons.replace === "function") {
+        window.PhosphorIcons.replace();
+      }
+    });
   }
 
   function getRedirectTargetFromUrl() {
@@ -796,6 +1108,16 @@
     return map[code] || (state.lang === "ar" ? "حدث خطأ غير متوقع." : "Something went wrong.");
   }
 
+  function isArabic() {
+    return state.lang === "ar";
+  }
+
+  function renderInlineIconButton(el, iconClass, label) {
+    if (!el) return;
+    const span = label ? `<span>${escapeHtml(label)}</span>` : "";
+    el.innerHTML = `<i class="${escapeHtml(iconClass)}"></i>${span}`;
+  }
+
   /* =========================================
      8) FIREBASE
   ========================================= */
@@ -848,6 +1170,20 @@
     }
   }
 
+  async function setAuthPersistenceFromRemember() {
+    if (!auth || !firebase?.auth?.Auth?.Persistence) return;
+    const remember = !!safeJsonGet(STORAGE_KEYS.remember, true);
+    const persistence = remember
+      ? firebase.auth.Auth.Persistence.LOCAL
+      : firebase.auth.Auth.Persistence.SESSION;
+
+    try {
+      await auth.setPersistence(persistence);
+    } catch (error) {
+      console.warn("Failed to set auth persistence:", error);
+    }
+  }
+
   /* =========================================
      9) PROPERTY NORMALIZATION
   ========================================= */
@@ -865,22 +1201,33 @@
     return true;
   }
 
+  function normalizeArray(value) {
+    if (!Array.isArray(value)) return [];
+    return value.map((item) => normalizeText(item)).filter(Boolean);
+  }
+
   function normalizeProperty(p = {}, docId = "", collectionName = "") {
     const titleEn = p.title_en || p.titleEn || p.nameEn || p.title || "";
     const titleAr = p.title_ar || p.titleAr || p.nameAr || p.title || "";
-    const locationEn = p.location_en || p.locationEn || p.cityEn || p.location || p.address || "";
-    const locationAr = p.location_ar || p.locationAr || p.cityAr || p.location || p.address || "";
+    const locationEn =
+      p.location_en || p.locationEn || p.cityEn || p.location || p.address || "";
+    const locationAr =
+      p.location_ar || p.locationAr || p.cityAr || p.location || p.address || "";
+    const galleryImages = normalizeArray(p.images)
+      .concat(normalizeArray(p.gallery))
+      .concat(normalizeArray(p.photos));
+
     const baseImage =
       p.image ||
       p.imageUrl ||
       p.mainImage ||
       p.coverImage ||
-      (Array.isArray(p.images) && p.images[0]) ||
+      galleryImages[0] ||
       "images/placeholder.jpg";
 
-    const images = Array.isArray(p.images) && p.images.length ? p.images.filter(Boolean) : [baseImage];
-    const customId = normalizeText(p.id);
-    const realDocId = normalizeText(docId || p.docId || "");
+    const images = Array.from(new Set([baseImage, ...galleryImages].filter(Boolean)));
+    const customId = normalizeText(p.id || p.slug || p.propertyId);
+    const realDocId = normalizeText(docId || p.docId || p.documentId || "");
     const navId = realDocId || customId || slugify(titleEn || titleAr || Date.now());
 
     return {
@@ -900,23 +1247,22 @@
       urgency: p.urgency || "",
       desc_en: p.desc_en || p.descEn || p.descriptionEn || p.description || "",
       desc_ar: p.desc_ar || p.descAr || p.descriptionAr || p.description || "",
-      type: String(p.type || p.category || "").toLowerCase(),
-      typeEn: p.typeEn || p.categoryEn || p.type || "",
-      typeAr: p.typeAr || p.categoryAr || p.type || "",
-      features_en: Array.isArray(p.features_en)
-        ? p.features_en
-        : Array.isArray(p.featuresEn)
-        ? p.featuresEn
-        : Array.isArray(p.amenitiesEn)
-        ? p.amenitiesEn
-        : [],
-      features_ar: Array.isArray(p.features_ar)
-        ? p.features_ar
-        : Array.isArray(p.featuresAr)
-        ? p.featuresAr
-        : Array.isArray(p.amenitiesAr)
-        ? p.amenitiesAr
-        : [],
+      type: String(p.type || p.category || p.propertyType || "").toLowerCase(),
+      typeEn: p.typeEn || p.categoryEn || p.propertyTypeEn || p.type || "",
+      typeAr: p.typeAr || p.categoryAr || p.propertyTypeAr || p.type || "",
+      features_en: normalizeArray(
+        p.features_en || p.featuresEn || p.amenitiesEn || p.amenities_en
+      ),
+      features_ar: normalizeArray(
+        p.features_ar || p.featuresAr || p.amenitiesAr || p.amenities_ar
+      ),
+      maxGuests: safeNumber(p.maxGuests || p.guests || p.capacity || 4, 4),
+      bedrooms: safeNumber(p.bedrooms || p.rooms || 2, 2),
+      hostName: p.hostName || p.host || p.ownerName || "OreBooking Host",
+      hostSince: p.hostSince || "2024",
+      lat: p.lat ?? p.locationLat ?? p.latitude ?? null,
+      lng: p.lng ?? p.locationLng ?? p.longitude ?? null,
+      mapLink: p.mapLink || "",
       createdAt: p.createdAt || null,
       updatedAt: p.updatedAt || null,
       raw: p
@@ -961,9 +1307,20 @@
 
   function getPropertyType(property) {
     if (!property) return "";
+    const raw = String(
+      state.lang === "ar"
+        ? property.typeAr || property.type || property.typeEn || ""
+        : property.typeEn || property.type || property.typeAr || ""
+    ).toLowerCase();
+
+    if (/hotel|فندق/.test(raw)) return t("hotel");
+    if (/apartment|suite|loft|flat|شقة|أجنحة/.test(raw)) return t("apartment");
+    if (/villa|فيلا/.test(raw)) return t("villa");
+    if (/resort|منتجع/.test(raw)) return t("resort");
+    if (/cabin|كوخ/.test(raw)) return t("cabin");
     return state.lang === "ar"
-      ? property.typeAr || property.type || ""
-      : property.typeEn || property.type || "";
+      ? property.typeAr || property.typeEn || t("premium_stay")
+      : property.typeEn || property.typeAr || t("premium_stay");
   }
 
   function propertyMatchesCategory(property, category) {
@@ -982,10 +1339,29 @@
       .toLowerCase();
 
     if (raw === "hotel" || raw === "hotels") return /hotel|فندق/.test(haystack);
-    if (raw === "apartment" || raw === "apartments") return /apartment|suite|loft|شقة|أجنحة/.test(haystack);
+    if (raw === "apartment" || raw === "apartments") return /apartment|suite|loft|flat|شقة|أجنحة/.test(haystack);
     if (raw === "villa" || raw === "villas") return /villa|فيلا/.test(haystack);
 
     return haystack.includes(raw);
+  }
+
+  function propertyMatchesSearch(property, search) {
+    const q = normalizeText(search).toLowerCase();
+    if (!q) return true;
+    const bag = [
+      property.title_en,
+      property.title_ar,
+      property.location_en,
+      property.location_ar,
+      property.desc_en,
+      property.desc_ar,
+      property.type,
+      property.typeEn,
+      property.typeAr
+    ]
+      .join(" ")
+      .toLowerCase();
+    return bag.includes(q);
   }
 
   function rememberSelectedProperty(property) {
@@ -1014,7 +1390,13 @@
     if (directMatch) return directMatch;
 
     const snapshot = safeJsonGetAny(STORAGE_ALIASES.selectedPropertyData, null);
-    if (snapshot) return normalizeProperty(snapshot, snapshot.docId || snapshot.id || "", snapshot.collection || "");
+    if (snapshot) {
+      return normalizeProperty(
+        snapshot,
+        snapshot.docId || snapshot.id || "",
+        snapshot.collection || ""
+      );
+    }
     return null;
   }
 
@@ -1124,6 +1506,45 @@
     }
   }
 
+  async function fetchPropertyByIdFromFirestore(id) {
+    if (!db || !id) return null;
+
+    for (const collectionName of PROPERTY_COLLECTION_CANDIDATES) {
+      try {
+        const direct = await db.collection(collectionName).doc(String(id)).get();
+        if (direct.exists) {
+          const data = direct.data() || {};
+          if (isPropertyVisible(data)) {
+            return normalizeProperty(data, direct.id, collectionName);
+          }
+        }
+      } catch (_) {}
+
+      try {
+        const queries = [
+          db.collection(collectionName).where("id", "==", String(id)).limit(1),
+          db.collection(collectionName).where("slug", "==", String(id)).limit(1),
+          db.collection(collectionName).where("propertyId", "==", String(id)).limit(1)
+        ];
+
+        for (const query of queries) {
+          try {
+            const snap = await query.get();
+            if (!snap.empty) {
+              const doc = snap.docs[0];
+              const data = doc.data() || {};
+              if (isPropertyVisible(data)) {
+                return normalizeProperty(data, doc.id, collectionName);
+              }
+            }
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
   /* =========================================
      10) FAVORITES
   ========================================= */
@@ -1135,645 +1556,199 @@
     return uid ? `orefavs-${uid}` : STORAGE_KEYS.favorites;
   }
 
+  function normalizeFavoriteList(list) {
+    return Array.from(
+      new Set(
+        (Array.isArray(list) ? list : [])
+          .map((item) => normalizeText(item))
+          .filter(Boolean)
+      )
+    );
+  }
+
+  function getStoredFavorites(uid = state.user?.uid || "") {
+    const primary = safeJsonGet(getFavoritesKeyForUser(uid), null);
+    const legacy = safeJsonGet(getLegacyFavoritesKey(uid), null);
+    const common = safeJsonGetAny(STORAGE_ALIASES.favoritesCommon, []);
+    return normalizeFavoriteList([...(primary || []), ...(legacy || []), ...(common || [])]);
+  }
+
+  function setStoredFavorites(list, uid = state.user?.uid || "") {
+    const normalized = normalizeFavoriteList(list);
+    safeJsonSet(getFavoritesKeyForUser(uid), normalized);
+    safeJsonSet(getLegacyFavoritesKey(uid), normalized);
+    if (!uid) {
+      safeJsonSetMany(STORAGE_ALIASES.favoritesCommon, normalized);
+    }
+    state.favorites = normalized;
+    updateFavoriteButtonsEverywhere();
+  }
+
   function getFavoriteIds() {
     const uid = state.user?.uid || "";
-    const key = getFavoritesKeyForUser(uid);
-    const legacy = getLegacyFavoritesKey(uid);
-
-    const primary = safeJsonGet(key, null);
-    const secondary = safeJsonGet(legacy, null);
-    const common = safeJsonGetAny(STORAGE_ALIASES.favoritesCommon, null);
-
-    const merged = []
-      .concat(Array.isArray(primary) ? primary : [])
-      .concat(Array.isArray(secondary) ? secondary : [])
-      .concat(Array.isArray(common) ? common : []);
-
-    const unique = [...new Set(merged.map((x) => String(x)))];
-    state.favorites = unique;
-    return unique;
+    state.favorites = getStoredFavorites(uid);
+    return state.favorites;
   }
 
-  function saveFavoriteIds(list) {
-    const uid = state.user?.uid || "";
-    const unique = [...new Set((Array.isArray(list) ? list : []).map((x) => String(x)))];
-
-    safeJsonSet(getFavoritesKeyForUser(uid), unique);
-    safeJsonSet(getLegacyFavoritesKey(uid), unique);
-    safeJsonSetMany(STORAGE_ALIASES.favoritesCommon, unique);
-
-    state.favorites = unique;
+  function isFavoriteId(id) {
+    return getFavoriteIds().includes(String(id));
   }
 
-  function mergeGuestFavoritesIntoUser() {
-    if (!state.user?.uid) return;
-
-    const guest = safeJsonGet(STORAGE_KEYS.favoritesGuest, []);
-    if (!Array.isArray(guest) || !guest.length) return;
-
-    const existing = getFavoriteIds();
-    const merged = [...new Set([...existing, ...guest.map(String)])];
-    saveFavoriteIds(merged);
-    safeRemove(STORAGE_KEYS.favoritesGuest);
+  function addFavoriteId(id) {
+    const current = getFavoriteIds();
+    if (!current.includes(String(id))) {
+      setStoredFavorites([...current, String(id)]);
+    }
   }
 
-  function isFavorite(propertyId) {
-    const id = String(propertyId || "");
-    return getFavoriteIds().includes(id);
-  }
-
-  function updateFavButtonState() {
-    const current = resolveSelectedProperty();
-    const currentId = current ? getNavigationPropertyId(current) : "";
-
-    $all("[data-favorite-id], [data-fav-id], #fav-property-btn, .favorite-btn, .fav-btn").forEach((btn) => {
-      const targetId =
-        btn.dataset.favoriteId ||
-        btn.dataset.favId ||
-        btn.dataset.id ||
-        currentId ||
-        "";
-      if (!targetId) return;
-      btn.classList.toggle("active", isFavorite(targetId));
-      btn.setAttribute("aria-pressed", isFavorite(targetId) ? "true" : "false");
-    });
+  function removeFavoriteId(id) {
+    const current = getFavoriteIds();
+    setStoredFavorites(current.filter((x) => x !== String(id)));
   }
 
   function toggleFavorite(property) {
-    if (!property) return;
-
     const propertyId = getNavigationPropertyId(property);
-    const list = getFavoriteIds();
-    const exists = list.includes(propertyId);
-    const next = exists ? list.filter((x) => x !== propertyId) : [...list, propertyId];
+    if (!propertyId) return false;
 
-    saveFavoriteIds(next);
-    updateFavButtonState();
-    renderListings();
-
-    showFavToast(exists ? t("fav_removed") : t("fav_added"));
-  }
-
-  /* =========================================
-     11) THEME / LANGUAGE
-  ========================================= */
-  function updateLogo() {
-    const mainLogo = firstExisting(["#main-logo", ".logo-img"]);
-    const modalLogo = firstExisting(["#modal-logo", ".auth-header img"]);
-    const logoPath = state.theme === "dark" ? "logos/orebooking2.png" : "logos/orebooking.png";
-
-    if (mainLogo && !/favicon/i.test(mainLogo.src || "")) mainLogo.src = logoPath;
-    if (modalLogo && !/favicon/i.test(modalLogo.src || "")) modalLogo.src = logoPath;
-  }
-
-  function updateTextNodes() {
-    const dom = getDom();
-
-    document.querySelectorAll("[data-i18n]").forEach((el) => {
-      const key = el.getAttribute("data-i18n");
-      if (!key) return;
-      const translated = translateOptional(key);
-      if (translated !== null) el.textContent = translated;
-    });
-
-    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
-      const key = el.getAttribute("data-i18n-placeholder");
-      if (!key) return;
-      const translated = translateOptional(key);
-      if (translated !== null) el.setAttribute("placeholder", translated);
-    });
-
-    document.title = t("page_title");
-
-    if (dom.langBtn) {
-      const hasIcon = !!dom.langBtn.querySelector("i");
-      dom.langBtn.innerHTML = hasIcon
-        ? `<i class="ph ph-translate"></i><span>${state.lang === "en" ? "AR" : "EN"}</span>`
-        : state.lang === "en"
-        ? "AR"
-        : "EN";
-    }
-
-    if (dom.themeBtn) {
-      dom.themeBtn.innerHTML =
-        state.theme === "dark" ? `<i class="ph ph-sun"></i>` : `<i class="ph ph-moon"></i>`;
-    }
-
-    if (dom.destinationInput && !dom.destinationInput.value) {
-      dom.destinationInput.setAttribute("placeholder", t("where_placeholder"));
-    }
-
-    if (dom.sectionTitle) {
-      dom.sectionTitle.textContent = state.currentView === "favorites" ? t("favorites") : t("featured_title");
-    }
-  }
-
-  function applyTheme() {
-    const dom = getDom();
-    dom.body?.classList.toggle("dark", state.theme === "dark");
-    dom.html?.classList.toggle("dark", state.theme === "dark");
-    safeSetMany(STORAGE_ALIASES.theme, state.theme);
-    updateLogo();
-
-    const metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) {
-      metaTheme.setAttribute("content", state.theme === "dark" ? "#020617" : "#435abf");
-    }
-
-    updateTextNodes();
-  }
-
-  function applyLanguage() {
-    const dom = getDom();
-    dom.html.lang = state.lang;
-    dom.html.dir = state.lang === "ar" ? "rtl" : "ltr";
-    safeSetMany(STORAGE_ALIASES.lang, state.lang);
-
-    if (auth) {
-      try {
-        auth.languageCode = state.lang;
-      } catch (_) {}
-    }
-
-    updateTextNodes();
-    updateUserUI();
-  }
-
-  function applyInitialState() {
-    state.currentView = detectCurrentView();
-    applyTheme();
-    applyLanguage();
-  }
-
-  function toggleTheme() {
-    state.theme = state.theme === "light" ? "dark" : "light";
-    applyTheme();
-  }
-
-  function toggleLanguage() {
-    state.lang = state.lang === "en" ? "ar" : "en";
-    applyLanguage();
-    syncCategoryButtons();
-    syncSortOptions();
-    renderListings();
-    renderBookingsPreview();
-    renderChatMessages();
-  }
-
-  /* =========================================
-     12) AUTH
-  ========================================= */
-  function showAuthMessage(message = "", type = "error") {
-    const dom = getDom();
-    if (!dom.authMessage) return;
-
-    if (!message) {
-      dom.authMessage.textContent = "";
-      dom.authMessage.className = "auth-message";
-      dom.authMessage.style.display = "none";
-      return;
-    }
-
-    dom.authMessage.textContent = message;
-    dom.authMessage.className = `auth-message ${type}`;
-    dom.authMessage.style.display = "block";
-  }
-
-  function switchAuthForm(formType = "login") {
-    const dom = getDom();
-    const forms = {
-      login: dom.loginForm,
-      register: dom.registerForm,
-      forgot: dom.forgotForm
-    };
-
-    Object.entries(forms).forEach(([key, form]) => {
-      if (!form) return;
-      form.classList.toggle("active", key === formType);
-      form.style.display = key === formType ? "" : "none";
-    });
-
-    showAuthMessage("");
-  }
-
-  function openAuthModal(view = "login", message = "") {
-    const dom = getDom();
-
-    if (!dom.authModal) {
-      window.location.href = getAuthUrl(view);
-      return;
-    }
-
-    switchAuthForm(view);
-    dom.authModal.classList.add("active");
-    dom.body?.classList.add("modal-open");
-    if (message) showAuthMessage(message, "error");
-  }
-
-  function closeAuthModal() {
-    const dom = getDom();
-    dom.authModal?.classList.remove("active");
-    dom.body?.classList.remove("modal-open");
-    showAuthMessage("");
-  }
-
-  function requireAuth(message = "", view = "login") {
-    if (state.user) return true;
-
-    if (isAuthPage()) {
-      switchAuthForm(view);
-      if (message) showAuthMessage(message, "error");
+    const exists = isFavoriteId(propertyId);
+    if (exists) {
+      removeFavoriteId(propertyId);
+      showFavToast(t("fav_removed"));
       return false;
     }
 
-    const dom = getDom();
-    if (dom.authModal) {
-      openAuthModal(view, message || t("auth_required"));
-      return false;
-    }
-
-    window.location.href = getAuthUrl(view);
-    return false;
+    addFavoriteId(propertyId);
+    showFavToast(t("fav_added"));
+    return true;
   }
 
-  async function setAuthPersistenceFromRemember() {
-    if (!auth || !firebase?.auth?.Auth?.Persistence) return;
+  function migrateGuestFavoritesToUser(uid) {
+    if (!uid) return;
+    const guestFavs = normalizeFavoriteList(safeJsonGet(STORAGE_KEYS.favoritesGuest, []));
+    if (!guestFavs.length) return;
 
-    const remember = safeGet(STORAGE_KEYS.remember, "1") !== "0";
-    const persistence = remember
-      ? firebase.auth.Auth.Persistence.LOCAL
-      : firebase.auth.Auth.Persistence.SESSION;
+    const userFavs = normalizeFavoriteList(safeJsonGet(getFavoritesKeyForUser(uid), []));
+    const merged = normalizeFavoriteList([...userFavs, ...guestFavs]);
 
-    try {
-      await auth.setPersistence(persistence);
-    } catch (error) {
-      console.warn("Auth persistence error:", error);
-    }
+    safeJsonSet(getFavoritesKeyForUser(uid), merged);
+    safeJsonSet(getLegacyFavoritesKey(uid), merged);
+    safeRemove(STORAGE_KEYS.favoritesGuest);
+    safeRemoveMany(STORAGE_ALIASES.favoritesCommon);
+    state.favorites = merged;
   }
 
-  async function handlePostAuthSuccess(type = "login") {
-    closeAuthModal();
-    showAuthMessage("");
+  function updateFavoriteButtonsEverywhere() {
+    const favIds = getFavoriteIds();
 
-    if (type === "register") {
-      showToast(t("register_success"), "success");
-    } else {
-      showToast(t("login_success"), "success");
-    }
+    $all("[data-fav-id]").forEach((btn) => {
+      const id = normalizeText(btn.getAttribute("data-fav-id"));
+      const active = favIds.includes(id);
+      btn.classList.toggle("active", active);
+      const label = active ? t("saved") : t("save");
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      btn.setAttribute("aria-label", `${label}`);
+      const icon = active ? "ph-fill ph-heart" : "ph ph-heart";
 
-    if (continuePendingBookingAfterAuth()) return;
-
-    const redirect = getRedirectTargetFromUrl();
-    if (redirect && isAuthPage()) {
-      window.location.href = redirect;
-      return;
-    }
-
-    if (isAuthPage()) {
-      window.location.href = ROUTES.home;
-    }
-  }
-
-  async function handleLoginSubmit(event) {
-    event.preventDefault();
-
-    if (!auth) {
-      showAuthMessage(t("auth_unavailable"), "error");
-      return;
-    }
-
-    const email = normalizeText($("#login-email")?.value);
-    const password = normalizeText($("#login-password")?.value);
-    const remember = !!($("#remember-me")?.checked || safeGet(STORAGE_KEYS.remember, "1") === "1");
-
-    if (!validateEmail(email)) {
-      showAuthMessage(t("invalid_email"), "error");
-      return;
-    }
-
-    if (!password) {
-      showAuthMessage(t("fill_required"), "error");
-      return;
-    }
-
-    safeSet(STORAGE_KEYS.remember, remember ? "1" : "0");
-
-    try {
-      await setAuthPersistenceFromRemember();
-      await auth.signInWithEmailAndPassword(email, password);
-      await handlePostAuthSuccess("login");
-    } catch (error) {
-      console.error("Login error:", error);
-      showAuthMessage(humanFirebaseError(error?.code), "error");
-    }
-  }
-
-  async function handleRegisterSubmit(event) {
-    event.preventDefault();
-
-    if (!auth) {
-      showAuthMessage(t("auth_unavailable"), "error");
-      return;
-    }
-
-    const name = normalizeText($("#reg-name")?.value);
-    const email = normalizeText($("#reg-email")?.value);
-    const password = normalizeText($("#reg-password")?.value);
-
-    if (!name || !validateEmail(email) || !password) {
-      showAuthMessage(t("fill_required"), "error");
-      return;
-    }
-
-    if (password.length < 6) {
-      showAuthMessage(humanFirebaseError("auth/weak-password"), "error");
-      return;
-    }
-
-    try {
-      await setAuthPersistenceFromRemember();
-      const cred = await auth.createUserWithEmailAndPassword(email, password);
-
-      if (cred?.user && name) {
-        try {
-          await cred.user.updateProfile({ displayName: name });
-        } catch (_) {}
+      if (btn.classList.contains("fav-btn") || btn.classList.contains("favorite-btn")) {
+        btn.innerHTML = `<i class="${icon}"></i>`;
+      } else if (btn.id === "property-fav-btn") {
+        btn.innerHTML = `<i class="${icon}"></i><span>${escapeHtml(label)}</span>`;
       }
-
-      if (db && cred?.user) {
-        try {
-          await db.collection("users").doc(cred.user.uid).set(
-            {
-              uid: cred.user.uid,
-              name,
-              email,
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            },
-            { merge: true }
-          );
-        } catch (_) {}
-      }
-
-      await handlePostAuthSuccess("register");
-    } catch (error) {
-      console.error("Register error:", error);
-      showAuthMessage(humanFirebaseError(error?.code), "error");
-    }
-  }
-
-  async function handleForgotSubmit(event) {
-    event.preventDefault();
-
-    if (!auth) {
-      showAuthMessage(t("auth_unavailable"), "error");
-      return;
-    }
-
-    const email = normalizeText($("#forgot-email")?.value);
-    if (!validateEmail(email)) {
-      showAuthMessage(t("invalid_email"), "error");
-      return;
-    }
-
-    try {
-      await auth.sendPasswordResetEmail(email);
-      showAuthMessage(t("reset_sent"), "success");
-    } catch (error) {
-      console.error("Reset error:", error);
-      showAuthMessage(humanFirebaseError(error?.code), "error");
-    }
-  }
-
-  async function handleGoogleAuth(event) {
-    if (event) event.preventDefault();
-
-    if (!auth || !googleProvider) {
-      showAuthMessage(t("auth_unavailable"), "error");
-      return;
-    }
-
-    try {
-      await setAuthPersistenceFromRemember();
-      await auth.signInWithPopup(googleProvider);
-      await handlePostAuthSuccess("login");
-    } catch (error) {
-      console.error("Google auth error:", error);
-      showAuthMessage(humanFirebaseError(error?.code), "error");
-    }
-  }
-
-  async function handleLogout() {
-    if (!auth) {
-      state.user = null;
-      updateUserUI();
-      showToast(t("logout_success"), "success");
-      return;
-    }
-
-    try {
-      await auth.signOut();
-      state.user = null;
-      updateUserUI();
-      renderBookingsPreview();
-      renderChatMessages();
-      renderListings();
-      showToast(t("logout_success"), "success");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  }
-
-  function closeProfileDropdown() {
-    const dom = getDom();
-    if (!dom.profileDropdown) return;
-    dom.profileDropdown.classList.remove("active");
-    dom.profileTrigger?.setAttribute("aria-expanded", "false");
-  }
-
-  function toggleProfileDropdown() {
-    const dom = getDom();
-    if (!dom.profileDropdown) return;
-
-    const active = dom.profileDropdown.classList.toggle("active");
-    dom.profileTrigger?.setAttribute("aria-expanded", active ? "true" : "false");
-  }
-
-  function updateUserUI() {
-    const dom = getDom();
-    const user = state.user;
-
-    const name =
-      normalizeText(user?.displayName) ||
-      normalizeText(user?.email?.split("@")[0]) ||
-      t("guest_user");
-
-    if (dom.profileName) {
-      dom.profileName.textContent = user ? name : t("guest_user");
-    }
-
-    if (dom.profileEmail) {
-      dom.profileEmail.textContent = user ? user.email || "" : t("sign_in_to_continue");
-    }
-
-    if (dom.logoutBtn) {
-      dom.logoutBtn.style.display = user ? "" : "none";
-    }
-
-    if (dom.profileTrigger) {
-      dom.profileTrigger.setAttribute(
-        "aria-label",
-        user ? `${t("logged_in_as")}: ${name}` : t("sign_in")
-      );
-      dom.profileTrigger.setAttribute("title", user ? name : t("sign_in"));
-    }
-
-    if (dom.authCta && dom.authCta !== dom.profileTrigger) {
-      dom.authCta.textContent = user ? t("sign_out") : t("sign_in");
-    }
-
-    updateFavButtonState();
-  }
-
-  function attachAuthStateListener() {
-    if (!auth) return;
-
-    auth.onAuthStateChanged(async (user) => {
-      state.user = user || null;
-      updateUserUI();
-
-      if (state.user) {
-        mergeGuestFavoritesIntoUser();
-        getFavoriteIds();
-        await loadUserBookings();
-      } else {
-        state.bookings = [];
-        getFavoriteIds();
-      }
-
-      renderBookingsPreview();
-      renderChatMessages();
-      renderListings();
     });
+
+    syncPhosphorIcons();
   }
 
   /* =========================================
-     13) LISTINGS
+     11) LISTINGS
   ========================================= */
-  function syncCategoryButtons() {
-    const dom = getDom();
-    dom.categoryButtons.forEach((btn) => {
-      const cat = String(btn.dataset.category || btn.dataset.categoryBtn || "").toLowerCase();
-      const normalized = cat === "hotels" ? "hotel" : cat === "apartments" ? "apartment" : cat === "villas" ? "villa" : cat;
-      btn.classList.toggle("active", normalized === state.activeCategory);
-    });
-  }
-
-  function syncSortOptions() {
-    const dom = getDom();
-    if (dom.sortSelect) dom.sortSelect.value = state.sort;
-  }
-
   function getFilteredProperties() {
-    const search = normalizeText(state.activeSearch).toLowerCase();
-    let list = getSourceProperties().slice();
+    const search = state.activeSearch;
+    const category = state.activeCategory;
+    const sort = state.sort;
+
+    let list = [...getSourceProperties()];
 
     if (state.currentView === "favorites") {
-      const favs = new Set(getFavoriteIds().map(String));
-      list = list.filter((property) => favs.has(getNavigationPropertyId(property)));
+      const favs = getFavoriteIds();
+      list = list.filter((p) => favs.includes(getNavigationPropertyId(p)));
     }
 
-    list = list.filter((property) => propertyMatchesCategory(property, state.activeCategory));
+    list = list.filter((property) => {
+      return propertyMatchesCategory(property, category) && propertyMatchesSearch(property, search);
+    });
 
-    if (search) {
-      list = list.filter((property) => {
-        const haystack = [
-          property.title_en,
-          property.title_ar,
-          property.location_en,
-          property.location_ar,
-          property.type,
-          property.typeEn,
-          property.typeAr,
-          property.desc_en,
-          property.desc_ar
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        return haystack.includes(search);
-      });
-    }
-
-    if (state.sort === "rating") {
-      list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
-    } else if (state.sort === "price_low") {
-      list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-    } else if (state.sort === "price_high") {
-      list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-    } else {
-      list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
-    }
+    list.sort((a, b) => {
+      if (sort === "rating") return (b.rating || 0) - (a.rating || 0);
+      if (sort === "price_low") return (a.price || 0) - (b.price || 0);
+      if (sort === "price_high") return (b.price || 0) - (a.price || 0);
+      const dateA = safeNumber(
+        typeof a.createdAt?.toMillis === "function" ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime(),
+        0
+      );
+      const dateB = safeNumber(
+        typeof b.createdAt?.toMillis === "function" ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime(),
+        0
+      );
+      return dateB - dateA || (b.rating || 0) - (a.rating || 0);
+    });
 
     return list;
   }
 
-  function renderLoadingListings() {
+  function renderListingSkeletons(count = 6) {
     const dom = getDom();
     if (!dom.listingsGrid) return;
-
-    dom.listingsGrid.innerHTML = Array.from({ length: 6 })
-      .map(() => `<div class="card-skeleton" aria-hidden="true"></div>`)
-      .join("");
+    dom.listingsGrid.innerHTML = "";
+    for (let i = 0; i < count; i += 1) {
+      const item = document.createElement("div");
+      item.className = "card-skeleton";
+      dom.listingsGrid.appendChild(item);
+    }
   }
 
-  function renderListingsEmpty(isFavoritesView = false) {
+  function renderEmptyListings(message = t("no_results_text")) {
     const dom = getDom();
     if (!dom.listingsGrid) return;
-
-    const title = isFavoritesView ? t("favorites") : t("no_results_title");
-    const text = isFavoritesView
-      ? state.lang === "ar"
-        ? "لم تقم بإضافة أي عقار إلى المفضلة بعد."
-        : "You have not added any property to favorites yet."
-      : state.activeSearch || state.activeCategory !== "all"
-      ? t("no_results_text")
-      : t("no_props");
 
     dom.listingsGrid.innerHTML = `
       <div class="listings-empty-state">
         <i class="ph ph-house-line"></i>
-        <h3>${escapeHtml(title)}</h3>
-        <p>${escapeHtml(text)}</p>
+        <h3>${escapeHtml(t("no_results_title"))}</h3>
+        <p>${escapeHtml(message)}</p>
       </div>
     `;
+    syncPhosphorIcons();
   }
 
   function renderPropertyCard(property) {
     const propertyId = getNavigationPropertyId(property);
-    const favorite = isFavorite(propertyId);
     const title = getPropertyTitle(property);
     const location = getPropertyLocation(property);
     const urgency = localizeUrgency(property.urgency);
+    const rating = safeNumber(property.rating, 4.8).toFixed(1);
     const reserveLabel = state.user ? t("reserve_now") : t("reserve_cta_signed_out");
+    const isFav = isFavoriteId(propertyId);
 
     return `
       <article class="property-card" data-property-id="${escapeHtml(propertyId)}">
         <div class="property-card-media">
-          <img src="${escapeHtml(property.image)}" alt="${escapeHtml(title)}" loading="lazy" />
+          <img src="${escapeHtml(property.image)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
           ${
             urgency
-              ? `<span class="property-urgency"><i class="ph ph-clock-countdown"></i>${escapeHtml(urgency)}</span>`
+              ? `<div class="property-urgency"><i class="ph-fill ph-fire"></i><span>${escapeHtml(
+                  urgency
+                )}</span></div>`
               : ""
           }
           <button
             type="button"
-            class="favorite-btn ${favorite ? "active" : ""}"
-            data-action="favorite"
-            data-id="${escapeHtml(propertyId)}"
-            aria-label="${escapeHtml(t("favorites"))}"
-            aria-pressed="${favorite ? "true" : "false"}"
+            class="favorite-btn ${isFav ? "active" : ""}"
+            data-fav-id="${escapeHtml(propertyId)}"
+            aria-label="${escapeHtml(t("save_property"))}"
+            aria-pressed="${isFav ? "true" : "false"}"
           >
-            <i class="ph ph-heart${favorite ? "-straight-fill" : ""}"></i>
+            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
           </button>
         </div>
 
@@ -1783,13 +1758,13 @@
               <h3 class="property-card-title">${escapeHtml(title)}</h3>
               <div class="property-card-location">
                 <i class="ph ph-map-pin"></i>
-                <span>${escapeHtml(location || "—")}</span>
+                <span>${escapeHtml(location)}</span>
               </div>
             </div>
 
             <div class="property-card-rating">
-              <i class="ph ph-star-fill"></i>
-              <span>${Number(property.rating || 0).toFixed(1)}</span>
+              <i class="ph-fill ph-star"></i>
+              <span>${escapeHtml(rating)}</span>
             </div>
           </div>
 
@@ -1799,13 +1774,12 @@
           </div>
 
           <div class="property-card-actions">
-            <button type="button" class="details-btn" data-action="details" data-id="${escapeHtml(propertyId)}">
-              <i class="ph ph-eye"></i>
+            <button type="button" class="details-btn" data-action="details" data-property-id="${escapeHtml(propertyId)}">
+              <i class="ph ph-arrow-up-right"></i>
               <span>${escapeHtml(t("view_details"))}</span>
             </button>
-
-            <button type="button" class="reserve-btn" data-action="reserve" data-id="${escapeHtml(propertyId)}">
-              <i class="ph ph-calendar-plus"></i>
+            <button type="button" class="reserve-btn" data-action="reserve" data-property-id="${escapeHtml(propertyId)}">
+              <i class="ph ph-calendar-check"></i>
               <span>${escapeHtml(reserveLabel)}</span>
             </button>
           </div>
@@ -1814,747 +1788,1283 @@
     `;
   }
 
+  function updateSectionHeading() {
+    const dom = getDom();
+    if (!dom.sectionTitle) return;
+    dom.sectionTitle.textContent =
+      state.currentView === "favorites" ? t("favorites") : t("featured_title");
+  }
+
+  function updateCategoryButtons() {
+    const dom = getDom();
+    dom.categoryButtons.forEach((btn) => {
+      const category = normalizeText(btn.dataset.category || btn.dataset.categoryBtn || "");
+      btn.classList.toggle("active", category === state.activeCategory);
+    });
+  }
+
+  function updateClearSearchButton() {
+    const dom = getDom();
+    if (!dom.clearSearchBtn) return;
+    const active = !!normalizeText(state.activeSearch);
+    dom.clearSearchBtn.style.display = active ? "inline-flex" : "none";
+  }
+
   function renderListings() {
     const dom = getDom();
     if (!dom.listingsGrid) return;
 
-    if (state.loadingProperties && !state.propertiesLoaded && !state.liveProperties.length) {
-      renderLoadingListings();
-      return;
-    }
+    updateSectionHeading();
+    updateCategoryButtons();
+    updateClearSearchButton();
 
     const list = getFilteredProperties();
-    const isFavoritesView = state.currentView === "favorites";
-
-    if (dom.clearSearchBtn) {
-      const active = !!state.activeSearch || state.activeCategory !== "all";
-      dom.clearSearchBtn.style.display = active ? "inline-flex" : "none";
-    }
-
-    if (dom.sectionTitle) {
-      dom.sectionTitle.textContent = isFavoritesView ? t("favorites") : t("featured_title");
-    }
 
     if (!list.length) {
-      renderListingsEmpty(isFavoritesView);
+      renderEmptyListings(
+        state.currentView === "favorites" ? t("no_bookings").replace("حجوزات", "عناصر").replace("bookings", "favorites") : t("no_results_text")
+      );
       return;
     }
 
     dom.listingsGrid.innerHTML = list.map(renderPropertyCard).join("");
-    updateFavButtonState();
+    updateFavoriteButtonsEverywhere();
+    syncPhosphorIcons();
   }
 
-  async function initialLoadProperties() {
-    if (db) {
-      const success = await loadLiveProperties();
-      if (!success && firebaseReady) {
-        showToast(t("property_load_error"), "info");
-      }
+  /* =========================================
+     12) PROPERTY PAGE
+  ========================================= */
+  function getFeatureIcon(feature) {
+    const key = normalizeText(feature).toLowerCase();
+    const iconMap = {
+      wifi: "ph-wifi-high",
+      "واي فاي": "ph-wifi-high",
+      pool: "ph-swimming-pool",
+      "مسبح": "ph-swimming-pool",
+      parking: "ph-car",
+      "موقف سيارات": "ph-car",
+      gym: "ph-barbell",
+      "قاعة رياضية": "ph-barbell",
+      restaurant: "ph-fork-knife",
+      "مطعم": "ph-fork-knife",
+      spa: "ph-flower-lotus",
+      "سبا": "ph-flower-lotus",
+      kitchen: "ph-cooking-pot",
+      "مطبخ": "ph-cooking-pot",
+      ac: "ph-snowflake",
+      "تكييف": "ph-snowflake",
+      balcony: "ph-windows",
+      "شرفة": "ph-windows",
+      breakfast: "ph-coffee",
+      "إفطار": "ph-coffee",
+      security: "ph-shield-check",
+      "حماية": "ph-shield-check",
+      tv: "ph-television",
+      "تلفاز": "ph-television",
+      beach: "ph-island",
+      "وصول للشاطئ": "ph-island"
+    };
+    return iconMap[key] || "ph-check-circle";
+  }
+
+  function normalizeFeatureLabel(feature) {
+    const key = normalizeText(feature).toLowerCase();
+    const map = {
+      wifi: t("wifi"),
+      pool: t("pool"),
+      parking: t("parking"),
+      gym: t("gym"),
+      restaurant: t("restaurant"),
+      spa: t("spa"),
+      kitchen: t("kitchen"),
+      ac: t("ac"),
+      balcony: t("balcony"),
+      breakfast: t("breakfast"),
+      security: t("security"),
+      tv: t("tv"),
+      beach: t("beach")
+    };
+    return map[key] || normalizeText(feature);
+  }
+
+  function getPropertyImages(property) {
+    const arr = Array.isArray(property?.images) ? property.images : [];
+    return arr.length ? arr.filter(Boolean) : [property?.image || "images/placeholder.jpg"];
+  }
+
+  function getFeaturesArray(property) {
+    if (!property) return ["wifi", "parking", "ac", "kitchen"];
+    if (state.lang === "ar" && Array.isArray(property.features_ar) && property.features_ar.length) {
+      return property.features_ar;
     }
-    renderListings();
+    if (state.lang !== "ar" && Array.isArray(property.features_en) && property.features_en.length) {
+      return property.features_en;
+    }
+    if (Array.isArray(property.features_en) && property.features_en.length) return property.features_en;
+    if (Array.isArray(property.features_ar) && property.features_ar.length) return property.features_ar;
+    return ["wifi", "parking", "ac", "kitchen"];
+  }
+
+  function getBedroomText(property) {
+    const n = safeNumber(property?.bedrooms, 2);
+    return t(n === 1 ? "bedrooms_count_one" : "bedrooms_count_many", { n });
+  }
+
+  function getGuestCountText(property) {
+    const n = safeNumber(property?.maxGuests, 4);
+    return t("up_to_guests", { n });
+  }
+
+  function showPropertyContent() {
+    const dom = getDom();
+    if (dom.propertySkeleton) dom.propertySkeleton.style.display = "none";
+    if (dom.propertyContent) dom.propertyContent.style.display = "block";
+  }
+
+  function showPropertyLoading() {
+    const dom = getDom();
+    if (dom.propertySkeleton) dom.propertySkeleton.style.display = "";
+    if (dom.propertyContent) dom.propertyContent.style.display = "none";
+  }
+
+  function destroyPropertyMap() {
+    if (state.propertyMapInstance) {
+      safeCall(() => state.propertyMapInstance.remove());
+      state.propertyMapInstance = null;
+    }
+  }
+
+  function initPropertyMap(lat, lng, locationName) {
+    const dom = getDom();
+    if (!dom.mapEl) return;
+
+    destroyPropertyMap();
+
+    const mapParent = dom.mapEl.parentElement;
+    const existingNoLocation = mapParent?.querySelector(".map-no-location");
+    if (existingNoLocation) existingNoLocation.remove();
+
+    const latitude = safeNumber(lat, NaN);
+    const longitude = safeNumber(lng, NaN);
+    const hasCoords = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+    if (!hasCoords || typeof window.L === "undefined") {
+      dom.mapEl.style.display = "none";
+      if (dom.mapOpenLink) dom.mapOpenLink.style.display = "none";
+
+      if (mapParent) {
+        const box = document.createElement("div");
+        box.className = "map-no-location";
+        box.innerHTML = `
+          <i class="ph ph-map-pin-line"></i>
+          <span>${escapeHtml(locationName || t("unknown_location"))}</span>
+        `;
+        mapParent.appendChild(box);
+      }
+      syncPhosphorIcons();
+      return;
+    }
+
+    dom.mapEl.style.display = "";
+    state.propertyMapInstance = L.map(dom.mapEl, {
+      scrollWheelZoom: false,
+      zoomControl: true
+    }).setView([latitude, longitude], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(state.propertyMapInstance);
+
+    const marker = L.marker([latitude, longitude]).addTo(state.propertyMapInstance);
+    marker.bindPopup(`<strong>${escapeHtml(locationName || t("unknown_location"))}</strong>`);
+
+    setTimeout(() => {
+      safeCall(() => state.propertyMapInstance.invalidateSize());
+    }, 250);
+
+    if (dom.mapOpenLink) {
+      dom.mapOpenLink.href = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      dom.mapOpenLink.style.display = "inline-flex";
+    }
+  }
+
+  function updateGalleryCounter() {
+    const dom = getDom();
+    if (!dom.galleryCount) return;
+    const total = state.galleryImages.length || 1;
+    const index = state.galleryIndex + 1;
+    dom.galleryCount.textContent = `${index} / ${total}`;
+  }
+
+  function updateGalleryDots() {
+    const dom = getDom();
+    if (!dom.galleryDots) return;
+    $all(".slider-dot", dom.galleryDots).forEach((dot, index) => {
+      dot.classList.toggle("active", index === state.galleryIndex);
+    });
+  }
+
+  function updateGalleryThumbs() {
+    const dom = getDom();
+    if (!dom.galleryThumbs) return;
+    $all(".gallery-thumb", dom.galleryThumbs).forEach((thumb, index) => {
+      thumb.classList.toggle("active", index === state.galleryIndex);
+    });
+  }
+
+  function updateGalleryTrack(animate = true) {
+    const dom = getDom();
+    if (!dom.galleryTrack) return;
+    dom.galleryTrack.style.transition = animate ? "" : "none";
+    dom.galleryTrack.style.transform = `translateX(${isArabic() ? "" : "-"}${state.galleryIndex * 100}%)`;
+    if (isArabic()) {
+      dom.galleryTrack.style.transform = `translateX(${state.galleryIndex * 100}%)`;
+    }
+    updateGalleryCounter();
+    updateGalleryDots();
+    updateGalleryThumbs();
+
+    if (dom.lightbox?.classList.contains("active") && dom.lightboxImg) {
+      dom.lightboxImg.src = state.galleryImages[state.galleryIndex] || "images/placeholder.jpg";
+      dom.lightboxImg.classList.remove("zoomed");
+    }
+  }
+
+  function goToSlide(index, animate = true) {
+    const total = state.galleryImages.length;
+    if (!total) return;
+    state.galleryIndex = (index + total) % total;
+    updateGalleryTrack(animate);
+  }
+
+  function nextSlide(e) {
+    if (e) e.preventDefault();
+    goToSlide(state.galleryIndex + 1);
+  }
+
+  function prevSlide(e) {
+    if (e) e.preventDefault();
+    goToSlide(state.galleryIndex - 1);
+  }
+
+  function openLightbox() {
+    const dom = getDom();
+    if (!dom.lightbox || !dom.lightboxImg || !state.galleryImages.length) return;
+    dom.lightboxImg.src = state.galleryImages[state.galleryIndex] || "images/placeholder.jpg";
+    dom.lightboxImg.classList.remove("zoomed");
+    openModal(dom.lightbox);
+  }
+
+  function closeLightbox() {
+    const dom = getDom();
+    if (!dom.lightbox) return;
+    closeModal(dom.lightbox);
+  }
+
+  function toggleZoom(e) {
+    e?.stopPropagation?.();
+    e?.currentTarget?.classList.toggle("zoomed");
+  }
+
+  function setupGallery(images) {
+    const dom = getDom();
+    if (!dom.galleryTrack) return;
+
+    state.galleryImages = images.length ? images : ["images/placeholder.jpg"];
+    state.galleryIndex = 0;
+
+    dom.galleryTrack.innerHTML = state.galleryImages
+      .map(
+        (src, index) => `
+          <img
+            src="${escapeHtml(src)}"
+            alt="${escapeHtml(`${t("details")} ${index + 1}`)}"
+            loading="${index === 0 ? "eager" : "lazy"}"
+            onerror="this.src='images/placeholder.jpg'"
+          >
+        `
+      )
+      .join("");
+
+    if (dom.galleryDots) {
+      dom.galleryDots.innerHTML = state.galleryImages
+        .map(
+          (_, index) => `
+            <button
+              type="button"
+              class="slider-dot ${index === 0 ? "active" : ""}"
+              data-slide-index="${index}"
+              aria-label="${escapeHtml(`${t("details")} ${index + 1}`)}"
+            ></button>
+          `
+        )
+        .join("");
+    }
+
+    if (dom.galleryThumbs) {
+      dom.galleryThumbs.innerHTML = state.galleryImages
+        .map(
+          (src, index) => `
+            <button
+              type="button"
+              class="gallery-thumb ${index === 0 ? "active" : ""}"
+              data-thumb-index="${index}"
+              aria-label="${escapeHtml(`${t("details")} ${index + 1}`)}"
+            >
+              <img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+            </button>
+          `
+        )
+        .join("");
+    }
+
+    updateGalleryTrack(false);
+  }
+
+  async function renderPropertyPage(property) {
+    const dom = getDom();
+    if (!property) {
+      showToast(t("property_not_found"), "error");
+      return;
+    }
+
+    state.selectedProperty = property;
+    rememberSelectedProperty(property);
+
+    const title = getPropertyTitle(property) || t("unnamed_property");
+    const location = getPropertyLocation(property) || t("unknown_location");
+    const description =
+      (state.lang === "ar" ? property.desc_ar : property.desc_en) ||
+      property.desc_en ||
+      property.desc_ar ||
+      t("no_description");
+    const type = getPropertyType(property);
+    const guestsText = getGuestCountText(property);
+    const bedroomsText = getBedroomText(property);
+
+    const $id = (id) => document.getElementById(id);
+
+    if ($id("prop-title")) $id("prop-title").textContent = title;
+    if ($id("prop-location")) $id("prop-location").textContent = location;
+    if ($id("prop-desc")) $id("prop-desc").textContent = description;
+    if ($id("prop-price")) $id("prop-price").textContent = formatCurrency(property.price);
+    if ($id("prop-rating")) $id("prop-rating").textContent = safeNumber(property.rating, 4.8).toFixed(1);
+    if ($id("prop-type-text")) $id("prop-type-text").textContent = type;
+
+    if ($id("chip-guests")) $id("chip-guests").textContent = guestsText;
+    if ($id("chip-bedrooms")) $id("chip-bedrooms").textContent = bedroomsText;
+    if ($id("chip-verified")) $id("chip-verified").textContent = t("verified_listing");
+    if ($id("chip-instant")) $id("chip-instant").textContent = t("instant_booking_request");
+
+    if ($id("booking-stat-guests")) $id("booking-stat-guests").textContent = t("capacity_label", { n: property.maxGuests });
+    if ($id("booking-stat-type")) $id("booking-stat-type").textContent = t("type_label", { type });
+
+    if ($id("host-name")) $id("host-name").textContent = property.hostName || "OreBooking Host";
+    if ($id("host-since")) $id("host-since").textContent = t("hosting_since");
+    if ($id("host-badge-text")) $id("host-badge-text").textContent = t("verified_host");
+
+    if ($id("share-text")) $id("share-text").textContent = t("share");
+    if ($id("fav-btn-text")) $id("fav-btn-text").textContent = isFavoriteId(getNavigationPropertyId(property)) ? t("saved") : t("save");
+    if ($id("contact-host-text")) $id("contact-host-text").textContent = t("contact_host");
+    if ($id("host-chat-text")) $id("host-chat-text").textContent = t("message_host");
+    if ($id("booking-chat-text")) $id("booking-chat-text").textContent = t("ask_about_property");
+
+    if ($id("highlights-title")) $id("highlights-title").textContent = t("why_guests_like_it");
+    if ($id("highlight-1-title")) $id("highlight-1-title").textContent = t("great_location");
+    if ($id("highlight-1-desc")) $id("highlight-1-desc").textContent = t("great_location_desc");
+    if ($id("highlight-2-title")) $id("highlight-2-title").textContent = t("clean_and_comfortable");
+    if ($id("highlight-2-desc")) $id("highlight-2-desc").textContent = t("clean_and_comfortable_desc");
+    if ($id("highlight-3-title")) $id("highlight-3-title").textContent = t("responsive_support");
+    if ($id("highlight-3-desc")) $id("highlight-3-desc").textContent = t("responsive_support_desc");
+    if ($id("highlight-4-title")) $id("highlight-4-title").textContent = t("trusted_listing");
+    if ($id("highlight-4-desc")) $id("highlight-4-desc").textContent = t("trusted_listing_desc");
+
+    if ($id("perk-1")) $id("perk-1").textContent = t("free_cancellation_24h");
+    if ($id("perk-2")) $id("perk-2").textContent = t("instant_confirmation");
+    if ($id("perk-3")) $id("perk-3").textContent = t("support_247");
+    if ($id("booking-info-text")) $id("booking-info-text").textContent = t("choose_dates_next_page");
+    if ($id("map-title")) $id("map-title").textContent = t("where_youll_be");
+    if ($id("open-maps-text")) $id("open-maps-text").textContent = t("open_google_maps");
+    if ($id("tips-title")) $id("tips-title").textContent = t("good_to_know");
+    if ($id("trust-note")) $id("trust-note").textContent = t("trust_note");
+
+    if ($id("tip-1")) {
+      $id("tip-1").textContent =
+        state.lang === "ar"
+          ? "يتم استكمال تفاصيل الحجز والمعلومات النهائية للضيوف في الخطوة التالية."
+          : "Booking details and final guest information are completed on the next step.";
+    }
+
+    if ($id("tip-2")) {
+      $id("tip-2").textContent =
+        state.lang === "ar"
+          ? "قد يعتمد السعر النهائي على التواريخ وعدد الضيوف وخيارات الحجز المحددة."
+          : "Final pricing may depend on dates, guests, and selected booking options.";
+    }
+
+    if ($id("tip-3")) {
+      $id("tip-3").textContent =
+        state.lang === "ar"
+          ? "استخدم زر المشاركة لنسخ رابط الإعلان أو إرساله بسرعة."
+          : "Use the share button to copy or send the listing link quickly.";
+    }
+
+    const features = getFeaturesArray(property);
+    const featuresList = $id("prop-features-list");
+    if (featuresList) {
+      featuresList.innerHTML = features
+        .map(
+          (feature) => `
+            <li>
+              <i class="ph ${escapeHtml(getFeatureIcon(feature))}"></i>
+              <span>${escapeHtml(normalizeFeatureLabel(feature))}</span>
+            </li>
+          `
+        )
+        .join("");
+    }
+
+    const images = getPropertyImages(property);
+    setupGallery(images);
+    initPropertyMap(property.lat, property.lng, location);
+
+    if (dom.bookNowLink) {
+      dom.bookNowLink.href = buildBookingUrl(property);
+      dom.bookNowLink.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          handleReserveNow(property);
+        },
+        { once: true }
+      );
+    }
+
+    if (dom.chatPropertyId) {
+      dom.chatPropertyId.value = getNavigationPropertyId(property);
+    }
+
+    if (dom.mapOpenLink && property.mapLink) {
+      dom.mapOpenLink.href = property.mapLink;
+      dom.mapOpenLink.style.display = "inline-flex";
+    }
+
+    updateFavoriteButtonsEverywhere();
+    document.title = `${title} - OreBooking`;
+    showPropertyContent();
+    syncPhosphorIcons();
+  }
+
+  async function loadPropertyPage() {
+    if (state.currentView !== "property") return;
+    showPropertyLoading();
+
+    const propertyId = resolveSelectedPropertyIdFromUrlOrStorage();
+    if (!propertyId) {
+      showToast(t("no_property_id"), "error");
+      showPropertyContent();
+      return;
+    }
+
+    await loadLiveProperties();
+
+    let property = getPropertyById(propertyId) || resolveSelectedProperty();
+    if (!property) {
+      property = await fetchPropertyByIdFromFirestore(propertyId);
+    }
+    if (!property && state.liveProperties.length) {
+      property =
+        state.liveProperties.find((p) => String(p.id) === String(propertyId)) || null;
+    }
+    if (!property) {
+      showToast(t("property_not_found"), "error");
+      showPropertyContent();
+      return;
+    }
+
+    await renderPropertyPage(property);
+  }
+
+  function handleShare() {
+    const title = document.getElementById("prop-title")?.textContent || "OreBooking Property";
+    const url = window.location.href;
+
+    if (navigator.share) {
+      navigator.share({ title, url }).catch(() => {});
+      return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => showToast(t("property_link_copied"), "success"))
+        .catch(() => showToast(t("copy_failed"), "error"));
+      return;
+    }
+
+    showToast(t("copy_failed"), "error");
+  }
+
+  /* =========================================
+     13) AUTH / MODALS
+  ========================================= */
+  function isElementVisible(el) {
+    return !!el && !el.classList.contains("hidden");
+  }
+
+  function getOpenModalCount() {
+    return $all(".modal-overlay.active, .lightbox-overlay.active").length;
+  }
+
+  function syncBodyModalState() {
+    const body = document.body;
+    if (!body) return;
+    body.classList.toggle("modal-open", getOpenModalCount() > 0);
+  }
+
+  function openModal(el) {
+    if (!el) return;
+    el.classList.add("active");
+    el.setAttribute("aria-hidden", "false");
+    syncBodyModalState();
+  }
+
+  function closeModal(el) {
+    if (!el) return;
+    el.classList.remove("active");
+    el.setAttribute("aria-hidden", "true");
+    syncBodyModalState();
+  }
+
+  function setAuthMessage(message = "", type = "") {
+    const dom = getDom();
+    if (!dom.authMessage) return;
+    dom.authMessage.className = "auth-message";
+    dom.authMessage.textContent = message;
+    if (message && type) dom.authMessage.classList.add(type);
+    dom.authMessage.style.display = message ? "block" : "none";
+  }
+
+  function switchAuthView(view = "login") {
+    const dom = getDom();
+    const forms = [
+      { key: "login", el: dom.loginForm },
+      { key: "register", el: dom.registerForm },
+      { key: "forgot", el: dom.forgotForm }
+    ];
+
+    forms.forEach(({ key, el }) => {
+      if (!el) return;
+      el.classList.toggle("active", key === view);
+    });
+
+    if (isAuthPage()) {
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${view}`);
+    }
+
+    setAuthMessage("");
+  }
+
+  function openAuthModal(view = "login", message = "") {
+    const dom = getDom();
+
+    if (dom.authModal) {
+      switchAuthView(view);
+      openModal(dom.authModal);
+      if (message) setAuthMessage(message, "error");
+      return;
+    }
+
+    if (!isAuthPage()) {
+      window.location.href = getAuthUrl(view);
+    }
+  }
+
+  function closeAuthModal() {
+    const dom = getDom();
+    if (dom.authModal) closeModal(dom.authModal);
+  }
+
+  function requireAuth(message = "", view = "login") {
+    if (state.user) return true;
+    openAuthModal(view, message || t("auth_required"));
+    return false;
+  }
+
+  function handlePasswordToggleClick(button) {
+    const wrapper = button.closest(".pass-wrapper");
+    const input = wrapper?.querySelector("input");
+    const icon = button.querySelector("i");
+    if (!input) return;
+
+    const nextType = input.type === "password" ? "text" : "password";
+    input.type = nextType;
+    if (icon) {
+      icon.className = nextType === "password" ? "ph ph-eye" : "ph ph-eye-slash";
+    }
+  }
+
+  function updatePasswordStrength(input) {
+    const strengthBox = document.getElementById("password-strength");
+    const label = document.getElementById("strength-label");
+    const bars = $all(".str-bar", strengthBox || document);
+
+    if (!strengthBox || !bars.length || !input) return;
+
+    const value = input.value || "";
+    let score = 0;
+
+    if (value.length >= 8) score += 1;
+    if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+    const colors = ["#e2e8f0", "#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
+    bars.forEach((bar, index) => {
+      bar.style.background = index < score ? colors[score] : "var(--border-color)";
+    });
+
+    let text = "";
+    if (!value) text = "";
+    else if (score <= 1) text = state.lang === "ar" ? "ضعيفة" : "Weak";
+    else if (score === 2) text = state.lang === "ar" ? "متوسطة" : "Medium";
+    else if (score === 3) text = state.lang === "ar" ? "جيدة" : "Good";
+    else text = state.lang === "ar" ? "قوية" : "Strong";
+
+    label.textContent = text;
+  }
+
+  async function loginWithEmail(form) {
+    if (!auth) throw new Error("Auth unavailable");
+
+    const emailInput = form.querySelector("input[type='email']");
+    const passwordInput = form.querySelector("input[type='password']");
+    const remember = form.querySelector("input[type='checkbox']");
+
+    const email = normalizeText(emailInput?.value);
+    const password = normalizeText(passwordInput?.value);
+
+    if (!validateEmail(email)) {
+      setAuthMessage(t("invalid_email"), "error");
+      return;
+    }
+    if (!password) {
+      setAuthMessage(t("fill_required"), "error");
+      return;
+    }
+
+    safeJsonSet(STORAGE_KEYS.remember, !!remember?.checked);
+    await setAuthPersistenceFromRemember();
+    await auth.signInWithEmailAndPassword(email, password);
+  }
+
+  async function registerWithEmail(form) {
+    if (!auth) throw new Error("Auth unavailable");
+
+    const nameInput = form.querySelector("input[type='text']");
+    const emailInput = form.querySelector("input[type='email']");
+    const passwordInput = form.querySelector("input[type='password']");
+    const name = normalizeText(nameInput?.value);
+    const email = normalizeText(emailInput?.value);
+    const password = normalizeText(passwordInput?.value);
+
+    if (!name || !validateEmail(email) || !password) {
+      setAuthMessage(t("fill_required"), "error");
+      return;
+    }
+
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    if (cred.user && name) {
+      await cred.user.updateProfile({ displayName: name });
+    }
+  }
+
+  async function sendPasswordReset(form) {
+    if (!auth) throw new Error("Auth unavailable");
+
+    const emailInput = form.querySelector("input[type='email']");
+    const email = normalizeText(emailInput?.value);
+
+    if (!validateEmail(email)) {
+      setAuthMessage(t("invalid_email"), "error");
+      return;
+    }
+
+    await auth.sendPasswordResetEmail(email);
+    setAuthMessage(t("reset_sent"), "success");
+  }
+
+  async function signInWithGoogle() {
+    if (!auth || !googleProvider) throw new Error("Auth unavailable");
+
+    safeJsonSet(STORAGE_KEYS.remember, true);
+    await setAuthPersistenceFromRemember();
+
+    try {
+      await auth.signInWithPopup(googleProvider);
+    } catch (error) {
+      if (error?.code === "auth/popup-blocked" || error?.code === "auth/cancelled-popup-request") {
+        await auth.signInWithRedirect(googleProvider);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  async function handleLogout() {
+    if (!auth || !state.user) {
+      state.user = null;
+      updateAuthUI();
+      return;
+    }
+
+    try {
+      await auth.signOut();
+      state.user = null;
+      updateAuthUI();
+      showToast(t("logout_success"), "success");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      showToast(humanFirebaseError(error?.code), "error");
+    }
+  }
+
+  function updateProfileTrigger() {
+    const dom = getDom();
+    if (!dom.profileTrigger) return;
+
+    const icon = state.user ? "ph ph-user-circle" : "ph ph-user";
+    dom.profileTrigger.classList.toggle("auth-btn-logged", !!state.user);
+    dom.profileTrigger.classList.toggle("auth-btn-guest", !state.user);
+
+    if (dom.profileTrigger.matches(".profile-menu")) {
+      dom.profileTrigger.innerHTML = `<i class="${icon}"></i>`;
+    } else {
+      renderInlineIconButton(dom.profileTrigger, icon, state.user ? t("account") : t("sign_in"));
+    }
+  }
+
+  function updateAuthUI() {
+    const dom = getDom();
+    const user = state.user;
+
+    updateProfileTrigger();
+
+    if (dom.profileName) {
+      dom.profileName.textContent = user?.displayName || user?.email || t("guest_user");
+    }
+
+    if (dom.profileEmail) {
+      dom.profileEmail.textContent = user?.email || t("sign_in_to_continue");
+    }
+
+    if (dom.logoutBtn) {
+      dom.logoutBtn.style.display = user ? "" : "none";
+    }
+
+    if (dom.myBookingsBtn) {
+      dom.myBookingsBtn.style.display = user ? "" : "";
+    }
+
+    if (dom.authCta && !dom.authCta.matches(".profile-menu")) {
+      dom.authCta.textContent = user ? t("account") : t("sign_in");
+    }
+
+    getFavoriteIds();
+    updateFavoriteButtonsEverywhere();
+  }
+
+  function handlePostLoginRedirect() {
+    if (continuePendingBookingAfterAuth()) return true;
+
+    const target = getRedirectTargetFromUrl();
+    if (isAuthPage() && target && target !== currentPage()) {
+      window.location.href = target;
+      return true;
+    }
+
+    return false;
+  }
+
+  function attachAuthObserver() {
+    if (!auth || authObserverAttached) return;
+    authObserverAttached = true;
+
+    auth.onAuthStateChanged(async (user) => {
+      state.user = user || null;
+
+      if (user?.uid) {
+        migrateGuestFavoritesToUser(user.uid);
+      }
+
+      updateAuthUI();
+
+      if (user) {
+        closeAuthModal();
+        setAuthMessage("");
+        if (!handlePostLoginRedirect()) {
+          if (isAuthPage()) {
+            showToast(t("login_success"), "success");
+          }
+        }
+      }
+    });
   }
 
   /* =========================================
      14) BOOKINGS
   ========================================= */
-  function normalizeBooking(data = {}, id = "") {
-    const propertyId = normalizeText(
-      data.propertyId || data.propertyDocId || data.selectedPropertyId || data.listingId || ""
-    );
+  function normalizeBooking(docId, data = {}) {
     const property =
-      getPropertyById(propertyId) ||
-      normalizeBooking.snapshotToProperty(data.propertySnapshot || data.property || null);
-
-    const propertyTitle = property
-      ? getPropertyTitle(property)
-      : data.propertyTitle ||
-        data.title ||
-        (state.lang === "ar" ? "عقار غير معروف" : "Unknown Property");
-
-    const status = String(data.status || data.bookingStatus || "pending").toLowerCase();
+      data.propertySnapshot
+        ? normalizeProperty(
+            data.propertySnapshot,
+            data.propertySnapshot.docId || data.propertySnapshot.id || "",
+            data.propertySnapshot.collection || ""
+          )
+        : getPropertyById(data.propertyId || data.propertyDocId || data.listingId || "") || null;
 
     return {
-      id: normalizeText(id || data.id || `booking-${Date.now()}`),
-      propertyId,
-      propertyTitle,
-      propertyLocation: property ? getPropertyLocation(property) : normalizeText(data.location || ""),
-      propertyImage: property?.image || data.image || "images/placeholder.jpg",
-      checkIn: data.checkIn || data.checkin || data.arrivalDate || data.startDate || "",
-      checkOut: data.checkOut || data.checkout || data.departureDate || data.endDate || "",
-      guests: Number(data.guests || data.totalGuests || data.adults || 1),
-      total: Number(data.total || data.totalAmount || data.amount || data.finalTotal || 0),
-      status,
-      createdAt: data.createdAt || data.timestamp || null
+      id: docId || data.id || data.bookingId || slugify(`${data.createdAt || Date.now()}`),
+      propertyId: data.propertyId || data.propertyDocId || data.listingId || property?.id || "",
+      propertyTitle:
+        data.propertyTitle ||
+        data.title ||
+        property?.title_en ||
+        property?.title_ar ||
+        t("unnamed_property"),
+      propertyLocation:
+        data.propertyLocation ||
+        data.location ||
+        property?.location_en ||
+        property?.location_ar ||
+        t("unknown_location"),
+      checkIn: data.checkIn || data.checkin || data.startDate || data.arrivalDate || null,
+      checkOut: data.checkOut || data.checkout || data.endDate || data.departureDate || null,
+      guests: safeNumber(data.guests || data.guestCount || data.totalGuests || 1, 1),
+      total: safeNumber(data.total || data.totalPrice || data.amount || 0, 0),
+      status: String(data.status || data.bookingStatus || "pending").toLowerCase(),
+      createdAt: data.createdAt || data.submittedAt || null,
+      property
     };
   }
 
-  normalizeBooking.snapshotToProperty = function (snapshot) {
-    if (!snapshot || typeof snapshot !== "object") return null;
-    return normalizeProperty(snapshot, snapshot.docId || snapshot.id || "", snapshot.collection || "");
-  };
-
-  async function loadUserBookings() {
-    if (!db || !state.user?.uid) {
-      state.bookings = [];
-      return [];
-    }
-
-    state.loadingBookings = true;
-    renderBookingsPreview();
-
-    try {
-      for (const collection of BOOKINGS_COLLECTION_CANDIDATES) {
-        try {
-          const snap = await db.collection(collection).where("userId", "==", state.user.uid).limit(50).get();
-
-          if (!snap.empty) {
-            const items = [];
-            snap.forEach((doc) => items.push(normalizeBooking(doc.data() || {}, doc.id)));
-
-            items.sort((a, b) => {
-              const ad = typeof a.createdAt?.toDate === "function" ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
-              const bd = typeof b.createdAt?.toDate === "function" ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
-              return bd - ad;
-            });
-
-            state.bookings = items;
-            state.loadingBookings = false;
-            return items;
-          }
-        } catch (err) {
-          console.warn(`Bookings collection "${collection}" failed`, err);
-        }
-      }
-
-      state.bookings = [];
-      state.loadingBookings = false;
-      return [];
-    } catch (error) {
-      console.error("Bookings load error:", error);
-      state.bookings = [];
-      state.loadingBookings = false;
-      return [];
-    }
-  }
-
-  function getBookingStatusLabel(status) {
+  function getStatusLabel(status) {
     const normalized = String(status || "").toLowerCase();
     if (normalized === "confirmed") return t("booking_status_confirmed");
-    if (normalized === "cancelled") return t("booking_status_cancelled");
+    if (normalized === "cancelled" || normalized === "canceled") return t("booking_status_cancelled");
     if (normalized === "rejected") return t("booking_status_rejected");
     return t("booking_status_pending");
   }
 
-  function renderBookingsPreview() {
+  async function queryBookingsByField(collectionName, field, value) {
+    if (!db || !value) return [];
+    try {
+      const snap = await db.collection(collectionName).where(field, "==", value).limit(50).get();
+      return snap.docs.map((doc) => normalizeBooking(doc.id, doc.data() || {}));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function loadUserBookings() {
+    if (!state.user) {
+      state.bookings = [];
+      return [];
+    }
+
+    if (!db) {
+      state.bookings = [];
+      return [];
+    }
+
+    if (state.loadingBookings) return state.bookings;
+    state.loadingBookings = true;
+
+    const uid = state.user.uid;
+    const email = state.user.email || "";
+    const all = [];
+
+    try {
+      for (const collectionName of BOOKINGS_COLLECTION_CANDIDATES) {
+        const chunks = await Promise.all([
+          queryBookingsByField(collectionName, "userId", uid),
+          queryBookingsByField(collectionName, "uid", uid),
+          queryBookingsByField(collectionName, "userUid", uid),
+          email ? queryBookingsByField(collectionName, "email", email) : Promise.resolve([])
+        ]);
+
+        chunks.flat().forEach((item) => all.push(item));
+      }
+
+      const map = new Map();
+      all.forEach((item) => {
+        if (!map.has(item.id)) map.set(item.id, item);
+      });
+
+      state.bookings = Array.from(map.values()).sort((a, b) => {
+        const timeA = safeNumber(
+          typeof a.createdAt?.toMillis === "function" ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime(),
+          0
+        );
+        const timeB = safeNumber(
+          typeof b.createdAt?.toMillis === "function" ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime(),
+          0
+        );
+        return timeB - timeA;
+      });
+
+      return state.bookings;
+    } catch (error) {
+      console.error("Failed loading bookings:", error);
+      state.bookings = [];
+      return [];
+    } finally {
+      state.loadingBookings = false;
+    }
+  }
+
+  function renderBookings() {
     const dom = getDom();
     if (!dom.bookingsList) return;
 
-    if (!state.user) {
-      dom.bookingsList.innerHTML = `
-        <div class="listings-empty-state">
-          <i class="ph ph-lock"></i>
-          <p>${escapeHtml(t("auth_required"))}</p>
-        </div>
-      `;
-      return;
-    }
-
     if (state.loadingBookings) {
       dom.bookingsList.innerHTML = `
-        <div class="listings-empty-state">
+        <div class="bookings-empty-state">
           <i class="ph ph-spinner-gap spin"></i>
           <p>${escapeHtml(t("loading_bookings"))}</p>
         </div>
       `;
+      syncPhosphorIcons();
       return;
     }
 
     if (!state.bookings.length) {
       dom.bookingsList.innerHTML = `
-        <div class="listings-empty-state">
+        <div class="bookings-empty-state">
           <i class="ph ph-calendar-blank"></i>
           <p>${escapeHtml(t("no_bookings"))}</p>
         </div>
       `;
+      syncPhosphorIcons();
       return;
     }
 
     dom.bookingsList.innerHTML = state.bookings
       .map((booking) => {
-        return `
-          <article class="booking-card">
-            <div class="booking-card-head">
-              <div>
-                <h4>${escapeHtml(booking.propertyTitle)}</h4>
-                <p class="booking-card-sub">${escapeHtml(booking.propertyLocation || "—")}</p>
-              </div>
-              <span class="booking-status ${escapeHtml(booking.status)}">
-                <i class="ph ph-dot-outline-fill"></i>
-                ${escapeHtml(getBookingStatusLabel(booking.status))}
-              </span>
-            </div>
+        const propertyTitle =
+          booking.property && getPropertyTitle(booking.property)
+            ? getPropertyTitle(booking.property)
+            : booking.propertyTitle;
+        const statusClass =
+          booking.status === "confirmed"
+            ? "confirmed"
+            : booking.status === "cancelled" || booking.status === "canceled"
+            ? "cancelled"
+            : booking.status === "rejected"
+            ? "cancelled"
+            : "pending";
 
-            <div class="booking-card-grid">
-              <div><strong>${escapeHtml(t("booking_checkin"))}</strong> ${escapeHtml(formatDate(booking.checkIn))}</div>
-              <div><strong>${escapeHtml(t("booking_checkout"))}</strong> ${escapeHtml(formatDate(booking.checkOut))}</div>
-              <div><strong>${escapeHtml(t("booking_guests"))}</strong> ${escapeHtml(String(booking.guests || 1))}</div>
-              <div><strong>${escapeHtml(t("booking_total"))}</strong> ${escapeHtml(formatCurrency(booking.total))}</div>
+        return `
+          <article class="booking-entry">
+            <div class="booking-entry-head">
+              <div>
+                <div class="booking-entry-title">${escapeHtml(propertyTitle)}</div>
+                <div class="booking-entry-meta">
+                  <span>${escapeHtml(t("booking_checkin"))} ${escapeHtml(formatDate(booking.checkIn))}</span>
+                  <span>${escapeHtml(t("booking_checkout"))} ${escapeHtml(formatDate(booking.checkOut))}</span>
+                  <span>${escapeHtml(t("booking_guests"))} ${escapeHtml(String(booking.guests))}</span>
+                  <span>${escapeHtml(t("booking_total"))} ${escapeHtml(formatCurrency(booking.total))}</span>
+                </div>
+              </div>
+              <span class="booking-status-badge ${escapeHtml(statusClass)}">${escapeHtml(
+          getStatusLabel(booking.status)
+        )}</span>
             </div>
           </article>
         `;
       })
       .join("");
+
+    syncPhosphorIcons();
   }
 
-  function openBookings() {
+  async function openBookingsModal() {
     const dom = getDom();
-    if (!state.user) {
-      requireAuth(t("auth_redirect_profile"), "login");
+    if (!requireAuth(t("auth_redirect_profile"), "login")) return;
+
+    if (!dom.bookingsModal) {
+      if (currentPage().toLowerCase() !== ROUTES.bookings.toLowerCase()) {
+        window.location.href = ROUTES.bookings;
+      }
       return;
     }
 
-    if (dom.bookingsModal) {
-      dom.bookingsModal.classList.add("active");
-      dom.body?.classList.add("modal-open");
-      renderBookingsPreview();
-      return;
-    }
+    state.loadingBookings = true;
+    renderBookings();
+    openModal(dom.bookingsModal);
 
-    if (currentPage().toLowerCase() !== ROUTES.bookings.toLowerCase()) {
-      window.location.href = ROUTES.bookings;
+    try {
+      await loadUserBookings();
+    } catch (_) {
+      showToast(t("bookings_load_error"), "error");
+    } finally {
+      renderBookings();
     }
-  }
-
-  function closeBookings() {
-    const dom = getDom();
-    dom.bookingsModal?.classList.remove("active");
-    dom.body?.classList.remove("modal-open");
   }
 
   /* =========================================
      15) CHAT
   ========================================= */
   function getChatStorageKey() {
-    return state.user?.uid ? `ore_chat_${state.user.uid}` : STORAGE_KEYS.chatGuest;
+    return state.user?.uid
+      ? `${STORAGE_KEYS.chatUserPrefix}${state.user.uid}`
+      : STORAGE_KEYS.chatGuest;
   }
 
-  function loadChatMessages() {
-    state.chatMessages = safeJsonGet(getChatStorageKey(), []);
-    if (!Array.isArray(state.chatMessages)) state.chatMessages = [];
+  function getUnreadStorageKey() {
+    return state.user?.uid
+      ? `${STORAGE_KEYS.unreadUserPrefix}${state.user.uid}`
+      : STORAGE_KEYS.unreadGuest;
+  }
+
+  function normalizeMessage(message) {
+    return {
+      id: message.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      sender: message.sender === "admin" ? "admin" : "customer",
+      text: truncate(normalizeText(message.text), MAX_CHAT_MESSAGE_LENGTH),
+      propertyId: normalizeText(message.propertyId),
+      createdAt: message.createdAt || new Date().toISOString()
+    };
+  }
+
+  function getChatBucket() {
+    return safeJsonGet(getChatStorageKey(), {});
+  }
+
+  function setChatBucket(data) {
+    safeJsonSet(getChatStorageKey(), data || {});
+  }
+
+  function getUnreadBucket() {
+    return safeJsonGet(getUnreadStorageKey(), {});
+  }
+
+  function setUnreadBucket(data) {
+    safeJsonSet(getUnreadStorageKey(), data || {});
+  }
+
+  function getCurrentChatPropertyId() {
+    return (
+      normalizeText(getDom().chatPropertyId?.value) ||
+      normalizeText(state.currentChatPropertyId) ||
+      normalizeText(getNavigationPropertyId(state.selectedProperty)) ||
+      "global"
+    );
+  }
+
+  function loadChatMessages(propertyId = getCurrentChatPropertyId()) {
+    const bucket = getChatBucket();
+    const list = Array.isArray(bucket[propertyId]) ? bucket[propertyId] : [];
+    state.chatMessages = list.map(normalizeMessage);
+    state.currentChatPropertyId = propertyId;
     return state.chatMessages;
   }
 
-  function saveChatMessages() {
-    safeJsonSet(getChatStorageKey(), state.chatMessages);
+  function saveChatMessages(propertyId = getCurrentChatPropertyId(), list = state.chatMessages) {
+    const bucket = getChatBucket();
+    bucket[propertyId] = normalizeFavoriteList([]).concat(list.map((m) => normalizeMessage(m)));
+    setChatBucket(bucket);
   }
 
-  function appendChatMessage(message) {
-    state.chatMessages.push(message);
-    saveChatMessages();
-    renderChatMessages();
+  function incrementUnread(propertyId) {
+    const bucket = getUnreadBucket();
+    bucket[propertyId] = safeNumber(bucket[propertyId], 0) + 1;
+    setUnreadBucket(bucket);
+    updateChatUnreadBadge();
+  }
+
+  function clearUnread(propertyId) {
+    const bucket = getUnreadBucket();
+    bucket[propertyId] = 0;
+    setUnreadBucket(bucket);
+    updateChatUnreadBadge();
+  }
+
+  function getUnreadTotal() {
+    const bucket = getUnreadBucket();
+    return Object.values(bucket).reduce((sum, v) => sum + safeNumber(v, 0), 0);
+  }
+
+  function updateChatUnreadBadge() {
+    const dom = getDom();
+    if (!dom.chatUnreadBadge) return;
+    const total = getUnreadTotal();
+    dom.chatUnreadBadge.textContent = String(total);
+    dom.chatUnreadBadge.style.display = total > 0 ? "inline-flex" : "none";
   }
 
   function renderChatMessages() {
     const dom = getDom();
     if (!dom.chatMessages) return;
 
-    loadChatMessages();
+    const currentPropertyId = getCurrentChatPropertyId();
+    const list = loadChatMessages(currentPropertyId);
 
-    if (!state.chatMessages.length) {
-      dom.chatMessages.innerHTML = "";
-      if (dom.chatEmptyState) dom.chatEmptyState.style.display = "";
-      return;
+    if (dom.chatEmptyState) {
+      dom.chatEmptyState.style.display = list.length ? "none" : "";
+      const title = document.getElementById("chat-empty-title");
+      const sub = document.getElementById("chat-empty-subtitle");
+      if (title) title.textContent = t("no_messages_yet");
+      if (sub) sub.textContent = t("start_chat_hint");
     }
 
-    if (dom.chatEmptyState) dom.chatEmptyState.style.display = "none";
-
-    dom.chatMessages.innerHTML = state.chatMessages
+    dom.chatMessages.innerHTML = list
       .map((msg) => {
-        const role = msg.role === "admin" ? "admin" : "customer";
+        const who = msg.sender === "admin" ? t("support_agent") : t("you");
         return `
-          <div class="chat-message ${role}">
-            <div>${escapeHtml(msg.text || "")}</div>
-            <small class="chat-meta">${escapeHtml(formatDate(msg.createdAt))}</small>
+          <div class="chat-message ${escapeHtml(msg.sender)}">
+            ${escapeHtml(msg.text).replace(/\n/g, "<br>")}
+            <span class="chat-meta">${escapeHtml(who)} • ${escapeHtml(
+          formatTime(msg.createdAt)
+        )}</span>
           </div>
         `;
       })
       .join("");
 
     dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
+    syncPhosphorIcons();
   }
 
-  function openChat() {
+  async function maybeMirrorChatToFirestore(message) {
+    if (!db) return;
+    const payload = {
+      ...message,
+      uid: state.user?.uid || "",
+      email: state.user?.email || "",
+      propertyId: message.propertyId || "",
+      createdAt: new Date().toISOString()
+    };
+
+    for (const collectionName of SUPPORT_COLLECTION_CANDIDATES) {
+      try {
+        await db.collection(collectionName).add(payload);
+        break;
+      } catch (_) {}
+    }
+  }
+
+  function buildAutoReply(property) {
+    const title = property ? getPropertyTitle(property) : "";
+    const base = t("quick_auto_reply");
+    return title ? `${base} ${state.lang === "ar" ? `بخصوص "${title}".` : `Regarding "${title}".`}` : base;
+  }
+
+  function pushChatMessage(message) {
+    const propertyId = message.propertyId || getCurrentChatPropertyId();
+    const list = loadChatMessages(propertyId);
+    list.push(normalizeMessage(message));
+    state.chatMessages = list;
+    saveChatMessages(propertyId, list);
+    renderChatMessages();
+  }
+
+  function openChatModal(propertyId = "") {
     const dom = getDom();
     if (!dom.chatModal) return;
 
-    const selectedProperty = resolveSelectedProperty();
-    if (dom.chatPropertyId && selectedProperty) {
-      dom.chatPropertyId.value = getNavigationPropertyId(selectedProperty);
-    }
+    const finalPropertyId =
+      normalizeText(propertyId) ||
+      normalizeText(getNavigationPropertyId(state.selectedProperty)) ||
+      normalizeText(dom.chatPropertyId?.value) ||
+      "global";
 
-    dom.chatModal.classList.add("active");
-    dom.body?.classList.add("modal-open");
+    state.currentChatPropertyId = finalPropertyId;
+    if (dom.chatPropertyId) dom.chatPropertyId.value = finalPropertyId;
+
+    const titleEl = document.getElementById("chat-title");
+    const subtitleEl = document.getElementById("chat-subtitle");
+    const noteEl = document.getElementById("chat-note");
+    const sendTextEl = document.getElementById("send-chat-text");
+
+    if (titleEl) titleEl.textContent = t("chat_title");
+    if (subtitleEl) subtitleEl.textContent = t("chat_subtitle");
+    if (noteEl) noteEl.textContent = t("chat_ready_note");
+    if (sendTextEl) sendTextEl.textContent = t("send_message");
+    if (dom.chatTextarea) dom.chatTextarea.placeholder = t("chat_placeholder");
+
+    openModal(dom.chatModal);
+    clearUnread(finalPropertyId);
     renderChatMessages();
     dom.chatTextarea?.focus();
   }
 
-  function closeChat() {
+  function closeChatModal() {
     const dom = getDom();
-    dom.chatModal?.classList.remove("active");
-    dom.body?.classList.remove("modal-open");
+    if (!dom.chatModal) return;
+    closeModal(dom.chatModal);
   }
 
   function sendChatMessage() {
     const dom = getDom();
-    const text = normalizeText(dom.chatTextarea?.value);
+    const input = dom.chatTextarea;
+    if (!input) return;
 
+    const text = normalizeText(input.value);
     if (!text) {
       showToast(t("message_required"), "error");
       return;
     }
-
     if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
-      showToast(
-        state.lang === "ar"
-          ? "الرسالة طويلة جدًا."
-          : "Message is too long.",
-        "error"
-      );
+      showToast(t("message_too_long"), "error");
       return;
     }
 
-    appendChatMessage({
-      id: `msg_${Date.now()}`,
-      role: "customer",
-      text,
-      propertyId: normalizeText(dom.chatPropertyId?.value),
+    const propertyId = getCurrentChatPropertyId();
+    const property = getPropertyById(propertyId) || state.selectedProperty || null;
+    const enrichedText = property
+      ? `${text}${state.lang === "ar" ? ` — بخصوص: ${getPropertyTitle(property)}` : ` — About: ${getPropertyTitle(property)}`}`
+      : text;
+
+    const userMessage = {
+      sender: "customer",
+      text: enrichedText,
+      propertyId,
       createdAt: new Date().toISOString()
-    });
+    };
 
-    if (dom.chatTextarea) dom.chatTextarea.value = "";
-    showToast(t("support_toast"), "success");
+    pushChatMessage(userMessage);
+    input.value = "";
+    maybeMirrorChatToFirestore(userMessage);
 
-    setTimeout(() => {
-      appendChatMessage({
-        id: `msg_${Date.now()}_reply`,
-        role: "admin",
-        text:
-          state.lang === "ar"
-            ? "تم استلام رسالتك، وسيقوم فريقنا بالرد عليك قريبًا."
-            : "We received your message and our team will reply shortly.",
+    clearTimeout(autoReplyTimer);
+    autoReplyTimer = setTimeout(() => {
+      const reply = {
+        sender: "admin",
+        text: buildAutoReply(property),
+        propertyId,
         createdAt: new Date().toISOString()
-      });
+      };
+      pushChatMessage(reply);
+
+      const domNow = getDom();
+      if (!domNow.chatModal?.classList.contains("active")) {
+        incrementUnread(propertyId);
+      }
     }, CHAT_REPLY_DELAY);
+
+    showToast(t("support_toast"), "success");
   }
 
   /* =========================================
-     16) SEARCH / VIEW ACTIONS
+     16) THEME / LANGUAGE
   ========================================= */
-  function setHomeView() {
-    state.currentView = "home";
-    renderListings();
-    syncMobileButtons();
-  }
-
-  function setFavoritesViewOrRoute() {
-    if (getDom().listingsGrid) {
-      state.currentView = "favorites";
-      renderListings();
-      syncMobileButtons();
-    } else if (currentPage().toLowerCase() !== ROUTES.favorites.toLowerCase()) {
-      window.location.href = ROUTES.favorites;
-    }
-  }
-
-  function syncMobileButtons() {
+  function applyTheme(theme, persist = true) {
     const dom = getDom();
-    dom.mobileFavBtn?.classList.toggle("active", state.currentView === "favorites");
-    dom.mobileStaysBtn?.classList.toggle("active", state.currentView !== "favorites");
-    dom.mobileProfileBtn?.classList.toggle("active", false);
-  }
+    state.theme = theme === "dark" ? "dark" : "light";
 
-  function applySearchFromDom() {
-    const dom = getDom();
-    state.activeSearch = normalizeText(dom.destinationInput?.value || "");
-    renderListings();
-  }
-
-  function clearSearchAndFilters() {
-    const dom = getDom();
-    state.activeSearch = "";
-    state.activeCategory = "all";
-    state.sort = "featured";
-
-    if (dom.destinationInput) dom.destinationInput.value = "";
-    if (dom.sortSelect) dom.sortSelect.value = state.sort;
-
-    syncCategoryButtons();
-    renderListings();
-  }
-
-  function hydrateStateFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const destination = params.get("destination") || params.get("q") || "";
-    const category = params.get("category") || "";
-    const sort = params.get("sort") || "";
-
-    if (destination) state.activeSearch = destination.trim();
-    if (category) {
-      const normalized =
-        category === "hotels" ? "hotel" : category === "apartments" ? "apartment" : category === "villas" ? "villa" : category;
-      state.activeCategory = normalized.toLowerCase();
-    }
-    if (["featured", "rating", "price_low", "price_high"].includes(sort)) {
-      state.sort = sort;
-    }
-
-    const dom = getDom();
-    if (dom.destinationInput && state.activeSearch) dom.destinationInput.value = state.activeSearch;
-    if (dom.sortSelect) dom.sortSelect.value = state.sort;
-  }
-
-  /* =========================================
-     17) EVENTS
-  ========================================= */
-  function bindGlobalButtons() {
-    const dom = getDom();
-
-    dom.themeBtn?.addEventListener("click", toggleTheme);
-    dom.langBtn?.addEventListener("click", toggleLanguage);
-
-    dom.homeLogoBtn?.addEventListener("click", () => {
-      closeProfileDropdown();
-    });
-
-    dom.scrollTopBtn?.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    window.addEventListener("scroll", () => {
-      if (!dom.scrollTopBtn) return;
-      dom.scrollTopBtn.classList.toggle("visible", window.scrollY > 320);
-    });
-
-    dom.mobileStaysBtn?.addEventListener("click", () => {
-      if (getDom().listingsGrid) {
-        setHomeView();
-      } else {
-        window.location.href = ROUTES.home;
-      }
-    });
-
-    dom.mobileFavBtn?.addEventListener("click", () => {
-      setFavoritesViewOrRoute();
-    });
-
-    dom.mobileProfileBtn?.addEventListener("click", () => {
-      if (state.user) {
-        closeProfileDropdown();
-        openBookings();
-      } else {
-        requireAuth(t("auth_redirect_profile"), "login");
-      }
-    });
-  }
-
-  function bindAuthUI() {
-    const dom = getDom();
-
-    dom.authCta?.addEventListener("click", (event) => {
-      if (dom.authCta !== dom.profileTrigger && !state.user) {
-        event.preventDefault();
-        openAuthModal("login");
-      }
-    });
-
-    dom.profileTrigger?.addEventListener("click", (event) => {
-      event.preventDefault();
-      if (!state.user) {
-        openAuthModal("login");
-        return;
-      }
-      toggleProfileDropdown();
-    });
-
-    dom.closeAuthBtn?.addEventListener("click", closeAuthModal);
-    dom.logoutBtn?.addEventListener("click", async (event) => {
-      event.preventDefault();
-      closeProfileDropdown();
-      await handleLogout();
-    });
-
-    $("#go-to-register")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      switchAuthForm("register");
-    });
-
-    $("#go-to-login")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      switchAuthForm("login");
-    });
-
-    $("#go-to-forgot")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      switchAuthForm("forgot");
-    });
-
-    $("#back-to-login")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      switchAuthForm("login");
-    });
-
-    dom.googleButtons.forEach((btn) => btn.addEventListener("click", handleGoogleAuth));
-    dom.loginForm?.addEventListener("submit", handleLoginSubmit);
-    dom.registerForm?.addEventListener("submit", handleRegisterSubmit);
-    dom.forgotForm?.addEventListener("submit", handleForgotSubmit);
-
-    $("#remember-me")?.addEventListener("change", (event) => {
-      safeSet(STORAGE_KEYS.remember, event.target.checked ? "1" : "0");
-    });
-
-    const remember = safeGet(STORAGE_KEYS.remember, "1") !== "0";
-    if ($("#remember-me")) $("#remember-me").checked = remember;
-  }
-
-  function bindSearchAndFilters() {
-    const dom = getDom();
-
-    dom.searchBtn?.addEventListener("click", applySearchFromDom);
-    dom.destinationInput?.addEventListener("input", debounce(applySearchFromDom, 180));
-    dom.destinationInput?.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        applySearchFromDom();
-      }
-    });
-
-    dom.clearSearchBtn?.addEventListener("click", clearSearchAndFilters);
-
-    dom.sortSelect?.addEventListener("change", (event) => {
-      const value = String(event.target.value || "featured");
-      if (["featured", "rating", "price_low", "price_high"].includes(value)) {
-        state.sort = value;
-        renderListings();
-      }
-    });
-
-    dom.categoryButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const raw = String(btn.dataset.category || btn.dataset.categoryBtn || "all").toLowerCase();
-        const normalized =
-          raw === "hotels" ? "hotel" : raw === "apartments" ? "apartment" : raw === "villas" ? "villa" : raw;
-        state.activeCategory = normalized || "all";
-        syncCategoryButtons();
-        renderListings();
-      });
-    });
-  }
-
-  function bindListingsDelegation() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    dom.listingsGrid.addEventListener("click", (event) => {
-      const actionBtn = event.target.closest("[data-action]");
-      if (!actionBtn) return;
-
-      const action = actionBtn.dataset.action;
-      const id = actionBtn.dataset.id;
-      const property = getPropertyById(id);
-      if (!property) return;
-
-      if (action === "favorite") {
-        event.preventDefault();
-        toggleFavorite(property);
-      } else if (action === "details") {
-        event.preventDefault();
-        openPropertyDetails(property);
-      } else if (action === "reserve") {
-        event.preventDefault();
-        handleReserveNow(property);
-      }
-    });
-  }
-
-  function bindBookingsUI() {
-    const dom = getDom();
-    dom.myBookingsBtn?.addEventListener("click", (event) => {
-      event.preventDefault();
-      closeProfileDropdown();
-      openBookings();
-    });
-
-    dom.closeBookingsBtn?.addEventListener("click", closeBookings);
-  }
-
-  function bindFavoritesUI() {
-    const dom = getDom();
-
-    dom.myFavoritesBtn?.addEventListener("click", (event) => {
-      event.preventDefault();
-      closeProfileDropdown();
-      setFavoritesViewOrRoute();
-    });
-
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("#fav-property-btn, [data-favorite-id], [data-fav-id]");
-      if (!btn) return;
-
-      const current = resolveSelectedProperty();
-      const id = btn.dataset.favoriteId || btn.dataset.favId || btn.dataset.id || getNavigationPropertyId(current);
-      const property = getPropertyById(id) || current;
-      if (!property) return;
-
-      event.preventDefault();
-      toggleFavorite(property);
-    });
-
-    document.addEventListener("click", (event) => {
-      const reserveBtn = event.target.closest("#reserve-now-btn, [data-reserve-current]");
-      if (!reserveBtn) return;
-      const property = resolveSelectedProperty();
-      if (!property) return;
-      event.preventDefault();
-      handleReserveNow(property);
-    });
-  }
-
-  function bindChatUI() {
-    const dom = getDom();
-
-    dom.chatOpenBtn?.addEventListener("click", (event) => {
-      event.preventDefault();
-      openChat();
-    });
-
-    dom.chatCloseBtn?.addEventListener("click", (event) => {
-      event.preventDefault();
-      closeChat();
-    });
-
-    dom.chatSendBtn?.addEventListener("click", (event) => {
-      event.preventDefault();
-      sendChatMessage();
-    });
-
-    dom.chatTextarea?.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        sendChatMessage();
-      }
-    });
-  }
-
-  function bindOverlaysAndOutsideClicks() {
-    document.addEventListener("click", (event) => {
-      const dom = getDom();
-
-      if (
-        dom.profileDropdown &&
-        dom.profileDropdown.classList.contains("active") &&
-        !event.target.closest(".profile-container")
-      ) {
-        closeProfileDropdown();
-      }
-
-      if (dom.authModal && event.target === dom.authModal) {
-        closeAuthModal();
-      }
-
-      if (dom.bookingsModal && event.target === dom.bookingsModal) {
-        closeBookings();
-      }
-
-      if (dom.chatModal && event.target === dom.chatModal) {
-        closeChat();
-      }
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-
-      closeProfileDropdown();
-      closeAuthModal();
-      closeBookings();
-      closeChat();
-    });
-  }
-
-  /* =========================================
-     18) INIT
-  ========================================= */
-  async function init() {
-    if (state.initialized) return;
-    state.initialized = true;
-
-    initFirebase();
-    applyInitialState();
-    hydrateStateFromUrl();
-
-    bindGlobalButtons();
-    bindAuthUI();
-    bindSearchAndFilters();
-    bindListingsDelegation();
-    bindBookingsUI();
-    bindFavoritesUI();
-    bindChatUI();
-    bindOverlaysAndOutsideClicks();
-
-    if (auth) {
-      await setAuthPersistenceFromRemember();
-      attachAuthStateListener();
-    } else {
-      getFavoriteIds();
-      updateUserUI();
-      renderBookingsPreview();
-      renderChatMessages();
-      renderListings();
-    }
-
-    renderChatMessages();
-    syncCategoryButtons();
-    syncSortOptions();
-    syncMobileButtons();
-    updateFavButtonState();
-
-    await initialLoadProperties();
-
-    if (isAuthPage()) {
-      switchAuthForm(readHashView());
-    }
-  }
-
-  /* =========================================
-     19) PUBLIC API
-  ========================================= */
-  window.updateFavButtonState = updateFavButtonState;
-  window.OreBookingApp = {
-    state,
-    t,
-    authReady: () => !!auth,
-    dbReady: () => !!db,
-    getPropertyById,
-    getSourceProperties,
-    resolveSelectedProperty,
-    rememberSelectedProperty,
-    openPropertyDetails,
-    handleReserveNow,
-    toggleFavorite,
-    isFavorite,
-    buildDetailsUrl,
-    buildBookingUrl,
-    requireAuth,
-    renderListings,
-    renderBookingsPreview,
-    openBookings,
-    openChat,
-    formatCurrency,
-    formatDate
-  };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
-})();
+    dom.html.classList.toggle("dark", state.theme === "dark");
+    dom.body?.classList.toggle("dark", state.theme ===
