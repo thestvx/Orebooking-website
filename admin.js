@@ -3,21 +3,45 @@
 // Synced with final admin.html structure
 // =========================================
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-  authDomain: "orebooking-website.firebaseapp.com",
-  projectId: "orebooking-website",
-  storageBucket: "orebooking-website.firebasestorage.app",
-  messagingSenderId: "1012887567747",
-  appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-  measurementId: "G-5GKMRMVHC3"
-};
+// =========================================
+// Firebase Safe Initialization
+// =========================================
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+let db = null;
+
+try {
+
+  if (typeof firebase === "undefined") {
+
+    console.error("Firebase SDK not loaded");
+
+  } else {
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+      authDomain: "orebooking-website.firebaseapp.com",
+      projectId: "orebooking-website",
+      storageBucket: "orebooking-website.firebasestorage.app",
+      messagingSenderId: "1012887567747",
+      appId: "1:1012887567747:web:153b57b60cb143d88acab6",
+      measurementId: "G-5GKMRMVHC3"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    db = firebase.firestore();
+
+    console.log("Firebase initialized successfully");
+
+  }
+
+} catch (err) {
+
+  console.error("Firebase Init Error:", err);
+
 }
-
-const db = firebase.firestore();
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
@@ -73,7 +97,8 @@ const APP_STATE = {
   propertiesDocs: [],
   ownerAccountDocs: [],
   bookingDocs: [],
-  currentPropertyFilter: ""
+  currentPropertyFilter: "",
+  currentBookingFilter: "all"
 };
 
 const CHAT_STATE = {
@@ -622,6 +647,33 @@ function getFilteredPropertyDocs() {
   });
 }
 
+
+function initializeBookingFilters() {
+
+  const container = document.querySelector(".booking-filter-bar");
+
+  if (!container) return;
+
+  const buttons = container.querySelectorAll(".booking-filter-btn");
+
+  buttons.forEach(btn => {
+
+    btn.addEventListener("click", () => {
+
+      buttons.forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+
+      APP_STATE.currentBookingFilter = btn.dataset.filter || "all";
+
+      loadBookings();
+
+    });
+
+  });
+
+}
+
 function updateQuickStats() {
   const filteredProps = getFilteredPropertyDocs();
   const visibleProps = filteredProps.filter(doc => {
@@ -828,7 +880,7 @@ async function toggleVisibility(docId, isVisible, checkboxEl) {
 
     await db.collection(PROPERTIES_COLLECTION).doc(docId).update({
       visible: isVisible,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
     });
 
     showToast(`تم ${isVisible ? "إظهار" : "إخفاء"} العقار بنجاح`, "success");
@@ -1040,8 +1092,8 @@ async function createOwnerAccountFromForm(e) {
 
     await db.collection(OWNER_ACCOUNTS_COLLECTION).add({
       ...payload,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
     });
 
     DOM.ownerAccountForm?.reset();
@@ -1066,7 +1118,7 @@ async function toggleOwnerAccount(docId, newState, clickedBtn = null) {
 
     await db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).update({
       active: !!newState,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
     });
 
     showToast(`تم ${newState ? "تفعيل" : "تعطيل"} الحساب بنجاح`, "success");
@@ -1426,13 +1478,13 @@ async function ensureChatForBooking({
     unreadCountGuest: existing.exists ? toNumber(existing.data()?.unreadCountGuest, 0) : 0,
     unreadCountOwner: 0,
     bookingCreatedAt: bookingData.createdAt || null,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
   };
 
   if (!existing.exists) {
     await chatRef.set({
       ...basePayload,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
     });
   } else {
     await chatRef.set(basePayload, { merge: true });
@@ -1528,8 +1580,8 @@ async function markChatAsSeenByOwner(chatId) {
   try {
     await db.collection(CHATS_COLLECTION).doc(chatId).set({
       unreadCountOwner: 0,
-      ownerLastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      ownerLastSeenAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
     }, { merge: true });
   } catch (err) {
     console.warn("markChatAsSeenByOwner:", err);
@@ -1723,7 +1775,7 @@ async function sendAdminChatMessage() {
       text,
       type,
       imageUrl,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
       seenByGuest: false,
       seenByOwner: true
     };
@@ -1749,11 +1801,11 @@ async function sendAdminChatMessage() {
       lastMessageType: type,
       lastSenderId: getAdminActorId(),
       lastSenderRole: "owner",
-      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastMessageAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
       unreadCountGuest: firebase.firestore.FieldValue.increment(1),
       unreadCountOwner: 0,
-      ownerLastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      ownerLastSeenAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
     }, { merge: true });
 
     if (textarea) {
@@ -2011,6 +2063,26 @@ async function loadBookings() {
 
     APP_STATE.bookingDocs = docs;
 
+    const currentFilter = APP_STATE.currentBookingFilter || "all";
+
+    if (currentFilter !== "all") {
+
+      docs = docs.filter(doc => {
+
+        const data = doc.data() || {};
+
+        const status = normalizeText(data.status || "pending");
+
+        if (currentFilter === "rejected") {
+          return status === "cancelled" || status === "rejected";
+        }
+
+        return status === currentFilter;
+
+      });
+
+    }
+
     if (!docs.length) {
       renderBookingsEmpty(container, "لا توجد طلبات حجز مرتبطة بهذا العقار.");
       return;
@@ -2049,7 +2121,14 @@ async function loadBookings() {
 }
 
 window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null) {
+
+  if (!db) {
+    showToast("Firebase غير متاح داخل الصفحة حالياً.", "error");
+    return;
+  }
+
   const isConfirm = newStatus === "confirmed";
+
   const confirmMsg = isConfirm
     ? "هل أنت متأكد من تأكيد وقبول هذا الحجز؟"
     : "هل أنت متأكد من رفض وإلغاء هذا الحجز؟";
@@ -2057,7 +2136,10 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
   if (!confirm(confirmMsg)) return;
 
   const row = clickedBtn?.closest?.(".booking-actions-row") || null;
-  const buttons = row ? Array.from(row.querySelectorAll("button")) : Array.from(document.querySelectorAll(".btn-approve, .btn-reject"));
+
+  const buttons = row
+    ? Array.from(row.querySelectorAll("button"))
+    : [];
 
   buttons.forEach(btn => {
     btn.disabled = true;
@@ -2065,11 +2147,19 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
   });
 
   try {
-    const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(docId);
+
+    const bookingRef = db
+      .collection(BOOKINGS_COLLECTION)
+      .doc(docId);
+
     const snap = await bookingRef.get();
-    if (!snap.exists) throw new Error("الحجز غير موجود");
+
+    if (!snap.exists) {
+      throw new Error("الحجز غير موجود");
+    }
 
     const bookingData = snap.data() || {};
+
     const bookingPropId = getBookingPropertyId(bookingData);
 
     if (!canAccessProperty(bookingPropId)) {
@@ -2078,31 +2168,36 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
 
     await bookingRef.update({
       status: newStatus,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt:
+        firebase?.firestore?.FieldValue?.serverTimestamp?.()
+        || new Date()
     });
 
-    const guestId = getBookingGuestId(bookingData);
-    const chatId = buildChatId(docId, bookingPropId, guestId);
-    const chatRef = db.collection(CHATS_COLLECTION).doc(chatId);
-    const chatSnap = await chatRef.get().catch(() => null);
+    showToast(
+      `تم ${isConfirm ? "قبول" : "رفض"} الحجز بنجاح`,
+      "success"
+    );
 
-    if (chatSnap?.exists) {
-      await chatRef.set({
-        status: newStatus,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-    }
-
-    showToast(`تم ${isConfirm ? "قبول" : "رفض"} الحجز بنجاح`, "success");
     await loadBookings();
+
   } catch (err) {
+
     console.error("[updateBookingStatus]", err);
-    showToast(`حدث خطأ أثناء تحديث حالة الحجز: ${err.message}`, "error");
+
+    showToast(
+      `حدث خطأ أثناء تحديث حالة الحجز: ${err.message}`,
+      "error"
+    );
+
+  } finally {
+
     buttons.forEach(btn => {
       btn.disabled = false;
       btn.style.opacity = "1";
     });
+
   }
+
 };
 
 function updateUploadPreview(file) {
@@ -2269,8 +2364,8 @@ if (DOM.addForm) {
 
       await db.collection(PROPERTIES_COLLECTION).add({
         ...newProperty,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+        updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
       });
 
       DOM.addForm.reset();
@@ -2355,7 +2450,7 @@ if (DOM.editForm) {
         type: payload.type,
         lat: payload.lat,
         lng: payload.lng,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
       };
 
       if (imageFile) {
@@ -2522,6 +2617,7 @@ function initUploadHooks() {
 document.addEventListener("DOMContentLoaded", async () => {
   ensureAdminChatModal();
   bindSearch();
+  initializeBookingFilters();
   bindStaticButtons();
   initUploadHooks();
 
