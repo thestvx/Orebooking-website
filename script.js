@@ -9,6 +9,7 @@
    - favorites / bookings / chat
    - theme / language sync
    - resilient DOM handling
+   - fixed / completed / production-safe
 ========================================= */
 
 (function () {
@@ -102,10 +103,14 @@
     oreSelectedProperty: "ore_selected_property",
     bookingPropertySnapshot: "booking_property_snapshot",
     bookingContext: "booking_context",
+    postAuthRedirect: "ore_post_auth_redirect",
+    bookingsGuest: "ore_bookings_guest",
+    bookingsUserPrefix: "ore_bookings_user_",
     chatGuest: "ore_chat_guest",
     chatUserPrefix: "ore_chat_user_",
     unreadGuest: "ore_chat_unread_guest",
-    unreadUserPrefix: "ore_chat_unread_user_"
+    unreadUserPrefix: "ore_chat_unread_user_",
+    guestBasics: "ore_guest_basics"
   };
 
   const STORAGE_ALIASES = {
@@ -172,7 +177,8 @@
     galleryIndex: 0,
     propertyMapInstance: null,
     currentChatPropertyId: "",
-    profileDropdownOpen: false
+    profileDropdownOpen: false,
+    revealObserver: null
   };
 
   let firebaseReady = false;
@@ -181,6 +187,7 @@
   let googleProvider = null;
   let authObserverAttached = false;
   let autoReplyTimer = null;
+  let dom = null;
 
   /* =========================================
      4) TRANSLATIONS
@@ -207,12 +214,15 @@
       cat_apartments: "Apartments",
       cat_villas: "Villas",
       featured_title: "Featured properties",
+      favorites_title: "Saved properties",
       sort_featured: "Featured",
       sort_rating: "Top rated",
       sort_price_low: "Price: low to high",
       sort_price_high: "Price: high to low",
       no_results_title: "No properties found",
       no_results_text: "Try another city, category, or clear the search.",
+      no_favorites_title: "No favorites yet",
+      no_favorites_text: "Save properties to access them quickly later.",
       view_details: "View details",
       reserve_now: "Reserve now",
       reserve_cta_signed_out: "Sign in to book",
@@ -363,8 +373,17 @@
       choose_dates: "Choose dates",
       date_not_available: "—",
       sign_in_google_failed: "Google sign-in could not be completed.",
+      google_signin_unavailable: "Google sign-in is unavailable right now.",
       account: "Account",
-      stays: "Stays"
+      stays: "Stays",
+      sending: "Sending...",
+      creating: "Creating...",
+      processing: "Processing...",
+      copied: "Copied successfully.",
+      clear: "Clear",
+      adults: "Adults",
+      children: "Children",
+      continue_booking: "Continue booking"
     },
     ar: {
       page_title: "OreBooking - إقامات مميزة",
@@ -387,12 +406,15 @@
       cat_apartments: "شقق",
       cat_villas: "فلل",
       featured_title: "العقارات المميزة",
+      favorites_title: "العقارات المحفوظة",
       sort_featured: "المميزة",
       sort_rating: "الأعلى تقييمًا",
       sort_price_low: "السعر: من الأقل إلى الأعلى",
       sort_price_high: "السعر: من الأعلى إلى الأقل",
       no_results_title: "لم يتم العثور على عقارات",
       no_results_text: "جرّب مدينة أخرى، أو فئة مختلفة، أو امسح البحث.",
+      no_favorites_title: "لا توجد مفضلة بعد",
+      no_favorites_text: "احفظ بعض العقارات لتصل إليها بسرعة لاحقًا.",
       view_details: "عرض التفاصيل",
       reserve_now: "احجز الآن",
       reserve_cta_signed_out: "سجّل الدخول للحجز",
@@ -543,73 +565,19 @@
       choose_dates: "اختر التواريخ",
       date_not_available: "—",
       sign_in_google_failed: "تعذر إكمال تسجيل الدخول عبر Google.",
+      google_signin_unavailable: "تسجيل الدخول عبر Google غير متاح الآن.",
       account: "الحساب",
-      stays: "الإقامات"
+      stays: "الإقامات",
+      sending: "جارٍ الإرسال...",
+      creating: "جارٍ الإنشاء...",
+      processing: "جارٍ المعالجة...",
+      copied: "تم النسخ بنجاح.",
+      clear: "مسح",
+      adults: "بالغون",
+      children: "أطفال",
+      continue_booking: "إكمال الحجز"
     }
   };
-
-  function normalizeKey(key) {
-    return String(key || "")
-      .trim()
-      .replace(/[\s-]+/g, "_")
-      .toLowerCase();
-  }
-
-  function keyAliases(key) {
-    const k = normalizeKey(key);
-    const aliases = new Set([k]);
-
-    const custom = {
-      signin: "sign_in",
-      signout: "sign_out",
-      logout: "sign_out",
-      mybookings: "my_bookings",
-      myfavorites: "favorites",
-      clearsearch: "clear_search",
-      searchhint: "search_hint",
-      whereplaceholder: "where_placeholder",
-      chatplaceholder: "chat_placeholder",
-      fullname: "full_name",
-      forgotpassword: "forgot_pass",
-      rememberme: "remember_me",
-      guestuser: "guest_user",
-      signintocontinue: "sign_in_to_continue",
-      emailaddress: "email",
-      reservenow: "reserve_now",
-      viewdetails: "view_details",
-      supportchat: "support_chat",
-      backhome: "backhome",
-      booknow: "booknow",
-      wontcharged: "wontcharged",
-      welcomeback: "welcomeback"
-    };
-
-    if (custom[k]) aliases.add(custom[k]);
-    return Array.from(aliases);
-  }
-
-  function translateOptional(key) {
-    const langDict = translations[state.lang] || translations.en;
-    const baseDict = translations.en;
-    const keys = keyAliases(key);
-
-    for (const candidate of keys) {
-      if (candidate in langDict) return langDict[candidate];
-      if (candidate in baseDict) return baseDict[candidate];
-    }
-
-    return null;
-  }
-
-  function t(key, vars = null) {
-    let text = translateOptional(key) ?? key;
-    if (vars && typeof vars === "object") {
-      Object.keys(vars).forEach((k) => {
-        text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(vars[k]));
-      });
-    }
-    return text;
-  }
 
   /* =========================================
      5) FALLBACK DATA
@@ -775,6 +743,94 @@
     return null;
   }
 
+  function refreshDom() {
+    dom = {
+      html: document.documentElement,
+      body: document.body,
+
+      themeBtn: firstExisting(["#theme-toggle", "[data-action='toggle-theme']"]),
+      langBtn: firstExisting(["#lang-toggle", "[data-action='toggle-lang']"]),
+
+      authCta: firstExisting(["#auth-cta", "#open-auth-btn", "[data-auth-open]"]),
+      profileContainer: firstExisting([".profile-container"]),
+      profileTrigger: firstExisting(["#profile-trigger", "#open-auth-btn", ".profile-menu", "[data-profile-trigger]"]),
+      profileDropdown: firstExisting(["#profile-dropdown", ".profile-dropdown"]),
+      logoutBtn: firstExisting(["#logout-btn", "[data-logout]"]),
+      myFavoritesBtn: firstExisting(["#my-favorites-btn", "#profile-favorites-btn", "[data-open-favorites]"]),
+      myBookingsBtn: firstExisting(["#my-bookings-btn", "#open-bookings-btn", "[data-open-bookings]"]),
+      homeLogoBtn: firstExisting(["#home-logo-btn", ".logo", "a.logo"]),
+      profileName: firstExisting(["#profile-name", "#dropdown-user-name", "[data-profile-name]"]),
+      profileEmail: firstExisting(["#profile-email", "#dropdown-user-email", "[data-profile-email]"]),
+
+      authModal: firstExisting(["#auth-modal", ".auth-modal", ".modal-overlay.auth-modal"]),
+      closeAuthBtn: firstExisting(["#close-auth-btn", ".close-modal-btn[data-close-auth]", "#auth-modal .close-modal-btn"]),
+      authMessage: firstExisting(["#auth-message", ".auth-message"]),
+      loginForm: firstExisting(["#login-form", "form[data-auth-form='login']"]),
+      registerForm: firstExisting(["#register-form", "form[data-auth-form='register']"]),
+      forgotForm: firstExisting(["#forgot-form", "form[data-auth-form='forgot']"]),
+      googleButtons: $all("[data-auth-provider='google'], #google-login-btn, #google-register-btn"),
+      loginSubmitBtn: firstExisting(["#login-submit-btn", "#login-form button[type='submit']"]),
+      registerSubmitBtn: firstExisting(["#register-submit-btn", "#register-form button[type='submit']"]),
+      forgotSubmitBtn: firstExisting(["#forgot-submit-btn", "#forgot-form button[type='submit']"]),
+
+      listingsGrid: firstExisting(["#listings-grid", ".listings-grid"]),
+      sortSelect: firstExisting(["#sort-select", "[data-sort-select]"]),
+      clearSearchBtn: firstExisting(["#clear-search-btn", "[data-clear-search]"]),
+
+      destinationInput: firstExisting(["#destination-input", "#search-location", "input[data-search='destination']"]),
+      searchBtn: firstExisting(["#search-btn", "#main-search-btn", "[data-main-search]"]),
+      categoryButtons: $all(".category-item[data-category], [data-category-btn], .category-chip[data-category]"),
+
+      sectionTitle: firstExisting(["#section-main-title", "[data-section-title]", ".section-header-wrapper h2"]),
+      sectionSubtext: firstExisting(["#section-subtitle", ".section-header-wrapper p"]),
+
+      bookingsModal: firstExisting(["#bookings-modal", ".bookings-modal", "[data-bookings-modal]"]),
+      closeBookingsBtn: firstExisting(["#close-bookings-btn", "[data-close-bookings]", ".close-bookings-btn"]),
+      bookingsList: firstExisting(["#bookings-list", "[data-bookings-list]", ".bookings-body"]),
+
+      chatModal: firstExisting(["#chat-modal", ".chat-modal", "[data-chat-modal]"]),
+      chatOpenBtn: firstExisting(["#chat-open-btn", "[data-chat-open]", ".chat-fab-btn", "#open-chat-btn"]),
+      chatCloseBtn: firstExisting(["#chat-close-btn", "#close-chat-btn", "[data-chat-close]"]),
+      chatSendBtn: firstExisting(["#chat-send-btn", "#send-chat-btn", "[data-chat-send]"]),
+      chatTextarea: firstExisting(["#chat-textarea", "#chat-message-input", "[data-chat-textarea]", ".chat-input-area textarea"]),
+      chatMessages: firstExisting(["#chat-messages", "[data-chat-messages]", ".chat-body"]),
+      chatEmptyState: firstExisting(["#chat-empty-state", "[data-chat-empty]"]),
+      chatPropertyId: firstExisting(["#chat-property-id"]),
+      chatUnreadBadge: firstExisting(["#chat-unread-badge"]),
+
+      scrollTopBtn: firstExisting(["#scroll-top-btn", "[data-scroll-top]"]),
+      favToast: firstExisting(["#fav-toast"]),
+      toastContainer: firstExisting(["#toast-container"]),
+
+      mobileFavBtn: firstExisting(["#mob-fav-btn"]),
+      mobileProfileBtn: firstExisting(["#mob-profile-btn"]),
+      mobileStaysBtn: firstExisting(["#mob-stays-btn"]),
+
+      propertySkeleton: firstExisting(["#prop-skeleton"]),
+      propertyContent: firstExisting(["#prop-real-content"]),
+      propertyFavBtn: firstExisting(["#property-fav-btn"]),
+      shareBtn: firstExisting(["#share-btn"]),
+      contactHostBtn: firstExisting(["#contact-host-btn", "#host-chat-btn", "#booking-chat-btn"]),
+      bookNowLink: firstExisting(["#book-now-link"]),
+      mapEl: firstExisting(["#property-map"]),
+      mapOpenLink: firstExisting(["#map-open-link"]),
+      galleryTrack: firstExisting(["#slider-track"]),
+      galleryThumbs: firstExisting(["#gallery-thumbs"]),
+      galleryDots: firstExisting(["#slider-dots"]),
+      galleryCount: firstExisting(["#slider-count-badge"]),
+      galleryPrev: firstExisting(["#gallery-prev-btn"]),
+      galleryNext: firstExisting(["#gallery-next-btn"]),
+      galleryFullscreen: firstExisting(["#gallery-fullscreen-btn"]),
+
+      lightbox: firstExisting(["#lightbox", ".lightbox-overlay"]),
+      lightboxImg: firstExisting(["#lightbox-img", ".lightbox-img"]),
+      lightboxClose: firstExisting(["#close-lightbox-btn", ".close-lightbox"]),
+      lightboxPrev: firstExisting(["#lightbox-prev-btn", ".lightbox-btn.prev-btn"]),
+      lightboxNext: firstExisting(["#lightbox-next-btn", ".lightbox-btn.next-btn"])
+    };
+    return dom;
+  }
+
   function currentPage() {
     const path = window.location.pathname.split("/").pop();
     return path || ROUTES.home;
@@ -806,89 +862,6 @@
     return `${ROUTES.auth}?redirect=${redirect}${hash}`;
   }
 
-  function getDom() {
-    return {
-      html: document.documentElement,
-      body: document.body,
-
-      themeBtn: firstExisting(["#theme-toggle", "[data-action='toggle-theme']"]),
-      langBtn: firstExisting(["#lang-toggle", "[data-action='toggle-lang']"]),
-
-      authCta: firstExisting(["#auth-cta", "#open-auth-btn", "[data-auth-open]"]),
-      profileContainer: firstExisting([".profile-container"]),
-      profileTrigger: firstExisting(["#profile-trigger", "#open-auth-btn", ".profile-menu", "[data-profile-trigger]"]),
-      profileDropdown: firstExisting(["#profile-dropdown", ".profile-dropdown"]),
-      logoutBtn: firstExisting(["#logout-btn", "[data-logout]"]),
-      myFavoritesBtn: firstExisting(["#my-favorites-btn", "#profile-favorites-btn", "[data-open-favorites]"]),
-      myBookingsBtn: firstExisting(["#my-bookings-btn", "#open-bookings-btn", "[data-open-bookings]"]),
-      homeLogoBtn: firstExisting(["#home-logo-btn", ".logo", "a.logo"]),
-      profileName: firstExisting(["#profile-name", "#dropdown-user-name", "[data-profile-name]"]),
-      profileEmail: firstExisting(["#profile-email", "#dropdown-user-email", "[data-profile-email]"]),
-
-      authModal: firstExisting(["#auth-modal", ".auth-modal", ".modal-overlay.auth-modal"]),
-      closeAuthBtn: firstExisting(["#close-auth-btn", ".close-modal-btn[data-close-auth]", "#auth-modal .close-modal-btn"]),
-      authMessage: firstExisting(["#auth-message", ".auth-message"]),
-      loginForm: firstExisting(["#login-form", "form[data-auth-form='login']"]),
-      registerForm: firstExisting(["#register-form", "form[data-auth-form='register']"]),
-      forgotForm: firstExisting(["#forgot-form", "form[data-auth-form='forgot']"]),
-      googleButtons: $all("[data-auth-provider='google'], #google-login-btn, #google-register-btn"),
-
-      listingsGrid: firstExisting(["#listings-grid", ".listings-grid"]),
-      sortSelect: firstExisting(["#sort-select", "[data-sort-select]"]),
-      clearSearchBtn: firstExisting(["#clear-search-btn", "[data-clear-search]"]),
-
-      destinationInput: firstExisting(["#destination-input", "#search-location", "input[data-search='destination']"]),
-      searchBtn: firstExisting(["#search-btn", "#main-search-btn", "[data-main-search]"]),
-      categoryButtons: $all(".category-item[data-category], [data-category-btn], .category-chip[data-category]"),
-
-      sectionTitle: firstExisting(["#section-main-title", "[data-section-title]", ".section-header-wrapper h2"]),
-
-      bookingsModal: firstExisting(["#bookings-modal", ".bookings-modal"]),
-      closeBookingsBtn: firstExisting(["#close-bookings-btn", "[data-close-bookings]", ".close-bookings-btn"]),
-      bookingsList: firstExisting(["#bookings-list", "[data-bookings-list]"]),
-
-      chatModal: firstExisting(["#chat-modal", ".chat-modal"]),
-      chatOpenBtn: firstExisting(["#chat-open-btn", "[data-chat-open]", ".chat-fab-btn", "#open-chat-btn"]),
-      chatCloseBtn: firstExisting(["#chat-close-btn", "#close-chat-btn", "[data-chat-close]"]),
-      chatSendBtn: firstExisting(["#chat-send-btn", "#send-chat-btn", "[data-chat-send]"]),
-      chatTextarea: firstExisting(["#chat-textarea", "#chat-message-input", "[data-chat-textarea]"]),
-      chatMessages: firstExisting(["#chat-messages", "[data-chat-messages]"]),
-      chatEmptyState: firstExisting(["#chat-empty-state", "[data-chat-empty]"]),
-      chatPropertyId: firstExisting(["#chat-property-id"]),
-      chatUnreadBadge: firstExisting(["#chat-unread-badge"]),
-
-      scrollTopBtn: firstExisting(["#scroll-top-btn", "[data-scroll-top]"]),
-      favToast: firstExisting(["#fav-toast"]),
-      toastContainer: firstExisting(["#toast-container"]),
-
-      mobileFavBtn: firstExisting(["#mob-fav-btn"]),
-      mobileProfileBtn: firstExisting(["#mob-profile-btn"]),
-      mobileStaysBtn: firstExisting(["#mob-stays-btn"]),
-
-      propertySkeleton: firstExisting(["#prop-skeleton"]),
-      propertyContent: firstExisting(["#prop-real-content"]),
-      propertyFavBtn: firstExisting(["#property-fav-btn"]),
-      shareBtn: firstExisting(["#share-btn"]),
-      contactHostBtn: firstExisting(["#contact-host-btn", "#host-chat-btn", "#booking-chat-btn"]),
-      bookNowLink: firstExisting(["#book-now-link"]),
-      mapEl: firstExisting(["#property-map"]),
-      mapOpenLink: firstExisting(["#map-open-link"]),
-      galleryTrack: firstExisting(["#slider-track"]),
-      galleryThumbs: firstExisting(["#gallery-thumbs"]),
-      galleryDots: firstExisting(["#slider-dots"]),
-      galleryCount: firstExisting(["#slider-count-badge"]),
-      galleryPrev: firstExisting(["#gallery-prev-btn"]),
-      galleryNext: firstExisting(["#gallery-next-btn"]),
-      galleryFullscreen: firstExisting(["#gallery-fullscreen-btn"]),
-
-      lightbox: firstExisting(["#lightbox"]),
-      lightboxImg: firstExisting(["#lightbox-img"]),
-      lightboxClose: firstExisting(["#close-lightbox-btn"]),
-      lightboxPrev: firstExisting(["#lightbox-prev-btn"]),
-      lightboxNext: firstExisting(["#lightbox-next-btn"])
-    };
-  }
-
   /* =========================================
      7) HELPERS
   ========================================= */
@@ -916,6 +889,16 @@
   function safeNumber(value, fallback = 0) {
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
+  }
+
+  function unique(arr) {
+    return Array.from(new Set((arr || []).filter(Boolean)));
+  }
+
+  function normalizeLang(value) {
+    const raw = normalizeText(value).toLowerCase();
+    if (raw === "ar" || raw === "arabic" || raw === "rtl") return "ar";
+    return "en";
   }
 
   function formatCurrency(value) {
@@ -947,12 +930,12 @@
     };
   }
 
-  function safeCall(fn) {
+  function safeCall(fn, fallback = null) {
     try {
       return fn();
     } catch (err) {
       console.error(err);
-      return null;
+      return fallback;
     }
   }
 
@@ -979,12 +962,42 @@
     });
   }
 
+  function setText(el, value) {
+    if (el) el.textContent = value;
+  }
+
+  function setHtml(el, value) {
+    if (el) el.innerHTML = value;
+  }
+
+  function setValue(el, value) {
+    if (el) el.value = value;
+  }
+
+  function setSrc(el, value, fallback = "") {
+    if (!el) return;
+    el.src = value || fallback;
+    if (fallback) {
+      el.onerror = function () {
+        this.onerror = null;
+        this.src = fallback;
+      };
+    }
+  }
+
+  function pick(...values) {
+    for (const value of values) {
+      if (Array.isArray(value) && value.length) return value;
+      if (normalizeText(value) !== "") return value;
+    }
+    return "";
+  }
+
   function getRedirectTargetFromUrl() {
     try {
       const url = new URL(window.location.href);
       const redirect = url.searchParams.get("redirect");
       if (!redirect) return "";
-
       const decoded = decodeURIComponent(redirect);
       if (!decoded) return "";
       if (/^https?:\/\//i.test(decoded)) return "";
@@ -1014,8 +1027,84 @@
     return value || "";
   }
 
+  function normalizeKey(key) {
+    return String(key || "")
+      .trim()
+      .replace(/[\s-]+/g, "_")
+      .toLowerCase();
+  }
+
+  function keyAliases(key) {
+    const k = normalizeKey(key);
+    const aliases = new Set([k]);
+
+    const custom = {
+      signin: "sign_in",
+      signout: "sign_out",
+      logout: "sign_out",
+      mybookings: "my_bookings",
+      myfavorites: "favorites",
+      clearsearch: "clear_search",
+      searchhint: "search_hint",
+      whereplaceholder: "where_placeholder",
+      chatplaceholder: "chat_placeholder",
+      fullname: "full_name",
+      forgotpassword: "forgot_pass",
+      rememberme: "remember_me",
+      guestuser: "guest_user",
+      signintocontinue: "sign_in_to_continue",
+      emailaddress: "email",
+      reservenow: "reserve_now",
+      viewdetails: "view_details",
+      supportchat: "support_chat",
+      backhome: "backhome",
+      booknow: "booknow",
+      wontcharged: "wontcharged",
+      welcomeback: "welcomeback"
+    };
+
+    if (custom[k]) aliases.add(custom[k]);
+    return Array.from(aliases);
+  }
+
+  function translateOptional(key) {
+    const langDict = translations[state.lang] || translations.en;
+    const baseDict = translations.en;
+    const keys = keyAliases(key);
+
+    for (const candidate of keys) {
+      if (candidate in langDict) return langDict[candidate];
+      if (candidate in baseDict) return baseDict[candidate];
+    }
+
+    return null;
+  }
+
+  function t(key, vars = null) {
+    let text = translateOptional(key) ?? key;
+    if (vars && typeof vars === "object") {
+      Object.keys(vars).forEach((k) => {
+        text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(vars[k]));
+      });
+    }
+    return text;
+  }
+
+  function setButtonLoading(btn, loading, label = "") {
+    if (!btn) return;
+    if (loading) {
+      btn.disabled = true;
+      if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+      btn.innerHTML = `<i class="ph ph-spinner-gap ph-spin"></i><span>${escapeHtml(label || t("processing"))}</span>`;
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+    }
+    syncPhosphorIcons();
+  }
+
   function showToast(message, type = "success") {
-    const dom = getDom();
+    refreshDom();
     let host = dom.toastContainer || document.getElementById("global-toast-host");
 
     if (!host) {
@@ -1027,8 +1116,8 @@
     }
 
     const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
 
     if (host.id === "global-toast-host") {
       const bg =
@@ -1066,7 +1155,7 @@
   }
 
   function showFavToast(message) {
-    const dom = getDom();
+    refreshDom();
     if (!dom.favToast) {
       showToast(message, "success");
       return;
@@ -1084,760 +1173,495 @@
     const map = {
       "auth/invalid-email": t("invalid_email"),
       "auth/missing-email": t("invalid_email"),
+      "auth/missing-password": t("fill_required"),
       "auth/user-not-found": t("invalid_credentials"),
       "auth/wrong-password": t("invalid_credentials"),
       "auth/invalid-credential": t("invalid_credentials"),
-      "auth/email-already-in-use":
-        state.lang === "ar" ? "هذا البريد مستخدم بالفعل." : "This email is already in use.",
-      "auth/weak-password":
-        state.lang === "ar" ? "كلمة المرور ضعيفة جدًا." : "Password is too weak.",
-      "auth/too-many-requests":
-        state.lang === "ar"
-          ? "عدد المحاولات كبير جدًا. حاول لاحقًا."
-          : "Too many attempts. Please try again later.",
-      "auth/popup-closed-by-user":
-        state.lang === "ar"
-          ? "تم إغلاق نافذة تسجيل الدخول."
-          : "Popup was closed before completing sign-in.",
-      "auth/network-request-failed":
-        state.lang === "ar"
-          ? "خطأ في الشبكة. تحقق من الاتصال."
-          : "Network error. Check your connection."
+      "auth/invalid-login-credentials": t("invalid_credentials"),
+      "auth/email-already-in-use": state.lang === "ar" ? "هذا البريد مستخدم بالفعل." : "This email is already in use.",
+      "auth/weak-password": state.lang === "ar" ? "كلمة المرور ضعيفة جدًا." : "Password is too weak.",
+      "auth/network-request-failed": state.lang === "ar" ? "تحقق من الاتصال بالإنترنت." : "Check your internet connection.",
+      "auth/popup-closed-by-user": state.lang === "ar" ? "تم إغلاق نافذة Google قبل إكمال العملية." : "Google popup was closed before completion.",
+      "auth/popup-blocked": state.lang === "ar" ? "تم حظر نافذة Google من المتصفح." : "Google popup was blocked by the browser.",
+      "auth/too-many-requests": state.lang === "ar" ? "عدد المحاولات كبير، حاول لاحقًا." : "Too many attempts. Try again later.",
+      "permission-denied": state.lang === "ar" ? "ليس لديك صلاحية لتنفيذ هذه العملية." : "You do not have permission to perform this action."
     };
 
-    return map[code] || (state.lang === "ar" ? "حدث خطأ غير متوقع." : "Something went wrong.");
-  }
-
-  function isArabic() {
-    return state.lang === "ar";
-  }
-
-  function renderInlineIconButton(el, iconClass, label) {
-    if (!el) return;
-    const span = label ? `<span>${escapeHtml(label)}</span>` : "";
-    el.innerHTML = `<i class="${escapeHtml(iconClass)}"></i>${span}`;
+    return map[normalizeText(code)] || t("auth_unavailable");
   }
 
   /* =========================================
      8) FIREBASE
   ========================================= */
-  function isFirebaseConfigUsable(cfg) {
-    if (!cfg || typeof cfg !== "object") return false;
-    const required = ["apiKey", "authDomain", "projectId", "appId"];
-    return required.every((key) => cfg[key] && !String(cfg[key]).includes("YOUR_"));
-  }
-
   function initFirebase() {
     try {
-      if (typeof window.firebase === "undefined") return false;
-      if (!isFirebaseConfigUsable(firebaseConfig)) return false;
-
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+      if (typeof window.firebase === "undefined") {
+        state.authReady = false;
+        state.firestoreReady = false;
+        return;
       }
 
-      auth = typeof firebase.auth === "function" ? firebase.auth() : null;
-      db = typeof firebase.firestore === "function" ? firebase.firestore() : null;
+      if (!window.firebase.apps?.length) {
+        window.firebase.initializeApp(firebaseConfig);
+      }
+
+      auth = typeof window.firebase.auth === "function" ? window.firebase.auth() : null;
+      db = typeof window.firebase.firestore === "function" ? window.firebase.firestore() : null;
       googleProvider =
-        typeof firebase.auth?.GoogleAuthProvider === "function"
-          ? new firebase.auth.GoogleAuthProvider()
+        typeof window.firebase.auth?.GoogleAuthProvider === "function"
+          ? new window.firebase.auth.GoogleAuthProvider()
           : null;
 
-      if (googleProvider?.setCustomParameters) {
-        googleProvider.setCustomParameters({ prompt: "select_account" });
-      }
-
-      firebaseReady = !!window.firebase;
+      firebaseReady = !!(auth || db);
       state.authReady = !!auth;
       state.firestoreReady = !!db;
-
-      if (auth && state.lang) {
-        try {
-          auth.languageCode = state.lang;
-        } catch (_) {}
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Firebase init error:", error);
+    } catch (err) {
+      console.error("Firebase init error:", err);
       firebaseReady = false;
       state.authReady = false;
       state.firestoreReady = false;
-      auth = null;
-      db = null;
-      googleProvider = null;
-      return false;
-    }
-  }
-
-  async function setAuthPersistenceFromRemember() {
-    if (!auth || !firebase?.auth?.Auth?.Persistence) return;
-    const remember = !!safeJsonGet(STORAGE_KEYS.remember, true);
-    const persistence = remember
-      ? firebase.auth.Auth.Persistence.LOCAL
-      : firebase.auth.Auth.Persistence.SESSION;
-
-    try {
-      await auth.setPersistence(persistence);
-    } catch (error) {
-      console.warn("Failed to set auth persistence:", error);
     }
   }
 
   /* =========================================
-     9) PROPERTY NORMALIZATION
+     9) THEME / LANGUAGE / I18N
   ========================================= */
-  function isPropertyVisible(p = {}) {
-    const status = String(p.status || p.propertyStatus || "").toLowerCase();
-    if (p.visible === false) return false;
-    if (p.hidden === true) return false;
-    if (p.archived === true) return false;
-    if (p.isArchived === true) return false;
-    if (p.active === false) return false;
-    if (p.isActive === false) return false;
-    if (p.published === false) return false;
-    if (p.isPublished === false) return false;
-    if (["draft", "archived", "inactive", "rejected", "deleted"].includes(status)) return false;
-    return true;
-  }
+  function applyTheme() {
+    refreshDom();
+    const isDark = state.theme === "dark";
+    dom.html.classList.toggle("dark", isDark);
+    dom.body?.classList.toggle("dark", isDark);
+    dom.html.style.colorScheme = isDark ? "dark" : "light";
+    dom.html.classList.remove("preload-dark");
 
-  function normalizeArray(value) {
-    if (!Array.isArray(value)) return [];
-    return value.map((item) => normalizeText(item)).filter(Boolean);
-  }
-
-  function normalizeProperty(p = {}, docId = "", collectionName = "") {
-    const titleEn = p.title_en || p.titleEn || p.nameEn || p.title || "";
-    const titleAr = p.title_ar || p.titleAr || p.nameAr || p.title || "";
-    const locationEn =
-      p.location_en || p.locationEn || p.cityEn || p.location || p.address || "";
-    const locationAr =
-      p.location_ar || p.locationAr || p.cityAr || p.location || p.address || "";
-    const galleryImages = normalizeArray(p.images)
-      .concat(normalizeArray(p.gallery))
-      .concat(normalizeArray(p.photos));
-
-    const baseImage =
-      p.image ||
-      p.imageUrl ||
-      p.mainImage ||
-      p.coverImage ||
-      galleryImages[0] ||
-      "images/placeholder.jpg";
-
-    const images = Array.from(new Set([baseImage, ...galleryImages].filter(Boolean)));
-    const customId = normalizeText(p.id || p.slug || p.propertyId);
-    const realDocId = normalizeText(docId || p.docId || p.documentId || "");
-    const navId = realDocId || customId || slugify(titleEn || titleAr || Date.now());
-
-    return {
-      id: navId,
-      navId,
-      docId: realDocId,
-      customId,
-      collection: collectionName || p.collection || "",
-      title_en: titleEn,
-      title_ar: titleAr,
-      location_en: locationEn,
-      location_ar: locationAr,
-      price: Number(p.price || p.basePrice || p.pricePerNight || p.nightlyRate || 0),
-      rating: Number(p.rating || p.avgRating || p.reviewScore || 4.8),
-      image: baseImage,
-      images,
-      urgency: p.urgency || "",
-      desc_en: p.desc_en || p.descEn || p.descriptionEn || p.description || "",
-      desc_ar: p.desc_ar || p.descAr || p.descriptionAr || p.description || "",
-      type: String(p.type || p.category || p.propertyType || "").toLowerCase(),
-      typeEn: p.typeEn || p.categoryEn || p.propertyTypeEn || p.type || "",
-      typeAr: p.typeAr || p.categoryAr || p.propertyTypeAr || p.type || "",
-      features_en: normalizeArray(
-        p.features_en || p.featuresEn || p.amenitiesEn || p.amenities_en
-      ),
-      features_ar: normalizeArray(
-        p.features_ar || p.featuresAr || p.amenitiesAr || p.amenities_ar
-      ),
-      maxGuests: safeNumber(p.maxGuests || p.guests || p.capacity || 4, 4),
-      bedrooms: safeNumber(p.bedrooms || p.rooms || 2, 2),
-      hostName: p.hostName || p.host || p.ownerName || "OreBooking Host",
-      hostSince: p.hostSince || "2024",
-      lat: p.lat ?? p.locationLat ?? p.latitude ?? null,
-      lng: p.lng ?? p.locationLng ?? p.longitude ?? null,
-      mapLink: p.mapLink || "",
-      createdAt: p.createdAt || null,
-      updatedAt: p.updatedAt || null,
-      raw: p
-    };
-  }
-
-  function getSourceProperties() {
-    if (state.liveProperties.length) return state.liveProperties;
-    return fallbackProperties.map((p) => normalizeProperty(p, p.id, "fallback"));
-  }
-
-  function getNavigationPropertyId(property) {
-    return normalizeText(property?.docId || property?.navId || property?.id || property?.customId || "");
-  }
-
-  function getPropertyById(id) {
-    const target = String(id || "");
-    return (
-      getSourceProperties().find(
-        (p) =>
-          String(p.id) === target ||
-          String(p.docId) === target ||
-          String(p.navId) === target ||
-          String(p.customId) === target
-      ) || null
-    );
-  }
-
-  function getPropertyTitle(property) {
-    if (!property) return "";
-    return state.lang === "ar"
-      ? property.title_ar || property.title_en || ""
-      : property.title_en || property.title_ar || "";
-  }
-
-  function getPropertyLocation(property) {
-    if (!property) return "";
-    return state.lang === "ar"
-      ? property.location_ar || property.location_en || ""
-      : property.location_en || property.location_ar || "";
-  }
-
-  function getPropertyType(property) {
-    if (!property) return "";
-    const raw = String(
-      state.lang === "ar"
-        ? property.typeAr || property.type || property.typeEn || ""
-        : property.typeEn || property.type || property.typeAr || ""
-    ).toLowerCase();
-
-    if (/hotel|فندق/.test(raw)) return t("hotel");
-    if (/apartment|suite|loft|flat|شقة|أجنحة/.test(raw)) return t("apartment");
-    if (/villa|فيلا/.test(raw)) return t("villa");
-    if (/resort|منتجع/.test(raw)) return t("resort");
-    if (/cabin|كوخ/.test(raw)) return t("cabin");
-    return state.lang === "ar"
-      ? property.typeAr || property.typeEn || t("premium_stay")
-      : property.typeEn || property.typeAr || t("premium_stay");
-  }
-
-  function propertyMatchesCategory(property, category) {
-    if (!category || category === "all") return true;
-    const raw = String(category).toLowerCase();
-    const haystack = [
-      property.type,
-      property.typeEn,
-      property.typeAr,
-      property.title_en,
-      property.title_ar,
-      property.desc_en,
-      property.desc_ar
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    if (raw === "hotel" || raw === "hotels") return /hotel|فندق/.test(haystack);
-    if (raw === "apartment" || raw === "apartments") return /apartment|suite|loft|flat|شقة|أجنحة/.test(haystack);
-    if (raw === "villa" || raw === "villas") return /villa|فيلا/.test(haystack);
-
-    return haystack.includes(raw);
-  }
-
-  function propertyMatchesSearch(property, search) {
-    const q = normalizeText(search).toLowerCase();
-    if (!q) return true;
-    const bag = [
-      property.title_en,
-      property.title_ar,
-      property.location_en,
-      property.location_ar,
-      property.desc_en,
-      property.desc_ar,
-      property.type,
-      property.typeEn,
-      property.typeAr
-    ]
-      .join(" ")
-      .toLowerCase();
-    return bag.includes(q);
-  }
-
-  function rememberSelectedProperty(property) {
-    if (!property) return;
-
-    const navId = getNavigationPropertyId(property);
-    const snapshot = { ...property, navId, rememberedAt: new Date().toISOString() };
-
-    safeSet(STORAGE_KEYS.selectedPropertyId, navId);
-    safeSet(STORAGE_KEYS.selectedPropertyDocId, normalizeText(property.docId || navId));
-    safeJsonSetMany(STORAGE_ALIASES.selectedPropertyData, snapshot);
-  }
-
-  function resolveSelectedPropertyIdFromUrlOrStorage() {
-    const params = new URLSearchParams(window.location.search);
-    return (
-      params.get("id") ||
-      safeGet(STORAGE_KEYS.selectedPropertyId, "") ||
-      safeGet(STORAGE_KEYS.selectedPropertyDocId, "")
-    );
-  }
-
-  function resolveSelectedProperty() {
-    const urlId = resolveSelectedPropertyIdFromUrlOrStorage();
-    const directMatch = getPropertyById(urlId);
-    if (directMatch) return directMatch;
-
-    const snapshot = safeJsonGetAny(STORAGE_ALIASES.selectedPropertyData, null);
-    if (snapshot) {
-      return normalizeProperty(
-        snapshot,
-        snapshot.docId || snapshot.id || "",
-        snapshot.collection || ""
-      );
+    const icon = dom.themeBtn?.querySelector("i");
+    if (icon) {
+      icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
     }
-    return null;
+
+    syncPhosphorIcons();
   }
 
-  function buildDetailsUrl(property) {
-    const propertyId = encodeURIComponent(getNavigationPropertyId(property));
-    return `${ROUTES.details}?id=${propertyId}`;
+  function updateDirection() {
+    refreshDom();
+    dom.html.lang = state.lang;
+    dom.html.dir = state.lang === "ar" ? "rtl" : "ltr";
   }
 
-  function buildBookingUrl(property) {
-    const propertyId = encodeURIComponent(getNavigationPropertyId(property));
-    const params = new URLSearchParams();
-    params.set("id", propertyId);
-
-    const dom = getDom();
-    const destinationInput = dom.destinationInput?.value?.trim();
-    const checkIn =
-      firstExisting(["#checkin-date", "#arrival-date", "#search-checkin", "input[name='checkin']"])?.value || "";
-    const checkOut =
-      firstExisting(["#checkout-date", "#departure-date", "#search-checkout", "input[name='checkout']"])?.value || "";
-    const guests =
-      firstExisting(["#guest-count", "#guest-adults", "#search-guests", "input[name='guests']"])?.value || "";
-
-    if (destinationInput) params.set("destination", destinationInput);
-    if (checkIn) params.set("checkIn", checkIn);
-    if (checkOut) params.set("checkOut", checkOut);
-    if (guests) params.set("guests", guests);
-
-    return `${ROUTES.booking}?${params.toString()}`;
+  function updateLangButton() {
+    refreshDom();
+    const span = dom.langBtn?.querySelector("span");
+    const label = state.lang === "ar" ? "EN" : "AR";
+    if (span) span.textContent = label;
+    else if (dom.langBtn) dom.langBtn.textContent = label;
   }
 
-  function openPropertyDetails(property) {
-    if (!property) return;
-    rememberSelectedProperty(property);
-    window.location.href = buildDetailsUrl(property);
-  }
-
-  function continuePendingBookingAfterAuth() {
-    const ctx = safeJsonGet(STORAGE_KEYS.bookingContext, null);
-    if (!ctx || !ctx.redirectTo) return false;
-
-    safeRemove(STORAGE_KEYS.bookingContext);
-    window.location.href = ctx.redirectTo;
-    return true;
-  }
-
-  function handleReserveNow(property) {
-    if (!property) return;
-
-    rememberSelectedProperty(property);
-    const redirectTo = buildBookingUrl(property);
-
-    if (!state.user) {
-      safeJsonSet(STORAGE_KEYS.bookingContext, {
-        type: "booking",
-        propertyId: getNavigationPropertyId(property),
-        redirectTo,
-        createdAt: new Date().toISOString()
-      });
-
-      requireAuth(t("auth_redirect_book"), "login");
+  function setTextPreservingIcon(el, text) {
+    if (!el) return;
+    const icon = Array.from(el.children).find((child) => child.tagName === "I");
+    if (!icon) {
+      el.textContent = text;
       return;
     }
 
-    window.location.href = redirectTo;
+    const iconClone = icon.cloneNode(true);
+    el.innerHTML = "";
+    el.appendChild(iconClone);
+    el.appendChild(document.createTextNode(` ${text}`));
   }
 
-  async function loadLiveProperties() {
-    if (!db) return false;
-    if (state.loadingProperties || state.propertiesLoaded) return state.liveProperties.length > 0;
-
-    state.loadingProperties = true;
-
-    try {
-      for (const collectionName of state.propertyCollectionCandidates) {
-        try {
-          const snap = await db.collection(collectionName).limit(60).get();
-          if (snap.empty) continue;
-
-          const items = [];
-          snap.forEach((doc) => {
-            const data = doc.data() || {};
-            if (isPropertyVisible(data)) {
-              items.push(normalizeProperty(data, doc.id, collectionName));
-            }
-          });
-
-          if (items.length) {
-            state.liveProperties = items;
-            state.currentCollection = collectionName;
-            state.propertiesLoaded = true;
-            state.loadingProperties = false;
-            return true;
-          }
-        } catch (err) {
-          console.warn(`Collection ${collectionName} read failed`, err);
-        }
+  function cacheOriginalLocalizedContent() {
+    document.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-title]").forEach((el) => {
+      if (el.hasAttribute("data-i18n") && !("i18nOriginalText" in el.dataset)) {
+        el.dataset.i18nOriginalText = el.textContent || "";
       }
+      if (el.hasAttribute("data-i18n-placeholder") && !("i18nOriginalPlaceholder" in el.dataset)) {
+        el.dataset.i18nOriginalPlaceholder = el.getAttribute("placeholder") || "";
+      }
+      if (el.hasAttribute("data-i18n-title") && !("i18nOriginalTitle" in el.dataset)) {
+        el.dataset.i18nOriginalTitle = el.getAttribute("title") || "";
+      }
+    });
+  }
 
-      state.propertiesLoaded = true;
-      state.loadingProperties = false;
-      return false;
-    } catch (error) {
-      console.error("Property load error:", error);
-      state.propertiesLoaded = true;
-      state.loadingProperties = false;
-      return false;
+  function applyTranslations() {
+    cacheOriginalLocalizedContent();
+
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      const translated = translateOptional(key);
+      if (translated != null) setTextPreservingIcon(el, translated);
+    });
+
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-placeholder");
+      const translated = translateOptional(key);
+      if (translated != null) el.setAttribute("placeholder", translated);
+    });
+
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-title");
+      const translated = translateOptional(key);
+      if (translated != null) el.setAttribute("title", translated);
+    });
+
+    if (!state.selectedProperty) {
+      document.title = t("page_title");
     }
   }
 
-  async function fetchPropertyByIdFromFirestore(id) {
-    if (!db || !id) return null;
-
-    for (const collectionName of PROPERTY_COLLECTION_CANDIDATES) {
-      try {
-        const direct = await db.collection(collectionName).doc(String(id)).get();
-        if (direct.exists) {
-          const data = direct.data() || {};
-          if (isPropertyVisible(data)) {
-            return normalizeProperty(data, direct.id, collectionName);
-          }
-        }
-      } catch (_) {}
-
-      try {
-        const queries = [
-          db.collection(collectionName).where("id", "==", String(id)).limit(1),
-          db.collection(collectionName).where("slug", "==", String(id)).limit(1),
-          db.collection(collectionName).where("propertyId", "==", String(id)).limit(1)
-        ];
-
-        for (const query of queries) {
-          try {
-            const snap = await query.get();
-            if (!snap.empty) {
-              const doc = snap.docs[0];
-              const data = doc.data() || {};
-              if (isPropertyVisible(data)) {
-                return normalizeProperty(data, doc.id, collectionName);
-              }
-            }
-          } catch (_) {}
-        }
-      } catch (_) {}
-    }
-
-    return null;
+  function applyLanguageAndTheme() {
+    updateDirection();
+    updateLangButton();
+    applyTheme();
+    applyTranslations();
+    renderDynamicText();
+    syncPhosphorIcons();
   }
 
   /* =========================================
-     10) FAVORITES
+     10) UI / MODALS
   ========================================= */
-  function getFavoritesKeyForUser(uid) {
-    return uid ? `orefavs_${uid}` : STORAGE_KEYS.favoritesGuest;
+  function openModal(el) {
+    if (!el) return;
+    el.classList.add("active");
+    document.body.classList.add("modal-open");
   }
 
-  function getLegacyFavoritesKey(uid) {
-    return uid ? `orefavs-${uid}` : STORAGE_KEYS.favorites;
+  function closeModal(el) {
+    if (!el) return;
+    el.classList.remove("active");
+    const hasActive = $all(".modal-overlay.active, .lightbox-overlay.active, .profile-dropdown.active").length > 0;
+    if (!hasActive) document.body.classList.remove("modal-open");
   }
 
-  function normalizeFavoriteList(list) {
-    return Array.from(
-      new Set(
-        (Array.isArray(list) ? list : [])
-          .map((item) => normalizeText(item))
-          .filter(Boolean)
-      )
-    );
+  function openAuthModal(view = "login") {
+    refreshDom();
+    switchAuthForm(view);
+    clearAuthMessage();
+    if (dom.authModal) {
+      openModal(dom.authModal);
+      return;
+    }
+    window.location.href = getAuthUrl(view);
   }
 
-  function getStoredFavorites(uid = state.user?.uid || "") {
-    const primary = safeJsonGet(getFavoritesKeyForUser(uid), null);
-    const legacy = safeJsonGet(getLegacyFavoritesKey(uid), null);
+  function closeAuthModal() {
+    refreshDom();
+    closeModal(dom.authModal);
+  }
+
+  function switchAuthForm(view = "login") {
+    refreshDom();
+    const forms = {
+      login: dom.loginForm,
+      register: dom.registerForm,
+      forgot: dom.forgotForm
+    };
+
+    Object.entries(forms).forEach(([key, form]) => {
+      if (!form) return;
+      form.classList.toggle("active", key === view);
+      form.hidden = key !== view;
+    });
+
+    try {
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${encodeURIComponent(view)}`);
+    } catch (_) {}
+  }
+
+  function toggleProfileDropdown(force = null) {
+    refreshDom();
+    if (!dom.profileDropdown) return;
+
+    const isActive =
+      typeof force === "boolean"
+        ? force
+        : !dom.profileDropdown.classList.contains("active");
+
+    dom.profileDropdown.classList.toggle("active", isActive);
+    dom.profileTrigger?.setAttribute("aria-expanded", isActive ? "true" : "false");
+    state.profileDropdownOpen = isActive;
+  }
+
+  function setAuthMessage(message, type = "error") {
+    refreshDom();
+    if (!dom.authMessage) {
+      showToast(message, type === "error" ? "error" : "success");
+      return;
+    }
+
+    dom.authMessage.className = `auth-message ${type}`;
+    dom.authMessage.textContent = message;
+  }
+
+  function clearAuthMessage() {
+    refreshDom();
+    if (!dom.authMessage) return;
+    dom.authMessage.className = "auth-message";
+    dom.authMessage.textContent = "";
+  }
+
+  /* =========================================
+     11) AUTH
+  ========================================= */
+  function getCurrentUserId() {
+    return state.user?.uid || "guest";
+  }
+
+  function getGuestBasics() {
+    return safeJsonGet(STORAGE_KEYS.guestBasics, {});
+  }
+
+  function saveGuestBasics(data) {
+    const current = getGuestBasics();
+    safeJsonSet(STORAGE_KEYS.guestBasics, { ...current, ...data });
+  }
+
+  function updateAuthUI() {
+    refreshDom();
+
+    const guestBasics = getGuestBasics();
+    const name = normalizeText(state.user?.displayName || guestBasics.name || t("guest_user"));
+    const email = normalizeText(state.user?.email || guestBasics.email || t("sign_in_to_continue"));
+
+    setText(dom.profileName, name);
+    setText(dom.profileEmail, email);
+
+    if (dom.authCta) {
+      const isLogged = !!state.user;
+      dom.authCta.classList.toggle("auth-btn-guest", !isLogged);
+      dom.authCta.classList.toggle("auth-btn-logged", isLogged);
+      dom.authCta.setAttribute("aria-label", isLogged ? t("account") : t("sign_in"));
+
+      const icon = dom.authCta.querySelector("i");
+      if (icon) {
+        icon.className = isLogged ? "ph ph-user-circle-check" : "ph ph-user";
+      }
+    }
+
+    renderUnreadBadge();
+    syncPhosphorIcons();
+  }
+
+  function readRememberMe() {
+    return safeGet(STORAGE_KEYS.remember, "0") === "1";
+  }
+
+  function handlePostAuthRedirect() {
+    const fromStorage = safeGet(STORAGE_KEYS.postAuthRedirect, "");
+    const fromUrl = getRedirectTargetFromUrl();
+    const redirect = fromStorage || fromUrl;
+
+    safeRemove(STORAGE_KEYS.postAuthRedirect);
+
+    if (!redirect) return;
+    if (redirect === currentPageWithSearch()) return;
+
+    setTimeout(() => {
+      window.location.href = redirect;
+    }, 250);
+  }
+
+  async function signInWithEmail(email, password) {
+    if (!auth) {
+      setAuthMessage(t("auth_unavailable"), "error");
+      return;
+    }
+
+    try {
+      clearAuthMessage();
+      setButtonLoading(dom.loginSubmitBtn, true, t("sign_in"));
+      await auth.signInWithEmailAndPassword(email, password);
+      saveGuestBasics({ email });
+      showToast(t("login_success"), "success");
+      closeAuthModal();
+      handlePostAuthRedirect();
+    } catch (err) {
+      setAuthMessage(humanFirebaseError(err?.code), "error");
+    } finally {
+      setButtonLoading(dom.loginSubmitBtn, false);
+    }
+  }
+
+  async function registerWithEmail(name, email, password) {
+    if (!auth) {
+      setAuthMessage(t("auth_unavailable"), "error");
+      return;
+    }
+
+    try {
+      clearAuthMessage();
+      setButtonLoading(dom.registerSubmitBtn, true, t("creating"));
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      if (cred?.user && name) {
+        await cred.user.updateProfile({ displayName: name });
+      }
+      saveGuestBasics({ name, email });
+      showToast(t("register_success"), "success");
+      closeAuthModal();
+      handlePostAuthRedirect();
+    } catch (err) {
+      setAuthMessage(humanFirebaseError(err?.code), "error");
+    } finally {
+      setButtonLoading(dom.registerSubmitBtn, false);
+    }
+  }
+
+  async function sendPasswordReset(email) {
+    if (!auth) {
+      setAuthMessage(t("auth_unavailable"), "error");
+      return;
+    }
+
+    try {
+      clearAuthMessage();
+      setButtonLoading(dom.forgotSubmitBtn, true, t("send_link"));
+      await auth.sendPasswordResetEmail(email);
+      setAuthMessage(t("reset_sent"), "success");
+    } catch (err) {
+      setAuthMessage(humanFirebaseError(err?.code), "error");
+    } finally {
+      setButtonLoading(dom.forgotSubmitBtn, false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    if (!auth || !googleProvider) {
+      setAuthMessage(t("google_signin_unavailable"), "error");
+      return;
+    }
+
+    try {
+      clearAuthMessage();
+      await auth.signInWithPopup(googleProvider);
+      showToast(t("login_success"), "success");
+      closeAuthModal();
+      handlePostAuthRedirect();
+    } catch (err) {
+      setAuthMessage(humanFirebaseError(err?.code) || t("sign_in_google_failed"), "error");
+    }
+  }
+
+  async function logoutUser() {
+    try {
+      if (auth) await auth.signOut();
+      toggleProfileDropdown(false);
+      showToast(t("logout_success"), "success");
+    } catch (err) {
+      console.error("Logout error:", err);
+      showToast(t("auth_unavailable"), "error");
+    }
+  }
+
+  function attachAuthObserver() {
+    if (!auth || authObserverAttached) return;
+    authObserverAttached = true;
+
+    auth.onAuthStateChanged(async (user) => {
+      state.user = user || null;
+      mergeGuestFavoritesIntoUser();
+      loadFavorites();
+      updateAuthUI();
+      if (state.currentView === "favorites" || state.currentView === "home") {
+        renderListings();
+      }
+      if (state.currentView === "property") {
+        updatePropertyActionButtons();
+      }
+      if (state.bookings.length || state.currentView === "property") {
+        await loadBookings();
+      }
+    });
+  }
+
+  /* =========================================
+     12) FAVORITES
+  ========================================= */
+  function getFavoritesStorageKey() {
+    return state.user
+      ? `${STORAGE_KEYS.favorites}_${state.user.uid}`
+      : STORAGE_KEYS.favoritesGuest;
+  }
+
+  function loadFavorites() {
+    const fromCurrent = safeJsonGet(getFavoritesStorageKey(), null);
     const common = safeJsonGetAny(STORAGE_ALIASES.favoritesCommon, []);
-    return normalizeFavoriteList([...(primary || []), ...(legacy || []), ...(common || [])]);
+    state.favorites = unique([...(fromCurrent || []), ...(common || [])].map(String));
   }
 
-  function setStoredFavorites(list, uid = state.user?.uid || "") {
-    const normalized = normalizeFavoriteList(list);
-    safeJsonSet(getFavoritesKeyForUser(uid), normalized);
-    safeJsonSet(getLegacyFavoritesKey(uid), normalized);
-    if (!uid) {
-      safeJsonSetMany(STORAGE_ALIASES.favoritesCommon, normalized);
-    }
-    state.favorites = normalized;
-    updateFavoriteButtonsEverywhere();
+  function saveFavorites() {
+    safeJsonSet(getFavoritesStorageKey(), state.favorites);
+    safeJsonSetMany(STORAGE_ALIASES.favoritesCommon, state.favorites);
   }
 
-  function getFavoriteIds() {
-    const uid = state.user?.uid || "";
-    state.favorites = getStoredFavorites(uid);
-    return state.favorites;
+  function mergeGuestFavoritesIntoUser() {
+    if (!state.user) return;
+    const guest = safeJsonGet(STORAGE_KEYS.favoritesGuest, []);
+    const userKey = getFavoritesStorageKey();
+    const currentUserFavorites = safeJsonGet(userKey, []);
+    const merged = unique([...(currentUserFavorites || []), ...(guest || [])].map(String));
+
+    safeJsonSet(userKey, merged);
+    safeJsonSetMany(STORAGE_ALIASES.favoritesCommon, merged);
+    if ((guest || []).length) safeRemove(STORAGE_KEYS.favoritesGuest);
   }
 
-  function isFavoriteId(id) {
-    return getFavoriteIds().includes(String(id));
-  }
-
-  function addFavoriteId(id) {
-    const current = getFavoriteIds();
-    if (!current.includes(String(id))) {
-      setStoredFavorites([...current, String(id)]);
-    }
-  }
-
-  function removeFavoriteId(id) {
-    const current = getFavoriteIds();
-    setStoredFavorites(current.filter((x) => x !== String(id)));
+  function isFavorite(propertyId) {
+    return state.favorites.includes(String(propertyId));
   }
 
   function toggleFavorite(property) {
-    const propertyId = getNavigationPropertyId(property);
-    if (!propertyId) return false;
+    if (!property?.id) return;
 
-    const exists = isFavoriteId(propertyId);
-    if (exists) {
-      removeFavoriteId(propertyId);
+    const id = String(property.id);
+    if (isFavorite(id)) {
+      state.favorites = state.favorites.filter((x) => String(x) !== id);
+      saveFavorites();
       showFavToast(t("fav_removed"));
-      return false;
+    } else {
+      state.favorites = unique([...state.favorites, id]);
+      saveFavorites();
+      showFavToast(t("fav_added"));
     }
 
-    addFavoriteId(propertyId);
-    showFavToast(t("fav_added"));
-    return true;
+    updateAllFavoriteButtons(id);
+    if (state.currentView === "favorites") renderListings();
   }
 
-  function migrateGuestFavoritesToUser(uid) {
-    if (!uid) return;
-    const guestFavs = normalizeFavoriteList(safeJsonGet(STORAGE_KEYS.favoritesGuest, []));
-    if (!guestFavs.length) return;
-
-    const userFavs = normalizeFavoriteList(safeJsonGet(getFavoritesKeyForUser(uid), []));
-    const merged = normalizeFavoriteList([...userFavs, ...guestFavs]);
-
-    safeJsonSet(getFavoritesKeyForUser(uid), merged);
-    safeJsonSet(getLegacyFavoritesKey(uid), merged);
-    safeRemove(STORAGE_KEYS.favoritesGuest);
-    safeRemoveMany(STORAGE_ALIASES.favoritesCommon);
-    state.favorites = merged;
+  function favoriteIconHtml(propertyId) {
+    const active = isFavorite(propertyId);
+    return `<i class="${active ? "ph-fill" : "ph"} ph-heart"></i>`;
   }
 
-  function updateFavoriteButtonsEverywhere() {
-    const favIds = getFavoriteIds();
-
-    $all("[data-fav-id]").forEach((btn) => {
-      const id = normalizeText(btn.getAttribute("data-fav-id"));
-      const active = favIds.includes(id);
-      btn.classList.toggle("active", active);
-      const label = active ? t("saved") : t("save");
-      btn.setAttribute("aria-pressed", active ? "true" : "false");
-      btn.setAttribute("aria-label", `${label}`);
-      const icon = active ? "ph-fill ph-heart" : "ph ph-heart";
-
-      if (btn.classList.contains("fav-btn") || btn.classList.contains("favorite-btn")) {
-        btn.innerHTML = `<i class="${icon}"></i>`;
-      } else if (btn.id === "property-fav-btn") {
-        btn.innerHTML = `<i class="${icon}"></i><span>${escapeHtml(label)}</span>`;
+  function updateAllFavoriteButtons(propertyId = "") {
+    $all("[data-action='toggle-favorite']").forEach((btn) => {
+      const btnId = String(btn.dataset.propertyId || "");
+      const isActive = isFavorite(btnId);
+      btn.classList.toggle("active", isActive);
+      if (!propertyId || btnId === String(propertyId)) {
+        btn.innerHTML = favoriteIconHtml(btnId);
       }
     });
 
+    if (dom?.propertyFavBtn && state.selectedProperty?.id) {
+      const active = isFavorite(state.selectedProperty.id);
+      dom.propertyFavBtn.classList.toggle("active", active);
+      const labelEl = $("#fav-btn-text", dom.propertyFavBtn) || $("span", dom.propertyFavBtn);
+      const icon = $("i", dom.propertyFavBtn);
+      if (icon) icon.className = active ? "ph-fill ph-heart" : "ph ph-heart";
+      if (labelEl) labelEl.textContent = active ? t("saved") : t("save");
+    }
+
     syncPhosphorIcons();
   }
 
   /* =========================================
-     11) LISTINGS
+     13) PROPERTY NORMALIZATION
   ========================================= */
-  function getFilteredProperties() {
-    const search = state.activeSearch;
-    const category = state.activeCategory;
-    const sort = state.sort;
-
-    let list = [...getSourceProperties()];
-
-    if (state.currentView === "favorites") {
-      const favs = getFavoriteIds();
-      list = list.filter((p) => favs.includes(getNavigationPropertyId(p)));
-    }
-
-    list = list.filter((property) => {
-      return propertyMatchesCategory(property, category) && propertyMatchesSearch(property, search);
-    });
-
-    list.sort((a, b) => {
-      if (sort === "rating") return (b.rating || 0) - (a.rating || 0);
-      if (sort === "price_low") return (a.price || 0) - (b.price || 0);
-      if (sort === "price_high") return (b.price || 0) - (a.price || 0);
-      const dateA = safeNumber(
-        typeof a.createdAt?.toMillis === "function" ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime(),
-        0
-      );
-      const dateB = safeNumber(
-        typeof b.createdAt?.toMillis === "function" ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime(),
-        0
-      );
-      return dateB - dateA || (b.rating || 0) - (a.rating || 0);
-    });
-
-    return list;
-  }
-
-  function renderListingSkeletons(count = 6) {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-    dom.listingsGrid.innerHTML = "";
-    for (let i = 0; i < count; i += 1) {
-      const item = document.createElement("div");
-      item.className = "card-skeleton";
-      dom.listingsGrid.appendChild(item);
-    }
-  }
-
-  function renderEmptyListings(message = t("no_results_text")) {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    dom.listingsGrid.innerHTML = `
-      <div class="listings-empty-state">
-        <i class="ph ph-house-line"></i>
-        <h3>${escapeHtml(t("no_results_title"))}</h3>
-        <p>${escapeHtml(message)}</p>
-      </div>
-    `;
-    syncPhosphorIcons();
-  }
-
-  function renderPropertyCard(property) {
-    const propertyId = getNavigationPropertyId(property);
-    const title = getPropertyTitle(property);
-    const location = getPropertyLocation(property);
-    const urgency = localizeUrgency(property.urgency);
-    const rating = safeNumber(property.rating, 4.8).toFixed(1);
-    const reserveLabel = state.user ? t("reserve_now") : t("reserve_cta_signed_out");
-    const isFav = isFavoriteId(propertyId);
-
-    return `
-      <article class="property-card" data-property-id="${escapeHtml(propertyId)}">
-        <div class="property-card-media">
-          <img src="${escapeHtml(property.image)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-          ${
-            urgency
-              ? `<div class="property-urgency"><i class="ph-fill ph-fire"></i><span>${escapeHtml(
-                  urgency
-                )}</span></div>`
-              : ""
-          }
-          <button
-            type="button"
-            class="favorite-btn ${isFav ? "active" : ""}"
-            data-fav-id="${escapeHtml(propertyId)}"
-            aria-label="${escapeHtml(t("save_property"))}"
-            aria-pressed="${isFav ? "true" : "false"}"
-          >
-            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
-          </button>
-        </div>
-
-        <div class="property-card-body">
-          <div class="property-card-top">
-            <div class="card-title-wrapper">
-              <h3 class="property-card-title">${escapeHtml(title)}</h3>
-              <div class="property-card-location">
-                <i class="ph ph-map-pin"></i>
-                <span>${escapeHtml(location)}</span>
-              </div>
-            </div>
-
-            <div class="property-card-rating">
-              <i class="ph-fill ph-star"></i>
-              <span>${escapeHtml(rating)}</span>
-            </div>
-          </div>
-
-          <div class="property-card-price">
-            ${escapeHtml(formatCurrency(property.price))}
-            <span>${escapeHtml(t("night_suffix"))}</span>
-          </div>
-
-          <div class="property-card-actions">
-            <button type="button" class="details-btn" data-action="details" data-property-id="${escapeHtml(propertyId)}">
-              <i class="ph ph-arrow-up-right"></i>
-              <span>${escapeHtml(t("view_details"))}</span>
-            </button>
-            <button type="button" class="reserve-btn" data-action="reserve" data-property-id="${escapeHtml(propertyId)}">
-              <i class="ph ph-calendar-check"></i>
-              <span>${escapeHtml(reserveLabel)}</span>
-            </button>
-          </div>
-        </div>
-      </article>
-    `;
-  }
-
-  function updateSectionHeading() {
-    const dom = getDom();
-    if (!dom.sectionTitle) return;
-    dom.sectionTitle.textContent =
-      state.currentView === "favorites" ? t("favorites") : t("featured_title");
-  }
-
-  function updateCategoryButtons() {
-    const dom = getDom();
-    dom.categoryButtons.forEach((btn) => {
-      const category = normalizeText(btn.dataset.category || btn.dataset.categoryBtn || "");
-      btn.classList.toggle("active", category === state.activeCategory);
-    });
-  }
-
-  function updateClearSearchButton() {
-    const dom = getDom();
-    if (!dom.clearSearchBtn) return;
-    const active = !!normalizeText(state.activeSearch);
-    dom.clearSearchBtn.style.display = active ? "inline-flex" : "none";
-  }
-
-  function renderListings() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    updateSectionHeading();
-    updateCategoryButtons();
-    updateClearSearchButton();
-
-    const list = getFilteredProperties();
-
-    if (!list.length) {
-      renderEmptyListings(
-        state.currentView === "favorites" ? t("no_bookings").replace("حجوزات", "عناصر").replace("bookings", "favorites") : t("no_results_text")
-      );
-      return;
-    }
-
-    dom.listingsGrid.innerHTML = list.map(renderPropertyCard).join("");
-    updateFavoriteButtonsEverywhere();
-    syncPhosphorIcons();
-  }
-
-  /* =========================================
-     12) PROPERTY PAGE
-  ========================================= */
-  function getFeatureIcon(feature) {
-    const key = normalizeText(feature).toLowerCase();
-    const iconMap = {
+  function featureIcon(featureKey) {
+    const key = normalizeText(featureKey).toLowerCase();
+    const map = {
       wifi: "ph-wifi-high",
       "واي فاي": "ph-wifi-high",
       pool: "ph-swimming-pool",
@@ -1854,225 +1678,650 @@
       "مطبخ": "ph-cooking-pot",
       ac: "ph-snowflake",
       "تكييف": "ph-snowflake",
-      balcony: "ph-windows",
-      "شرفة": "ph-windows",
+      balcony: "ph-buildings",
+      "شرفة": "ph-buildings",
       breakfast: "ph-coffee",
       "إفطار": "ph-coffee",
       security: "ph-shield-check",
       "حماية": "ph-shield-check",
       tv: "ph-television",
       "تلفاز": "ph-television",
-      beach: "ph-island",
-      "وصول للشاطئ": "ph-island"
+      beach: "ph-wave-sine",
+      "وصول للشاطئ": "ph-wave-sine"
     };
-    return iconMap[key] || "ph-check-circle";
+    return map[key] || "ph-check-circle";
   }
 
-  function normalizeFeatureLabel(feature) {
-    const key = normalizeText(feature).toLowerCase();
-    const map = {
-      wifi: t("wifi"),
-      pool: t("pool"),
-      parking: t("parking"),
-      gym: t("gym"),
-      restaurant: t("restaurant"),
-      spa: t("spa"),
-      kitchen: t("kitchen"),
-      ac: t("ac"),
-      balcony: t("balcony"),
-      breakfast: t("breakfast"),
-      security: t("security"),
-      tv: t("tv"),
-      beach: t("beach")
-    };
-    return map[key] || normalizeText(feature);
+  function translateFeature(feature) {
+    const raw = normalizeText(feature).toLowerCase();
+    const englishKeys = [
+      "wifi",
+      "pool",
+      "parking",
+      "gym",
+      "restaurant",
+      "spa",
+      "kitchen",
+      "ac",
+      "balcony",
+      "breakfast",
+      "security",
+      "tv",
+      "beach"
+    ];
+
+    if (englishKeys.includes(raw)) return t(raw);
+    return feature;
   }
 
-  function getPropertyImages(property) {
-    const arr = Array.isArray(property?.images) ? property.images : [];
-    return arr.length ? arr.filter(Boolean) : [property?.image || "images/placeholder.jpg"];
-  }
-
-  function getFeaturesArray(property) {
-    if (!property) return ["wifi", "parking", "ac", "kitchen"];
-    if (state.lang === "ar" && Array.isArray(property.features_ar) && property.features_ar.length) {
-      return property.features_ar;
+  function normalizeFeatures(raw) {
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    if (typeof raw === "string") {
+      return raw
+        .split(/[|,]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
     }
-    if (state.lang !== "ar" && Array.isArray(property.features_en) && property.features_en.length) {
-      return property.features_en;
-    }
-    if (Array.isArray(property.features_en) && property.features_en.length) return property.features_en;
-    if (Array.isArray(property.features_ar) && property.features_ar.length) return property.features_ar;
-    return ["wifi", "parking", "ac", "kitchen"];
+    return [];
   }
 
-  function getBedroomText(property) {
-    const n = safeNumber(property?.bedrooms, 2);
-    return t(n === 1 ? "bedrooms_count_one" : "bedrooms_count_many", { n });
-  }
+  function normalizeImages(raw) {
+    const list = [];
+    const candidates = [
+      ...(Array.isArray(raw?.images) ? raw.images : []),
+      ...(Array.isArray(raw?.gallery) ? raw.gallery : []),
+      ...(Array.isArray(raw?.photos) ? raw.photos : []),
+      ...(Array.isArray(raw?.media) ? raw.media : [])
+    ];
 
-  function getGuestCountText(property) {
-    const n = safeNumber(property?.maxGuests, 4);
-    return t("up_to_guests", { n });
-  }
+    const mainImage = pick(raw?.image, raw?.imageUrl, raw?.cover, raw?.thumbnail);
+    if (mainImage) list.push(mainImage);
 
-  function showPropertyContent() {
-    const dom = getDom();
-    if (dom.propertySkeleton) dom.propertySkeleton.style.display = "none";
-    if (dom.propertyContent) dom.propertyContent.style.display = "block";
-  }
-
-  function showPropertyLoading() {
-    const dom = getDom();
-    if (dom.propertySkeleton) dom.propertySkeleton.style.display = "";
-    if (dom.propertyContent) dom.propertyContent.style.display = "none";
-  }
-
-  function destroyPropertyMap() {
-    if (state.propertyMapInstance) {
-      safeCall(() => state.propertyMapInstance.remove());
-      state.propertyMapInstance = null;
-    }
-  }
-
-  function initPropertyMap(lat, lng, locationName) {
-    const dom = getDom();
-    if (!dom.mapEl) return;
-
-    destroyPropertyMap();
-
-    const mapParent = dom.mapEl.parentElement;
-    const existingNoLocation = mapParent?.querySelector(".map-no-location");
-    if (existingNoLocation) existingNoLocation.remove();
-
-    const latitude = safeNumber(lat, NaN);
-    const longitude = safeNumber(lng, NaN);
-    const hasCoords = Number.isFinite(latitude) && Number.isFinite(longitude);
-
-    if (!hasCoords || typeof window.L === "undefined") {
-      dom.mapEl.style.display = "none";
-      if (dom.mapOpenLink) dom.mapOpenLink.style.display = "none";
-
-      if (mapParent) {
-        const box = document.createElement("div");
-        box.className = "map-no-location";
-        box.innerHTML = `
-          <i class="ph ph-map-pin-line"></i>
-          <span>${escapeHtml(locationName || t("unknown_location"))}</span>
-        `;
-        mapParent.appendChild(box);
+    candidates.forEach((item) => {
+      if (typeof item === "string") list.push(item);
+      else if (item && typeof item === "object") {
+        list.push(item.url || item.src || item.image || "");
       }
-      syncPhosphorIcons();
+    });
+
+    const cleaned = unique(list.filter((x) => /^https?:\/\//i.test(String(x))));
+    return cleaned.length ? cleaned : ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"];
+  }
+
+  function normalizeProperty(raw = {}, docId = "") {
+    const titleEn = pick(raw.title_en, raw.titleEn, raw.name_en, raw.nameEn, raw.title, raw.name, t("unnamed_property"));
+    const titleAr = pick(raw.title_ar, raw.titleAr, raw.name_ar, raw.nameAr, raw.titleArAlt, titleEn);
+    const locationEn = pick(
+      raw.location_en,
+      raw.locationEn,
+      raw.location,
+      raw.city,
+      [raw.city, raw.wilaya].filter(Boolean).join(", "),
+      t("unknown_location")
+    );
+    const locationAr = pick(
+      raw.location_ar,
+      raw.locationAr,
+      raw.location,
+      raw.cityAr,
+      [raw.cityAr, raw.wilayaAr].filter(Boolean).join("، "),
+      locationEn
+    );
+
+    const typeRaw = normalizeText(pick(raw.type, raw.category, raw.kind, raw.propertyType, "hotel")).toLowerCase();
+    const typeKey = ["hotel", "apartment", "villa", "resort", "cabin"].includes(typeRaw)
+      ? typeRaw
+      : "hotel";
+
+    const images = normalizeImages(raw);
+    const id = String(
+      pick(raw.id, raw.slug, raw.propertyId, raw.listingId, raw.docId, docId, slugify(titleEn) || "property")
+    );
+
+    const featuresEn = normalizeFeatures(raw.features_en || raw.featuresEn || raw.amenities_en || raw.amenities || raw.features);
+    const featuresAr = normalizeFeatures(raw.features_ar || raw.featuresAr);
+
+    const maxGuests = Math.max(
+      1,
+      safeNumber(pick(raw.maxGuests, raw.capacity, raw.guests, raw.max_guests, raw.adults), 2)
+    );
+
+    const bedrooms = Math.max(
+      1,
+      safeNumber(pick(raw.bedrooms, raw.rooms, raw.roomCount, raw.beds), 1)
+    );
+
+    return {
+      id,
+      docId: String(docId || raw.docId || raw.id || ""),
+      title_en: titleEn,
+      title_ar: titleAr,
+      location_en: locationEn,
+      location_ar: locationAr,
+      price: safeNumber(pick(raw.price, raw.pricePerNight, raw.basePrice, raw.amount), 0),
+      rating: Math.max(0, safeNumber(pick(raw.rating, raw.stars, raw.score), 4.6)),
+      image: images[0],
+      images,
+      urgency: pick(raw.urgency, raw.badge, raw.label, ""),
+      type: typeKey,
+      typeEn: translateOptional(typeKey) && state.lang === "ar" ? translations.en[typeKey] : (raw.typeEn || t(typeKey)),
+      typeAr: raw.typeAr || translations.ar[typeKey] || raw.type || t("premium_stay"),
+      desc_en: pick(raw.desc_en, raw.descEn, raw.description_en, raw.descriptionEn, raw.description, t("no_description")),
+      desc_ar: pick(raw.desc_ar, raw.descAr, raw.description_ar, raw.descriptionAr, raw.description, t("no_description")),
+      maxGuests,
+      bedrooms,
+      lat: safeNumber(pick(raw.lat, raw.latitude), 0),
+      lng: safeNumber(pick(raw.lng, raw.longitude), 0),
+      features_en: featuresEn.length ? featuresEn : ["wifi", "parking", "security"],
+      features_ar: featuresAr.length ? featuresAr : [],
+      hostName: pick(raw.hostName, raw.host_name, "OreBooking Host"),
+      hostSince: pick(raw.hostSince, raw.host_since, "2024"),
+      verified: raw.verified !== false
+    };
+  }
+
+  function propertyTitle(property) {
+    return state.lang === "ar"
+      ? property.title_ar || property.title_en || t("unnamed_property")
+      : property.title_en || property.title_ar || t("unnamed_property");
+  }
+
+  function propertyLocation(property) {
+    return state.lang === "ar"
+      ? property.location_ar || property.location_en || t("unknown_location")
+      : property.location_en || property.location_ar || t("unknown_location");
+  }
+
+  function propertyDescription(property) {
+    return state.lang === "ar"
+      ? property.desc_ar || property.desc_en || t("no_description")
+      : property.desc_en || property.desc_ar || t("no_description");
+  }
+
+  function propertyTypeLabel(property) {
+    const key = normalizeText(property.type).toLowerCase();
+    if (["hotel", "apartment", "villa", "resort", "cabin"].includes(key)) return t(key);
+    return state.lang === "ar" ? property.typeAr || property.typeEn || t("premium_stay") : property.typeEn || property.typeAr || t("premium_stay");
+  }
+
+  function propertyFeatures(property) {
+    const list =
+      state.lang === "ar"
+        ? (property.features_ar?.length ? property.features_ar : property.features_en?.map(translateFeature))
+        : (property.features_en?.length ? property.features_en.map(translateFeature) : property.features_ar);
+
+    return (list || []).map((item) => ({
+      label: state.lang === "ar" ? translateFeature(item) : translateFeature(item),
+      icon: featureIcon(item)
+    }));
+  }
+
+  function getPropertyById(id) {
+    const normalized = String(id || "");
+    return state.liveProperties.find(
+      (prop) => String(prop.id) === normalized || String(prop.docId) === normalized
+    );
+  }
+
+  function storeSelectedProperty(property) {
+    if (!property) return;
+    state.selectedProperty = property;
+    safeSet(STORAGE_KEYS.selectedPropertyId, property.id);
+    safeSet(STORAGE_KEYS.selectedPropertyDocId, property.docId || "");
+    safeJsonSetMany(STORAGE_ALIASES.selectedPropertyData, property);
+  }
+
+  function readStoredSelectedProperty() {
+    const data = safeJsonGetAny(STORAGE_ALIASES.selectedPropertyData, null);
+    return data ? normalizeProperty(data, data.docId || data.id || "") : null;
+  }
+
+  function currentPropertyIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return (
+      normalizeText(params.get("id")) ||
+      normalizeText(params.get("propertyId")) ||
+      normalizeText(params.get("listingId")) ||
+      normalizeText(safeGet(STORAGE_KEYS.selectedPropertyId, ""))
+    );
+  }
+
+  /* =========================================
+     14) LOAD LIVE PROPERTIES
+  ========================================= */
+  async function fetchCollectionProperties(collectionName) {
+    if (!db) return [];
+    try {
+      const snapshot = await db.collection(collectionName).limit(60).get();
+      if (!snapshot || snapshot.empty) return [];
+      return snapshot.docs.map((docItem) => normalizeProperty(docItem.data(), docItem.id));
+    } catch (err) {
+      console.warn(`Collection "${collectionName}" failed`, err);
+      return [];
+    }
+  }
+
+  async function loadLiveProperties() {
+    if (state.loadingProperties) return state.liveProperties;
+    state.loadingProperties = true;
+
+    try {
+      if (db) {
+        for (const collectionName of state.propertyCollectionCandidates) {
+          const result = await fetchCollectionProperties(collectionName);
+          if (result.length) {
+            state.liveProperties = result;
+            state.currentCollection = collectionName;
+            state.propertiesLoaded = true;
+            state.loadingProperties = false;
+            return state.liveProperties;
+          }
+        }
+      }
+
+      state.liveProperties = fallbackProperties.map((item) => normalizeProperty(item, item.id));
+      state.currentCollection = "fallback";
+      state.propertiesLoaded = true;
+      return state.liveProperties;
+    } catch (err) {
+      console.error("Properties load error:", err);
+      state.liveProperties = fallbackProperties.map((item) => normalizeProperty(item, item.id));
+      state.currentCollection = "fallback";
+      state.propertiesLoaded = true;
+      showToast(t("property_load_error"), "info");
+      return state.liveProperties;
+    } finally {
+      state.loadingProperties = false;
+    }
+  }
+
+  /* =========================================
+     15) LISTINGS / HOME / FAVORITES PAGE
+  ========================================= */
+  function filteredProperties() {
+    let items = [...state.liveProperties];
+
+    if (state.currentView === "favorites") {
+      items = items.filter((item) => isFavorite(item.id));
+    }
+
+    if (state.activeCategory && state.activeCategory !== "all") {
+      items = items.filter((item) => normalizeText(item.type).toLowerCase() === state.activeCategory);
+    }
+
+    if (state.activeSearch) {
+      const query = normalizeText(state.activeSearch).toLowerCase();
+      items = items.filter((item) => {
+        const haystack = [
+          item.id,
+          item.docId,
+          item.title_en,
+          item.title_ar,
+          item.location_en,
+          item.location_ar,
+          item.type,
+          item.typeEn,
+          item.typeAr
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
+    switch (state.sort) {
+      case "rating":
+        items.sort((a, b) => b.rating - a.rating);
+        break;
+      case "price_low":
+        items.sort((a, b) => a.price - b.price);
+        break;
+      case "price_high":
+        items.sort((a, b) => b.price - a.price);
+        break;
+      default:
+        items.sort((a, b) => b.rating - a.rating || a.price - b.price);
+        break;
+    }
+
+    return items;
+  }
+
+  function cardHtml(property) {
+    return `
+      <article class="property-card ore-reveal" data-property-id="${escapeHtml(property.id)}">
+        <div class="property-card-media">
+          <img src="${escapeHtml(property.image)}" alt="${escapeHtml(propertyTitle(property))}" loading="lazy" />
+          ${property.urgency ? `<span class="property-urgency"><i class="ph ph-fire"></i>${escapeHtml(localizeUrgency(property.urgency))}</span>` : ""}
+          <button
+            type="button"
+            class="favorite-btn ${isFavorite(property.id) ? "active" : ""}"
+            data-action="toggle-favorite"
+            data-property-id="${escapeHtml(property.id)}"
+            aria-label="${escapeHtml(t("save_property"))}"
+          >
+            ${favoriteIconHtml(property.id)}
+          </button>
+        </div>
+
+        <div class="property-card-body">
+          <div class="property-card-top">
+            <div class="card-title-wrapper">
+              <h3 class="property-card-title">${escapeHtml(propertyTitle(property))}</h3>
+              <div class="property-card-location">
+                <i class="ph ph-map-pin"></i>
+                <span>${escapeHtml(propertyLocation(property))}</span>
+              </div>
+            </div>
+
+            <div class="property-card-rating">
+              <i class="ph-fill ph-star"></i>
+              <span>${escapeHtml(property.rating.toFixed(1))}</span>
+            </div>
+          </div>
+
+          <div class="property-card-meta">
+            <i class="ph ph-house-line"></i>
+            <span>${escapeHtml(propertyTypeLabel(property))}</span>
+          </div>
+
+          <div class="property-card-price">
+            <strong>${escapeHtml(formatCurrency(property.price))}</strong>
+            <span>${escapeHtml(t("night_suffix"))}</span>
+          </div>
+
+          <div class="property-card-actions">
+            <button
+              type="button"
+              class="details-btn"
+              data-action="view-details"
+              data-property-id="${escapeHtml(property.id)}"
+            >
+              <i class="ph ph-arrow-square-out"></i>
+              <span>${escapeHtml(t("view_details"))}</span>
+            </button>
+
+            <button
+              type="button"
+              class="reserve-btn"
+              data-action="reserve-now"
+              data-property-id="${escapeHtml(property.id)}"
+            >
+              <i class="ph ph-calendar-check"></i>
+              <span>${escapeHtml(state.user ? t("reserve_now") : t("reserve_cta_signed_out"))}</span>
+            </button>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderEmptyState() {
+    if (!dom?.listingsGrid) return;
+
+    const isFavoritesPage = state.currentView === "favorites";
+    const title = isFavoritesPage ? t("no_favorites_title") : t("no_results_title");
+    const text = isFavoritesPage ? t("no_favorites_text") : t("no_results_text");
+
+    dom.listingsGrid.innerHTML = `
+      <div class="listings-empty-state">
+        <i class="ph ph-house-line"></i>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(text)}</p>
+      </div>
+    `;
+    syncPhosphorIcons();
+  }
+
+  function renderSectionHeading() {
+    if (!dom?.sectionTitle) return;
+
+    if (state.currentView === "favorites") {
+      dom.sectionTitle.textContent = t("favorites_title");
+      if (dom.sectionSubtext) dom.sectionSubtext.textContent = t("no_favorites_text");
       return;
     }
 
-    dom.mapEl.style.display = "";
-    state.propertyMapInstance = L.map(dom.mapEl, {
-      scrollWheelZoom: false,
-      zoomControl: true
-    }).setView([latitude, longitude], 13);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
-    }).addTo(state.propertyMapInstance);
-
-    const marker = L.marker([latitude, longitude]).addTo(state.propertyMapInstance);
-    marker.bindPopup(`<strong>${escapeHtml(locationName || t("unknown_location"))}</strong>`);
-
-    setTimeout(() => {
-      safeCall(() => state.propertyMapInstance.invalidateSize());
-    }, 250);
-
-    if (dom.mapOpenLink) {
-      dom.mapOpenLink.href = `https://www.google.com/maps?q=${latitude},${longitude}`;
-      dom.mapOpenLink.style.display = "inline-flex";
+    dom.sectionTitle.textContent = t("featured_title");
+    if (dom.sectionSubtext) {
+      dom.sectionSubtext.textContent = state.activeSearch
+        ? `${t("search_hint")}: ${state.activeSearch}`
+        : "";
     }
   }
 
-  function updateGalleryCounter() {
-    const dom = getDom();
-    if (!dom.galleryCount) return;
-    const total = state.galleryImages.length || 1;
-    const index = state.galleryIndex + 1;
-    dom.galleryCount.textContent = `${index} / ${total}`;
+  function renderListings() {
+    refreshDom();
+    if (!dom.listingsGrid) return;
+
+    renderSectionHeading();
+
+    const items = filteredProperties();
+    if (!items.length) {
+      renderEmptyState();
+      return;
+    }
+
+    dom.listingsGrid.innerHTML = items.map(cardHtml).join("");
+    updateAllFavoriteButtons();
+    initRevealAnimations();
+    syncPhosphorIcons();
   }
 
-  function updateGalleryDots() {
-    const dom = getDom();
-    if (!dom.galleryDots) return;
-    $all(".slider-dot", dom.galleryDots).forEach((dot, index) => {
-      dot.classList.toggle("active", index === state.galleryIndex);
+  function setCategoryButtonsUI() {
+    refreshDom();
+    dom.categoryButtons.forEach((btn) => {
+      const key = normalizeText(btn.dataset.category || btn.dataset.categoryBtn || "").toLowerCase();
+      btn.classList.toggle("active", key === state.activeCategory);
     });
   }
 
-  function updateGalleryThumbs() {
-    const dom = getDom();
-    if (!dom.galleryThumbs) return;
-    $all(".gallery-thumb", dom.galleryThumbs).forEach((thumb, index) => {
-      thumb.classList.toggle("active", index === state.galleryIndex);
+  function setSortSelectUI() {
+    refreshDom();
+    if (dom.sortSelect) dom.sortSelect.value = state.sort;
+  }
+
+  function setSearchUI() {
+    refreshDom();
+    if (dom.destinationInput) dom.destinationInput.value = state.activeSearch;
+    if (dom.clearSearchBtn) {
+      dom.clearSearchBtn.style.display = state.activeSearch ? "inline-flex" : "none";
+    }
+  }
+
+  function runSearch() {
+    refreshDom();
+    state.activeSearch = normalizeText(dom.destinationInput?.value || "");
+    setSearchUI();
+    renderListings();
+  }
+
+  function clearSearch() {
+    state.activeSearch = "";
+    setSearchUI();
+    renderListings();
+  }
+
+  /* =========================================
+     16) PROPERTY DETAILS PAGE
+  ========================================= */
+  async function resolvePropertyForDetails() {
+    const urlId = currentPropertyIdFromUrl();
+    const stored = readStoredSelectedProperty();
+
+    if (urlId) {
+      let candidate = getPropertyById(urlId);
+      if (!candidate && stored && (String(stored.id) === urlId || String(stored.docId) === urlId)) {
+        candidate = stored;
+      }
+      if (!candidate) {
+        candidate = fallbackProperties
+          .map((item) => normalizeProperty(item, item.id))
+          .find((item) => item.id === urlId || item.docId === urlId);
+      }
+
+      if (candidate) {
+        storeSelectedProperty(candidate);
+        return candidate;
+      }
+
+      if (db) {
+        for (const collectionName of PROPERTY_COLLECTION_CANDIDATES) {
+          try {
+            const docRef = await db.collection(collectionName).doc(urlId).get();
+            if (docRef?.exists) {
+              const property = normalizeProperty(docRef.data(), docRef.id);
+              storeSelectedProperty(property);
+              return property;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    if (stored) {
+      storeSelectedProperty(stored);
+      return stored;
+    }
+
+    const fallback = fallbackProperties.map((item) => normalizeProperty(item, item.id))[0];
+    storeSelectedProperty(fallback);
+    return fallback;
+  }
+
+  function updatePropertyActionButtons() {
+    refreshDom();
+    if (!state.selectedProperty) return;
+
+    const active = isFavorite(state.selectedProperty.id);
+    if (dom.propertyFavBtn) {
+      dom.propertyFavBtn.classList.toggle("active", active);
+      const icon = dom.propertyFavBtn.querySelector("i");
+      const textEl = $("#fav-btn-text", dom.propertyFavBtn) || $("span", dom.propertyFavBtn);
+      if (icon) icon.className = active ? "ph-fill ph-heart" : "ph ph-heart";
+      if (textEl) textEl.textContent = active ? t("saved") : t("save");
+    }
+
+    if (dom.bookNowLink) {
+      dom.bookNowLink.setAttribute("href", buildBookingUrl(state.selectedProperty));
+      const labelEl = $("span", dom.bookNowLink);
+      if (labelEl) labelEl.textContent = state.user ? t("reserve_now") : t("reserve_cta_signed_out");
+    }
+
+    syncPhosphorIcons();
+  }
+
+  function buildBookingUrl(property) {
+    const id = encodeURIComponent(property?.id || "");
+    return `${ROUTES.booking}?id=${id}`;
+  }
+
+  function requireAuthForBooking(property) {
+    storeSelectedProperty(property);
+    safeSet(STORAGE_KEYS.postAuthRedirect, buildBookingUrl(property));
+    safeJsonSet(STORAGE_KEYS.bookingContext, {
+      propertyId: property.id,
+      propertyTitle: propertyTitle(property),
+      createdAt: new Date().toISOString()
     });
-  }
 
-  function updateGalleryTrack(animate = true) {
-    const dom = getDom();
-    if (!dom.galleryTrack) return;
-    dom.galleryTrack.style.transition = animate ? "" : "none";
-    dom.galleryTrack.style.transform = `translateX(${isArabic() ? "" : "-"}${state.galleryIndex * 100}%)`;
-    if (isArabic()) {
-      dom.galleryTrack.style.transform = `translateX(${state.galleryIndex * 100}%)`;
-    }
-    updateGalleryCounter();
-    updateGalleryDots();
-    updateGalleryThumbs();
-
-    if (dom.lightbox?.classList.contains("active") && dom.lightboxImg) {
-      dom.lightboxImg.src = state.galleryImages[state.galleryIndex] || "images/placeholder.jpg";
-      dom.lightboxImg.classList.remove("zoomed");
+    if (dom?.authModal) {
+      openAuthModal("login");
+      showToast(t("auth_redirect_book"), "info");
+    } else {
+      window.location.href = getAuthUrl("login");
     }
   }
 
-  function goToSlide(index, animate = true) {
-    const total = state.galleryImages.length;
-    if (!total) return;
-    state.galleryIndex = (index + total) % total;
-    updateGalleryTrack(animate);
+  function goToDetails(property) {
+    storeSelectedProperty(property);
+    const id = encodeURIComponent(property.docId || property.id);
+    window.location.href = `${ROUTES.details}?id=${id}`;
   }
 
-  function nextSlide(e) {
-    if (e) e.preventDefault();
-    goToSlide(state.galleryIndex + 1);
+  function startBooking(property) {
+    if (!property) return;
+    storeSelectedProperty(property);
+
+    if (!state.user) {
+      requireAuthForBooking(property);
+      return;
+    }
+
+    window.location.href = buildBookingUrl(property);
   }
 
-  function prevSlide(e) {
-    if (e) e.preventDefault();
-    goToSlide(state.galleryIndex - 1);
+  function fillPropertyText() {
+    const property = state.selectedProperty;
+    if (!property) return;
+
+    setText($("#prop-title"), propertyTitle(property));
+    setText($("#prop-rating"), property.rating.toFixed(1));
+    setText($("#prop-location"), propertyLocation(property));
+    setText($("#prop-type-text"), propertyTypeLabel(property));
+
+    const bedroomsLabel =
+      property.bedrooms === 1
+        ? t("bedrooms_count_one", { n: property.bedrooms })
+        : t("bedrooms_count_many", { n: property.bedrooms });
+
+    setText($("#chip-bedrooms"), bedroomsLabel);
+    setText($("#chip-guests"), t("up_to_guests", { n: property.maxGuests }));
+    setText($("#chip-verified"), t("verified_listing"));
+    setText($("#chip-instant"), t("instant_booking_request"));
+    setText($("#prop-desc"), propertyDescription(property));
+
+    setText($("#host-name"), property.hostName || "OreBooking Host");
+    setText($("#host-since"), `${t("hosting_since")}`.includes("2024") ? t("hosting_since") : `${t("hosting_since")} ${property.hostSince || "2024"}`);
+    setText($("#host-badge-text"), t("verified_host"));
+
+    setText($("#highlight-1-title"), t("great_location"));
+    setText($("#highlight-1-desc"), t("great_location_desc"));
+    setText($("#highlight-2-title"), t("clean_and_comfortable"));
+    setText($("#highlight-2-desc"), t("clean_and_comfortable_desc"));
+    setText($("#highlight-3-title"), t("responsive_support"));
+    setText($("#highlight-3-desc"), t("responsive_support_desc"));
+    setText($("#highlight-4-title"), t("trusted_listing"));
+    setText($("#highlight-4-desc"), t("trusted_listing_desc"));
+
+    setText($("#perk-1"), t("free_cancellation_24h"));
+    setText($("#perk-2"), t("instant_confirmation"));
+    setText($("#perk-3"), t("support_247"));
+    setText($("#booking-info-text"), t("choose_dates_next_page"));
+    setText($("#trust-note"), t("trust_note"));
+
+    setText($("#prop-price"), formatCurrency(property.price));
+    setText($("#booking-stat-guests"), t("up_to_guests", { n: property.maxGuests }));
+    setText($("#booking-stat-type"), propertyTypeLabel(property));
+
+    document.title = `${propertyTitle(property)} | OreBooking`;
   }
 
-  function openLightbox() {
-    const dom = getDom();
-    if (!dom.lightbox || !dom.lightboxImg || !state.galleryImages.length) return;
-    dom.lightboxImg.src = state.galleryImages[state.galleryIndex] || "images/placeholder.jpg";
-    dom.lightboxImg.classList.remove("zoomed");
-    openModal(dom.lightbox);
+  function renderFeatures() {
+    const property = state.selectedProperty;
+    const listEl = $("#prop-features-list");
+    if (!property || !listEl) return;
+
+    const items = propertyFeatures(property);
+    listEl.innerHTML = items
+      .map(
+        (item) => `
+          <li>
+            <i class="ph ${escapeHtml(item.icon)}"></i>
+            <span>${escapeHtml(item.label)}</span>
+          </li>
+        `
+      )
+      .join("");
   }
 
-  function closeLightbox() {
-    const dom = getDom();
-    if (!dom.lightbox) return;
-    closeModal(dom.lightbox);
-  }
+  function renderGallery() {
+    const property = state.selectedProperty;
+    refreshDom();
+    if (!property || !dom.galleryTrack) return;
 
-  function toggleZoom(e) {
-    e?.stopPropagation?.();
-    e?.currentTarget?.classList.toggle("zoomed");
-  }
-
-  function setupGallery(images) {
-    const dom = getDom();
-    if (!dom.galleryTrack) return;
-
-    state.galleryImages = images.length ? images : ["images/placeholder.jpg"];
+    state.galleryImages = property.images?.length ? property.images : [property.image];
     state.galleryIndex = 0;
 
     dom.galleryTrack.innerHTML = state.galleryImages
@@ -2080,28 +2329,13 @@
         (src, index) => `
           <img
             src="${escapeHtml(src)}"
-            alt="${escapeHtml(`${t("details")} ${index + 1}`)}"
+            alt="${escapeHtml(propertyTitle(property))} ${index + 1}"
             loading="${index === 0 ? "eager" : "lazy"}"
-            onerror="this.src='images/placeholder.jpg'"
-          >
+            data-gallery-index="${index}"
+          />
         `
       )
       .join("");
-
-    if (dom.galleryDots) {
-      dom.galleryDots.innerHTML = state.galleryImages
-        .map(
-          (_, index) => `
-            <button
-              type="button"
-              class="slider-dot ${index === 0 ? "active" : ""}"
-              data-slide-index="${index}"
-              aria-label="${escapeHtml(`${t("details")} ${index + 1}`)}"
-            ></button>
-          `
-        )
-        .join("");
-    }
 
     if (dom.galleryThumbs) {
       dom.galleryThumbs.innerHTML = state.galleryImages
@@ -2110,1638 +2344,268 @@
             <button
               type="button"
               class="gallery-thumb ${index === 0 ? "active" : ""}"
-              data-thumb-index="${index}"
-              aria-label="${escapeHtml(`${t("details")} ${index + 1}`)}"
+              data-action="gallery-thumb"
+              data-index="${index}"
+              aria-label="${escapeHtml(`${propertyTitle(property)} ${index + 1}`)}"
             >
-              <img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+              <img src="${escapeHtml(src)}" alt="${escapeHtml(propertyTitle(property))} ${index + 1}" loading="lazy" />
             </button>
           `
         )
         .join("");
     }
 
-    updateGalleryTrack(false);
-  }
-
-  async function renderPropertyPage(property) {
-    const dom = getDom();
-    if (!property) {
-      showToast(t("property_not_found"), "error");
-      return;
-    }
-
-    state.selectedProperty = property;
-    rememberSelectedProperty(property);
-
-    const title = getPropertyTitle(property) || t("unnamed_property");
-    const location = getPropertyLocation(property) || t("unknown_location");
-    const description =
-      (state.lang === "ar" ? property.desc_ar : property.desc_en) ||
-      property.desc_en ||
-      property.desc_ar ||
-      t("no_description");
-    const type = getPropertyType(property);
-    const guestsText = getGuestCountText(property);
-    const bedroomsText = getBedroomText(property);
-
-    const $id = (id) => document.getElementById(id);
-
-    if ($id("prop-title")) $id("prop-title").textContent = title;
-    if ($id("prop-location")) $id("prop-location").textContent = location;
-    if ($id("prop-desc")) $id("prop-desc").textContent = description;
-    if ($id("prop-price")) $id("prop-price").textContent = formatCurrency(property.price);
-    if ($id("prop-rating")) $id("prop-rating").textContent = safeNumber(property.rating, 4.8).toFixed(1);
-    if ($id("prop-type-text")) $id("prop-type-text").textContent = type;
-
-    if ($id("chip-guests")) $id("chip-guests").textContent = guestsText;
-    if ($id("chip-bedrooms")) $id("chip-bedrooms").textContent = bedroomsText;
-    if ($id("chip-verified")) $id("chip-verified").textContent = t("verified_listing");
-    if ($id("chip-instant")) $id("chip-instant").textContent = t("instant_booking_request");
-
-    if ($id("booking-stat-guests")) $id("booking-stat-guests").textContent = t("capacity_label", { n: property.maxGuests });
-    if ($id("booking-stat-type")) $id("booking-stat-type").textContent = t("type_label", { type });
-
-    if ($id("host-name")) $id("host-name").textContent = property.hostName || "OreBooking Host";
-    if ($id("host-since")) $id("host-since").textContent = t("hosting_since");
-    if ($id("host-badge-text")) $id("host-badge-text").textContent = t("verified_host");
-
-    if ($id("share-text")) $id("share-text").textContent = t("share");
-    if ($id("fav-btn-text")) $id("fav-btn-text").textContent = isFavoriteId(getNavigationPropertyId(property)) ? t("saved") : t("save");
-    if ($id("contact-host-text")) $id("contact-host-text").textContent = t("contact_host");
-    if ($id("host-chat-text")) $id("host-chat-text").textContent = t("message_host");
-    if ($id("booking-chat-text")) $id("booking-chat-text").textContent = t("ask_about_property");
-
-    if ($id("highlights-title")) $id("highlights-title").textContent = t("why_guests_like_it");
-    if ($id("highlight-1-title")) $id("highlight-1-title").textContent = t("great_location");
-    if ($id("highlight-1-desc")) $id("highlight-1-desc").textContent = t("great_location_desc");
-    if ($id("highlight-2-title")) $id("highlight-2-title").textContent = t("clean_and_comfortable");
-    if ($id("highlight-2-desc")) $id("highlight-2-desc").textContent = t("clean_and_comfortable_desc");
-    if ($id("highlight-3-title")) $id("highlight-3-title").textContent = t("responsive_support");
-    if ($id("highlight-3-desc")) $id("highlight-3-desc").textContent = t("responsive_support_desc");
-    if ($id("highlight-4-title")) $id("highlight-4-title").textContent = t("trusted_listing");
-    if ($id("highlight-4-desc")) $id("highlight-4-desc").textContent = t("trusted_listing_desc");
-
-    if ($id("perk-1")) $id("perk-1").textContent = t("free_cancellation_24h");
-    if ($id("perk-2")) $id("perk-2").textContent = t("instant_confirmation");
-    if ($id("perk-3")) $id("perk-3").textContent = t("support_247");
-    if ($id("booking-info-text")) $id("booking-info-text").textContent = t("choose_dates_next_page");
-    if ($id("map-title")) $id("map-title").textContent = t("where_youll_be");
-    if ($id("open-maps-text")) $id("open-maps-text").textContent = t("open_google_maps");
-    if ($id("tips-title")) $id("tips-title").textContent = t("good_to_know");
-    if ($id("trust-note")) $id("trust-note").textContent = t("trust_note");
-
-    if ($id("tip-1")) {
-      $id("tip-1").textContent =
-        state.lang === "ar"
-          ? "يتم استكمال تفاصيل الحجز والمعلومات النهائية للضيوف في الخطوة التالية."
-          : "Booking details and final guest information are completed on the next step.";
-    }
-
-    if ($id("tip-2")) {
-      $id("tip-2").textContent =
-        state.lang === "ar"
-          ? "قد يعتمد السعر النهائي على التواريخ وعدد الضيوف وخيارات الحجز المحددة."
-          : "Final pricing may depend on dates, guests, and selected booking options.";
-    }
-
-    if ($id("tip-3")) {
-      $id("tip-3").textContent =
-        state.lang === "ar"
-          ? "استخدم زر المشاركة لنسخ رابط الإعلان أو إرساله بسرعة."
-          : "Use the share button to copy or send the listing link quickly.";
-    }
-
-    const features = getFeaturesArray(property);
-    const featuresList = $id("prop-features-list");
-    if (featuresList) {
-      featuresList.innerHTML = features
+    if (dom.galleryDots) {
+      dom.galleryDots.innerHTML = state.galleryImages
         .map(
-          (feature) => `
-            <li>
-              <i class="ph ${escapeHtml(getFeatureIcon(feature))}"></i>
-              <span>${escapeHtml(normalizeFeatureLabel(feature))}</span>
-            </li>
+          (_, index) => `
+            <button
+              type="button"
+              class="slider-dot ${index === 0 ? "active" : ""}"
+              data-action="gallery-dot"
+              data-index="${index}"
+              aria-label="Slide ${index + 1}"
+            ></button>
           `
         )
         .join("");
     }
 
-    const images = getPropertyImages(property);
-    setupGallery(images);
-    initPropertyMap(property.lat, property.lng, location);
+    updateGalleryUI();
+  }
 
-    if (dom.bookNowLink) {
-      dom.bookNowLink.href = buildBookingUrl(property);
-      dom.bookNowLink.addEventListener(
-        "click",
-        (e) => {
-          e.preventDefault();
-          handleReserveNow(property);
-        },
-        { once: true }
-      );
+  function updateGalleryUI() {
+    refreshDom();
+    if (!dom.galleryTrack) return;
+
+    const count = state.galleryImages.length || 1;
+    const index = Math.max(0, Math.min(state.galleryIndex, count - 1));
+
+    dom.galleryTrack.style.transform = `translateX(-${index * 100}%)`;
+
+    if (dom.galleryCount) {
+      dom.galleryCount.textContent = `${index + 1} / ${count}`;
     }
 
-    if (dom.chatPropertyId) {
-      dom.chatPropertyId.value = getNavigationPropertyId(property);
+    $all("[data-action='gallery-thumb']", dom.galleryThumbs || document).forEach((btn) => {
+      btn.classList.toggle("active", safeNumber(btn.dataset.index, 0) === index);
+    });
+
+    $all("[data-action='gallery-dot']", dom.galleryDots || document).forEach((btn) => {
+      btn.classList.toggle("active", safeNumber(btn.dataset.index, 0) === index);
+    });
+  }
+
+  function goGallery(delta) {
+    const total = state.galleryImages.length || 1;
+    state.galleryIndex = (state.galleryIndex + delta + total) % total;
+    updateGalleryUI();
+    if (dom?.lightbox?.classList.contains("active")) {
+      updateLightbox();
+    }
+  }
+
+  function openLightbox() {
+    refreshDom();
+    if (!dom.lightbox || !dom.lightboxImg || !state.galleryImages.length) return;
+    openModal(dom.lightbox);
+    updateLightbox();
+  }
+
+  function closeLightbox() {
+    refreshDom();
+    closeModal(dom.lightbox);
+  }
+
+  function updateLightbox() {
+    refreshDom();
+    if (!dom.lightboxImg || !state.galleryImages.length) return;
+    const src = state.galleryImages[state.galleryIndex];
+    dom.lightboxImg.src = src;
+    dom.lightboxImg.alt = `${propertyTitle(state.selectedProperty || {})} ${state.galleryIndex + 1}`;
+  }
+
+  function destroyPropertyMap() {
+    if (state.propertyMapInstance && typeof state.propertyMapInstance.remove === "function") {
+      state.propertyMapInstance.remove();
+    }
+    state.propertyMapInstance = null;
+  }
+
+  function renderPropertyMap() {
+    refreshDom();
+    const property = state.selectedProperty;
+    if (!dom.mapEl || !property) return;
+
+    destroyPropertyMap();
+
+    if (!property.lat || !property.lng || typeof window.L === "undefined") {
+      if (dom.mapEl) {
+        dom.mapEl.innerHTML = `
+          <div class="map-no-location">
+            <i class="ph ph-map-pin"></i>
+            <span>${escapeHtml(t("unknown_location"))}</span>
+          </div>
+        `;
+      }
+      if (dom.mapOpenLink) dom.mapOpenLink.style.display = "none";
+      syncPhosphorIcons();
+      return;
     }
 
-    if (dom.mapOpenLink && property.mapLink) {
-      dom.mapOpenLink.href = property.mapLink;
+    const coords = [property.lat, property.lng];
+    state.propertyMapInstance = window.L.map(dom.mapEl, { scrollWheelZoom: false }).setView(coords, 13);
+
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(state.propertyMapInstance);
+
+    window.L.marker(coords)
+      .addTo(state.propertyMapInstance)
+      .bindPopup(`<strong>${escapeHtml(propertyTitle(property))}</strong><br>${escapeHtml(propertyLocation(property))}`);
+
+    if (dom.mapOpenLink) {
+      dom.mapOpenLink.href = `https://www.google.com/maps?q=${encodeURIComponent(`${property.lat},${property.lng}`)}`;
       dom.mapOpenLink.style.display = "inline-flex";
     }
+  }
 
-    updateFavoriteButtonsEverywhere();
-    document.title = `${title} - OreBooking`;
-    showPropertyContent();
+  async function renderPropertyPage() {
+    refreshDom();
+    if (!dom.propertyContent && !dom.propertySkeleton) return;
+
+    if (dom.propertySkeleton) dom.propertySkeleton.style.display = "block";
+    if (dom.propertyContent) dom.propertyContent.style.display = "none";
+
+    const property = await resolvePropertyForDetails();
+    state.selectedProperty = property;
+
+    fillPropertyText();
+    renderFeatures();
+    renderGallery();
+    renderPropertyMap();
+    updatePropertyActionButtons();
+
+    if (dom.propertySkeleton) dom.propertySkeleton.style.display = "none";
+    if (dom.propertyContent) dom.propertyContent.style.display = "";
+
+    initRevealAnimations();
     syncPhosphorIcons();
   }
 
-  async function loadPropertyPage() {
-    if (state.currentView !== "property") return;
-    showPropertyLoading();
-
-    const propertyId = resolveSelectedPropertyIdFromUrlOrStorage();
-    if (!propertyId) {
-      showToast(t("no_property_id"), "error");
-      showPropertyContent();
-      return;
-    }
-
-    await loadLiveProperties();
-
-    let property = getPropertyById(propertyId) || resolveSelectedProperty();
-    if (!property) {
-      property = await fetchPropertyByIdFromFirestore(propertyId);
-    }
-    if (!property && state.liveProperties.length) {
-      property =
-        state.liveProperties.find((p) => String(p.id) === String(propertyId)) || null;
-    }
-    if (!property) {
-      showToast(t("property_not_found"), "error");
-      showPropertyContent();
-      return;
-    }
-
-    await renderPropertyPage(property);
-  }
-
-  function handleShare() {
-    const title = document.getElementById("prop-title")?.textContent || "OreBooking Property";
-    const url = window.location.href;
-
-    if (navigator.share) {
-      navigator.share({ title, url }).catch(() => {});
-      return;
-    }
-
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(url)
-        .then(() => showToast(t("property_link_copied"), "success"))
-        .catch(() => showToast(t("copy_failed"), "error"));
-      return;
-    }
-
-    showToast(t("copy_failed"), "error");
-  }
-
   /* =========================================
-     13) AUTH / MODALS
+     17) BOOKINGS
   ========================================= */
-  function isElementVisible(el) {
-    return !!el && !el.classList.contains("hidden");
+  function localBookingsKey() {
+    return state.user
+      ? `${STORAGE_KEYS.bookingsUserPrefix}${state.user.uid}`
+      : STORAGE_KEYS.bookingsGuest;
   }
 
-  function getOpenModalCount() {
-    return $all(".modal-overlay.active, .lightbox-overlay.active").length;
-  }
-
-  function syncBodyModalState() {
-    const body = document.body;
-    if (!body) return;
-    body.classList.toggle("modal-open", getOpenModalCount() > 0);
-  }
-
-  function openModal(el) {
-    if (!el) return;
-    el.classList.add("active");
-    el.setAttribute("aria-hidden", "false");
-    syncBodyModalState();
-  }
-
-  function closeModal(el) {
-    if (!el) return;
-    el.classList.remove("active");
-    el.setAttribute("aria-hidden", "true");
-    syncBodyModalState();
-  }
-
-  function setAuthMessage(message = "", type = "") {
-    const dom = getDom();
-    if (!dom.authMessage) return;
-    dom.authMessage.className = "auth-message";
-    dom.authMessage.textContent = message;
-    if (message && type) dom.authMessage.classList.add(type);
-    dom.authMessage.style.display = message ? "block" : "none";
-  }
-
-  function switchAuthView(view = "login") {
-    const dom = getDom();
-    const forms = [
-      { key: "login", el: dom.loginForm },
-      { key: "register", el: dom.registerForm },
-      { key: "forgot", el: dom.forgotForm }
-    ];
-
-    forms.forEach(({ key, el }) => {
-      if (!el) return;
-      el.classList.toggle("active", key === view);
-    });
-
-    if (isAuthPage()) {
-      history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${view}`);
-    }
-
-    setAuthMessage("");
-  }
-
-  function openAuthModal(view = "login", message = "") {
-    const dom = getDom();
-
-    if (dom.authModal) {
-      switchAuthView(view);
-      openModal(dom.authModal);
-      if (message) setAuthMessage(message, "error");
-      return;
-    }
-
-    if (!isAuthPage()) {
-      window.location.href = getAuthUrl(view);
-    }
-  }
-
-  function closeAuthModal() {
-    const dom = getDom();
-    if (dom.authModal) closeModal(dom.authModal);
-  }
-
-  function requireAuth(message = "", view = "login") {
-    if (state.user) return true;
-    openAuthModal(view, message || t("auth_required"));
-    return false;
-  }
-
-  function handlePasswordToggleClick(button) {
-    const wrapper = button.closest(".pass-wrapper");
-    const input = wrapper?.querySelector("input");
-    const icon = button.querySelector("i");
-    if (!input) return;
-
-    const nextType = input.type === "password" ? "text" : "password";
-    input.type = nextType;
-    if (icon) {
-      icon.className = nextType === "password" ? "ph ph-eye" : "ph ph-eye-slash";
-    }
-  }
-
-  function updatePasswordStrength(input) {
-    const strengthBox = document.getElementById("password-strength");
-    const label = document.getElementById("strength-label");
-    const bars = $all(".str-bar", strengthBox || document);
-
-    if (!strengthBox || !bars.length || !input) return;
-
-    const value = input.value || "";
-    let score = 0;
-
-    if (value.length >= 8) score += 1;
-    if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
-    if (/\d/.test(value)) score += 1;
-    if (/[^A-Za-z0-9]/.test(value)) score += 1;
-
-    const colors = ["#e2e8f0", "#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
-    bars.forEach((bar, index) => {
-      bar.style.background = index < score ? colors[score] : "var(--border-color)";
-    });
-
-    let text = "";
-    if (!value) text = "";
-    else if (score <= 1) text = state.lang === "ar" ? "ضعيفة" : "Weak";
-    else if (score === 2) text = state.lang === "ar" ? "متوسطة" : "Medium";
-    else if (score === 3) text = state.lang === "ar" ? "جيدة" : "Good";
-    else text = state.lang === "ar" ? "قوية" : "Strong";
-
-    label.textContent = text;
-  }
-
-  async function loginWithEmail(form) {
-    if (!auth) throw new Error("Auth unavailable");
-
-    const emailInput = form.querySelector("input[type='email']");
-    const passwordInput = form.querySelector("input[type='password']");
-    const remember = form.querySelector("input[type='checkbox']");
-
-    const email = normalizeText(emailInput?.value);
-    const password = normalizeText(passwordInput?.value);
-
-    if (!validateEmail(email)) {
-      setAuthMessage(t("invalid_email"), "error");
-      return;
-    }
-    if (!password) {
-      setAuthMessage(t("fill_required"), "error");
-      return;
-    }
-
-    safeJsonSet(STORAGE_KEYS.remember, !!remember?.checked);
-    await setAuthPersistenceFromRemember();
-    await auth.signInWithEmailAndPassword(email, password);
-  }
-
-  async function registerWithEmail(form) {
-    if (!auth) throw new Error("Auth unavailable");
-
-    const nameInput = form.querySelector("input[type='text']");
-    const emailInput = form.querySelector("input[type='email']");
-    const passwordInput = form.querySelector("input[type='password']");
-    const name = normalizeText(nameInput?.value);
-    const email = normalizeText(emailInput?.value);
-    const password = normalizeText(passwordInput?.value);
-
-    if (!name || !validateEmail(email) || !password) {
-      setAuthMessage(t("fill_required"), "error");
-      return;
-    }
-
-    const cred = await auth.createUserWithEmailAndPassword(email, password);
-    if (cred.user && name) {
-      await cred.user.updateProfile({ displayName: name });
-    }
-  }
-
-  async function sendPasswordReset(form) {
-    if (!auth) throw new Error("Auth unavailable");
-
-    const emailInput = form.querySelector("input[type='email']");
-    const email = normalizeText(emailInput?.value);
-
-    if (!validateEmail(email)) {
-      setAuthMessage(t("invalid_email"), "error");
-      return;
-    }
-
-    await auth.sendPasswordResetEmail(email);
-    setAuthMessage(t("reset_sent"), "success");
-  }
-
-  async function signInWithGoogle() {
-    if (!auth || !googleProvider) throw new Error("Auth unavailable");
-
-    safeJsonSet(STORAGE_KEYS.remember, true);
-    await setAuthPersistenceFromRemember();
-
-    try {
-      await auth.signInWithPopup(googleProvider);
-    } catch (error) {
-      if (error?.code === "auth/popup-blocked" || error?.code === "auth/cancelled-popup-request") {
-        await auth.signInWithRedirect(googleProvider);
-        return;
-      }
-      throw error;
-    }
-  }
-
-  async function handleLogout() {
-    if (!auth || !state.user) {
-      state.user = null;
-      updateAuthUI();
-      return;
-    }
-
-    try {
-      await auth.signOut();
-      state.user = null;
-      updateAuthUI();
-      showToast(t("logout_success"), "success");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      showToast(humanFirebaseError(error?.code), "error");
-    }
-  }
-
-  function updateProfileTrigger() {
-    const dom = getDom();
-    if (!dom.profileTrigger) return;
-
-    const icon = state.user ? "ph ph-user-circle" : "ph ph-user";
-    dom.profileTrigger.classList.toggle("auth-btn-logged", !!state.user);
-    dom.profileTrigger.classList.toggle("auth-btn-guest", !state.user);
-
-    if (dom.profileTrigger.matches(".profile-menu")) {
-      dom.profileTrigger.innerHTML = `<i class="${icon}"></i>`;
-    } else {
-      renderInlineIconButton(dom.profileTrigger, icon, state.user ? t("account") : t("sign_in"));
-    }
-  }
-
-  function updateAuthUI() {
-    const dom = getDom();
-    const user = state.user;
-
-    updateProfileTrigger();
-
-    if (dom.profileName) {
-      dom.profileName.textContent = user?.displayName || user?.email || t("guest_user");
-    }
-
-    if (dom.profileEmail) {
-      dom.profileEmail.textContent = user?.email || t("sign_in_to_continue");
-    }
-
-    if (dom.logoutBtn) {
-      dom.logoutBtn.style.display = user ? "" : "none";
-    }
-
-    if (dom.myBookingsBtn) {
-      dom.myBookingsBtn.style.display = user ? "" : "";
-    }
-
-    if (dom.authCta && !dom.authCta.matches(".profile-menu")) {
-      dom.authCta.textContent = user ? t("account") : t("sign_in");
-    }
-
-    getFavoriteIds();
-    updateFavoriteButtonsEverywhere();
-  }
-
-  function handlePostLoginRedirect() {
-    if (continuePendingBookingAfterAuth()) return true;
-
-    const target = getRedirectTargetFromUrl();
-    if (isAuthPage() && target && target !== currentPage()) {
-      window.location.href = target;
-      return true;
-    }
-
-    return false;
-  }
-
-  function attachAuthObserver() {
-    if (!auth || authObserverAttached) return;
-    authObserverAttached = true;
-
-    auth.onAuthStateChanged(async (user) => {
-      state.user = user || null;
-
-      if (user?.uid) {
-        migrateGuestFavoritesToUser(user.uid);
-      }
-
-      updateAuthUI();
-
-      if (user) {
-        closeAuthModal();
-        setAuthMessage("");
-        if (!handlePostLoginRedirect()) {
-          if (isAuthPage()) {
-            showToast(t("login_success"), "success");
-          }
-        }
-      }
-    });
-  }
-
-  /* =========================================
-     14) BOOKINGS
-  ========================================= */
-  function normalizeBooking(docId, data = {}) {
-    const property =
-      data.propertySnapshot
-        ? normalizeProperty(
-            data.propertySnapshot,
-            data.propertySnapshot.docId || data.propertySnapshot.id || "",
-            data.propertySnapshot.collection || ""
-          )
-        : getPropertyById(data.propertyId || data.propertyDocId || data.listingId || "") || null;
-
+  function localBookingSnapshotToDisplay(item) {
     return {
-      id: docId || data.id || data.bookingId || slugify(`${data.createdAt || Date.now()}`),
-      propertyId: data.propertyId || data.propertyDocId || data.listingId || property?.id || "",
-      propertyTitle:
-        data.propertyTitle ||
-        data.title ||
-        property?.title_en ||
-        property?.title_ar ||
-        t("unnamed_property"),
-      propertyLocation:
-        data.propertyLocation ||
-        data.location ||
-        property?.location_en ||
-        property?.location_ar ||
-        t("unknown_location"),
-      checkIn: data.checkIn || data.checkin || data.startDate || data.arrivalDate || null,
-      checkOut: data.checkOut || data.checkout || data.endDate || data.departureDate || null,
-      guests: safeNumber(data.guests || data.guestCount || data.totalGuests || 1, 1),
-      total: safeNumber(data.total || data.totalPrice || data.amount || 0, 0),
-      status: String(data.status || data.bookingStatus || "pending").toLowerCase(),
-      createdAt: data.createdAt || data.submittedAt || null,
-      property
+      id: item.id || item.reference || item.bookingId || `BK-${Date.now()}`,
+      propertyTitle: item.propertyTitle || item.title || t("unnamed_property"),
+      status: normalizeText(item.status || "pending").toLowerCase(),
+      checkIn: item.checkIn || item.checkin || "",
+      checkOut: item.checkOut || item.checkout || "",
+      guests: safeNumber(item.guests || item.guestCount || item.adults, 1),
+      total: safeNumber(item.total || item.amount || item.price, 0),
+      createdAt: item.createdAt || item.timestamp || new Date().toISOString()
     };
   }
 
-  function getStatusLabel(status) {
-    const normalized = String(status || "").toLowerCase();
-    if (normalized === "confirmed") return t("booking_status_confirmed");
-    if (normalized === "cancelled" || normalized === "canceled") return t("booking_status_cancelled");
-    if (normalized === "rejected") return t("booking_status_rejected");
+  async function loadBookings() {
+    state.loadingBookings = true;
+    const local = (safeJsonGet(localBookingsKey(), []) || []).map(localBookingSnapshotToDisplay);
+
+    if (!db || !state.user) {
+      state.bookings = local;
+      state.loadingBookings = false;
+      return state.bookings;
+    }
+
+    const merged = [...local];
+
+    for (const collectionName of BOOKINGS_COLLECTION_CANDIDATES) {
+      try {
+        const snapshot = await db
+          .collection(collectionName)
+          .where("userId", "==", state.user.uid)
+          .limit(20)
+          .get();
+
+        if (!snapshot.empty) {
+          snapshot.docs.forEach((docItem) => {
+            merged.push(
+              localBookingSnapshotToDisplay({
+                id: docItem.id,
+                ...docItem.data()
+              })
+            );
+          });
+          break;
+        }
+      } catch (_) {}
+    }
+
+    state.bookings = unique(
+      merged.map((item) => JSON.stringify(item))
+    ).map((row) => JSON.parse(row));
+
+    state.loadingBookings = false;
+    return state.bookings;
+  }
+
+  function bookingStatusClass(status) {
+    const key = normalizeText(status).toLowerCase();
+    if (["confirmed", "مؤكد"].includes(key)) return "confirmed";
+    if (["cancelled", "canceled", "ملغي"].includes(key)) return "cancelled";
+    if (["rejected", "مرفوض"].includes(key)) return "cancelled";
+    return "pending";
+  }
+
+  function bookingStatusLabel(status) {
+    const key = normalizeText(status).toLowerCase();
+    if (["confirmed", "مؤكد"].includes(key)) return t("booking_status_confirmed");
+    if (["cancelled", "canceled", "ملغي"].includes(key)) return t("booking_status_cancelled");
+    if (["rejected", "مرفوض"].includes(key)) return t("booking_status_rejected");
     return t("booking_status_pending");
   }
 
-  async function queryBookingsByField(collectionName, field, value) {
-    if (!db || !value) return [];
-    try {
-      const snap = await db.collection(collectionName).where(field, "==", value).limit(50).get();
-      return snap.docs.map((doc) => normalizeBooking(doc.id, doc.data() || {}));
-    } catch (_) {
-      return [];
-    }
-  }
-
-  async function loadUserBookings() {
-    if (!state.user) {
-      state.bookings = [];
-      return [];
-    }
-
-    if (!db) {
-      state.bookings = [];
-      return [];
-    }
-
-    if (state.loadingBookings) return state.bookings;
-    state.loadingBookings = true;
-
-    const uid = state.user.uid;
-    const email = state.user.email || "";
-    const all = [];
-
-    try {
-      for (const collectionName of BOOKINGS_COLLECTION_CANDIDATES) {
-        const chunks = await Promise.all([
-          queryBookingsByField(collectionName, "userId", uid),
-          queryBookingsByField(collectionName, "uid", uid),
-          queryBookingsByField(collectionName, "userUid", uid),
-          email ? queryBookingsByField(collectionName, "email", email) : Promise.resolve([])
-        ]);
-
-        chunks.flat().forEach((item) => all.push(item));
-      }
-
-      const map = new Map();
-      all.forEach((item) => {
-        if (!map.has(item.id)) map.set(item.id, item);
-      });
-
-      state.bookings = Array.from(map.values()).sort((a, b) => {
-        const timeA = safeNumber(
-          typeof a.createdAt?.toMillis === "function" ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime(),
-          0
-        );
-        const timeB = safeNumber(
-          typeof b.createdAt?.toMillis === "function" ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime(),
-          0
-        );
-        return timeB - timeA;
-      });
-
-      return state.bookings;
-    } catch (error) {
-      console.error("Failed loading bookings:", error);
-      state.bookings = [];
-      return [];
-    } finally {
-      state.loadingBookings = false;
-    }
-  }
-
   function renderBookings() {
-    const dom = getDom();
+    refreshDom();
     if (!dom.bookingsList) return;
 
     if (state.loadingBookings) {
-      dom.bookingsList.innerHTML = `
-        <div class="bookings-empty-state">
-          <i class="ph ph-spinner-gap spin"></i>
-          <p>${escapeHtml(t("loading_bookings"))}</p>
-        </div>
-      `;
-      syncPhosphorIcons();
+      dom.bookingsList.innerHTML = `<p class="text-muted">${escapeHtml(t("loading_bookings"))}</p>`;
       return;
     }
 
     if (!state.bookings.length) {
-      dom.bookingsList.innerHTML = `
-        <div class="bookings-empty-state">
-          <i class="ph ph-calendar-blank"></i>
-          <p>${escapeHtml(t("no_bookings"))}</p>
-        </div>
-      `;
-      syncPhosphorIcons();
+      dom.bookingsList.innerHTML = `<p class="text-muted">${escapeHtml(t("no_bookings"))}</p>`;
       return;
     }
 
     dom.bookingsList.innerHTML = state.bookings
-      .map((booking) => {
-        const propertyTitle =
-          booking.property && getPropertyTitle(booking.property)
-            ? getPropertyTitle(booking.property)
-            : booking.propertyTitle;
-        const statusClass =
-          booking.status === "confirmed"
-            ? "confirmed"
-            : booking.status === "cancelled" || booking.status === "canceled"
-            ? "cancelled"
-            : booking.status === "rejected"
-            ? "cancelled"
-            : "pending";
-
-        return `
-          <article class="booking-entry">
-            <div class="booking-entry-head">
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(
+        (item) => `
+          <article class="booking-card ore-reveal">
+            <div class="booking-card-head">
               <div>
-                <div class="booking-entry-title">${escapeHtml(propertyTitle)}</div>
-                <div class="booking-entry-meta">
-                  <span>${escapeHtml(t("booking_checkin"))} ${escapeHtml(formatDate(booking.checkIn))}</span>
-                  <span>${escapeHtml(t("booking_checkout"))} ${escapeHtml(formatDate(booking.checkOut))}</span>
-                  <span>${escapeHtml(t("booking_guests"))} ${escapeHtml(String(booking.guests))}</span>
-                  <span>${escapeHtml(t("booking_total"))} ${escapeHtml(formatCurrency(booking.total))}</span>
-                </div>
+                <h4>${escapeHtml(item.propertyTitle)}</h4>
+                <div class="booking-card-sub">#${escapeHtml(item.id)}</div>
               </div>
-              <span class="booking-status-badge ${escapeHtml(statusClass)}">${escapeHtml(
-          getStatusLabel(booking.status)
-        )}</span>
+              <span class="booking-status-badge ${escapeHtml(bookingStatusClass(item.status))}">
+                ${escapeHtml(bookingStatusLabel(item.status))}
+              </span>
             </div>
-          </article>
-        `;
-      })
-      .join("");
 
-    syncPhosphorIcons();
-  }
-
-  async function openBookingsModal() {
-    const dom = getDom();
-    if (!requireAuth(t("auth_redirect_profile"), "login")) return;
-
-    if (!dom.bookingsModal) {
-      if (currentPage().toLowerCase() !== ROUTES.bookings.toLowerCase()) {
-        window.location.href = ROUTES.bookings;
-      }
-      return;
-    }
-
-    state.loadingBookings = true;
-    renderBookings();
-    openModal(dom.bookingsModal);
-
-    try {
-      await loadUserBookings();
-    } catch (_) {
-      showToast(t("bookings_load_error"), "error");
-    } finally {
-      renderBookings();
-    }
-  }
-
-  /* =========================================
-     15) CHAT
-  ========================================= */
-  function getChatStorageKey() {
-    return state.user?.uid
-      ? `${STORAGE_KEYS.chatUserPrefix}${state.user.uid}`
-      : STORAGE_KEYS.chatGuest;
-  }
-
-  function getUnreadStorageKey() {
-    return state.user?.uid
-      ? `${STORAGE_KEYS.unreadUserPrefix}${state.user.uid}`
-      : STORAGE_KEYS.unreadGuest;
-  }
-
-  function normalizeMessage(message) {
-    return {
-      id: message.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      sender: message.sender === "admin" ? "admin" : "customer",
-      text: truncate(normalizeText(message.text), MAX_CHAT_MESSAGE_LENGTH),
-      propertyId: normalizeText(message.propertyId),
-      createdAt: message.createdAt || new Date().toISOString()
-    };
-  }
-
-  function getChatBucket() {
-    return safeJsonGet(getChatStorageKey(), {});
-  }
-
-  function setChatBucket(data) {
-    safeJsonSet(getChatStorageKey(), data || {});
-  }
-
-  function getUnreadBucket() {
-    return safeJsonGet(getUnreadStorageKey(), {});
-  }
-
-  function setUnreadBucket(data) {
-    safeJsonSet(getUnreadStorageKey(), data || {});
-  }
-
-  function getCurrentChatPropertyId() {
-    return (
-      normalizeText(getDom().chatPropertyId?.value) ||
-      normalizeText(state.currentChatPropertyId) ||
-      normalizeText(getNavigationPropertyId(state.selectedProperty)) ||
-      "global"
-    );
-  }
-
-  function loadChatMessages(propertyId = getCurrentChatPropertyId()) {
-    const bucket = getChatBucket();
-    const list = Array.isArray(bucket[propertyId]) ? bucket[propertyId] : [];
-    state.chatMessages = list.map(normalizeMessage);
-    state.currentChatPropertyId = propertyId;
-    return state.chatMessages;
-  }
-
-  function saveChatMessages(propertyId = getCurrentChatPropertyId(), list = state.chatMessages) {
-    const bucket = getChatBucket();
-    bucket[propertyId] = normalizeFavoriteList([]).concat(list.map((m) => normalizeMessage(m)));
-    setChatBucket(bucket);
-  }
-
-  function incrementUnread(propertyId) {
-    const bucket = getUnreadBucket();
-    bucket[propertyId] = safeNumber(bucket[propertyId], 0) + 1;
-    setUnreadBucket(bucket);
-    updateChatUnreadBadge();
-  }
-
-  function clearUnread(propertyId) {
-    const bucket = getUnreadBucket();
-    bucket[propertyId] = 0;
-    setUnreadBucket(bucket);
-    updateChatUnreadBadge();
-  }
-
-  function getUnreadTotal() {
-    const bucket = getUnreadBucket();
-    return Object.values(bucket).reduce((sum, v) => sum + safeNumber(v, 0), 0);
-  }
-
-  function updateChatUnreadBadge() {
-    const dom = getDom();
-    if (!dom.chatUnreadBadge) return;
-    const total = getUnreadTotal();
-    dom.chatUnreadBadge.textContent = String(total);
-    dom.chatUnreadBadge.style.display = total > 0 ? "inline-flex" : "none";
-  }
-
-  function renderChatMessages() {
-    const dom = getDom();
-    if (!dom.chatMessages) return;
-
-    const currentPropertyId = getCurrentChatPropertyId();
-    const list = loadChatMessages(currentPropertyId);
-
-    if (dom.chatEmptyState) {
-      dom.chatEmptyState.style.display = list.length ? "none" : "";
-      const title = document.getElementById("chat-empty-title");
-      const sub = document.getElementById("chat-empty-subtitle");
-      if (title) title.textContent = t("no_messages_yet");
-      if (sub) sub.textContent = t("start_chat_hint");
-    }
-
-    dom.chatMessages.innerHTML = list
-      .map((msg) => {
-        const who = msg.sender === "admin" ? t("support_agent") : t("you");
-        return `
-          <div class="chat-message ${escapeHtml(msg.sender)}">
-            ${escapeHtml(msg.text).replace(/\n/g, "<br>")}
-            <span class="chat-meta">${escapeHtml(who)} • ${escapeHtml(
-          formatTime(msg.createdAt)
-        )}</span>
-          </div>
-        `;
-      })
-      .join("");
-
-    dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
-    syncPhosphorIcons();
-  }
-
-  async function maybeMirrorChatToFirestore(message) {
-    if (!db) return;
-    const payload = {
-      ...message,
-      uid: state.user?.uid || "",
-      email: state.user?.email || "",
-      propertyId: message.propertyId || "",
-      createdAt: new Date().toISOString()
-    };
-
-    for (const collectionName of SUPPORT_COLLECTION_CANDIDATES) {
-      try {
-        await db.collection(collectionName).add(payload);
-        break;
-      } catch (_) {}
-    }
-  }
-
-  function buildAutoReply(property) {
-    const title = property ? getPropertyTitle(property) : "";
-    const base = t("quick_auto_reply");
-    return title ? `${base} ${state.lang === "ar" ? `بخصوص "${title}".` : `Regarding "${title}".`}` : base;
-  }
-
-  function pushChatMessage(message) {
-    const propertyId = message.propertyId || getCurrentChatPropertyId();
-    const list = loadChatMessages(propertyId);
-    list.push(normalizeMessage(message));
-    state.chatMessages = list;
-    saveChatMessages(propertyId, list);
-    renderChatMessages();
-  }
-
-  function openChatModal(propertyId = "") {
-    const dom = getDom();
-    if (!dom.chatModal) return;
-
-    const finalPropertyId =
-      normalizeText(propertyId) ||
-      normalizeText(getNavigationPropertyId(state.selectedProperty)) ||
-      normalizeText(dom.chatPropertyId?.value) ||
-      "global";
-
-    state.currentChatPropertyId = finalPropertyId;
-    if (dom.chatPropertyId) dom.chatPropertyId.value = finalPropertyId;
-
-    const titleEl = document.getElementById("chat-title");
-    const subtitleEl = document.getElementById("chat-subtitle");
-    const noteEl = document.getElementById("chat-note");
-    const sendTextEl = document.getElementById("send-chat-text");
-
-    if (titleEl) titleEl.textContent = t("chat_title");
-    if (subtitleEl) subtitleEl.textContent = t("chat_subtitle");
-    if (noteEl) noteEl.textContent = t("chat_ready_note");
-    if (sendTextEl) sendTextEl.textContent = t("send_message");
-    if (dom.chatTextarea) dom.chatTextarea.placeholder = t("chat_placeholder");
-
-    openModal(dom.chatModal);
-    clearUnread(finalPropertyId);
-    renderChatMessages();
-    dom.chatTextarea?.focus();
-  }
-
-  function closeChatModal() {
-    const dom = getDom();
-    if (!dom.chatModal) return;
-    closeModal(dom.chatModal);
-  }
-
-  function sendChatMessage() {
-    const dom = getDom();
-    const input = dom.chatTextarea;
-    if (!input) return;
-
-    const text = normalizeText(input.value);
-    if (!text) {
-      showToast(t("message_required"), "error");
-      return;
-    }
-    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
-      showToast(t("message_too_long"), "error");
-      return;
-    }
-
-    const propertyId = getCurrentChatPropertyId();
-    const property = getPropertyById(propertyId) || state.selectedProperty || null;
-    const enrichedText = property
-      ? `${text}${state.lang === "ar" ? ` — بخصوص: ${getPropertyTitle(property)}` : ` — About: ${getPropertyTitle(property)}`}`
-      : text;
-
-    const userMessage = {
-      sender: "customer",
-      text: enrichedText,
-      propertyId,
-      createdAt: new Date().toISOString()
-    };
-
-    pushChatMessage(userMessage);
-    input.value = "";
-    maybeMirrorChatToFirestore(userMessage);
-
-    clearTimeout(autoReplyTimer);
-    autoReplyTimer = setTimeout(() => {
-      const reply = {
-        sender: "admin",
-        text: buildAutoReply(property),
-        propertyId,
-        createdAt: new Date().toISOString()
-      };
-      pushChatMessage(reply);
-
-      const domNow = getDom();
-      if (!domNow.chatModal?.classList.contains("active")) {
-        incrementUnread(propertyId);
-      }
-    }, CHAT_REPLY_DELAY);
-
-    showToast(t("support_toast"), "success");
-  }
-
-  /* =========================================
-     16) THEME / LANGUAGE
-  ========================================= */
-    function applyTheme(theme, persist = true) {
-    const dom = getDom();
-    state.theme = theme === "dark" ? "dark" : "light";
-
-    if (dom.html) {
-      dom.html.classList.toggle("dark", state.theme === "dark");
-      dom.html.dataset.theme = state.theme;
-    }
-
-    if (dom.body) {
-      dom.body.classList.toggle("dark", state.theme === "dark");
-      dom.body.dataset.theme = state.theme;
-    }
-
-    if (persist) {
-      safeSetMany(STORAGE_ALIASES.theme, state.theme);
-    }
-
-    if (dom.themeBtn) {
-      dom.themeBtn.setAttribute(
-        "aria-label",
-        state.theme === "dark"
-          ? state.lang === "ar"
-            ? "تبديل إلى الوضع الفاتح"
-            : "Switch to light mode"
-          : state.lang === "ar"
-          ? "تبديل إلى الوضع الداكن"
-          : "Switch to dark mode"
-      );
-
-      const icon = dom.themeBtn.querySelector("i");
-      if (icon) {
-        icon.className = state.theme === "dark" ? "ph ph-sun" : "ph ph-moon";
-      }
-    }
-  }
-
-  function applyLanguage(lang, persist = true) {
-    const dom = getDom();
-    state.lang = lang === "ar" ? "ar" : "en";
-
-    if (dom.html) {
-      dom.html.lang = state.lang;
-      dom.html.dir = state.lang === "ar" ? "rtl" : "ltr";
-    }
-
-    if (persist) {
-      safeSetMany(STORAGE_ALIASES.lang, state.lang);
-    }
-
-    if (auth) {
-      try {
-        auth.languageCode = state.lang;
-      } catch (_) {}
-    }
-
-    if (dom.langBtn) {
-      const span = dom.langBtn.querySelector("span");
-      if (span) span.textContent = state.lang === "ar" ? "AR" : "EN";
-      dom.langBtn.setAttribute(
-        "aria-label",
-        state.lang === "ar" ? "Switch language" : "تبديل اللغة"
-      );
-    }
-
-    applyTranslations();
-    renderListings();
-    updateAuthUI();
-    renderBookings();
-    renderChatMessages();
-
-    if (state.currentView === "property" && state.selectedProperty) {
-      renderPropertyPage(state.selectedProperty);
-    }
-  }
-
-  function toggleTheme() {
-    applyTheme(state.theme === "dark" ? "light" : "dark", true);
-  }
-
-  function toggleLanguage() {
-    applyLanguage(state.lang === "ar" ? "en" : "ar", true);
-  }
-
-  /* =========================================
-     17) I18N DOM
-  ========================================= */
-  function translateElement(el) {
-    if (!el) return;
-
-    const key =
-      el.getAttribute("data-i18n") ||
-      el.dataset.i18n ||
-      el.getAttribute("data-translate");
-
-    if (key) {
-      const translated = translateOptional(key);
-      if (translated !== null) {
-        el.textContent = translated;
-      }
-    }
-
-    const placeholderKey =
-      el.getAttribute("data-i18n-placeholder") || el.dataset.i18nPlaceholder;
-    if (placeholderKey) {
-      const translated = translateOptional(placeholderKey);
-      if (translated !== null) {
-        el.setAttribute("placeholder", translated);
-      }
-    }
-
-    const titleKey = el.getAttribute("data-i18n-title") || el.dataset.i18nTitle;
-    if (titleKey) {
-      const translated = translateOptional(titleKey);
-      if (translated !== null) {
-        el.setAttribute("title", translated);
-      }
-    }
-
-    const ariaKey =
-      el.getAttribute("data-i18n-aria-label") || el.dataset.i18nAriaLabel;
-    if (ariaKey) {
-      const translated = translateOptional(ariaKey);
-      if (translated !== null) {
-        el.setAttribute("aria-label", translated);
-      }
-    }
-  }
-
-  function applyTranslations() {
-    document.title = t("page_title");
-
-    $all("[data-i18n], [data-i18n-placeholder], [data-i18n-title], [data-i18n-aria-label]").forEach(
-      translateElement
-    );
-
-    const dom = getDom();
-
-    if (dom.destinationInput && !dom.destinationInput.value) {
-      dom.destinationInput.placeholder = t("where_placeholder");
-    }
-
-    if (dom.chatTextarea && !dom.chatTextarea.value) {
-      dom.chatTextarea.placeholder = t("chat_placeholder");
-    }
-
-    if (dom.clearSearchBtn) {
-      dom.clearSearchBtn.textContent = t("clear_search");
-    }
-
-    if (dom.searchBtn) {
-      const span = dom.searchBtn.querySelector("span");
-      if (span) span.textContent = t("search_btn");
-    }
-
-    const backHome = document.querySelector("[data-i18n='backhome']");
-    if (backHome) backHome.textContent = t("backhome");
-
-    syncPhosphorIcons();
-  }
-
-  /* =========================================
-     18) EVENTS
-  ========================================= */
-  function bindThemeAndLanguage() {
-    const dom = getDom();
-
-    dom.themeBtn?.addEventListener("click", toggleTheme);
-    dom.langBtn?.addEventListener("click", toggleLanguage);
-  }
-
-  function setProfileDropdown(open) {
-    const dom = getDom();
-    state.profileDropdownOpen = !!open;
-
-    if (dom.profileDropdown) {
-      dom.profileDropdown.classList.toggle("active", !!open);
-    }
-
-    if (dom.profileTrigger) {
-      dom.profileTrigger.setAttribute("aria-expanded", open ? "true" : "false");
-    }
-  }
-
-  function bindProfileMenu() {
-    const dom = getDom();
-
-    dom.profileTrigger?.addEventListener("click", (e) => {
-      e.preventDefault();
-
-      if (!state.user && !dom.profileDropdown) {
-        openAuthModal("login");
-        return;
-      }
-
-      if (!dom.profileDropdown) {
-        openAuthModal("login");
-        return;
-      }
-
-      setProfileDropdown(!state.profileDropdownOpen);
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!dom.profileContainer) return;
-      if (!dom.profileContainer.contains(e.target)) {
-        setProfileDropdown(false);
-      }
-    });
-
-    dom.logoutBtn?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      setProfileDropdown(false);
-      await handleLogout();
-    });
-
-    dom.myFavoritesBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      setProfileDropdown(false);
-      if (currentPage().toLowerCase() === ROUTES.favorites.toLowerCase()) {
-        state.currentView = "favorites";
-        renderListings();
-      } else {
-        window.location.href = ROUTES.favorites;
-      }
-    });
-
-    dom.myBookingsBtn?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      setProfileDropdown(false);
-      await openBookingsModal();
-    });
-
-    dom.homeLogoBtn?.addEventListener("click", () => {
-      setProfileDropdown(false);
-    });
-  }
-
-  function bindAuthForms() {
-    const dom = getDom();
-
-    dom.closeAuthBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      closeAuthModal();
-    });
-
-    dom.authModal?.addEventListener("click", (e) => {
-      if (e.target === dom.authModal) closeAuthModal();
-    });
-
-    document.addEventListener("click", (e) => {
-      const trigger = e.target.closest("#go-to-register, [data-auth-view='register']");
-      if (trigger) {
-        e.preventDefault();
-        switchAuthView("register");
-      }
-    });
-
-    document.addEventListener("click", (e) => {
-      const trigger = e.target.closest("#go-to-login, [data-auth-view='login']");
-      if (trigger) {
-        e.preventDefault();
-        switchAuthView("login");
-      }
-    });
-
-    document.addEventListener("click", (e) => {
-      const trigger = e.target.closest("#go-to-forgot, [data-auth-view='forgot']");
-      if (trigger) {
-        e.preventDefault();
-        switchAuthView("forgot");
-      }
-    });
-
-    $all(".toggle-pass-btn").forEach((btn) => {
-      btn.addEventListener("click", () => handlePasswordToggleClick(btn));
-    });
-
-    const registerPassword =
-      dom.registerForm?.querySelector("input[type='password']") || $("#reg-password");
-    registerPassword?.addEventListener("input", () =>
-      updatePasswordStrength(registerPassword)
-    );
-
-    dom.loginForm?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      if (!auth) {
-        setAuthMessage(t("auth_unavailable"), "error");
-        return;
-      }
-
-      setAuthMessage(t("loading"), "success");
-      try {
-        await loginWithEmail(dom.loginForm);
-        setAuthMessage(t("login_success"), "success");
-      } catch (error) {
-        setAuthMessage(humanFirebaseError(error?.code), "error");
-      }
-    });
-
-    dom.registerForm?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      if (!auth) {
-        setAuthMessage(t("auth_unavailable"), "error");
-        return;
-      }
-
-      setAuthMessage(t("loading"), "success");
-      try {
-        await registerWithEmail(dom.registerForm);
-        setAuthMessage(t("register_success"), "success");
-      } catch (error) {
-        setAuthMessage(humanFirebaseError(error?.code), "error");
-      }
-    });
-
-    dom.forgotForm?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      if (!auth) {
-        setAuthMessage(t("auth_unavailable"), "error");
-        return;
-      }
-
-      setAuthMessage(t("loading"), "success");
-      try {
-        await sendPasswordReset(dom.forgotForm);
-      } catch (error) {
-        setAuthMessage(humanFirebaseError(error?.code), "error");
-      }
-    });
-
-    dom.googleButtons.forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
-        e.preventDefault();
-
-        if (!auth || !googleProvider) {
-          setAuthMessage(t("auth_unavailable"), "error");
-          return;
-        }
-
-        setAuthMessage(t("loading"), "success");
-        try {
-          await signInWithGoogle();
-        } catch (error) {
-          setAuthMessage(
-            humanFirebaseError(error?.code) || t("sign_in_google_failed"),
-            "error"
-          );
-        }
-      });
-    });
-
-    if (isAuthPage()) {
-      switchAuthView(readHashView());
-    }
-  }
-
-  function bindListingsEvents() {
-    const dom = getDom();
-
-    dom.searchBtn?.addEventListener("click", () => {
-      state.activeSearch = normalizeText(dom.destinationInput?.value);
-      renderListings();
-    });
-
-    dom.destinationInput?.addEventListener(
-      "input",
-      debounce(() => {
-        state.activeSearch = normalizeText(dom.destinationInput?.value);
-        renderListings();
-      }, 180)
-    );
-
-    dom.destinationInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        state.activeSearch = normalizeText(dom.destinationInput?.value);
-        renderListings();
-      }
-    });
-
-    dom.clearSearchBtn?.addEventListener("click", () => {
-      state.activeSearch = "";
-      if (dom.destinationInput) dom.destinationInput.value = "";
-      renderListings();
-    });
-
-    dom.sortSelect?.addEventListener("change", () => {
-      const raw = normalizeText(dom.sortSelect.value).toLowerCase();
-      state.sort =
-        raw === "rating" || raw === "price_low" || raw === "price_high"
-          ? raw
-          : "featured";
-      renderListings();
-    });
-
-    dom.categoryButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        state.activeCategory = normalizeText(
-          btn.dataset.category || btn.dataset.categoryBtn || "all"
-        ).toLowerCase();
-        renderListings();
-      });
-    });
-
-    document.addEventListener("click", (e) => {
-      const favBtn = e.target.closest("[data-fav-id]");
-      if (favBtn) {
-        e.preventDefault();
-        const propertyId = favBtn.getAttribute("data-fav-id");
-        const property = getPropertyById(propertyId) || resolveSelectedProperty();
-        if (property) toggleFavorite(property);
-        else {
-          if (isFavoriteId(propertyId)) removeFavoriteId(propertyId);
-          else addFavoriteId(propertyId);
-          showFavToast(isFavoriteId(propertyId) ? t("fav_added") : t("fav_removed"));
-        }
-        updateFavoriteButtonsEverywhere();
-
-        if (state.currentView === "favorites") {
-          renderListings();
-        }
-        return;
-      }
-
-      const detailsBtn = e.target.closest("[data-action='details']");
-      if (detailsBtn) {
-        e.preventDefault();
-        const propertyId = detailsBtn.getAttribute("data-property-id");
-        const property = getPropertyById(propertyId);
-        if (property) openPropertyDetails(property);
-        return;
-      }
-
-      const reserveBtn = e.target.closest("[data-action='reserve']");
-      if (reserveBtn) {
-        e.preventDefault();
-        const propertyId = reserveBtn.getAttribute("data-property-id");
-        const property = getPropertyById(propertyId);
-        if (property) handleReserveNow(property);
-      }
-    });
-  }
-
-  function bindPropertyPageEvents() {
-    const dom = getDom();
-
-    dom.propertyFavBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (!state.selectedProperty) return;
-      toggleFavorite(state.selectedProperty);
-      updateFavoriteButtonsEverywhere();
-    });
-
-    dom.shareBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      handleShare();
-    });
-
-    [dom.contactHostBtn, $("#host-chat-btn"), $("#booking-chat-btn"), dom.chatOpenBtn]
-      .filter(Boolean)
-      .forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          e.preventDefault();
-          const propertyId =
-            getNavigationPropertyId(state.selectedProperty) ||
-            resolveSelectedPropertyIdFromUrlOrStorage();
-          openChatModal(propertyId);
-        });
-      });
-
-    dom.galleryPrev?.addEventListener("click", prevSlide);
-    dom.galleryNext?.addEventListener("click", nextSlide);
-    dom.galleryFullscreen?.addEventListener("click", openLightbox);
-
-    dom.galleryDots?.addEventListener("click", (e) => {
-      const dot = e.target.closest("[data-slide-index]");
-      if (!dot) return;
-      goToSlide(Number(dot.getAttribute("data-slide-index")) || 0);
-    });
-
-    dom.galleryThumbs?.addEventListener("click", (e) => {
-      const thumb = e.target.closest("[data-thumb-index]");
-      if (!thumb) return;
-      goToSlide(Number(thumb.getAttribute("data-thumb-index")) || 0);
-    });
-
-    dom.lightboxClose?.addEventListener("click", closeLightbox);
-    dom.lightboxPrev?.addEventListener("click", prevSlide);
-    dom.lightboxNext?.addEventListener("click", nextSlide);
-
-    dom.lightbox?.addEventListener("click", (e) => {
-      if (e.target === dom.lightbox) closeLightbox();
-    });
-
-    dom.lightboxImg?.addEventListener("click", toggleZoom);
-
-    document.addEventListener("keydown", (e) => {
-      const lightboxOpen = !!dom.lightbox?.classList.contains("active");
-      const chatOpen = !!dom.chatModal?.classList.contains("active");
-      const authOpen = !!dom.authModal?.classList.contains("active");
-      const bookingsOpen = !!dom.bookingsModal?.classList.contains("active");
-
-      if (e.key === "Escape") {
-        if (lightboxOpen) closeLightbox();
-        else if (chatOpen) closeChatModal();
-        else if (bookingsOpen) closeModal(dom.bookingsModal);
-        else if (authOpen) closeAuthModal();
-      }
-
-      if (lightboxOpen) {
-        if (e.key === "ArrowRight") {
-          if (isArabic()) prevSlide();
-          else nextSlide();
-        }
-        if (e.key === "ArrowLeft") {
-          if (isArabic()) nextSlide();
-          else prevSlide();
-        }
-      }
-    });
-  }
-
-  function bindBookingsEvents() {
-    const dom = getDom();
-
-    dom.closeBookingsBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      closeModal(dom.bookingsModal);
-    });
-
-    dom.bookingsModal?.addEventListener("click", (e) => {
-      if (e.target === dom.bookingsModal) closeModal(dom.bookingsModal);
-    });
-  }
-
-  function bindChatEvents() {
-    const dom = getDom();
-
-    dom.chatOpenBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      openChatModal(
-        getNavigationPropertyId(state.selectedProperty) ||
-          resolveSelectedPropertyIdFromUrlOrStorage()
-      );
-    });
-
-    dom.chatCloseBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      closeChatModal();
-    });
-
-    dom.chatModal?.addEventListener("click", (e) => {
-      if (e.target === dom.chatModal) closeChatModal();
-    });
-
-    dom.chatSendBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      sendChatMessage();
-    });
-
-    dom.chatTextarea?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-      }
-    });
-  }
-
-  function bindMiscEvents() {
-    const dom = getDom();
-
-    dom.mobileFavBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      window.location.href = ROUTES.favorites;
-    });
-
-    dom.mobileProfileBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (state.user) {
-        setProfileDropdown(!state.profileDropdownOpen);
-      } else {
-        openAuthModal("login");
-      }
-    });
-
-    dom.mobileStaysBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      window.location.href = ROUTES.home;
-    });
-
-    dom.scrollTopBtn?.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    window.addEventListener("storage", (e) => {
-      if (!e.key) return;
-
-      const themeKeys = new Set(STORAGE_ALIASES.theme);
-      const langKeys = new Set(STORAGE_ALIASES.lang);
-
-      if (themeKeys.has(e.key)) {
-        applyTheme(safeGetAny(STORAGE_ALIASES.theme, "light"), false);
-      }
-
-      if (langKeys.has(e.key)) {
-        applyLanguage(safeGetAny(STORAGE_ALIASES.lang, "en"), false);
-      }
-
-      if (
-        e.key === STORAGE_KEYS.favoritesGuest ||
-        e.key === getFavoritesKeyForUser(state.user?.uid || "") ||
-        e.key === getLegacyFavoritesKey(state.user?.uid || "")
-      ) {
-        state.favorites = getFavoriteIds();
-        updateFavoriteButtonsEverywhere();
-        if (state.currentView === "favorites") renderListings();
-      }
-    });
-  }
-
-  /* =========================================
-     19) INIT
-  ========================================= */
-  async function initializeData() {
-    await loadLiveProperties();
-
-    if (state.currentView === "home" || state.currentView === "favorites") {
-      renderListings();
-    }
-
-    if (state.currentView === "property") {
-      await loadPropertyPage();
-    }
-  }
-
-  async function init() {
-    if (state.initialized) return;
-    state.initialized = true;
-    state.currentView = detectCurrentView();
-
-    initFirebase();
-    await setAuthPersistenceFromRemember();
-    attachAuthObserver();
-
-    applyTheme(state.theme, false);
-    applyLanguage(state.lang, false);
-
-    bindThemeAndLanguage();
-    bindProfileMenu();
-    bindAuthForms();
-    bindListingsEvents();
-    bindPropertyPageEvents();
-    bindBookingsEvents();
-    bindChatEvents();
-    bindMiscEvents();
-
-    updateAuthUI();
-    updateChatUnreadBadge();
-    applyTranslations();
-
-    try {
-      await initializeData();
-    } catch (error) {
-      console.error("Initialization error:", error);
-      if (state.currentView === "home" || state.currentView === "favorites") {
-        renderListings();
-      }
-      showToast(t("property_load_error"), "info");
-    }
-
-    syncPhosphorIcons();
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
-})();
+            <div class="booking-card-grid">
+              <div><strong>${escapeHtml(t("booking_checkin"))}</strong> ${escapeHtml(formatDate(item.checkIn))}</div>
+              <div><strong>${escapeHtml(t("booking_checkout"))}</strong> ${escapeHtml(formatDate(item.checkOut))}</div>
+              <div><strong>${escapeHtml(t("booking_guests"))}</strong> ${escapeHtml(String(item.guests || 1))}</div>
+              <div><strong>${escapeHtml(t("booking_total"))}</strong> ${escapeHtml(formatCurrency(item.total))}</div>
+           
