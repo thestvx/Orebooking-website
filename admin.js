@@ -1,5 +1,5 @@
 // =========================================
-// OreBooking Admin Panel Logic — Production Ready
+// OreBooking Admin Panel Logic — Production Ready (Fixed)
 // Synced with final admin.html structure
 // =========================================
 
@@ -8,14 +8,28 @@
 // =========================================
 
 let db = null;
+let _firebaseReady = false;
 
-try {
+function getDb() {
+  if (db) return db;
+  try {
+    if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+      db = firebase.firestore();
+      _firebaseReady = true;
+      return db;
+    }
+  } catch (e) {
+    console.error("getDb() failed:", e);
+  }
+  return null;
+}
 
-  if (typeof firebase === "undefined") {
-
-    console.error("Firebase SDK not loaded");
-
-  } else {
+function initFirebase() {
+  try {
+    if (typeof firebase === "undefined") {
+      console.error("Firebase SDK not loaded");
+      return false;
+    }
 
     const firebaseConfig = {
       apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
@@ -32,50 +46,26 @@ try {
     }
 
     db = firebase.firestore();
+    _firebaseReady = true;
+    console.log("[OreBooking] Firebase initialized successfully ✅");
+    return true;
 
-    console.log("Firebase initialized successfully");
-
+  } catch (err) {
+    console.error("Firebase Init Error:", err);
+    _firebaseReady = false;
+    return false;
   }
-
-} catch (err) {
-
-  console.error("Firebase Init Error:", err);
-
 }
 
-// إعادة محاولة ربط Firebase بعد تحميل الصفحة
+// تهيئة فورية عند تحميل السكربت
+initFirebase();
+
+// إعادة محاولة ربط Firebase بعد تحميل الصفحة (fallback)
 window.addEventListener("load", () => {
-
-  try {
-
-    if (!db && typeof firebase !== "undefined") {
-
-      if (!firebase.apps.length) {
-
-        firebase.initializeApp({
-          apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-          authDomain: "orebooking-website.firebaseapp.com",
-          projectId: "orebooking-website",
-          storageBucket: "orebooking-website.firebasestorage.app",
-          messagingSenderId: "1012887567747",
-          appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-          measurementId: "G-5GKMRMVHC3"
-        });
-
-      }
-
-      db = firebase.firestore();
-
-      console.log("Firebase reconnected successfully");
-
-    }
-
-  } catch (e) {
-
-    console.error("Firebase reconnect error:", e);
-
+  if (!_firebaseReady || !db) {
+    console.warn("[OreBooking] Retrying Firebase initialization on window.load...");
+    initFirebase();
   }
-
 });
 
 const ADMIN_USER = "admin";
@@ -682,31 +672,18 @@ function getFilteredPropertyDocs() {
   });
 }
 
-
 function initializeBookingFilters() {
-
   const container = document.querySelector(".booking-filter-bar");
-
   if (!container) return;
-
   const buttons = container.querySelectorAll(".booking-filter-btn");
-
   buttons.forEach(btn => {
-
     btn.addEventListener("click", () => {
-
       buttons.forEach(b => b.classList.remove("active"));
-
       btn.classList.add("active");
-
       APP_STATE.currentBookingFilter = btn.dataset.filter || "all";
-
       loadBookings();
-
     });
-
   });
-
 }
 
 function updateQuickStats() {
@@ -736,13 +713,18 @@ function updateQuickStats() {
 
 async function loadPropertiesForSelect() {
   if (!DOM.ownerPropertySelect) return;
+  const _db = getDb();
+  if (!_db) {
+    DOM.ownerPropertySelect.innerHTML = `<option value="">Firebase غير متصل</option>`;
+    return;
+  }
 
   const previous = DOM.ownerPropertySelect.value;
   DOM.ownerPropertySelect.innerHTML = `<option value="">جارٍ تحميل العقارات...</option>`;
 
   try {
-    const snapshot = await db.collection(PROPERTIES_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
-      return await db.collection(PROPERTIES_COLLECTION).get();
+    const snapshot = await _db.collection(PROPERTIES_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
+      return await _db.collection(PROPERTIES_COLLECTION).get();
     });
 
     if (snapshot.empty) {
@@ -859,6 +841,11 @@ function renderPropertiesTable(docsArray) {
 
 async function loadProperties() {
   if (!DOM.propertiesTbody) return;
+  const _db = getDb();
+  if (!_db) {
+    renderPropertiesEmpty("Firebase غير متصل. تحقق من الإنترنت أو أعد تحميل الصفحة.", true);
+    return;
+  }
 
   DOM.propertiesTbody.innerHTML = `
     <tr>
@@ -877,7 +864,7 @@ async function loadProperties() {
         return;
       }
 
-      const doc = await db.collection(PROPERTIES_COLLECTION).doc(ownerPropId).get();
+      const doc = await _db.collection(PROPERTIES_COLLECTION).doc(ownerPropId).get();
       if (!doc.exists) {
         APP_STATE.propertiesDocs = [];
         renderPropertiesEmpty("عقارك غير موجود أو تم حذفه.");
@@ -889,9 +876,13 @@ async function loadProperties() {
       return;
     }
 
-    const snapshot = await db.collection(PROPERTIES_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
-      return await db.collection(PROPERTIES_COLLECTION).get();
-    });
+    let snapshot;
+    try {
+      snapshot = await _db.collection(PROPERTIES_COLLECTION).orderBy("createdAt", "desc").get();
+    } catch (orderErr) {
+      console.warn("orderBy failed, falling back to plain get:", orderErr.message);
+      snapshot = await _db.collection(PROPERTIES_COLLECTION).get();
+    }
 
     if (snapshot.empty) {
       APP_STATE.propertiesDocs = [];
@@ -909,13 +900,23 @@ async function loadProperties() {
 }
 
 async function toggleVisibility(docId, isVisible, checkboxEl) {
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل حالياً", "error");
+    if (checkboxEl) checkboxEl.checked = !isVisible;
+    return;
+  }
   try {
     if (checkboxEl) checkboxEl.disabled = true;
     if (!canAccessProperty(docId)) throw new Error("غير مسموح لك بتعديل هذا العقار");
 
-    await db.collection(PROPERTIES_COLLECTION).doc(docId).update({
+    const ts = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp)
+      ? firebase.firestore.FieldValue.serverTimestamp()
+      : new Date();
+
+    await _db.collection(PROPERTIES_COLLECTION).doc(docId).update({
       visible: isVisible,
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+      updatedAt: ts
     });
 
     showToast(`تم ${isVisible ? "إظهار" : "إخفاء"} العقار بنجاح`, "success");
@@ -932,6 +933,11 @@ async function toggleVisibility(docId, isVisible, checkboxEl) {
 async function openEditModal(docId) {
   const editModal = document.getElementById("edit-modal");
   if (!editModal) return;
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    return;
+  }
 
   try {
     if (!canAccessProperty(docId)) {
@@ -939,7 +945,7 @@ async function openEditModal(docId) {
       return;
     }
 
-    const doc = await db.collection(PROPERTIES_COLLECTION).doc(docId).get();
+    const doc = await _db.collection(PROPERTIES_COLLECTION).doc(docId).get();
     if (!doc.exists) {
       showToast("العقار غير موجود", "error");
       return;
@@ -992,11 +998,16 @@ async function deleteProperty(docId) {
     showToast("غير مسموح لك بحذف العقار من هذه الجلسة", "error");
     return;
   }
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    return;
+  }
 
   if (!confirm("هل أنت متأكد من حذف هذا العقار نهائياً؟")) return;
 
   try {
-    await db.collection(PROPERTIES_COLLECTION).doc(docId).delete();
+    await _db.collection(PROPERTIES_COLLECTION).doc(docId).delete();
     showToast("تم حذف العقار بنجاح", "success");
     await loadProperties();
     await loadPropertiesForSelect();
@@ -1008,6 +1019,11 @@ async function deleteProperty(docId) {
 
 async function loadOwnerAccounts() {
   if (!DOM.ownerAccountsTbody) return;
+  const _db = getDb();
+  if (!_db) {
+    renderOwnerAccountsEmpty("Firebase غير متصل. تحقق من الاتصال.", true);
+    return;
+  }
 
   if (!getIsSuperAdmin()) {
     APP_STATE.ownerAccountDocs = [];
@@ -1024,9 +1040,13 @@ async function loadOwnerAccounts() {
     </tr>`;
 
   try {
-    const snapshot = await db.collection(OWNER_ACCOUNTS_COLLECTION).orderBy("createdAt", "desc").get().catch(async () => {
-      return await db.collection(OWNER_ACCOUNTS_COLLECTION).get();
-    });
+    let snapshot;
+    try {
+      snapshot = await _db.collection(OWNER_ACCOUNTS_COLLECTION).orderBy("createdAt", "desc").get();
+    } catch (orderErr) {
+      console.warn("orderBy failed for ownerAccounts, fallback to plain get:", orderErr.message);
+      snapshot = await _db.collection(OWNER_ACCOUNTS_COLLECTION).get();
+    }
 
     if (snapshot.empty) {
       APP_STATE.ownerAccountDocs = [];
@@ -1085,6 +1105,11 @@ function renderOwnerAccountsTable(docsArray) {
 
 async function createOwnerAccountFromForm(e) {
   e.preventDefault();
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    return;
+  }
 
   if (!getIsSuperAdmin()) {
     showToast("فقط المدير العام يمكنه إنشاء حسابات الملاك", "error");
@@ -1111,12 +1136,12 @@ async function createOwnerAccountFromForm(e) {
   setButtonLoading(submitBtn, true, `<i class="ph ph-circle-notch ph-spin"></i> جارٍ إنشاء الحساب...`);
 
   try {
-    const propertySnap = await db.collection(PROPERTIES_COLLECTION).doc(payload.propertyId).get();
+    const propertySnap = await _db.collection(PROPERTIES_COLLECTION).doc(payload.propertyId).get();
     if (!propertySnap.exists) {
       throw new Error("العقار المحدد غير موجود");
     }
 
-    const duplicateSnap = await db.collection(OWNER_ACCOUNTS_COLLECTION)
+    const duplicateSnap = await _db.collection(OWNER_ACCOUNTS_COLLECTION)
       .where("username", "==", payload.username)
       .limit(1)
       .get();
@@ -1125,10 +1150,14 @@ async function createOwnerAccountFromForm(e) {
       throw new Error("اسم المستخدم مستخدم مسبقاً");
     }
 
-    await db.collection(OWNER_ACCOUNTS_COLLECTION).add({
+    const ts = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp)
+      ? firebase.firestore.FieldValue.serverTimestamp()
+      : new Date();
+
+    await _db.collection(OWNER_ACCOUNTS_COLLECTION).add({
       ...payload,
-      createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+      createdAt: ts,
+      updatedAt: ts
     });
 
     DOM.ownerAccountForm?.reset();
@@ -1147,13 +1176,22 @@ async function toggleOwnerAccount(docId, newState, clickedBtn = null) {
     showToast("فقط المدير العام يمكنه تعديل حسابات الملاك", "error");
     return;
   }
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    return;
+  }
 
   try {
     if (clickedBtn) clickedBtn.disabled = true;
 
-    await db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).update({
+    const ts = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp)
+      ? firebase.firestore.FieldValue.serverTimestamp()
+      : new Date();
+
+    await _db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).update({
       active: !!newState,
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+      updatedAt: ts
     });
 
     showToast(`تم ${newState ? "تفعيل" : "تعطيل"} الحساب بنجاح`, "success");
@@ -1171,11 +1209,16 @@ async function deleteOwnerAccount(docId) {
     showToast("فقط المدير العام يمكنه حذف حسابات الملاك", "error");
     return;
   }
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    return;
+  }
 
   if (!confirm("هل أنت متأكد من حذف حساب المالك نهائياً؟")) return;
 
   try {
-    await db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).delete();
+    await _db.collection(OWNER_ACCOUNTS_COLLECTION).doc(docId).delete();
     showToast("تم حذف حساب المالك بنجاح", "success");
     await loadOwnerAccounts();
   } catch (err) {
@@ -1476,6 +1519,20 @@ function buildChatId(bookingId, propertyId, guestId) {
   return `chat_${[p || "property", g || "guest", Date.now()].join("_")}`;
 }
 
+function getServerTimestamp() {
+  if (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp) {
+    return firebase.firestore.FieldValue.serverTimestamp();
+  }
+  return new Date();
+}
+
+function getIncrement(n) {
+  if (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.increment) {
+    return firebase.firestore.FieldValue.increment(n);
+  }
+  return n;
+}
+
 async function ensureChatForBooking({
   bookingId,
   bookingData,
@@ -1487,8 +1544,11 @@ async function ensureChatForBooking({
   guestEmail,
   guestPhone
 }) {
+  const _db = getDb();
+  if (!_db) throw new Error("Firebase غير متصل");
+
   const chatId = buildChatId(bookingId, propertyId, guestId);
-  const chatRef = db.collection(CHATS_COLLECTION).doc(chatId);
+  const chatRef = _db.collection(CHATS_COLLECTION).doc(chatId);
   const existing = await chatRef.get();
 
   const basePayload = {
@@ -1513,13 +1573,13 @@ async function ensureChatForBooking({
     unreadCountGuest: existing.exists ? toNumber(existing.data()?.unreadCountGuest, 0) : 0,
     unreadCountOwner: 0,
     bookingCreatedAt: bookingData.createdAt || null,
-    updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+    updatedAt: getServerTimestamp()
   };
 
   if (!existing.exists) {
     await chatRef.set({
       ...basePayload,
-      createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+      createdAt: getServerTimestamp()
     });
   } else {
     await chatRef.set(basePayload, { merge: true });
@@ -1612,11 +1672,13 @@ function renderAdminChatMessages(docs = []) {
 
 async function markChatAsSeenByOwner(chatId) {
   if (!chatId) return;
+  const _db = getDb();
+  if (!_db) return;
   try {
-    await db.collection(CHATS_COLLECTION).doc(chatId).set({
+    await _db.collection(CHATS_COLLECTION).doc(chatId).set({
       unreadCountOwner: 0,
-      ownerLastSeenAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+      ownerLastSeenAt: getServerTimestamp(),
+      updatedAt: getServerTimestamp()
     }, { merge: true });
   } catch (err) {
     console.warn("markChatAsSeenByOwner:", err);
@@ -1624,6 +1686,12 @@ async function markChatAsSeenByOwner(chatId) {
 }
 
 function bindAdminChatStreams(chatId) {
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل — لا يمكن تحميل المحادثة", "error");
+    return;
+  }
+
   if (typeof CHAT_STATE.messagesUnsub === "function") {
     try { CHAT_STATE.messagesUnsub(); } catch (_) {}
   }
@@ -1631,7 +1699,7 @@ function bindAdminChatStreams(chatId) {
     try { CHAT_STATE.chatUnsub(); } catch (_) {}
   }
 
-  CHAT_STATE.chatUnsub = db.collection(CHATS_COLLECTION).doc(chatId).onSnapshot(snap => {
+  CHAT_STATE.chatUnsub = _db.collection(CHATS_COLLECTION).doc(chatId).onSnapshot(snap => {
     if (!snap.exists) return;
     const data = snap.data() || {};
     CHAT_STATE.currentBookingStatus = normalizeText(data.status || CHAT_STATE.currentBookingStatus);
@@ -1649,7 +1717,7 @@ function bindAdminChatStreams(chatId) {
     console.error("chat snapshot error:", err);
   });
 
-  CHAT_STATE.messagesUnsub = db.collection(CHATS_COLLECTION).doc(chatId)
+  CHAT_STATE.messagesUnsub = _db.collection(CHATS_COLLECTION).doc(chatId)
     .collection("messages")
     .orderBy("createdAt", "asc")
     .onSnapshot(snap => {
@@ -1670,8 +1738,15 @@ async function openBookingChat(bookingId) {
     document.body.classList.add("modal-open");
   }
 
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    closeAdminChatModal();
+    return;
+  }
+
   try {
-    const bookingSnap = await db.collection(BOOKINGS_COLLECTION).doc(bookingId).get();
+    const bookingSnap = await _db.collection(BOOKINGS_COLLECTION).doc(bookingId).get();
     if (!bookingSnap.exists) throw new Error("الحجز غير موجود");
 
     const bookingData = bookingSnap.data() || {};
@@ -1690,7 +1765,7 @@ async function openBookingChat(bookingId) {
 
     if (!propertyImage && bookingPropId) {
       try {
-        const propSnap = await db.collection(PROPERTIES_COLLECTION).doc(bookingPropId).get();
+        const propSnap = await _db.collection(PROPERTIES_COLLECTION).doc(bookingPropId).get();
         if (propSnap.exists) {
           const propData = propSnap.data() || {};
           propertyImage = normalizeText(propData.imageUrl || propData.image || "");
@@ -1766,6 +1841,11 @@ async function uploadToCloudinary(file) {
 
 async function sendAdminChatMessage() {
   if (CHAT_STATE.sending) return;
+  const _db = getDb();
+  if (!_db) {
+    showToast("Firebase غير متصل", "error");
+    return;
+  }
 
   const textarea = document.getElementById("admin-chat-textarea");
   const fileInput = document.getElementById("admin-chat-file-input");
@@ -1810,17 +1890,17 @@ async function sendAdminChatMessage() {
       text,
       type,
       imageUrl,
-      createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+      createdAt: getServerTimestamp(),
       seenByGuest: false,
       seenByOwner: true
     };
 
-    await db.collection(CHATS_COLLECTION)
+    await _db.collection(CHATS_COLLECTION)
       .doc(CHAT_STATE.currentChatId)
       .collection("messages")
       .add(msgPayload);
 
-    await db.collection(CHATS_COLLECTION).doc(CHAT_STATE.currentChatId).set({
+    await _db.collection(CHATS_COLLECTION).doc(CHAT_STATE.currentChatId).set({
       bookingId: CHAT_STATE.currentBookingId,
       propertyId: CHAT_STATE.currentPropertyId,
       propertyTitle: CHAT_STATE.currentPropertyTitle,
@@ -1836,11 +1916,11 @@ async function sendAdminChatMessage() {
       lastMessageType: type,
       lastSenderId: getAdminActorId(),
       lastSenderRole: "owner",
-      lastMessageAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-      unreadCountGuest: firebase.firestore.FieldValue.increment(1),
+      lastMessageAt: getServerTimestamp(),
+      unreadCountGuest: getIncrement(1),
       unreadCountOwner: 0,
-      ownerLastSeenAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+      ownerLastSeenAt: getServerTimestamp(),
+      updatedAt: getServerTimestamp()
     }, { merge: true });
 
     if (textarea) {
@@ -1862,11 +1942,14 @@ async function sendAdminChatMessage() {
 }
 
 async function tryOwnerLogin(username, password) {
+  const _db = getDb();
+  if (!_db) return { success: false };
+
   const user = normalizeText(username);
   const pass = normalizeText(password);
 
   try {
-    const snap = await db.collection(OWNER_ACCOUNTS_COLLECTION)
+    const snap = await _db.collection(OWNER_ACCOUNTS_COLLECTION)
       .where("username", "==", user)
       .where("password", "==", pass)
       .where("active", "==", true)
@@ -1889,7 +1972,7 @@ async function tryOwnerLogin(username, password) {
   }
 
   try {
-    const snap = await db.collection(OWNER_ACCOUNTS_COLLECTION).get();
+    const snap = await _db.collection(OWNER_ACCOUNTS_COLLECTION).get();
     const match = snap.docs.find(doc => {
       const d = doc.data() || {};
       return normalizeText(d.username) === user &&
@@ -2070,6 +2153,11 @@ function buildBookingCard(doc) {
 async function loadBookings() {
   const container = DOM.bookingsContainer;
   if (!container) return;
+  const _db = getDb();
+  if (!_db) {
+    renderBookingsEmpty(container, "Firebase غير متصل. تحقق من الإنترنت أو أعد تحميل الصفحة.");
+    return;
+  }
 
   container.innerHTML = `
     <div class="empty-state">
@@ -2080,9 +2168,10 @@ async function loadBookings() {
   try {
     let snapshot;
     try {
-      snapshot = await db.collection(BOOKINGS_COLLECTION).orderBy("createdAt", "desc").get();
-    } catch (_) {
-      snapshot = await db.collection(BOOKINGS_COLLECTION).get();
+      snapshot = await _db.collection(BOOKINGS_COLLECTION).orderBy("createdAt", "desc").get();
+    } catch (orderErr) {
+      console.warn("[loadBookings] orderBy failed, fallback to plain get:", orderErr.message);
+      snapshot = await _db.collection(BOOKINGS_COLLECTION).get();
     }
 
     if (snapshot.empty) {
@@ -2099,23 +2188,15 @@ async function loadBookings() {
     APP_STATE.bookingDocs = docs;
 
     const currentFilter = APP_STATE.currentBookingFilter || "all";
-
     if (currentFilter !== "all") {
-
       docs = docs.filter(doc => {
-
         const data = doc.data() || {};
-
         const status = normalizeText(data.status || "pending");
-
         if (currentFilter === "rejected") {
           return status === "cancelled" || status === "rejected";
         }
-
         return status === currentFilter;
-
       });
-
     }
 
     if (!docs.length) {
@@ -2124,7 +2205,6 @@ async function loadBookings() {
     }
 
     const cards = docs.map(buildBookingCard).filter(Boolean).join("");
-
     if (!cards) {
       renderBookingsEmpty(container, "لا توجد طلبات حجز قابلة للعرض حالياً.");
       return;
@@ -2156,14 +2236,13 @@ async function loadBookings() {
 }
 
 window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null) {
-
-  if (!db) {
+  const _db = getDb();
+  if (!_db) {
     showToast("Firebase غير متاح داخل الصفحة حالياً.", "error");
     return;
   }
 
   const isConfirm = newStatus === "confirmed";
-
   const confirmMsg = isConfirm
     ? "هل أنت متأكد من تأكيد وقبول هذا الحجز؟"
     : "هل أنت متأكد من رفض وإلغاء هذا الحجز؟";
@@ -2171,22 +2250,11 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
   if (!confirm(confirmMsg)) return;
 
   const row = clickedBtn?.closest?.(".booking-actions-row") || null;
-
-  const buttons = row
-    ? Array.from(row.querySelectorAll("button"))
-    : [];
-
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    btn.style.opacity = "0.6";
-  });
+  const buttons = row ? Array.from(row.querySelectorAll("button")) : [];
+  buttons.forEach(btn => { btn.disabled = true; btn.style.opacity = "0.6"; });
 
   try {
-
-    const bookingRef = db
-      .collection(BOOKINGS_COLLECTION)
-      .doc(docId);
-
+    const bookingRef = _db.collection(BOOKINGS_COLLECTION).doc(docId);
     const snap = await bookingRef.get();
 
     if (!snap.exists) {
@@ -2194,45 +2262,29 @@ window.updateBookingStatus = async function(docId, newStatus, clickedBtn = null)
     }
 
     const bookingData = snap.data() || {};
-
     const bookingPropId = getBookingPropertyId(bookingData);
 
     if (!canAccessProperty(bookingPropId)) {
       throw new Error("غير مسموح لك بتحديث هذا الحجز");
     }
 
+    const ts = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp)
+      ? firebase.firestore.FieldValue.serverTimestamp()
+      : new Date();
+
     await bookingRef.update({
       status: newStatus,
-      updatedAt:
-        firebase?.firestore?.FieldValue?.serverTimestamp?.()
-        || new Date()
+      updatedAt: ts
     });
 
-    showToast(
-      `تم ${isConfirm ? "قبول" : "رفض"} الحجز بنجاح`,
-      "success"
-    );
-
+    showToast(`تم ${isConfirm ? "قبول" : "رفض"} الحجز بنجاح`, "success");
     await loadBookings();
-
   } catch (err) {
-
     console.error("[updateBookingStatus]", err);
-
-    showToast(
-      `حدث خطأ أثناء تحديث حالة الحجز: ${err.message}`,
-      "error"
-    );
-
+    showToast(`حدث خطأ أثناء تحديث حالة الحجز: ${err.message}`, "error");
   } finally {
-
-    buttons.forEach(btn => {
-      btn.disabled = false;
-      btn.style.opacity = "1";
-    });
-
+    buttons.forEach(btn => { btn.disabled = false; btn.style.opacity = "1"; });
   }
-
 };
 
 function updateUploadPreview(file) {
@@ -2338,6 +2390,11 @@ function resetEditUploadPreview() {
 if (DOM.addForm) {
   DOM.addForm.addEventListener("submit", async function(e) {
     e.preventDefault();
+    const _db = getDb();
+    if (!_db) {
+      showToast("Firebase غير متصل — لا يمكن إضافة العقار", "error");
+      return;
+    }
 
     if (!getIsSuperAdmin()) {
       showToast("إضافة العقارات متاحة للمدير العام فقط", "error");
@@ -2397,10 +2454,14 @@ if (DOM.addForm) {
       const validationError = validatePropertyPayload(newProperty, { requireImage: true, requireMap: true });
       if (validationError) throw new Error(validationError);
 
-      await db.collection(PROPERTIES_COLLECTION).add({
+      const ts = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp)
+        ? firebase.firestore.FieldValue.serverTimestamp()
+        : new Date();
+
+      await _db.collection(PROPERTIES_COLLECTION).add({
         ...newProperty,
-        createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-        updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+        createdAt: ts,
+        updatedAt: ts
       });
 
       DOM.addForm.reset();
@@ -2438,6 +2499,11 @@ if (DOM.editModalEl) {
 if (DOM.editForm) {
   DOM.editForm.addEventListener("submit", async function(e) {
     e.preventDefault();
+    const _db = getDb();
+    if (!_db) {
+      showToast("Firebase غير متصل", "error");
+      return;
+    }
 
     const docId = qs("#edit-prop-id")?.value;
     const imageFile = qs("#edit-image")?.files?.[0];
@@ -2474,6 +2540,10 @@ if (DOM.editForm) {
         return;
       }
 
+      const ts = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp)
+        ? firebase.firestore.FieldValue.serverTimestamp()
+        : new Date();
+
       const updateData = {
         titleAr: payload.titleAr,
         titleEn: payload.titleEn,
@@ -2485,7 +2555,7 @@ if (DOM.editForm) {
         type: payload.type,
         lat: payload.lat,
         lng: payload.lng,
-        updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+        updatedAt: ts
       };
 
       if (imageFile) {
@@ -2496,7 +2566,7 @@ if (DOM.editForm) {
         updateData.imageUrl = await uploadToCloudinary(imageFile);
       }
 
-      await db.collection(PROPERTIES_COLLECTION).doc(docId).update(updateData);
+      await _db.collection(PROPERTIES_COLLECTION).doc(docId).update(updateData);
       closeEditModal();
       await loadProperties();
       await loadPropertiesForSelect();
