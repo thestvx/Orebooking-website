@@ -74,11 +74,41 @@
   };
 
   function getDbSafe() {
-    return g.db || null;
+    // Priority 1: window.getDB() from admin.html
+    if (typeof g.getDB === "function") {
+      try {
+        const _db = g.getDB();
+        if (_db) return _db;
+      } catch (e) {
+        console.warn("[admin_bookings_addon] getDB() failed:", e.message);
+      }
+    }
+    // Priority 2: getDb() from admin_fixed.js
+    if (typeof g.getDb === "function") {
+      try {
+        const _db = g.getDb();
+        if (_db) return _db;
+      } catch (e) {
+        console.warn("[admin_bookings_addon] getDb() failed:", e.message);
+      }
+    }
+    // Priority 3: direct firebase access
+    if (typeof g.firebase !== "undefined" && g.firebase.apps && g.firebase.apps.length > 0) {
+      try {
+        return g.firebase.firestore();
+      } catch (e) {
+        console.warn("[admin_bookings_addon] direct firebase.firestore() failed:", e.message);
+      }
+    }
+    console.error("[admin_bookings_addon] ❌ No Firestore instance available. Check admin.html and admin_fixed.js loading order.");
+    return null;
   }
 
   function getFirebaseSafe() {
-    return g.firebase || null;
+    if (typeof g.firebase !== "undefined" && g.firebase) return g.firebase;
+    if (typeof firebase !== "undefined" && firebase) return firebase;
+    console.error("[admin_bookings_addon] ❌ Firebase global not found.");
+    return null;
   }
 
   function serverTimestamp() {
@@ -784,6 +814,58 @@
     } finally {
       BOOKING_STATUS_LOCKS.delete(docId);
       setBookingActionButtonsDisabled(false, actionRow);
+    }
+  };
+
+  // ==========================================
+  // Clear All Bookings (Super Admin only)
+  // ==========================================
+  g.clearAllBookings = async function clearAllBookings() {
+    const db = getDbSafe();
+    if (!db) {
+      showAddonToast("Firebase غير متاح — لا يمكن تنظيف الحجوزات.", "error");
+      return;
+    }
+
+    if (!getIsSuperAdminSafe()) {
+      showAddonToast("فقط المدير العام يمكنه تنظيف الحجوزات.", "error");
+      return;
+    }
+
+    if (!confirm("⚠️ هل أنت متأكد من حذف ALL الحجوزات؟\n\nهذا الإجراء لا يمكن التراجع عنه!")) return;
+    if (!confirm("تأكيد نهائي: سيتم حذف كل الحجوزات من قاعدة البيانات. متأكد؟")) return;
+
+    try {
+      showAddonToast("جارٍ تنظيف الحجوزات...", "info");
+
+      const snapshot = await db.collection(COLLECTIONS.bookings).get();
+      if (snapshot.empty) {
+        showAddonToast("لا توجد حجوزات للحذف.", "info");
+        return;
+      }
+
+      const batch = db.batch();
+      let count = 0;
+
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+        count++;
+      });
+
+      await batch.commit();
+
+      showAddonToast(`✅ تم حذف ${count} حجز بنجاح.`, "success");
+
+      // Refresh the view
+      if (typeof g.loadBookings === "function") {
+        await g.loadBookings();
+      }
+      if (typeof g.updateAdminQuickStats === "function") {
+        g.updateAdminQuickStats();
+      }
+    } catch (err) {
+      console.error("[admin_bookings_addon:clearAllBookings]", err);
+      showAddonToast("حدث خطأ أثناء تنظيف الحجوزات: " + (err?.message || "Unknown error"), "error");
     }
   };
 
