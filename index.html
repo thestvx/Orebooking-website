@@ -78,6 +78,7 @@
             margin: 0;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            transition: background-color .3s ease, color .3s ease;
         }
 
         html[dir="rtl"] body {
@@ -200,6 +201,37 @@
 
         .delay-4 {
             animation-delay: 0.32s;
+        }
+
+        .delay-5 {
+            animation-delay: 0.4s;
+        }
+
+        .ore-reveal {
+            opacity: 0;
+            transform: translateY(22px) scale(0.985);
+            transition:
+                opacity 0.7s ease,
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            transition-delay: var(--ore-delay, 0ms);
+            will-change: opacity, transform;
+        }
+
+        .ore-reveal.ore-reveal-in {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .animate-up,
+            .ore-reveal,
+            .ore-reveal.ore-reveal-in {
+                animation: none;
+                transition: none;
+                opacity: 1;
+                transform: none;
+            }
         }
 
         [class^="ph-"],
@@ -390,21 +422,32 @@
             text-align: center;
         }
 
-        .hero h1 {
+        .hero-copy {
+            max-width: 860px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .hero h1,
+        #hero-title {
             font-size: clamp(2.4rem, 5vw, 4rem);
             letter-spacing: -0.03em;
-            margin: 0 0 16px;
+            margin: 0 auto 16px;
             line-height: 1.1;
             font-weight: 800;
             color: var(--text-main);
+            max-width: 980px;
+            text-align: center;
         }
 
-        .hero p {
+        .hero p,
+        #hero-desc {
             font-size: 1.1rem;
             color: var(--text-muted);
             max-width: 760px;
             margin: 0 auto 34px;
             line-height: 1.8;
+            text-align: center;
         }
 
         .hero-badges {
@@ -625,23 +668,38 @@
 
         .section-header-wrapper {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             margin-bottom: 20px;
             flex-wrap: wrap;
             gap: 16px;
+            text-align: center;
+        }
+
+        .section-header-main {
+            flex: 1 1 100%;
+            text-align: center;
         }
 
         .section-header-wrapper h2 {
             margin: 0 0 8px;
             font-size: 1.8rem;
+            text-align: center;
+        }
+
+        .section-header-wrapper p {
+            margin: 0;
+            color: var(--text-muted);
+            text-align: center;
         }
 
         .section-header-controls {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
             flex-wrap: wrap;
+            width: 100%;
         }
 
         .sort-select,
@@ -939,6 +997,7 @@
             border: 2px solid #fff;
         }
 
+        .modal-overlay,
         .bookings-modal,
         .chat-modal {
             position: fixed;
@@ -951,11 +1010,13 @@
             padding: 18px;
         }
 
+        .modal-overlay.active,
         .bookings-modal.active,
         .chat-modal.active {
             display: flex;
         }
 
+        .modal-content,
         .bookings-modal-dialog {
             width: min(960px, 100%);
             max-height: 90vh;
@@ -966,6 +1027,215 @@
             box-shadow: var(--shadow-hover);
             display: flex;
             flex-direction: column;
+        }
+
+        .auth-card {
+            width: min(460px, 100%);
+        }
+
+        .auth-header {
+            padding: 22px 24px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+        }
+
+        .auth-content {
+            padding: 24px;
+        }
+
+        .auth-form {
+            display: none;
+            flex-direction: column;
+        }
+
+        .auth-form.active {
+            display: flex;
+        }
+
+        .auth-title {
+            margin: 0 0 8px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .auth-subtitle {
+            margin: 0 0 18px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.7;
+        }
+
+        .auth-message {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .auth-message.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+            border: 1px solid rgba(239, 68, 68, .18);
+        }
+
+        .auth-message.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            border: 1px solid rgba(16, 185, 129, .18);
+        }
+
+        .close-modal-btn,
+        .bookings-modal-header button,
+        .chat-close-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .close-modal-btn {
+            position: absolute;
+            top: 16px;
+            inset-inline-end: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .input-group input,
+        .chat-input-area textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-main);
+            outline: none;
+        }
+
+        .pass-wrapper {
+            position: relative;
+        }
+
+        .toggle-pass-btn {
+            position: absolute;
+            top: 50%;
+            inset-inline-end: 10px;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .password-strength {
+            display: block;
+            margin-top: -6px;
+            margin-bottom: 14px;
+        }
+
+        .strength-bars {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .str-bar {
+            height: 6px;
+            border-radius: 999px;
+            background: var(--border-color);
+        }
+
+        .strength-label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .auth-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .auth-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 600;
+        }
+
+        .auth-checkmark {
+            width: 18px;
+            height: 18px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border-color);
+            background: var(--surface-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .forgot-link {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .social-logins {
+            display: flex;
+            gap: 12px;
+            margin-top: 14px;
+            margin-bottom: 18px;
+        }
+
+        .social-btn {
+            flex: 1;
+            min-height: 46px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-main);
+            cursor: pointer;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .switch-form-text {
+            text-align: center;
+            line-height: 1.7;
+            color: var(--text-muted);
+        }
+
+        .switch-form-text a {
+            color: var(--primary);
+            font-weight: 800;
         }
 
         .bookings-modal-header {
@@ -985,17 +1255,6 @@
             gap: 10px;
         }
 
-        .bookings-modal-header button,
-        .chat-close-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            background: var(--surface-color);
-            color: var(--text-main);
-            cursor: pointer;
-        }
-
         .bookings-modal-body {
             padding: 24px;
             max-height: min(72vh, 700px);
@@ -1003,7 +1262,8 @@
             background: var(--bg-color);
         }
 
-        .booking-card {
+        .booking-card,
+        .booking-entry {
             background: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 18px;
@@ -1012,39 +1272,33 @@
             box-shadow: var(--shadow-sm);
         }
 
-        .booking-card:last-child {
+        .booking-entry:last-child {
             margin-bottom: 0;
         }
 
-        .booking-card-head {
+        .booking-entry-head {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 14px;
-            margin-bottom: 14px;
             flex-wrap: wrap;
         }
 
-        .booking-card-head h4 {
-            margin: 0 0 4px;
+        .booking-entry-title {
+            margin: 0 0 6px;
             font-size: 1.05rem;
+            font-weight: 800;
         }
 
-        .booking-card-sub {
+        .booking-entry-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
             color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .booking-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 10px 16px;
             font-size: 0.92rem;
-            color: var(--text-main);
-            margin-bottom: 14px;
         }
 
-        .booking-status {
+        .booking-status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -1054,17 +1308,17 @@
             font-weight: 800;
         }
 
-        .booking-status.pending {
+        .booking-status-badge.pending {
             background: rgba(245, 158, 11, .12);
             color: #b45309;
         }
 
-        .booking-status.confirmed {
+        .booking-status-badge.confirmed {
             background: rgba(16, 185, 129, .12);
             color: #047857;
         }
 
-        .booking-status.cancelled {
+        .booking-status-badge.cancelled {
             background: rgba(239, 68, 68, .12);
             color: #b91c1c;
         }
@@ -1120,7 +1374,8 @@
             color: var(--text-muted);
         }
 
-        .chat-modal-body {
+        .chat-modal-body,
+        #chat-messages {
             flex: 1;
             overflow-y: auto;
             background: var(--bg-color);
@@ -1179,18 +1434,6 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-        }
-
-        .chat-input-area textarea {
-            resize: none;
-            min-height: 92px;
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-color);
-            outline: none;
-            color: var(--text-main);
         }
 
         .chat-actions {
@@ -1439,7 +1682,7 @@
     </style>
 </head>
 
-<body>
+<body data-view="home">
     <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
     <div id="fav-toast" aria-live="polite"></div>
 
@@ -1451,7 +1694,7 @@
         <div class="nav-actions">
             <div class="rewards-badge" id="nav-rewards-badge">
                 <i class="ph-fill ph-gift"></i>
-                <span data-i18n="rewards_badge">Loyalty Rewards</span>
+                <span>Loyalty Rewards</span>
             </div>
 
             <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
@@ -1460,7 +1703,7 @@
 
             <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
                 <i class="ph ph-translate"></i>
-                <span id="lang-toggle-text">AR</span>
+                <span id="lang-toggle-text">العربية</span>
             </button>
 
             <a id="auth-cta" class="auth-link-btn" href="auth.html?redirect=index.html">
@@ -1468,32 +1711,32 @@
                 <span data-i18n="sign_in">Sign In</span>
             </a>
 
-            <div class="profile-container hidden" id="profile-container">
-                <button id="open-auth-btn" class="profile-menu" type="button" aria-label="Account"
+            <div class="profile-container">
+                <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button" aria-label="Account"
                     aria-haspopup="true" aria-expanded="false" aria-controls="profile-dropdown">
                     <i class="ph ph-user"></i>
                 </button>
 
                 <div id="profile-dropdown" role="menu">
                     <div class="dropdown-header">
-                        <strong id="dropdown-user-name">Guest User</strong>
-                        <span id="dropdown-user-email" class="text-muted text-sm">Sign in to continue</span>
+                        <span id="dropdown-user-name">Guest User</span>
+                        <span id="dropdown-user-email" class="text-muted">Sign in to continue</span>
                     </div>
 
                     <div class="dropdown-body">
                         <button class="dropdown-item" id="my-bookings-btn" type="button" role="menuitem">
                             <i class="ph ph-calendar-check"></i>
-                            <span data-i18n="my_bookings">My Bookings</span>
+                            <span data-i18n="mybookings">My Bookings</span>
                         </button>
 
                         <button class="dropdown-item" id="my-favorites-btn" type="button" role="menuitem">
                             <i class="ph ph-heart"></i>
-                            <span data-i18n="my_favorites">My Favorites</span>
+                            <span data-i18n="myfavorites">Favorites</span>
                         </button>
 
                         <button class="dropdown-item" id="open-chat-btn" type="button" role="menuitem">
                             <i class="ph ph-chat-centered-text"></i>
-                            <span data-i18n="support_chat">Support Chat</span>
+                            <span data-i18n="supportchat">Support Chat</span>
                         </button>
 
                         <button class="dropdown-item text-danger" id="logout-btn" type="button" role="menuitem">
@@ -1509,128 +1752,114 @@
     <main>
         <section class="hero">
             <div class="container">
-                <div class="hero-badges animate-up">
-                    <div class="hero-badge">
-                        <i class="ph ph-shield-check"></i>
-                        <span data-i18n="hero_badge_verified">Verified stays</span>
-                    </div>
-
-                    <div class="hero-badge">
-                        <i class="ph ph-lightning"></i>
-                        <span data-i18n="hero_badge_fast">Fast booking</span>
-                    </div>
-
-                    <div class="hero-badge">
-                        <i class="ph ph-headset"></i>
-                        <span data-i18n="hero_badge_support">24/7 support</span>
-                    </div>
-                </div>
-
-                <h1 class="animate-up delay-1" data-i18n="hero_title">Find your next premium stay</h1>
-                <p class="animate-up delay-2" data-i18n="hero_subtitle">
-                    Discover hotels, apartments, and villas with a smooth booking experience designed for comfort,
-                    speed, and trust.
-                </p>
-
-                <form id="home-search-form" class="search-bar animate-up delay-3" autocomplete="off">
-                    <div class="search-field">
-                        <label for="search-location" data-i18n="search_location">Location</label>
-                        <input id="search-location" type="text" placeholder="City, area, or property"
-                            data-i18n-placeholder="search_location_placeholder">
-                        <div id="search-location-dropdown" class="search-dropdown" aria-label="Location suggestions">
-                            <div class="search-empty" data-i18n="search_start_typing">Start typing to see suggestions</div>
+                <div class="hero-copy">
+                    <div class="hero-badges ore-reveal ore-reveal-in">
+                        <div class="hero-badge" id="hero-badge">
+                            <i class="ph-fill ph-crown-simple"></i>
+                            <span>Premium stays</span>
+                        </div>
+                        <div class="hero-badge">
+                            <i class="ph-fill ph-shield-check"></i>
+                            <span>Trusted booking flow</span>
+                        </div>
+                        <div class="hero-badge">
+                            <i class="ph-fill ph-map-pin"></i>
+                            <span>Across Algeria</span>
                         </div>
                     </div>
 
-                    <div class="search-divider" aria-hidden="true"></div>
+                    <h1 id="hero-title" class="animate-up">
+                        Find your ideal stay in Algeria
+                    </h1>
 
+                    <p id="hero-desc" class="animate-up delay-1">
+                        Carefully selected hotels, apartments, and villas with a smooth booking experience.
+                    </p>
+                </div>
+
+                <div class="search-bar animate-up delay-2">
                     <div class="search-field">
-                        <label for="search-checkin" data-i18n="search_checkin">Check-in</label>
-                        <input id="search-checkin" type="date">
+                        <label for="destination-input" data-i18n="search_hint">Search by city, wilaya, or property name</label>
+                        <input id="destination-input" type="text" data-search="destination"
+                            placeholder="Search city or property" autocomplete="off">
+                        <div class="search-dropdown" id="search-dropdown"></div>
                     </div>
 
                     <div class="search-divider" aria-hidden="true"></div>
 
                     <div class="search-field">
-                        <label for="search-checkout" data-i18n="search_checkout">Check-out</label>
-                        <input id="search-checkout" type="date">
+                        <label for="search-checkin">Check-in</label>
+                        <input id="search-checkin" type="date" name="checkin">
                     </div>
 
                     <div class="search-divider" aria-hidden="true"></div>
 
                     <div class="search-field">
-                        <label for="search-guests" data-i18n="search_guests">Guests</label>
-                        <input id="search-guests" type="number" min="1" value="1" placeholder="1">
+                        <label for="search-checkout">Check-out</label>
+                        <input id="search-checkout" type="date" name="checkout">
                     </div>
 
-                    <button id="search-btn" class="search-btn" type="submit">
+                    <div class="search-divider" aria-hidden="true"></div>
+
+                    <div class="search-field">
+                        <label for="search-guests">Guests</label>
+                        <input id="search-guests" type="number" name="guests" min="1" max="20" value="2"
+                            placeholder="2">
+                    </div>
+
+                    <button id="search-btn" class="search-btn" type="button">
                         <i class="ph ph-magnifying-glass"></i>
                         <span data-i18n="search_btn">Search</span>
                     </button>
-                </form>
+                </div>
             </div>
         </section>
 
-        <section class="categories container" aria-label="Property categories">
+        <section class="categories">
             <button class="category-item active" type="button" data-category="all">
-                <i class="ph ph-squares-four"></i>
-                <span data-i18n="cat_all">All</span>
+                <i class="ph ph-buildings"></i>
+                <span data-i18n="cat_all">All stays</span>
             </button>
 
-            <button class="category-item" type="button" data-category="hotel">
-                <i class="ph ph-buildings"></i>
+            <button class="category-item" type="button" data-category="hotels">
+                <i class="ph ph-bed"></i>
                 <span data-i18n="cat_hotels">Hotels</span>
             </button>
 
-            <button class="category-item" type="button" data-category="apartment">
-                <i class="ph ph-building-apartment"></i>
+            <button class="category-item" type="button" data-category="apartments">
+                <i class="ph ph-house-line"></i>
                 <span data-i18n="cat_apartments">Apartments</span>
             </button>
 
-            <button class="category-item" type="button" data-category="villa">
-                <i class="ph ph-house-line"></i>
+            <button class="category-item" type="button" data-category="villas">
+                <i class="ph ph-house"></i>
                 <span data-i18n="cat_villas">Villas</span>
-            </button>
-
-            <button class="category-item" type="button" data-category="resort">
-                <i class="ph ph-island"></i>
-                <span data-i18n="cat_resorts">Resorts</span>
             </button>
         </section>
 
-        <section class="container" id="results-section">
-            <div class="section-header-wrapper">
-                <div>
-                    <h2 id="results-heading" data-i18n="results_title">Popular stays</h2>
-                    <p class="text-muted" id="results-subtitle" data-i18n="results_subtitle">
-                        Explore carefully selected places for your next trip.
-                    </p>
+        <section class="container">
+            <div class="section-header-wrapper ore-reveal">
+                <div class="section-header-main">
+                    <h2 id="section-main-title" data-section-title data-i18n="featured_title">Featured properties</h2>
+                    <p>Explore handpicked stays with comfort, style, and fast booking.</p>
                 </div>
 
                 <div class="section-header-controls">
-                    <button id="clear-search-btn" class="clear-search-btn" type="button">
-                        <i class="ph ph-x-circle"></i>
-                        <span data-i18n="clear_filters">Clear Filters</span>
-                    </button>
-
-                    <select id="sort-select" class="sort-select" aria-label="Sort listings">
-                        <option value="recommended" data-i18n="sort_recommended">Recommended</option>
-                        <option value="price-low" data-i18n="sort_price_low">Price: Low to High</option>
-                        <option value="price-high" data-i18n="sort_price_high">Price: High to Low</option>
-                        <option value="rating-high" data-i18n="sort_rating_high">Top Rated</option>
+                    <select id="sort-select" class="sort-select" data-sort-select>
+                        <option value="featured" data-i18n="sort_featured">Featured</option>
+                        <option value="rating" data-i18n="sort_rating">Top rated</option>
+                        <option value="price_low" data-i18n="sort_price_low">Price: low to high</option>
+                        <option value="price_high" data-i18n="sort_price_high">Price: high to low</option>
                     </select>
+
+                    <button id="clear-search-btn" class="clear-search-btn" type="button" data-clear-search>
+                        <i class="ph ph-x"></i>
+                        <span data-i18n="clear_search">Clear search</span>
+                    </button>
                 </div>
             </div>
 
-            <div id="listings-grid" aria-live="polite">
-                <div class="listings-empty-state" id="listings-empty-state">
-                    <i class="ph ph-house"></i>
-                    <strong data-i18n="loading_properties">Loading properties...</strong>
-                    <p class="text-muted" data-i18n="loading_properties_subtitle">
-                        Please wait while we fetch the latest listings.
-                    </p>
-                </div>
-            </div>
+            <div id="listings-grid" class="listings-grid" aria-live="polite"></div>
         </section>
     </main>
 
@@ -1643,35 +1872,170 @@
         <i class="ph ph-arrow-up"></i>
     </button>
 
+    <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
+        <div class="mobile-nav-inner">
+            <button id="mob-stays-btn" class="mob-nav-btn active" type="button">
+                <i class="ph ph-house-line"></i>
+                <span data-i18n="mobile_stays">Stays</span>
+            </button>
+
+            <button id="mob-fav-btn" class="mob-nav-btn" type="button">
+                <i class="ph ph-heart"></i>
+                <span data-i18n="mobile_favorites">Favorites</span>
+            </button>
+
+            <button id="mob-profile-btn" class="mob-nav-btn" type="button">
+                <i class="ph ph-user-circle"></i>
+                <span data-i18n="mobile_profile">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="modal-overlay" id="auth-modal" aria-hidden="true">
+        <div class="modal-content auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+            <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
+                <i class="ph ph-x"></i>
+            </button>
+
+            <div class="auth-header">
+                <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="modal-logo">
+            </div>
+
+            <div class="auth-content">
+                <div id="auth-message" class="auth-message"></div>
+
+                <form id="login-form" class="auth-form active" novalidate>
+                    <h2 class="auth-title" id="auth-dialog-title" data-i18n="welcomeback">Welcome back</h2>
+                    <p class="auth-subtitle" data-i18n="logindesc">Enter your details to access your account.</p>
+
+                    <div class="input-group">
+                        <label for="login-email" data-i18n="email">Email Address</label>
+                        <input type="email" id="login-email" placeholder="name@example.com" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="login-password" data-i18n="password">Password</label>
+                        <div class="pass-wrapper">
+                            <input type="password" id="login-password" placeholder="••••••••" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="auth-options">
+                        <label class="auth-check">
+                            <input type="checkbox" checked>
+                            <span class="auth-checkmark"></span>
+                            <span data-i18n="rememberme">Remember me</span>
+                        </label>
+
+                        <a href="#" class="forgot-link" id="go-to-forgot" data-i18n="forgotpass">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="primary-btn" id="login-submit-btn">
+                        <span data-i18n="signin">Sign In</span>
+                    </button>
+
+                    <div class="social-logins">
+                        <button type="button" class="social-btn" id="google-login-btn">
+                            <i class="ph ph-google-logo"></i>
+                            <span>Google</span>
+                        </button>
+                    </div>
+
+                    <p class="switch-form-text">
+                        <span data-i18n="noaccount">Don't have an account?</span>
+                        <a href="#" id="go-to-register" data-i18n="signup">Sign up</a>
+                    </p>
+                </form>
+
+                <form id="register-form" class="auth-form" novalidate>
+                    <h2 class="auth-title" data-i18n="createaccount">Create an account</h2>
+                    <p class="auth-subtitle" data-i18n="registerdesc">Join OreBooking to unlock premium features.</p>
+
+                    <div class="input-group">
+                        <label for="reg-name" data-i18n="fullname">Full Name</label>
+                        <input type="text" id="reg-name" placeholder="John Doe" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="reg-email" data-i18n="email">Email Address</label>
+                        <input type="email" id="reg-email" placeholder="name@example.com" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="reg-password" data-i18n="password">Password</label>
+                        <div class="pass-wrapper">
+                            <input type="password" id="reg-password" placeholder="Create password" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="password-strength" id="password-strength">
+                        <div class="strength-bars">
+                            <div class="str-bar"></div>
+                            <div class="str-bar"></div>
+                            <div class="str-bar"></div>
+                            <div class="str-bar"></div>
+                        </div>
+                        <div class="strength-label" id="strength-label"></div>
+                    </div>
+
+                    <button type="submit" class="primary-btn" id="register-submit-btn">
+                        <span data-i18n="signupbtn">Create Account</span>
+                    </button>
+
+                    <div class="social-logins">
+                        <button type="button" class="social-btn" id="google-register-btn">
+                            <i class="ph ph-google-logo"></i>
+                            <span>Google</span>
+                        </button>
+                    </div>
+
+                    <p class="switch-form-text">
+                        <span data-i18n="hasaccount">Already have an account?</span>
+                        <a href="#" id="go-to-login">Sign in</a>
+                    </p>
+                </form>
+
+                <form id="forgot-form" class="auth-form" novalidate>
+                    <h2 class="auth-title" data-i18n="resetpasstitle">Reset Password</h2>
+                    <p class="auth-subtitle" data-i18n="resetpassdesc">Enter your email and we'll send you a reset link.</p>
+
+                    <div class="input-group">
+                        <label for="forgot-email" data-i18n="email">Email Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@example.com" required>
+                    </div>
+
+                    <button type="submit" class="primary-btn">
+                        <span data-i18n="send_link">Send reset link</span>
+                    </button>
+
+                    <p class="switch-form-text">
+                        <a href="#" id="back-to-login" data-auth-view="login">Back to login</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
         <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-modal-title">
             <div class="bookings-modal-header">
                 <h3 id="bookings-modal-title">
                     <i class="ph ph-calendar-check"></i>
-                    <span data-i18n="my_bookings">My Bookings</span>
+                    <span data-i18n="mybookings">My Bookings</span>
                 </h3>
-
-                <button id="close-bookings-btn" type="button" aria-label="Close bookings">
+                <button id="close-bookings-btn" type="button" aria-label="Close">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="bookings-modal-body" id="bookings-list">
-                <div class="booking-card">
-                    <div class="booking-card-head">
-                        <div>
-                            <h4 data-i18n="no_bookings_yet">No bookings yet</h4>
-                            <div class="booking-card-sub" data-i18n="no_bookings_subtitle">
-                                Your upcoming and previous reservations will appear here.
-                            </div>
-                        </div>
-
-                        <span class="booking-status pending">
-                            <i class="ph ph-clock-countdown"></i>
-                            <span data-i18n="empty_state">Empty</span>
-                        </span>
-                    </div>
-                </div>
+            <div class="bookings-modal-body">
+                <div id="bookings-list"></div>
             </div>
         </div>
     </div>
@@ -1683,74 +2047,69 @@
                     <div class="chat-avatar">
                         <i class="ph ph-headset"></i>
                     </div>
-
                     <div class="chat-title-text">
-                        <h3 id="chat-title" data-i18n="support_chat">Support Chat</h3>
-                        <p id="chat-subtitle" data-i18n="chat_subtitle">
-                            Ask about availability, bookings, or listing details.
-                        </p>
+                        <h3 id="chat-title" data-i18n="chat_title">Support chat</h3>
+                        <p id="chat-subtitle" data-i18n="chat_subtitle">We usually reply quickly</p>
                     </div>
                 </div>
 
-                <button id="close-chat-btn" class="chat-close-btn" type="button" aria-label="Close chat">
+                <button class="chat-close-btn" id="chat-close-btn" type="button" aria-label="Close chat">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="chat-modal-body" id="chat-messages">
+            <div id="chat-messages" class="chat-modal-body">
                 <div class="chat-empty-state" id="chat-empty-state">
-                    <i class="ph ph-chat-centered-text"></i>
-                    <p id="chat-empty-title" data-i18n="chat_empty_title">No messages yet.</p>
-                    <p id="chat-empty-subtitle" data-i18n="chat_empty_subtitle">
-                        Start the conversation and our team will get back to you.
-                    </p>
+                    <i class="ph ph-chat-circle-dots"></i>
+                    <div id="chat-empty-title">No messages yet.</div>
+                    <p id="chat-empty-subtitle">Start the conversation and mention this property to contact support.</p>
                 </div>
             </div>
 
             <div class="chat-input-area">
-                <input type="hidden" id="chat-property-id" value="">
-                <textarea id="chat-message-input" placeholder="Type your message here..."
-                    data-i18n-placeholder="chat_message_placeholder"></textarea>
+                <input type="hidden" id="chat-property-id" value="global">
+                <textarea id="chat-textarea" placeholder="Type your message"></textarea>
 
                 <div class="chat-actions">
-                    <span class="chat-note" id="chat-note" data-i18n="chat_note">
-                        This chat is linked to your OreBooking account when signed in.
-                    </span>
+                    <div class="chat-note" id="chat-note">This chat works now and can also be connected to Firestore later.</div>
 
-                    <button class="primary-btn chat-send-btn" type="button" id="send-chat-btn">
+                    <button class="primary-btn chat-send-btn" id="chat-send-btn" type="button">
                         <i class="ph ph-paper-plane-tilt"></i>
-                        <span id="send-chat-text" data-i18n="send_message">Send Message</span>
+                        <span id="send-chat-text" data-i18n="send_message">Send message</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
-        <div class="mobile-nav-inner">
-            <button class="mob-nav-btn active" id="mob-home-btn" type="button">
-                <i class="ph ph-house"></i>
-                <span data-i18n="nav_home">Home</span>
-            </button>
+    <script>
+        (function () {
+            try {
+                const savedLang = localStorage.getItem("ore_lang") || localStorage.getItem("orelang") || "en";
+                const label = document.getElementById("lang-toggle-text");
+                if (label) {
+                    label.textContent = savedLang === "ar" ? "English" : "العربية";
+                }
+            } catch (_) { }
+        })();
+    </script>
 
-            <button class="mob-nav-btn" id="mob-favorites-btn" type="button">
-                <i class="ph ph-heart"></i>
-                <span data-i18n="nav_favorites">Favorites</span>
-            </button>
+    <script>
+        (function () {
+            const btn = document.getElementById("scroll-top-btn");
+            if (!btn) return;
 
-            <button class="mob-nav-btn" id="mob-bookings-btn" type="button">
-                <i class="ph ph-calendar-check"></i>
-                <span data-i18n="nav_bookings">Bookings</span>
-            </button>
+            function onScroll() {
+                if (window.scrollY > 280) btn.classList.add("visible");
+                else btn.classList.remove("visible");
+            }
 
-            <button class="mob-nav-btn" id="mob-profile-btn" type="button">
-                <i class="ph ph-user"></i>
-                <span data-i18n="nav_profile">Profile</span>
-            </button>
-        </div>
-    </nav>
+            window.addEventListener("scroll", onScroll, { passive: true });
+            onScroll();
+        })();
+    </script>
 
-    <script src="script.js?v=2.4" defer></script>
+    <script src="script.js?v=2.6" defer></script>
 </body>
 
 </html>
