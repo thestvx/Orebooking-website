@@ -24,6 +24,30 @@ function getDb() {
   return null;
 }
 
+async function testFirestoreConnection() {
+  const _db = getDb();
+  if (!_db) {
+    console.error("[OreBooking] ❌ Firestore not initialized — check Firebase config");
+    return false;
+  }
+  try {
+    // Try a lightweight operation to verify connection
+    const testSnap = await _db.collection(PROPERTIES_COLLECTION).limit(1).get({ source: "server" });
+    console.log("[OreBooking] ✅ Firestore connection OK");
+    return true;
+  } catch (err) {
+    console.error("[OreBooking] ❌ Firestore connection failed:", err.code || err.message);
+    if (err.code === "permission-denied") {
+      console.error("[OreBooking] → Check Firestore Rules in Firebase Console");
+    } else if (err.code === "not-found") {
+      console.error("[OreBooking] → Project/database not found — check projectId");
+    } else if (err.code === "unavailable" || err.message?.includes("backend")) {
+      console.error("[OreBooking] → Network/Firewall issue. Try: disable AdBlock, use VPN, or check internet");
+    }
+    return false;
+  }
+}
+
 function initFirebase() {
   try {
     if (typeof firebase === "undefined") {
@@ -46,6 +70,19 @@ function initFirebase() {
     }
 
     db = firebase.firestore();
+
+    // Fix connection issues in restrictive networks (corporate firewalls, some ISPs)
+    try {
+      db.settings({
+        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: false,
+        merge: true
+      });
+      console.log("[OreBooking] Firestore long polling enabled");
+    } catch (settingsErr) {
+      console.warn("[OreBooking] Could not set Firestore settings:", settingsErr.message);
+    }
+
     _firebaseReady = true;
     console.log("[OreBooking] Firebase initialized successfully ✅");
     return true;
@@ -2725,6 +2762,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   initializeBookingFilters();
   bindStaticButtons();
   initUploadHooks();
+
+  // Test Firestore connection before loading data
+  const connectionOk = await testFirestoreConnection();
+  if (!connectionOk) {
+    showToast("⚠️ تعذر الاتصال بقاعدة البيانات. تحقق من الإنترنت أو إعدادات Firebase.", "error");
+  }
 
   const hasSession = (!!localStorage.getItem(SESSION_KEYS.role) || !!localStorage.getItem(SESSION_KEYS.ownerPropId)) && ensureValidSession();
 
