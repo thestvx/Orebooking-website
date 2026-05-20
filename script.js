@@ -3,11 +3,12 @@
 /* =========================================
    OreBooking - script.js
    Shared app script
-   - public property details
+   - public listings / property helpers
    - protected booking redirect
    - Firebase auth
-   - listings / favorites / bookings / chat
+   - favorites / bookings / chat
    - theme / language sync
+   - resilient DOM handling
 ========================================= */
 
 (function () {
@@ -53,6 +54,39 @@
     } catch (_) {}
   }
 
+  function safeGetAny(keys, fallback = "") {
+    const list = Array.isArray(keys) ? keys : [keys];
+    for (const key of list) {
+      const value = safeGet(key, "");
+      if (value !== "") return value;
+    }
+    return fallback;
+  }
+
+  function safeJsonGetAny(keys, fallback = null) {
+    const list = Array.isArray(keys) ? keys : [keys];
+    for (const key of list) {
+      const value = safeJsonGet(key, null);
+      if (value !== null) return value;
+    }
+    return fallback;
+  }
+
+  function safeSetMany(keys, value) {
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach((key) => safeSet(key, value));
+  }
+
+  function safeJsonSetMany(keys, value) {
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach((key) => safeJsonSet(key, value));
+  }
+
+  function safeRemoveMany(keys) {
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach((key) => safeRemove(key));
+  }
+
   /* =========================================
      2) CONFIG / ROUTES
   ========================================= */
@@ -67,13 +101,25 @@
     selectedPropertyData: "selectedPropertyData",
     oreSelectedProperty: "ore_selected_property",
     bookingPropertySnapshot: "booking_property_snapshot",
-    bookingContext: "booking_context"
+    bookingContext: "booking_context",
+    chatGuest: "ore_chat_guest"
+  };
+
+  const STORAGE_ALIASES = {
+    lang: [STORAGE_KEYS.lang, "orelang"],
+    theme: [STORAGE_KEYS.theme, "oretheme"],
+    favoritesCommon: [STORAGE_KEYS.favorites, "ore_favorites_common", "orefavorites"],
+    selectedPropertyData: [
+      STORAGE_KEYS.selectedPropertyData,
+      STORAGE_KEYS.oreSelectedProperty,
+      STORAGE_KEYS.bookingPropertySnapshot
+    ]
   };
 
   const ROUTES = {
     home: "index.html",
     auth: "auth.html",
-    details: safeGet("ore_property_page", "property.html"), // غيّرها إلى details.html لو هذا اسم صفحتك
+    details: safeGet("ore_property_page", "property.html"),
     booking: safeGet("ore_booking_page", "booking.html"),
     favorites: safeGet("ore_favorites_page", "favorites.html"),
     bookings: safeGet("ore_bookings_page", "bookings.html")
@@ -89,13 +135,17 @@
     measurementId: "G-5GKMRMVHC3"
   };
 
+  const BOOKINGS_COLLECTION_CANDIDATES = ["bookings", "reservations", "userBookings"];
+  const CHAT_REPLY_DELAY = 900;
+  const MAX_CHAT_MESSAGE_LENGTH = 1200;
+
   /* =========================================
      3) STATE
   ========================================= */
   const state = {
     initialized: false,
-    lang: safeGet(STORAGE_KEYS.lang, "en") || "en",
-    theme: safeGet(STORAGE_KEYS.theme, "light") || "light",
+    lang: safeGetAny(STORAGE_ALIASES.lang, "en") === "ar" ? "ar" : "en",
+    theme: safeGetAny(STORAGE_ALIASES.theme, "light") === "dark" ? "dark" : "light",
     user: null,
     currentView: "home",
     activeSearch: "",
@@ -108,6 +158,7 @@
     propertyCollectionCandidates: ["properties", "listings", "propertyListings", "stays", "hotels"],
     authReady: false,
     firestoreReady: false,
+    loadingBookings: false,
     bookings: [],
     chatMessages: [],
     favorites: []
@@ -126,10 +177,15 @@
       page_title: "OreBooking - Premium Stays",
       sign_in: "Sign In",
       sign_out: "Sign out",
+      logout: "Log Out",
       my_bookings: "My bookings",
       favorites: "Favorites",
+      myfavorites: "Favorites",
+      mybookings: "My Bookings",
       guest_user: "Guest User",
+      guestuser: "Guest User",
       logged_in_as: "Signed in",
+      sign_in_to_continue: "Sign in to continue",
       where_placeholder: "Search city or property",
       search_btn: "Search",
       clear_search: "Clear search",
@@ -160,7 +216,7 @@
       invalid_credentials: "Invalid email or password.",
       invalid_email: "Please enter a valid email address.",
       fill_required: "Please fill all required fields.",
-      loading: "Loading properties...",
+      loading: "Loading...",
       no_props: "No properties available yet.",
       property_load_error: "Could not load live properties. Showing fallback data.",
       support_toast: "Message sent. Our team will reply soon.",
@@ -182,8 +238,10 @@
       booking_total: "Total:",
       search_hint: "Search by city, wilaya, or property name",
       email: "Email Address",
+      emailaddress: "Email Address",
       password: "Password",
       full_name: "Full Name",
+      fullname: "Full Name",
       remember_me: "Remember me",
       forgot_pass: "Forgot password?",
       send_link: "Send reset link",
@@ -197,16 +255,23 @@
       no_bookings: "No bookings yet.",
       bookings_load_error: "Could not load your bookings.",
       loading_bookings: "Loading bookings...",
-      message_required: "Please type a message first."
+      message_required: "Please type a message first.",
+      home: "Home",
+      pts: "Pts"
     },
     ar: {
       page_title: "OreBooking - إقامات مميزة",
       sign_in: "تسجيل الدخول",
       sign_out: "تسجيل الخروج",
+      logout: "تسجيل الخروج",
       my_bookings: "حجوزاتي",
       favorites: "المفضلة",
+      myfavorites: "المفضلة",
+      mybookings: "حجوزاتي",
       guest_user: "زائر",
+      guestuser: "زائر",
       logged_in_as: "تم تسجيل الدخول",
+      sign_in_to_continue: "سجّل الدخول للمتابعة",
       where_placeholder: "ابحث عن مدينة أو عقار",
       search_btn: "ابحث",
       clear_search: "مسح البحث",
@@ -237,7 +302,7 @@
       invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
       invalid_email: "يرجى إدخال بريد إلكتروني صحيح.",
       fill_required: "يرجى تعبئة جميع الحقول المطلوبة.",
-      loading: "جارٍ تحميل العقارات...",
+      loading: "جارٍ التحميل...",
       no_props: "لا توجد عقارات متاحة بعد.",
       property_load_error: "تعذر تحميل العقارات المباشرة، وتم عرض البيانات البديلة.",
       support_toast: "تم إرسال الرسالة، وسيرد فريقنا قريبًا.",
@@ -259,8 +324,10 @@
       booking_total: "الإجمالي:",
       search_hint: "ابحث بالمدينة أو الولاية أو اسم العقار",
       email: "البريد الإلكتروني",
+      emailaddress: "البريد الإلكتروني",
       password: "كلمة المرور",
       full_name: "الاسم الكامل",
+      fullname: "الاسم الكامل",
       remember_me: "تذكرني",
       forgot_pass: "نسيت كلمة المرور؟",
       send_link: "إرسال الرابط",
@@ -274,7 +341,9 @@
       no_bookings: "لا توجد حجوزات بعد.",
       bookings_load_error: "تعذر تحميل الحجوزات.",
       loading_bookings: "جارٍ تحميل الحجوزات...",
-      message_required: "اكتب رسالة أولًا."
+      message_required: "اكتب رسالة أولًا.",
+      home: "الرئيسية",
+      pts: "نقطة"
     }
   };
 
@@ -292,21 +361,28 @@
     const custom = {
       signin: "sign_in",
       signout: "sign_out",
+      logout: "sign_out",
       mybookings: "my_bookings",
+      myfavorites: "favorites",
       clearsearch: "clear_search",
       searchhint: "search_hint",
       whereplaceholder: "where_placeholder",
       chatplaceholder: "chat_placeholder",
       fullname: "full_name",
       forgotpassword: "forgot_pass",
-      rememberme: "remember_me"
+      rememberme: "remember_me",
+      guestuser: "guest_user",
+      signintocontinue: "sign_in_to_continue",
+      emailaddress: "email",
+      reservenow: "reserve_now",
+      viewdetails: "view_details"
     };
 
     if (custom[k]) aliases.add(custom[k]);
     return Array.from(aliases);
   }
 
-  function t(key) {
+  function translateOptional(key) {
     const langDict = translations[state.lang] || translations.en;
     const baseDict = translations.en;
     const keys = keyAliases(key);
@@ -316,7 +392,11 @@
       if (candidate in baseDict) return baseDict[candidate];
     }
 
-    return key;
+    return null;
+  }
+
+  function t(key) {
+    return translateOptional(key) ?? key;
   }
 
   /* =========================================
@@ -415,7 +495,7 @@
       location_en: "Bejaia, Algeria",
       location_ar: "بجاية، الجزائر",
       price: 39000,
-      rating: 5.0,
+      rating: 5,
       image: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1200&q=80",
       images: ["https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1200&q=80"],
       urgency: "Luxury pick",
@@ -439,7 +519,8 @@
   }
 
   function firstExisting(selectors, root = document) {
-    for (const selector of selectors) {
+    const list = Array.isArray(selectors) ? selectors : [selectors];
+    for (const selector of list) {
       const el = root.querySelector(selector);
       if (el) return el;
     }
@@ -453,6 +534,18 @@
 
   function currentPageWithSearch() {
     return currentPage() + (window.location.search || "");
+  }
+
+  function isAuthPage() {
+    return currentPage().toLowerCase() === ROUTES.auth.toLowerCase() || /auth/i.test(currentPage());
+  }
+
+  function detectCurrentView() {
+    const page = currentPage().toLowerCase();
+    const bodyView = String(document.body?.dataset?.view || "").toLowerCase();
+
+    if (bodyView.includes("favorite") || page.includes("favorite")) return "favorites";
+    return "home";
   }
 
   function getAuthUrl(view = "login") {
@@ -481,12 +574,12 @@
       profileEmail: firstExisting(["#profile-email", "#dropdown-user-email", "[data-profile-email]"]),
 
       authModal: firstExisting(["#auth-modal", ".auth-modal", ".modal-overlay.auth-modal"]),
-      closeAuthBtn: firstExisting(["#close-auth-btn", ".close-modal-btn"]),
+      closeAuthBtn: firstExisting(["#close-auth-btn", ".close-modal-btn[data-close-auth]", "#auth-modal .close-modal-btn"]),
       authMessage: firstExisting(["#auth-message", ".auth-message"]),
       loginForm: firstExisting(["#login-form", "form[data-auth-form='login']"]),
       registerForm: firstExisting(["#register-form", "form[data-auth-form='register']"]),
       forgotForm: firstExisting(["#forgot-form", "form[data-auth-form='forgot']"]),
-      googleLoginBtn: firstExisting(["#google-login-btn", "[data-auth-provider='google']"]),
+      googleButtons: $all("[data-auth-provider='google'], #google-login-btn, #google-register-btn"),
 
       listingsGrid: firstExisting(["#listings-grid", ".listings-grid"]),
       sortSelect: firstExisting(["#sort-select", "[data-sort-select]"]),
@@ -507,8 +600,8 @@
       chatCloseBtn: firstExisting(["#chat-close-btn", "#close-chat-btn", "[data-chat-close]"]),
       chatSendBtn: firstExisting(["#chat-send-btn", "#send-chat-btn", "[data-chat-send]"]),
       chatTextarea: firstExisting(["#chat-textarea", "#chat-message-input", "[data-chat-textarea]"]),
-      chatMessages: firstExisting(["#chat-messages"]),
-      chatEmptyState: firstExisting(["#chat-empty-state"]),
+      chatMessages: firstExisting(["#chat-messages", "[data-chat-messages]"]),
+      chatEmptyState: firstExisting(["#chat-empty-state", "[data-chat-empty]"]),
       chatPropertyId: firstExisting(["#chat-property-id"]),
 
       scrollTopBtn: firstExisting(["#scroll-top-btn", "[data-scroll-top]"]),
@@ -557,6 +650,58 @@
     return date.toLocaleDateString(state.lang === "ar" ? "ar-DZ" : "en-GB");
   }
 
+  function debounce(fn, delay = 220) {
+    let timer = null;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  function safeCall(fn) {
+    try {
+      return fn();
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+
+  function getRedirectTargetFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      const redirect = url.searchParams.get("redirect");
+      if (!redirect) return "";
+
+      const decoded = decodeURIComponent(redirect);
+      if (!decoded) return "";
+      if (/^https?:\/\//i.test(decoded)) return "";
+      if (decoded.startsWith("//")) return "";
+      return decoded.replace(/^\//, "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function readHashView() {
+    const hash = decodeURIComponent(window.location.hash || "").replace(/^#/, "").trim();
+    if (["login", "register", "forgot"].includes(hash)) return hash;
+    return "login";
+  }
+
+  function localizeUrgency(value) {
+    const str = normalizeText(value).toLowerCase();
+
+    if (str === "popular this week") return t("popular_this_week");
+    if (str === "great value") return t("great_value");
+    if (str === "luxury pick") return t("luxury_pick");
+    if (str === "breakfast included") return t("breakfast_included");
+    if (str === "weekend favorite") return t("weekend_favorite");
+    if (str === "only 2 rooms left") return t("only_rooms_left");
+
+    return value || "";
+  }
+
   function showToast(message, type = "success") {
     const dom = getDom();
     let host = dom.toastContainer || document.getElementById("global-toast-host");
@@ -574,10 +719,21 @@
     toast.textContent = message;
 
     if (host.id === "global-toast-host") {
+      const bg =
+        type === "error" ? "#fef2f2" : type === "info" ? "#eff6ff" : "#ecfdf5";
+      const border =
+        type === "error"
+          ? "rgba(239,68,68,.28)"
+          : type === "info"
+          ? "rgba(59,130,246,.28)"
+          : "rgba(16,185,129,.28)";
+      const color =
+        type === "error" ? "#b91c1c" : type === "info" ? "#1d4ed8" : "#047857";
+
       toast.style.cssText = `
-        background:${type === "error" ? "#fef2f2" : type === "info" ? "#eff6ff" : "#ecfdf5"};
-        border:1px solid ${type === "error" ? "rgba(239,68,68,.28)" : type === "info" ? "rgba(59,130,246,.28)" : "rgba(16,185,129,.28)"};
-        color:${type === "error" ? "#b91c1c" : type === "info" ? "#1d4ed8" : "#047857"};
+        background:${bg};
+        border:1px solid ${border};
+        color:${color};
         padding:14px 16px;
         border-radius:16px;
         box-shadow:0 14px 30px rgba(15,23,42,.12);
@@ -619,23 +775,25 @@
       "auth/user-not-found": t("invalid_credentials"),
       "auth/wrong-password": t("invalid_credentials"),
       "auth/invalid-credential": t("invalid_credentials"),
-      "auth/email-already-in-use": state.lang === "ar" ? "هذا البريد مستخدم بالفعل." : "This email is already in use.",
-      "auth/weak-password": state.lang === "ar" ? "كلمة المرور ضعيفة جدًا." : "Password is too weak.",
-      "auth/too-many-requests": state.lang === "ar" ? "عدد المحاولات كبير جدًا. حاول لاحقًا." : "Too many attempts. Please try again later.",
-      "auth/popup-closed-by-user": state.lang === "ar" ? "تم إغلاق نافذة تسجيل الدخول." : "Popup was closed before completing sign-in.",
-      "auth/network-request-failed": state.lang === "ar" ? "خطأ في الشبكة. تحقق من الاتصال." : "Network error. Check your connection."
+      "auth/email-already-in-use":
+        state.lang === "ar" ? "هذا البريد مستخدم بالفعل." : "This email is already in use.",
+      "auth/weak-password":
+        state.lang === "ar" ? "كلمة المرور ضعيفة جدًا." : "Password is too weak.",
+      "auth/too-many-requests":
+        state.lang === "ar"
+          ? "عدد المحاولات كبير جدًا. حاول لاحقًا."
+          : "Too many attempts. Please try again later.",
+      "auth/popup-closed-by-user":
+        state.lang === "ar"
+          ? "تم إغلاق نافذة تسجيل الدخول."
+          : "Popup was closed before completing sign-in.",
+      "auth/network-request-failed":
+        state.lang === "ar"
+          ? "خطأ في الشبكة. تحقق من الاتصال."
+          : "Network error. Check your connection."
     };
 
     return map[code] || (state.lang === "ar" ? "حدث خطأ غير متوقع." : "Something went wrong.");
-  }
-
-  function safeCall(fn) {
-    try {
-      return fn();
-    } catch (err) {
-      console.error(err);
-      return null;
-    }
   }
 
   /* =========================================
@@ -662,6 +820,10 @@
         typeof firebase.auth?.GoogleAuthProvider === "function"
           ? new firebase.auth.GoogleAuthProvider()
           : null;
+
+      if (googleProvider?.setCustomParameters) {
+        googleProvider.setCustomParameters({ prompt: "select_account" });
+      }
 
       firebaseReady = !!window.firebase;
       state.authReady = !!auth;
@@ -756,13 +918,18 @@
         ? p.amenitiesAr
         : [],
       createdAt: p.createdAt || null,
-      updatedAt: p.updatedAt || null
+      updatedAt: p.updatedAt || null,
+      raw: p
     };
   }
 
   function getSourceProperties() {
     if (state.liveProperties.length) return state.liveProperties;
     return fallbackProperties.map((p) => normalizeProperty(p, p.id, "fallback"));
+  }
+
+  function getNavigationPropertyId(property) {
+    return normalizeText(property?.docId || property?.navId || property?.id || property?.customId || "");
   }
 
   function getPropertyById(id) {
@@ -814,14 +981,11 @@
       .join(" ")
       .toLowerCase();
 
-    if (raw === "hotel") return /hotel|فندق/.test(haystack);
-    if (raw === "apartment") return /apartment|suite|loft|شقة|أجنحة/.test(haystack);
-    if (raw === "villa") return /villa|فيلا/.test(haystack);
-    return haystack.includes(raw);
-  }
+    if (raw === "hotel" || raw === "hotels") return /hotel|فندق/.test(haystack);
+    if (raw === "apartment" || raw === "apartments") return /apartment|suite|loft|شقة|أجنحة/.test(haystack);
+    if (raw === "villa" || raw === "villas") return /villa|فيلا/.test(haystack);
 
-  function getNavigationPropertyId(property) {
-    return normalizeText(property?.docId || property?.navId || property?.id || property?.customId || "");
+    return haystack.includes(raw);
   }
 
   function rememberSelectedProperty(property) {
@@ -832,9 +996,26 @@
 
     safeSet(STORAGE_KEYS.selectedPropertyId, navId);
     safeSet(STORAGE_KEYS.selectedPropertyDocId, normalizeText(property.docId || navId));
-    safeJsonSet(STORAGE_KEYS.selectedPropertyData, snapshot);
-    safeJsonSet(STORAGE_KEYS.oreSelectedProperty, snapshot);
-    safeJsonSet(STORAGE_KEYS.bookingPropertySnapshot, snapshot);
+    safeJsonSetMany(STORAGE_ALIASES.selectedPropertyData, snapshot);
+  }
+
+  function resolveSelectedPropertyIdFromUrlOrStorage() {
+    const params = new URLSearchParams(window.location.search);
+    return (
+      params.get("id") ||
+      safeGet(STORAGE_KEYS.selectedPropertyId, "") ||
+      safeGet(STORAGE_KEYS.selectedPropertyDocId, "")
+    );
+  }
+
+  function resolveSelectedProperty() {
+    const urlId = resolveSelectedPropertyIdFromUrlOrStorage();
+    const directMatch = getPropertyById(urlId);
+    if (directMatch) return directMatch;
+
+    const snapshot = safeJsonGetAny(STORAGE_ALIASES.selectedPropertyData, null);
+    if (snapshot) return normalizeProperty(snapshot, snapshot.docId || snapshot.id || "", snapshot.collection || "");
+    return null;
   }
 
   function buildDetailsUrl(property) {
@@ -961,7 +1142,7 @@
 
     const primary = safeJsonGet(key, null);
     const secondary = safeJsonGet(legacy, null);
-    const common = safeJsonGet(STORAGE_KEYS.favorites, null);
+    const common = safeJsonGetAny(STORAGE_ALIASES.favoritesCommon, null);
 
     const merged = []
       .concat(Array.isArray(primary) ? primary : [])
@@ -979,14 +1160,43 @@
 
     safeJsonSet(getFavoritesKeyForUser(uid), unique);
     safeJsonSet(getLegacyFavoritesKey(uid), unique);
-    safeJsonSet(STORAGE_KEYS.favorites, unique);
+    safeJsonSetMany(STORAGE_ALIASES.favoritesCommon, unique);
 
     state.favorites = unique;
+  }
+
+  function mergeGuestFavoritesIntoUser() {
+    if (!state.user?.uid) return;
+
+    const guest = safeJsonGet(STORAGE_KEYS.favoritesGuest, []);
+    if (!Array.isArray(guest) || !guest.length) return;
+
+    const existing = getFavoriteIds();
+    const merged = [...new Set([...existing, ...guest.map(String)])];
+    saveFavoriteIds(merged);
+    safeRemove(STORAGE_KEYS.favoritesGuest);
   }
 
   function isFavorite(propertyId) {
     const id = String(propertyId || "");
     return getFavoriteIds().includes(id);
+  }
+
+  function updateFavButtonState() {
+    const current = resolveSelectedProperty();
+    const currentId = current ? getNavigationPropertyId(current) : "";
+
+    $all("[data-favorite-id], [data-fav-id], #fav-property-btn, .favorite-btn, .fav-btn").forEach((btn) => {
+      const targetId =
+        btn.dataset.favoriteId ||
+        btn.dataset.favId ||
+        btn.dataset.id ||
+        currentId ||
+        "";
+      if (!targetId) return;
+      btn.classList.toggle("active", isFavorite(targetId));
+      btn.setAttribute("aria-pressed", isFavorite(targetId) ? "true" : "false");
+    });
   }
 
   function toggleFavorite(property) {
@@ -998,11 +1208,8 @@
     const next = exists ? list.filter((x) => x !== propertyId) : [...list, propertyId];
 
     saveFavoriteIds(next);
+    updateFavButtonState();
     renderListings();
-
-    if (typeof window.updateFavButtonState === "function") {
-      safeCall(() => window.updateFavButtonState());
-    }
 
     showFavToast(exists ? t("fav_removed") : t("fav_added"));
   }
@@ -1015,8 +1222,8 @@
     const modalLogo = firstExisting(["#modal-logo", ".auth-header img"]);
     const logoPath = state.theme === "dark" ? "logos/orebooking2.png" : "logos/orebooking.png";
 
-    if (mainLogo && !/favicon/i.test(mainLogo.src)) mainLogo.src = logoPath;
-    if (modalLogo && !/favicon/i.test(modalLogo.src)) modalLogo.src = logoPath;
+    if (mainLogo && !/favicon/i.test(mainLogo.src || "")) mainLogo.src = logoPath;
+    if (modalLogo && !/favicon/i.test(modalLogo.src || "")) modalLogo.src = logoPath;
   }
 
   function updateTextNodes() {
@@ -1025,13 +1232,15 @@
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
       if (!key) return;
-      el.textContent = t(key);
+      const translated = translateOptional(key);
+      if (translated !== null) el.textContent = translated;
     });
 
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       const key = el.getAttribute("data-i18n-placeholder");
       if (!key) return;
-      el.setAttribute("placeholder", t(key));
+      const translated = translateOptional(key);
+      if (translated !== null) el.setAttribute("placeholder", translated);
     });
 
     document.title = t("page_title");
@@ -1063,7 +1272,7 @@
     const dom = getDom();
     dom.body?.classList.toggle("dark", state.theme === "dark");
     dom.html?.classList.toggle("dark", state.theme === "dark");
-    safeSet(STORAGE_KEYS.theme, state.theme);
+    safeSetMany(STORAGE_ALIASES.theme, state.theme);
     updateLogo();
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -1078,7 +1287,7 @@
     const dom = getDom();
     dom.html.lang = state.lang;
     dom.html.dir = state.lang === "ar" ? "rtl" : "ltr";
-    safeSet(STORAGE_KEYS.lang, state.lang);
+    safeSetMany(STORAGE_ALIASES.lang, state.lang);
 
     if (auth) {
       try {
@@ -1091,6 +1300,7 @@
   }
 
   function applyInitialState() {
+    state.currentView = detectCurrentView();
     applyTheme();
     applyLanguage();
   }
@@ -1104,8 +1314,10 @@
     state.lang = state.lang === "en" ? "ar" : "en";
     applyLanguage();
     syncCategoryButtons();
+    syncSortOptions();
     renderListings();
     renderBookingsPreview();
+    renderChatMessages();
   }
 
   /* =========================================
@@ -1137,12 +1349,14 @@
 
     Object.entries(forms).forEach(([key, form]) => {
       if (!form) return;
-      form.style.display = key === formType ? "flex" : "none";
       form.classList.toggle("active", key === formType);
+      form.style.display = key === formType ? "" : "none";
     });
+
+    showAuthMessage("");
   }
 
-  function openAuthModal(view = "login") {
+  function openAuthModal(view = "login", message = "") {
     const dom = getDom();
 
     if (!dom.authModal) {
@@ -1150,58 +1364,77 @@
       return;
     }
 
-    dom.authModal.classList.add("active");
-    dom.body.classList.add("modal-open");
     switchAuthForm(view);
-    showAuthMessage("", "");
+    dom.authModal.classList.add("active");
+    dom.body?.classList.add("modal-open");
+    if (message) showAuthMessage(message, "error");
   }
 
   function closeAuthModal() {
     const dom = getDom();
-    if (!dom.authModal) return;
-    dom.authModal.classList.remove("active");
-    dom.body.classList.remove("modal-open");
-    showAuthMessage("", "");
+    dom.authModal?.classList.remove("active");
+    dom.body?.classList.remove("modal-open");
+    showAuthMessage("");
   }
 
-  function updateUserUI() {
-    const dom = getDom();
-    const name = state.user?.displayName || t("guest_user");
-    const email = state.user?.email || "";
+  function requireAuth(message = "", view = "login") {
+    if (state.user) return true;
 
-    if (dom.profileName) dom.profileName.textContent = name;
-    if (dom.profileEmail) dom.profileEmail.textContent = email;
-
-    if (dom.authCta && dom.profileTrigger && dom.authCta !== dom.profileTrigger) {
-      dom.authCta.classList.toggle("hidden", !!state.user);
-      dom.profileTrigger.classList.toggle("hidden", !state.user);
-    } else if (dom.authCta) {
-      const icon = dom.authCta.querySelector("i");
-      const span = dom.authCta.querySelector("span");
-
-      if (state.user) {
-        if (icon) icon.className = "ph ph-user-circle-check";
-        if (span) span.textContent = state.user.displayName || t("logged_in_as");
-      } else {
-        if (icon) icon.className = "ph ph-sign-in";
-        if (span) span.textContent = t("sign_in");
-      }
+    if (isAuthPage()) {
+      switchAuthForm(view);
+      if (message) showAuthMessage(message, "error");
+      return false;
     }
 
-    if (!state.user && dom.profileDropdown) {
-      dom.profileDropdown.classList.remove("active");
+    const dom = getDom();
+    if (dom.authModal) {
+      openAuthModal(view, message || t("auth_required"));
+      return false;
+    }
+
+    window.location.href = getAuthUrl(view);
+    return false;
+  }
+
+  async function setAuthPersistenceFromRemember() {
+    if (!auth || !firebase?.auth?.Auth?.Persistence) return;
+
+    const remember = safeGet(STORAGE_KEYS.remember, "1") !== "0";
+    const persistence = remember
+      ? firebase.auth.Auth.Persistence.LOCAL
+      : firebase.auth.Auth.Persistence.SESSION;
+
+    try {
+      await auth.setPersistence(persistence);
+    } catch (error) {
+      console.warn("Auth persistence error:", error);
     }
   }
 
-  function requireAuth(message = t("auth_required"), view = "login") {
-    showToast(message, "error");
-    const dom = getDom();
+  async function handlePostAuthSuccess(type = "login") {
+    closeAuthModal();
+    showAuthMessage("");
 
-    if (dom.authModal) openAuthModal(view);
-    else window.location.href = getAuthUrl(view);
+    if (type === "register") {
+      showToast(t("register_success"), "success");
+    } else {
+      showToast(t("login_success"), "success");
+    }
+
+    if (continuePendingBookingAfterAuth()) return;
+
+    const redirect = getRedirectTargetFromUrl();
+    if (redirect && isAuthPage()) {
+      window.location.href = redirect;
+      return;
+    }
+
+    if (isAuthPage()) {
+      window.location.href = ROUTES.home;
+    }
   }
 
-  async function handleLogin(event) {
+  async function handleLoginSubmit(event) {
     event.preventDefault();
 
     if (!auth) {
@@ -1209,12 +1442,9 @@
       return;
     }
 
-    const email = $("#login-email")?.value.trim() || $("#auth-login-email")?.value.trim() || "";
-    const password = $("#login-password")?.value || $("#auth-login-password")?.value || "";
-    const remember =
-      $("#login-remember")?.checked ??
-      $("#remember-me")?.checked ??
-      safeGet(STORAGE_KEYS.remember, "1") !== "0";
+    const email = normalizeText($("#login-email")?.value);
+    const password = normalizeText($("#login-password")?.value);
+    const remember = !!($("#remember-me")?.checked || safeGet(STORAGE_KEYS.remember, "1") === "1");
 
     if (!validateEmail(email)) {
       showAuthMessage(t("invalid_email"), "error");
@@ -1222,92 +1452,23 @@
     }
 
     if (!password) {
-      showAuthMessage(t("invalid_credentials"), "error");
-      return;
-    }
-
-    try {
-      const persistence =
-        remember && firebase?.auth?.Auth?.Persistence?.LOCAL
-          ? firebase.auth.Auth.Persistence.LOCAL
-          : firebase?.auth?.Auth?.Persistence?.SESSION || undefined;
-
-      if (persistence) {
-        await auth.setPersistence(persistence);
-      }
-
-      safeSet(STORAGE_KEYS.remember, remember ? "1" : "0");
-      await auth.signInWithEmailAndPassword(email, password);
-
-      showToast(t("login_success"), "success");
-      showAuthMessage("", "");
-      getDom().loginForm?.reset();
-      closeAuthModal();
-    } catch (error) {
-      console.error("Login error:", error);
-      showAuthMessage(humanFirebaseError(error.code), "error");
-    }
-  }
-
-  async function handleRegister(event) {
-    event.preventDefault();
-
-    if (!auth) {
-      showAuthMessage(t("auth_unavailable"), "error");
-      return;
-    }
-
-    const fullName =
-      $("#reg-name")?.value.trim() ||
-      $("#register-name")?.value.trim() ||
-      $("#auth-register-name")?.value.trim() ||
-      "";
-
-    const email =
-      $("#reg-email")?.value.trim() ||
-      $("#register-email")?.value.trim() ||
-      $("#auth-register-email")?.value.trim() ||
-      "";
-
-    const password =
-      $("#reg-password")?.value ||
-      $("#register-password")?.value ||
-      $("#auth-register-password")?.value ||
-      "";
-
-    if (!fullName || !email || !password) {
       showAuthMessage(t("fill_required"), "error");
       return;
     }
 
-    if (!validateEmail(email)) {
-      showAuthMessage(t("invalid_email"), "error");
-      return;
-    }
-
-    if (String(password).length < 6) {
-      showAuthMessage(state.lang === "ar" ? "كلمة المرور قصيرة جدًا." : "Password is too short.", "error");
-      return;
-    }
+    safeSet(STORAGE_KEYS.remember, remember ? "1" : "0");
 
     try {
-      const result = await auth.createUserWithEmailAndPassword(email, password);
-
-      if (result?.user && fullName) {
-        await result.user.updateProfile({ displayName: fullName });
-      }
-
-      showToast(t("register_success"), "success");
-      showAuthMessage("", "");
-      getDom().registerForm?.reset();
-      closeAuthModal();
+      await setAuthPersistenceFromRemember();
+      await auth.signInWithEmailAndPassword(email, password);
+      await handlePostAuthSuccess("login");
     } catch (error) {
-      console.error("Register error:", error);
-      showAuthMessage(humanFirebaseError(error.code), "error");
+      console.error("Login error:", error);
+      showAuthMessage(humanFirebaseError(error?.code), "error");
     }
   }
 
-  async function handleForgotPassword(event) {
+  async function handleRegisterSubmit(event) {
     event.preventDefault();
 
     if (!auth) {
@@ -1315,8 +1476,60 @@
       return;
     }
 
-    const email = $("#forgot-email")?.value.trim() || $("#reset-email")?.value.trim() || "";
+    const name = normalizeText($("#reg-name")?.value);
+    const email = normalizeText($("#reg-email")?.value);
+    const password = normalizeText($("#reg-password")?.value);
 
+    if (!name || !validateEmail(email) || !password) {
+      showAuthMessage(t("fill_required"), "error");
+      return;
+    }
+
+    if (password.length < 6) {
+      showAuthMessage(humanFirebaseError("auth/weak-password"), "error");
+      return;
+    }
+
+    try {
+      await setAuthPersistenceFromRemember();
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+
+      if (cred?.user && name) {
+        try {
+          await cred.user.updateProfile({ displayName: name });
+        } catch (_) {}
+      }
+
+      if (db && cred?.user) {
+        try {
+          await db.collection("users").doc(cred.user.uid).set(
+            {
+              uid: cred.user.uid,
+              name,
+              email,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          );
+        } catch (_) {}
+      }
+
+      await handlePostAuthSuccess("register");
+    } catch (error) {
+      console.error("Register error:", error);
+      showAuthMessage(humanFirebaseError(error?.code), "error");
+    }
+  }
+
+  async function handleForgotSubmit(event) {
+    event.preventDefault();
+
+    if (!auth) {
+      showAuthMessage(t("auth_unavailable"), "error");
+      return;
+    }
+
+    const email = normalizeText($("#forgot-email")?.value);
     if (!validateEmail(email)) {
       showAuthMessage(t("invalid_email"), "error");
       return;
@@ -1327,12 +1540,12 @@
       showAuthMessage(t("reset_sent"), "success");
     } catch (error) {
       console.error("Reset error:", error);
-      showAuthMessage(humanFirebaseError(error.code), "error");
+      showAuthMessage(humanFirebaseError(error?.code), "error");
     }
   }
 
-  async function handleGoogleLogin(event) {
-    event?.preventDefault?.();
+  async function handleGoogleAuth(event) {
+    if (event) event.preventDefault();
 
     if (!auth || !googleProvider) {
       showAuthMessage(t("auth_unavailable"), "error");
@@ -1340,108 +1553,396 @@
     }
 
     try {
+      await setAuthPersistenceFromRemember();
       await auth.signInWithPopup(googleProvider);
-      closeAuthModal();
-      showToast(t("login_success"), "success");
+      await handlePostAuthSuccess("login");
     } catch (error) {
-      console.error("Google login error:", error);
-      showAuthMessage(humanFirebaseError(error.code), "error");
+      console.error("Google auth error:", error);
+      showAuthMessage(humanFirebaseError(error?.code), "error");
     }
   }
 
   async function handleLogout() {
-    try {
-      if (auth) await auth.signOut();
+    if (!auth) {
       state.user = null;
-      getFavoriteIds();
       updateUserUI();
+      showToast(t("logout_success"), "success");
+      return;
+    }
+
+    try {
+      await auth.signOut();
+      state.user = null;
+      updateUserUI();
+      renderBookingsPreview();
+      renderChatMessages();
       renderListings();
       showToast(t("logout_success"), "success");
     } catch (error) {
       console.error("Logout error:", error);
-      showToast(state.lang === "ar" ? "تعذر تسجيل الخروج." : "Could not sign out.", "error");
     }
   }
 
+  function closeProfileDropdown() {
+    const dom = getDom();
+    if (!dom.profileDropdown) return;
+    dom.profileDropdown.classList.remove("active");
+    dom.profileTrigger?.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleProfileDropdown() {
+    const dom = getDom();
+    if (!dom.profileDropdown) return;
+
+    const active = dom.profileDropdown.classList.toggle("active");
+    dom.profileTrigger?.setAttribute("aria-expanded", active ? "true" : "false");
+  }
+
+  function updateUserUI() {
+    const dom = getDom();
+    const user = state.user;
+
+    const name =
+      normalizeText(user?.displayName) ||
+      normalizeText(user?.email?.split("@")[0]) ||
+      t("guest_user");
+
+    if (dom.profileName) {
+      dom.profileName.textContent = user ? name : t("guest_user");
+    }
+
+    if (dom.profileEmail) {
+      dom.profileEmail.textContent = user ? user.email || "" : t("sign_in_to_continue");
+    }
+
+    if (dom.logoutBtn) {
+      dom.logoutBtn.style.display = user ? "" : "none";
+    }
+
+    if (dom.profileTrigger) {
+      dom.profileTrigger.setAttribute(
+        "aria-label",
+        user ? `${t("logged_in_as")}: ${name}` : t("sign_in")
+      );
+      dom.profileTrigger.setAttribute("title", user ? name : t("sign_in"));
+    }
+
+    if (dom.authCta && dom.authCta !== dom.profileTrigger) {
+      dom.authCta.textContent = user ? t("sign_out") : t("sign_in");
+    }
+
+    updateFavButtonState();
+  }
+
+  function attachAuthStateListener() {
+    if (!auth) return;
+
+    auth.onAuthStateChanged(async (user) => {
+      state.user = user || null;
+      updateUserUI();
+
+      if (state.user) {
+        mergeGuestFavoritesIntoUser();
+        getFavoriteIds();
+        await loadUserBookings();
+      } else {
+        state.bookings = [];
+        getFavoriteIds();
+      }
+
+      renderBookingsPreview();
+      renderChatMessages();
+      renderListings();
+    });
+  }
+
   /* =========================================
-     13) BOOKINGS PREVIEW
+     13) LISTINGS
   ========================================= */
-  function bookingStatusText(status) {
-    const raw = String(status || "pending").toLowerCase();
-
-    if (raw === "confirmed") return t("booking_status_confirmed");
-    if (raw === "cancelled") return t("booking_status_cancelled");
-    if (raw === "rejected") return t("booking_status_rejected");
-    return t("booking_status_pending");
+  function syncCategoryButtons() {
+    const dom = getDom();
+    dom.categoryButtons.forEach((btn) => {
+      const cat = String(btn.dataset.category || btn.dataset.categoryBtn || "").toLowerCase();
+      const normalized = cat === "hotels" ? "hotel" : cat === "apartments" ? "apartment" : cat === "villas" ? "villa" : cat;
+      btn.classList.toggle("active", normalized === state.activeCategory);
+    });
   }
 
-  function getLocalBookings() {
-    const list = safeJsonGet("orebookingslocalv1", []);
-    return Array.isArray(list) ? list : [];
+  function syncSortOptions() {
+    const dom = getDom();
+    if (dom.sortSelect) dom.sortSelect.value = state.sort;
   }
+
+  function getFilteredProperties() {
+    const search = normalizeText(state.activeSearch).toLowerCase();
+    let list = getSourceProperties().slice();
+
+    if (state.currentView === "favorites") {
+      const favs = new Set(getFavoriteIds().map(String));
+      list = list.filter((property) => favs.has(getNavigationPropertyId(property)));
+    }
+
+    list = list.filter((property) => propertyMatchesCategory(property, state.activeCategory));
+
+    if (search) {
+      list = list.filter((property) => {
+        const haystack = [
+          property.title_en,
+          property.title_ar,
+          property.location_en,
+          property.location_ar,
+          property.type,
+          property.typeEn,
+          property.typeAr,
+          property.desc_en,
+          property.desc_ar
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(search);
+      });
+    }
+
+    if (state.sort === "rating") {
+      list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    } else if (state.sort === "price_low") {
+      list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    } else if (state.sort === "price_high") {
+      list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    } else {
+      list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    }
+
+    return list;
+  }
+
+  function renderLoadingListings() {
+    const dom = getDom();
+    if (!dom.listingsGrid) return;
+
+    dom.listingsGrid.innerHTML = Array.from({ length: 6 })
+      .map(() => `<div class="card-skeleton" aria-hidden="true"></div>`)
+      .join("");
+  }
+
+  function renderListingsEmpty(isFavoritesView = false) {
+    const dom = getDom();
+    if (!dom.listingsGrid) return;
+
+    const title = isFavoritesView ? t("favorites") : t("no_results_title");
+    const text = isFavoritesView
+      ? state.lang === "ar"
+        ? "لم تقم بإضافة أي عقار إلى المفضلة بعد."
+        : "You have not added any property to favorites yet."
+      : state.activeSearch || state.activeCategory !== "all"
+      ? t("no_results_text")
+      : t("no_props");
+
+    dom.listingsGrid.innerHTML = `
+      <div class="listings-empty-state">
+        <i class="ph ph-house-line"></i>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(text)}</p>
+      </div>
+    `;
+  }
+
+  function renderPropertyCard(property) {
+    const propertyId = getNavigationPropertyId(property);
+    const favorite = isFavorite(propertyId);
+    const title = getPropertyTitle(property);
+    const location = getPropertyLocation(property);
+    const urgency = localizeUrgency(property.urgency);
+    const reserveLabel = state.user ? t("reserve_now") : t("reserve_cta_signed_out");
+
+    return `
+      <article class="property-card" data-property-id="${escapeHtml(propertyId)}">
+        <div class="property-card-media">
+          <img src="${escapeHtml(property.image)}" alt="${escapeHtml(title)}" loading="lazy" />
+          ${
+            urgency
+              ? `<span class="property-urgency"><i class="ph ph-clock-countdown"></i>${escapeHtml(urgency)}</span>`
+              : ""
+          }
+          <button
+            type="button"
+            class="favorite-btn ${favorite ? "active" : ""}"
+            data-action="favorite"
+            data-id="${escapeHtml(propertyId)}"
+            aria-label="${escapeHtml(t("favorites"))}"
+            aria-pressed="${favorite ? "true" : "false"}"
+          >
+            <i class="ph ph-heart${favorite ? "-straight-fill" : ""}"></i>
+          </button>
+        </div>
+
+        <div class="property-card-body">
+          <div class="property-card-top">
+            <div class="card-title-wrapper">
+              <h3 class="property-card-title">${escapeHtml(title)}</h3>
+              <div class="property-card-location">
+                <i class="ph ph-map-pin"></i>
+                <span>${escapeHtml(location || "—")}</span>
+              </div>
+            </div>
+
+            <div class="property-card-rating">
+              <i class="ph ph-star-fill"></i>
+              <span>${Number(property.rating || 0).toFixed(1)}</span>
+            </div>
+          </div>
+
+          <div class="property-card-price">
+            ${escapeHtml(formatCurrency(property.price))}
+            <span>${escapeHtml(t("night_suffix"))}</span>
+          </div>
+
+          <div class="property-card-actions">
+            <button type="button" class="details-btn" data-action="details" data-id="${escapeHtml(propertyId)}">
+              <i class="ph ph-eye"></i>
+              <span>${escapeHtml(t("view_details"))}</span>
+            </button>
+
+            <button type="button" class="reserve-btn" data-action="reserve" data-id="${escapeHtml(propertyId)}">
+              <i class="ph ph-calendar-plus"></i>
+              <span>${escapeHtml(reserveLabel)}</span>
+            </button>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderListings() {
+    const dom = getDom();
+    if (!dom.listingsGrid) return;
+
+    if (state.loadingProperties && !state.propertiesLoaded && !state.liveProperties.length) {
+      renderLoadingListings();
+      return;
+    }
+
+    const list = getFilteredProperties();
+    const isFavoritesView = state.currentView === "favorites";
+
+    if (dom.clearSearchBtn) {
+      const active = !!state.activeSearch || state.activeCategory !== "all";
+      dom.clearSearchBtn.style.display = active ? "inline-flex" : "none";
+    }
+
+    if (dom.sectionTitle) {
+      dom.sectionTitle.textContent = isFavoritesView ? t("favorites") : t("featured_title");
+    }
+
+    if (!list.length) {
+      renderListingsEmpty(isFavoritesView);
+      return;
+    }
+
+    dom.listingsGrid.innerHTML = list.map(renderPropertyCard).join("");
+    updateFavButtonState();
+  }
+
+  async function initialLoadProperties() {
+    if (db) {
+      const success = await loadLiveProperties();
+      if (!success && firebaseReady) {
+        showToast(t("property_load_error"), "info");
+      }
+    }
+    renderListings();
+  }
+
+  /* =========================================
+     14) BOOKINGS
+  ========================================= */
+  function normalizeBooking(data = {}, id = "") {
+    const propertyId = normalizeText(
+      data.propertyId || data.propertyDocId || data.selectedPropertyId || data.listingId || ""
+    );
+    const property =
+      getPropertyById(propertyId) ||
+      normalizeBooking.snapshotToProperty(data.propertySnapshot || data.property || null);
+
+    const propertyTitle = property
+      ? getPropertyTitle(property)
+      : data.propertyTitle ||
+        data.title ||
+        (state.lang === "ar" ? "عقار غير معروف" : "Unknown Property");
+
+    const status = String(data.status || data.bookingStatus || "pending").toLowerCase();
+
+    return {
+      id: normalizeText(id || data.id || `booking-${Date.now()}`),
+      propertyId,
+      propertyTitle,
+      propertyLocation: property ? getPropertyLocation(property) : normalizeText(data.location || ""),
+      propertyImage: property?.image || data.image || "images/placeholder.jpg",
+      checkIn: data.checkIn || data.checkin || data.arrivalDate || data.startDate || "",
+      checkOut: data.checkOut || data.checkout || data.departureDate || data.endDate || "",
+      guests: Number(data.guests || data.totalGuests || data.adults || 1),
+      total: Number(data.total || data.totalAmount || data.amount || data.finalTotal || 0),
+      status,
+      createdAt: data.createdAt || data.timestamp || null
+    };
+  }
+
+  normalizeBooking.snapshotToProperty = function (snapshot) {
+    if (!snapshot || typeof snapshot !== "object") return null;
+    return normalizeProperty(snapshot, snapshot.docId || snapshot.id || "", snapshot.collection || "");
+  };
 
   async function loadUserBookings() {
-    if (!state.user) {
+    if (!db || !state.user?.uid) {
       state.bookings = [];
       return [];
     }
 
-    const local = getLocalBookings().filter((item) => {
-      return (
-        String(item?.userId || "") === String(state.user.uid || "") ||
-        String(item?.userEmail || "").toLowerCase() === String(state.user.email || "").toLowerCase()
-      );
-    });
-
-    if (!db) {
-      state.bookings = local;
-      return local;
-    }
+    state.loadingBookings = true;
+    renderBookingsPreview();
 
     try {
-      let remote = [];
-
-      try {
-        const byUserId = await db
-          .collection("bookings")
-          .where("userId", "==", state.user.uid)
-          .limit(20)
-          .get();
-
-        byUserId.forEach((doc) => remote.push({ id: doc.id, ...doc.data() }));
-      } catch (_) {}
-
-      if (!remote.length && state.user.email) {
+      for (const collection of BOOKINGS_COLLECTION_CANDIDATES) {
         try {
-          const byEmail = await db
-            .collection("bookings")
-            .where("userEmail", "==", state.user.email)
-            .limit(20)
-            .get();
+          const snap = await db.collection(collection).where("userId", "==", state.user.uid).limit(50).get();
 
-          byEmail.forEach((doc) => remote.push({ id: doc.id, ...doc.data() }));
-        } catch (_) {}
+          if (!snap.empty) {
+            const items = [];
+            snap.forEach((doc) => items.push(normalizeBooking(doc.data() || {}, doc.id)));
+
+            items.sort((a, b) => {
+              const ad = typeof a.createdAt?.toDate === "function" ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
+              const bd = typeof b.createdAt?.toDate === "function" ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
+              return bd - ad;
+            });
+
+            state.bookings = items;
+            state.loadingBookings = false;
+            return items;
+          }
+        } catch (err) {
+          console.warn(`Bookings collection "${collection}" failed`, err);
+        }
       }
 
-      const mergedMap = new Map();
-
-      [...remote, ...local].forEach((item) => {
-        const key = String(item?.id || item?.bookingReference || item?.createdAt || Math.random());
-        mergedMap.set(key, item);
-      });
-
-      state.bookings = Array.from(mergedMap.values()).sort((a, b) => {
-        const da = new Date(a?.createdAt?.toDate ? a.createdAt.toDate() : a?.createdAt || 0).getTime();
-        const dbb = new Date(b?.createdAt?.toDate ? b.createdAt.toDate() : b?.createdAt || 0).getTime();
-        return dbb - da;
-      });
-
-      return state.bookings;
+      state.bookings = [];
+      state.loadingBookings = false;
+      return [];
     } catch (error) {
       console.error("Bookings load error:", error);
-      state.bookings = local;
-      return local;
+      state.bookings = [];
+      state.loadingBookings = false;
+      return [];
     }
+  }
+
+  function getBookingStatusLabel(status) {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "confirmed") return t("booking_status_confirmed");
+    if (normalized === "cancelled") return t("booking_status_cancelled");
+    if (normalized === "rejected") return t("booking_status_rejected");
+    return t("booking_status_pending");
   }
 
   function renderBookingsPreview() {
@@ -1450,59 +1951,54 @@
 
     if (!state.user) {
       dom.bookingsList.innerHTML = `
-        <div style="text-align:center;padding:28px;color:var(--text-muted);">
-          ${escapeHtml(t("auth_required"))}
+        <div class="listings-empty-state">
+          <i class="ph ph-lock"></i>
+          <p>${escapeHtml(t("auth_required"))}</p>
         </div>
       `;
       return;
     }
 
-    const bookings = Array.isArray(state.bookings) ? state.bookings : [];
-
-    if (!bookings.length) {
+    if (state.loadingBookings) {
       dom.bookingsList.innerHTML = `
-        <div style="text-align:center;padding:28px;color:var(--text-muted);">
-          ${escapeHtml(t("no_bookings"))}
+        <div class="listings-empty-state">
+          <i class="ph ph-spinner-gap spin"></i>
+          <p>${escapeHtml(t("loading_bookings"))}</p>
         </div>
       `;
       return;
     }
 
-    dom.bookingsList.innerHTML = bookings
-      .map((item) => {
-        const title =
-          item?.propertyTitle ||
-          item?.propertyName ||
-          item?.title ||
-          (state.lang === "ar" ? "عقار" : "Property");
+    if (!state.bookings.length) {
+      dom.bookingsList.innerHTML = `
+        <div class="listings-empty-state">
+          <i class="ph ph-calendar-blank"></i>
+          <p>${escapeHtml(t("no_bookings"))}</p>
+        </div>
+      `;
+      return;
+    }
 
-        const checkIn = item?.stay?.checkIn || item?.checkIn || item?.arrivalDate || "";
-        const checkOut = item?.stay?.checkOut || item?.checkOut || item?.departureDate || "";
-        const guests =
-          item?.stay?.adults + item?.stay?.children ||
-          item?.guestCount ||
-          item?.guests ||
-          item?.stay?.adults ||
-          1;
-
-        const total = item?.pricing?.total || item?.total || item?.amount || 0;
-        const status = bookingStatusText(item?.status);
-
+    dom.bookingsList.innerHTML = state.bookings
+      .map((booking) => {
         return `
-          <article style="padding:16px;border:1px solid var(--border-color,#e2e8f0);border-radius:16px;background:var(--surface-color,#fff);margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+          <article class="booking-card">
+            <div class="booking-card-head">
               <div>
-                <strong style="display:block;margin-bottom:6px;">${escapeHtml(title)}</strong>
-                <div style="color:var(--text-muted,#64748b);font-size:.92rem;line-height:1.8;">
-                  <div>${escapeHtml(t("booking_checkin"))} ${escapeHtml(formatDate(checkIn))}</div>
-                  <div>${escapeHtml(t("booking_checkout"))} ${escapeHtml(formatDate(checkOut))}</div>
-                  <div>${escapeHtml(t("booking_guests"))} ${escapeHtml(String(guests || 1))}</div>
-                  <div>${escapeHtml(t("booking_total"))} ${escapeHtml(formatCurrency(total))}</div>
-                </div>
+                <h4>${escapeHtml(booking.propertyTitle)}</h4>
+                <p class="booking-card-sub">${escapeHtml(booking.propertyLocation || "—")}</p>
               </div>
-              <span style="padding:6px 10px;border-radius:999px;background:rgba(67,90,191,.08);color:#435abf;font-weight:800;font-size:.82rem;">
-                ${escapeHtml(status)}
+              <span class="booking-status ${escapeHtml(booking.status)}">
+                <i class="ph ph-dot-outline-fill"></i>
+                ${escapeHtml(getBookingStatusLabel(booking.status))}
               </span>
+            </div>
+
+            <div class="booking-card-grid">
+              <div><strong>${escapeHtml(t("booking_checkin"))}</strong> ${escapeHtml(formatDate(booking.checkIn))}</div>
+              <div><strong>${escapeHtml(t("booking_checkout"))}</strong> ${escapeHtml(formatDate(booking.checkOut))}</div>
+              <div><strong>${escapeHtml(t("booking_guests"))}</strong> ${escapeHtml(String(booking.guests || 1))}</div>
+              <div><strong>${escapeHtml(t("booking_total"))}</strong> ${escapeHtml(formatCurrency(booking.total))}</div>
             </div>
           </article>
         `;
@@ -1510,9 +2006,8 @@
       .join("");
   }
 
-  async function openBookingsModal() {
+  function openBookings() {
     const dom = getDom();
-
     if (!state.user) {
       requireAuth(t("auth_redirect_profile"), "login");
       return;
@@ -1520,630 +2015,469 @@
 
     if (dom.bookingsModal) {
       dom.bookingsModal.classList.add("active");
-      dom.body.classList.add("modal-open");
-    }
-
-    if (dom.bookingsList) {
-      dom.bookingsList.innerHTML = `
-        <div style="text-align:center;padding:28px;color:var(--text-muted);">
-          ${escapeHtml(t("loading_bookings"))}
-        </div>
-      `;
-    }
-
-    try {
-      await loadUserBookings();
+      dom.body?.classList.add("modal-open");
       renderBookingsPreview();
-    } catch (_) {
-      if (dom.bookingsList) {
-        dom.bookingsList.innerHTML = `
-          <div style="text-align:center;padding:28px;color:var(--text-muted);">
-            ${escapeHtml(t("bookings_load_error"))}
-          </div>
-        `;
-      }
+      return;
+    }
+
+    if (currentPage().toLowerCase() !== ROUTES.bookings.toLowerCase()) {
+      window.location.href = ROUTES.bookings;
     }
   }
 
-  function closeBookingsModal() {
+  function closeBookings() {
     const dom = getDom();
     dom.bookingsModal?.classList.remove("active");
-    dom.body.classList.remove("modal-open");
+    dom.body?.classList.remove("modal-open");
   }
 
   /* =========================================
-     14) CHAT
+     15) CHAT
   ========================================= */
-  function openChatModal() {
-    const dom = getDom();
-    if (!dom.chatModal) return;
-
-    dom.chatModal.classList.add("active");
-    dom.body.classList.add("modal-open");
+  function getChatStorageKey() {
+    return state.user?.uid ? `ore_chat_${state.user.uid}` : STORAGE_KEYS.chatGuest;
   }
 
-  function closeChatModal() {
-    const dom = getDom();
-    if (!dom.chatModal) return;
-
-    dom.chatModal.classList.remove("active");
-    dom.body.classList.remove("modal-open");
+  function loadChatMessages() {
+    state.chatMessages = safeJsonGet(getChatStorageKey(), []);
+    if (!Array.isArray(state.chatMessages)) state.chatMessages = [];
+    return state.chatMessages;
   }
 
-  function appendChatMessage(text, from = "user") {
+  function saveChatMessages() {
+    safeJsonSet(getChatStorageKey(), state.chatMessages);
+  }
+
+  function appendChatMessage(message) {
+    state.chatMessages.push(message);
+    saveChatMessages();
+    renderChatMessages();
+  }
+
+  function renderChatMessages() {
     const dom = getDom();
     if (!dom.chatMessages) return;
 
+    loadChatMessages();
+
+    if (!state.chatMessages.length) {
+      dom.chatMessages.innerHTML = "";
+      if (dom.chatEmptyState) dom.chatEmptyState.style.display = "";
+      return;
+    }
+
     if (dom.chatEmptyState) dom.chatEmptyState.style.display = "none";
 
-    const item = document.createElement("div");
-    item.style.cssText = `
-      display:flex;
-      justify-content:${from === "user" ? "flex-end" : "flex-start"};
-      margin-bottom:10px;
-    `;
+    dom.chatMessages.innerHTML = state.chatMessages
+      .map((msg) => {
+        const role = msg.role === "admin" ? "admin" : "customer";
+        return `
+          <div class="chat-message ${role}">
+            <div>${escapeHtml(msg.text || "")}</div>
+            <small class="chat-meta">${escapeHtml(formatDate(msg.createdAt))}</small>
+          </div>
+        `;
+      })
+      .join("");
 
-    const bubble = document.createElement("div");
-    bubble.style.cssText = `
-      max-width:min(85%,420px);
-      padding:12px 14px;
-      border-radius:16px;
-      line-height:1.7;
-      font-weight:600;
-      background:${from === "user" ? "#435abf" : "rgba(148,163,184,.14)"};
-      color:${from === "user" ? "#fff" : "inherit"};
-    `;
-    bubble.textContent = text;
-
-    item.appendChild(bubble);
-    dom.chatMessages.appendChild(item);
     dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
   }
 
-  function handleChatSend() {
+  function openChat() {
     const dom = getDom();
-    const text = normalizeText(dom.chatTextarea?.value || "");
+    if (!dom.chatModal) return;
+
+    const selectedProperty = resolveSelectedProperty();
+    if (dom.chatPropertyId && selectedProperty) {
+      dom.chatPropertyId.value = getNavigationPropertyId(selectedProperty);
+    }
+
+    dom.chatModal.classList.add("active");
+    dom.body?.classList.add("modal-open");
+    renderChatMessages();
+    dom.chatTextarea?.focus();
+  }
+
+  function closeChat() {
+    const dom = getDom();
+    dom.chatModal?.classList.remove("active");
+    dom.body?.classList.remove("modal-open");
+  }
+
+  function sendChatMessage() {
+    const dom = getDom();
+    const text = normalizeText(dom.chatTextarea?.value);
 
     if (!text) {
       showToast(t("message_required"), "error");
       return;
     }
 
-    appendChatMessage(text, "user");
-    if (dom.chatTextarea) dom.chatTextarea.value = "";
-
-    setTimeout(() => {
-      appendChatMessage(
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+      showToast(
         state.lang === "ar"
-          ? "تم استلام رسالتك، وسيرد فريق الدعم قريبًا."
-          : "Your message has been received. Our support team will reply soon.",
-        "support"
+          ? "الرسالة طويلة جدًا."
+          : "Message is too long.",
+        "error"
       );
-    }, 500);
-
-    showToast(t("support_toast"), "success");
-  }
-
-  /* =========================================
-     15) LISTINGS RENDER
-  ========================================= */
-  function renderStars(rating) {
-    const val = Number(rating || 0).toFixed(1);
-    return `
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        <i class="ph-fill ph-star" style="color:#f59e0b;"></i>
-        <span>${escapeHtml(val)}</span>
-      </span>
-    `;
-  }
-
-  function getUrgencyText(property) {
-    if (property?.urgency) return property.urgency;
-    const type = String(property?.type || "").toLowerCase();
-
-    if (type === "hotel") return t("only_rooms_left");
-    if (type === "apartment") return t("great_value");
-    if (type === "villa") return t("luxury_pick");
-    return "";
-  }
-
-  function buildPropertyCard(property) {
-    const title = getPropertyTitle(property);
-    const location = getPropertyLocation(property);
-    const type = getPropertyType(property);
-    const isFav = isFavorite(getNavigationPropertyId(property));
-    const reserveLabel = state.user ? t("reserve_now") : t("reserve_cta_signed_out");
-    const urgency = getUrgencyText(property);
-
-    return `
-      <article class="listing-card" data-property-id="${escapeHtml(getNavigationPropertyId(property))}" style="
-        background:var(--surface-color,#fff);
-        border:1px solid var(--border-color,#e2e8f0);
-        border-radius:24px;
-        overflow:hidden;
-        box-shadow:0 10px 30px rgba(15,23,42,.06);
-      ">
-        <div style="position:relative;">
-          <img
-            src="${escapeHtml(property.image)}"
-            alt="${escapeHtml(title)}"
-            style="width:100%;height:240px;object-fit:cover;background:#f8fafc;"
-            onerror="this.src='images/placeholder.jpg'"
-          />
-          <button
-            type="button"
-            data-action="favorite"
-            data-id="${escapeHtml(getNavigationPropertyId(property))}"
-            style="
-              position:absolute;top:14px;${state.lang === "ar" ? "left" : "right"}:14px;
-              width:44px;height:44px;border:none;border-radius:999px;cursor:pointer;
-              background:${isFav ? "rgba(225,29,72,.12)" : "rgba(255,255,255,.92)"};
-              color:${isFav ? "#e11d48" : "#0f172a"};
-              box-shadow:0 8px 24px rgba(15,23,42,.12);
-              display:flex;align-items:center;justify-content:center;
-            "
-            aria-label="favorite"
-          >
-            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
-          </button>
-        </div>
-
-        <div style="padding:18px;">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;">
-            <div style="min-width:0;">
-              <h3 style="margin:0 0 6px;font-size:1.15rem;line-height:1.3;">${escapeHtml(title)}</h3>
-              <p style="margin:0;color:var(--text-muted,#64748b);display:flex;align-items:center;gap:6px;">
-                <i class="ph ph-map-pin"></i>
-                <span>${escapeHtml(location)}</span>
-              </p>
-            </div>
-            <div style="white-space:nowrap;font-weight:800;">${renderStars(property.rating)}</div>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-            <span style="padding:6px 10px;border-radius:999px;background:rgba(67,90,191,.08);color:#435abf;font-weight:800;font-size:.82rem;">
-              ${escapeHtml(type)}
-            </span>
-            ${urgency ? `
-              <span style="color:var(--text-muted,#64748b);font-size:.86rem;font-weight:700;">
-                ${escapeHtml(urgency)}
-              </span>
-            ` : ""}
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:16px;">
-            <div>
-              <strong style="font-size:1.25rem;">${escapeHtml(formatCurrency(property.price))}</strong>
-              <span style="color:var(--text-muted,#64748b);">${escapeHtml(t("night_suffix"))}</span>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <button
-              type="button"
-              data-action="details"
-              data-id="${escapeHtml(getNavigationPropertyId(property))}"
-              class="listing-details-btn"
-              style="
-                min-height:48px;border-radius:14px;border:1px solid var(--border-color,#e2e8f0);
-                background:var(--surface-color,#fff);cursor:pointer;font-weight:800;
-              "
-            >
-              ${escapeHtml(t("view_details"))}
-            </button>
-
-            <button
-              type="button"
-              data-action="reserve"
-              data-id="${escapeHtml(getNavigationPropertyId(property))}"
-              class="listing-reserve-btn"
-              style="
-                min-height:48px;border-radius:14px;border:none;cursor:pointer;font-weight:800;color:#fff;
-                background:linear-gradient(135deg,#435abf,#34459c);
-              "
-            >
-              ${escapeHtml(reserveLabel)}
-            </button>
-          </div>
-        </div>
-      </article>
-    `;
-  }
-
-  function getFilteredProperties() {
-    const source = getSourceProperties();
-    const searchText = normalizeText(state.activeSearch).toLowerCase();
-
-    let filtered = source.filter((property) => {
-      const inCategory = propertyMatchesCategory(property, state.activeCategory);
-
-      const haystack = [
-        property.title_en,
-        property.title_ar,
-        property.location_en,
-        property.location_ar,
-        property.type,
-        property.typeEn,
-        property.typeAr,
-        property.desc_en,
-        property.desc_ar
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      const inSearch = !searchText || haystack.includes(searchText);
-      return inCategory && inSearch;
-    });
-
-    if (state.currentView === "favorites") {
-      const ids = getFavoriteIds();
-      filtered = filtered.filter((item) => ids.includes(getNavigationPropertyId(item)));
-    }
-
-    if (state.sort === "rating") {
-      filtered.sort((a, b) => b.rating - a.rating);
-    } else if (state.sort === "price-low") {
-      filtered.sort((a, b) => a.price - b.price);
-    } else if (state.sort === "price-high") {
-      filtered.sort((a, b) => b.price - a.price);
-    }
-
-    return filtered;
-  }
-
-  function renderEmptyState() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    dom.listingsGrid.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-muted,#64748b);">
-        <h3 style="margin-bottom:10px;">${escapeHtml(t("no_results_title"))}</h3>
-        <p style="margin:0;">${escapeHtml(t("no_results_text"))}</p>
-      </div>
-    `;
-  }
-
-  function renderLoadingState() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    dom.listingsGrid.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-muted,#64748b);">
-        ${escapeHtml(t("loading"))}
-      </div>
-    `;
-  }
-
-  function renderListings() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    const items = getFilteredProperties();
-
-    if (!items.length) {
-      renderEmptyState();
       return;
     }
 
-    dom.listingsGrid.innerHTML = items.map(buildPropertyCard).join("");
-  }
-
-  function syncCategoryButtons() {
-    const dom = getDom();
-
-    dom.categoryButtons.forEach((btn) => {
-      const category = btn.getAttribute("data-category") || btn.getAttribute("data-category-btn") || "all";
-      const isActive = category === state.activeCategory;
-      btn.classList.toggle("active", isActive);
-      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    appendChatMessage({
+      id: `msg_${Date.now()}`,
+      role: "customer",
+      text,
+      propertyId: normalizeText(dom.chatPropertyId?.value),
+      createdAt: new Date().toISOString()
     });
-  }
 
-  function updateCurrentViewFromPage() {
-    const page = currentPage().toLowerCase();
-    if (page.includes("favorite")) state.currentView = "favorites";
-    else state.currentView = "home";
+    if (dom.chatTextarea) dom.chatTextarea.value = "";
+    showToast(t("support_toast"), "success");
+
+    setTimeout(() => {
+      appendChatMessage({
+        id: `msg_${Date.now()}_reply`,
+        role: "admin",
+        text:
+          state.lang === "ar"
+            ? "تم استلام رسالتك، وسيقوم فريقنا بالرد عليك قريبًا."
+            : "We received your message and our team will reply shortly.",
+        createdAt: new Date().toISOString()
+      });
+    }, CHAT_REPLY_DELAY);
   }
 
   /* =========================================
-     16) EVENTS
+     16) SEARCH / VIEW ACTIONS
   ========================================= */
-  function bindListingActions() {
-    document.addEventListener("click", (event) => {
-      const actionBtn = event.target.closest("[data-action]");
-      if (!actionBtn) return;
-
-      const action = actionBtn.getAttribute("data-action");
-      const id = actionBtn.getAttribute("data-id");
-      const property = getPropertyById(id);
-
-      if (action === "favorite") {
-        event.preventDefault();
-        if (property) toggleFavorite(property);
-      }
-
-      if (action === "details") {
-        event.preventDefault();
-        if (property) openPropertyDetails(property);
-      }
-
-      if (action === "reserve") {
-        event.preventDefault();
-        if (property) handleReserveNow(property);
-      }
-
-      if (action === "toggle-theme") {
-        toggleTheme();
-      }
-
-      if (action === "toggle-lang") {
-        toggleLanguage();
-      }
-    });
+  function setHomeView() {
+    state.currentView = "home";
+    renderListings();
+    syncMobileButtons();
   }
 
-  function bindGeneralEvents() {
+  function setFavoritesViewOrRoute() {
+    if (getDom().listingsGrid) {
+      state.currentView = "favorites";
+      renderListings();
+      syncMobileButtons();
+    } else if (currentPage().toLowerCase() !== ROUTES.favorites.toLowerCase()) {
+      window.location.href = ROUTES.favorites;
+    }
+  }
+
+  function syncMobileButtons() {
+    const dom = getDom();
+    dom.mobileFavBtn?.classList.toggle("active", state.currentView === "favorites");
+    dom.mobileStaysBtn?.classList.toggle("active", state.currentView !== "favorites");
+    dom.mobileProfileBtn?.classList.toggle("active", false);
+  }
+
+  function applySearchFromDom() {
+    const dom = getDom();
+    state.activeSearch = normalizeText(dom.destinationInput?.value || "");
+    renderListings();
+  }
+
+  function clearSearchAndFilters() {
+    const dom = getDom();
+    state.activeSearch = "";
+    state.activeCategory = "all";
+    state.sort = "featured";
+
+    if (dom.destinationInput) dom.destinationInput.value = "";
+    if (dom.sortSelect) dom.sortSelect.value = state.sort;
+
+    syncCategoryButtons();
+    renderListings();
+  }
+
+  function hydrateStateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const destination = params.get("destination") || params.get("q") || "";
+    const category = params.get("category") || "";
+    const sort = params.get("sort") || "";
+
+    if (destination) state.activeSearch = destination.trim();
+    if (category) {
+      const normalized =
+        category === "hotels" ? "hotel" : category === "apartments" ? "apartment" : category === "villas" ? "villa" : category;
+      state.activeCategory = normalized.toLowerCase();
+    }
+    if (["featured", "rating", "price_low", "price_high"].includes(sort)) {
+      state.sort = sort;
+    }
+
+    const dom = getDom();
+    if (dom.destinationInput && state.activeSearch) dom.destinationInput.value = state.activeSearch;
+    if (dom.sortSelect) dom.sortSelect.value = state.sort;
+  }
+
+  /* =========================================
+     17) EVENTS
+  ========================================= */
+  function bindGlobalButtons() {
     const dom = getDom();
 
     dom.themeBtn?.addEventListener("click", toggleTheme);
     dom.langBtn?.addEventListener("click", toggleLanguage);
 
-    dom.searchBtn?.addEventListener("click", () => {
-      state.activeSearch = normalizeText(dom.destinationInput?.value || "");
-      renderListings();
-    });
-
-    dom.destinationInput?.addEventListener("input", (e) => {
-      state.activeSearch = normalizeText(e.target.value || "");
-      renderListings();
-    });
-
-    dom.destinationInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        state.activeSearch = normalizeText(dom.destinationInput?.value || "");
-        renderListings();
-      }
-    });
-
-    dom.clearSearchBtn?.addEventListener("click", () => {
-      state.activeSearch = "";
-      if (dom.destinationInput) dom.destinationInput.value = "";
-      renderListings();
-    });
-
-    dom.sortSelect?.addEventListener("change", (e) => {
-      const value = String(e.target.value || "featured").toLowerCase();
-      const map = {
-        featured: "featured",
-        rating: "rating",
-        "top-rated": "rating",
-        price_low: "price-low",
-        "price-low": "price-low",
-        price_high: "price-high",
-        "price-high": "price-high"
-      };
-
-      state.sort = map[value] || "featured";
-      renderListings();
-    });
-
-    dom.categoryButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        state.activeCategory =
-          btn.getAttribute("data-category") || btn.getAttribute("data-category-btn") || "all";
-        syncCategoryButtons();
-        renderListings();
-      });
-    });
-
-    dom.authCta?.addEventListener("click", (e) => {
-      if (!state.user) {
-        e.preventDefault();
-        openAuthModal("login");
-      } else if (dom.profileDropdown) {
-        dom.profileDropdown.classList.toggle("active");
-      }
-    });
-
-    dom.profileTrigger?.addEventListener("click", (e) => {
-      if (!state.user) {
-        e.preventDefault();
-        openAuthModal("login");
-        return;
-      }
-
-      if (dom.profileDropdown) {
-        e.preventDefault();
-        dom.profileDropdown.classList.toggle("active");
-      }
-    });
-
-    dom.closeAuthBtn?.addEventListener("click", closeAuthModal);
-    dom.authModal?.addEventListener("click", (e) => {
-      if (e.target === dom.authModal) closeAuthModal();
-    });
-
-    dom.logoutBtn?.addEventListener("click", handleLogout);
-    dom.myFavoritesBtn?.addEventListener("click", () => {
-      window.location.href = ROUTES.favorites;
-    });
-    dom.myBookingsBtn?.addEventListener("click", openBookingsModal);
-
-    dom.closeBookingsBtn?.addEventListener("click", closeBookingsModal);
-    dom.bookingsModal?.addEventListener("click", (e) => {
-      if (e.target === dom.bookingsModal) closeBookingsModal();
-    });
-
-    dom.chatOpenBtn?.addEventListener("click", openChatModal);
-    dom.chatCloseBtn?.addEventListener("click", closeChatModal);
-    dom.chatModal?.addEventListener("click", (e) => {
-      if (e.target === dom.chatModal) closeChatModal();
-    });
-    dom.chatSendBtn?.addEventListener("click", handleChatSend);
-    dom.chatTextarea?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleChatSend();
-      }
-    });
-
-    dom.mobileFavBtn?.addEventListener("click", () => {
-      window.location.href = ROUTES.favorites;
-    });
-
-    dom.mobileProfileBtn?.addEventListener("click", () => {
-      if (!state.user) openAuthModal("login");
-      else if (dom.profileDropdown) dom.profileDropdown.classList.toggle("active");
-    });
-
-    dom.mobileStaysBtn?.addEventListener("click", () => {
-      window.location.href = ROUTES.home;
-    });
-
-    dom.homeLogoBtn?.addEventListener("click", (e) => {
-      const tag = dom.homeLogoBtn?.tagName?.toLowerCase();
-      if (tag !== "a") {
-        e.preventDefault();
-        window.location.href = ROUTES.home;
-      }
-    });
-
-    document.addEventListener("click", (event) => {
-      if (!dom.profileDropdown || !dom.profileTrigger || !dom.profileContainer) return;
-      const insideDropdown = dom.profileDropdown.contains(event.target);
-      const insideTrigger = dom.profileTrigger.contains(event.target);
-      const insideContainer = dom.profileContainer.contains(event.target);
-
-      if (!insideDropdown && !insideTrigger && !insideContainer) {
-        dom.profileDropdown.classList.remove("active");
-      }
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        closeAuthModal();
-        closeBookingsModal();
-        closeChatModal();
-        dom.profileDropdown?.classList.remove("active");
-      }
+    dom.homeLogoBtn?.addEventListener("click", () => {
+      closeProfileDropdown();
     });
 
     dom.scrollTopBtn?.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    window.addEventListener("storage", (e) => {
-      if ([STORAGE_KEYS.lang, STORAGE_KEYS.theme, STORAGE_KEYS.favorites].includes(e.key)) {
-        if (e.key === STORAGE_KEYS.lang) {
-          state.lang = safeGet(STORAGE_KEYS.lang, state.lang);
-          applyLanguage();
-        }
+    window.addEventListener("scroll", () => {
+      if (!dom.scrollTopBtn) return;
+      dom.scrollTopBtn.classList.toggle("visible", window.scrollY > 320);
+    });
 
-        if (e.key === STORAGE_KEYS.theme) {
-          state.theme = safeGet(STORAGE_KEYS.theme, state.theme);
-          applyTheme();
-        }
+    dom.mobileStaysBtn?.addEventListener("click", () => {
+      if (getDom().listingsGrid) {
+        setHomeView();
+      } else {
+        window.location.href = ROUTES.home;
+      }
+    });
 
-        getFavoriteIds();
+    dom.mobileFavBtn?.addEventListener("click", () => {
+      setFavoritesViewOrRoute();
+    });
+
+    dom.mobileProfileBtn?.addEventListener("click", () => {
+      if (state.user) {
+        closeProfileDropdown();
+        openBookings();
+      } else {
+        requireAuth(t("auth_redirect_profile"), "login");
+      }
+    });
+  }
+
+  function bindAuthUI() {
+    const dom = getDom();
+
+    dom.authCta?.addEventListener("click", (event) => {
+      if (dom.authCta !== dom.profileTrigger && !state.user) {
+        event.preventDefault();
+        openAuthModal("login");
+      }
+    });
+
+    dom.profileTrigger?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!state.user) {
+        openAuthModal("login");
+        return;
+      }
+      toggleProfileDropdown();
+    });
+
+    dom.closeAuthBtn?.addEventListener("click", closeAuthModal);
+    dom.logoutBtn?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      closeProfileDropdown();
+      await handleLogout();
+    });
+
+    $("#go-to-register")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      switchAuthForm("register");
+    });
+
+    $("#go-to-login")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      switchAuthForm("login");
+    });
+
+    $("#go-to-forgot")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      switchAuthForm("forgot");
+    });
+
+    $("#back-to-login")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      switchAuthForm("login");
+    });
+
+    dom.googleButtons.forEach((btn) => btn.addEventListener("click", handleGoogleAuth));
+    dom.loginForm?.addEventListener("submit", handleLoginSubmit);
+    dom.registerForm?.addEventListener("submit", handleRegisterSubmit);
+    dom.forgotForm?.addEventListener("submit", handleForgotSubmit);
+
+    $("#remember-me")?.addEventListener("change", (event) => {
+      safeSet(STORAGE_KEYS.remember, event.target.checked ? "1" : "0");
+    });
+
+    const remember = safeGet(STORAGE_KEYS.remember, "1") !== "0";
+    if ($("#remember-me")) $("#remember-me").checked = remember;
+  }
+
+  function bindSearchAndFilters() {
+    const dom = getDom();
+
+    dom.searchBtn?.addEventListener("click", applySearchFromDom);
+    dom.destinationInput?.addEventListener("input", debounce(applySearchFromDom, 180));
+    dom.destinationInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applySearchFromDom();
+      }
+    });
+
+    dom.clearSearchBtn?.addEventListener("click", clearSearchAndFilters);
+
+    dom.sortSelect?.addEventListener("change", (event) => {
+      const value = String(event.target.value || "featured");
+      if (["featured", "rating", "price_low", "price_high"].includes(value)) {
+        state.sort = value;
         renderListings();
       }
     });
+
+    dom.categoryButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const raw = String(btn.dataset.category || btn.dataset.categoryBtn || "all").toLowerCase();
+        const normalized =
+          raw === "hotels" ? "hotel" : raw === "apartments" ? "apartment" : raw === "villas" ? "villa" : raw;
+        state.activeCategory = normalized || "all";
+        syncCategoryButtons();
+        renderListings();
+      });
+    });
   }
 
-  function bindAuthEvents() {
+  function bindListingsDelegation() {
     const dom = getDom();
+    if (!dom.listingsGrid) return;
 
-    dom.loginForm?.addEventListener("submit", handleLogin);
-    dom.registerForm?.addEventListener("submit", handleRegister);
-    dom.forgotForm?.addEventListener("submit", handleForgotPassword);
-    dom.googleLoginBtn?.addEventListener("click", handleGoogleLogin);
+    dom.listingsGrid.addEventListener("click", (event) => {
+      const actionBtn = event.target.closest("[data-action]");
+      if (!actionBtn) return;
 
-    $("#go-to-register")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchAuthForm("register");
-      showAuthMessage("", "");
-    });
+      const action = actionBtn.dataset.action;
+      const id = actionBtn.dataset.id;
+      const property = getPropertyById(id);
+      if (!property) return;
 
-    $("#go-to-login")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchAuthForm("login");
-      showAuthMessage("", "");
-    });
-
-    $("#go-to-forgot")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchAuthForm("forgot");
-      showAuthMessage("", "");
-    });
-
-    $("#back-to-login")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      switchAuthForm("login");
-      showAuthMessage("", "");
-    });
-  }
-
-  function bindFirebaseAuthState() {
-    if (!auth) {
-      updateUserUI();
-      return;
-    }
-
-    auth.onAuthStateChanged(async (user) => {
-      state.user = user || null;
-      getFavoriteIds();
-      updateUserUI();
-      renderListings();
-
-      if (state.user) {
-        await loadUserBookings();
-        renderBookingsPreview();
-
-        if (continuePendingBookingAfterAuth()) return;
-      } else {
-        state.bookings = [];
-        renderBookingsPreview();
+      if (action === "favorite") {
+        event.preventDefault();
+        toggleFavorite(property);
+      } else if (action === "details") {
+        event.preventDefault();
+        openPropertyDetails(property);
+      } else if (action === "reserve") {
+        event.preventDefault();
+        handleReserveNow(property);
       }
     });
   }
 
-  /* =========================================
-     17) PAGE HELPERS
-  ========================================= */
-  function handleAuthPageRedirectIfNeeded() {
-    if (currentPage() !== ROUTES.auth) return;
+  function bindBookingsUI() {
+    const dom = getDom();
+    dom.myBookingsBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      closeProfileDropdown();
+      openBookings();
+    });
 
-    const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect");
-    const hashView = decodeURIComponent((window.location.hash || "").replace(/^#/, "") || "login");
-
-    if (hashView) switchAuthForm(hashView);
-
-    if (!state.user || !redirect) return;
-
-    window.location.href = redirect;
+    dom.closeBookingsBtn?.addEventListener("click", closeBookings);
   }
 
-  function exposePublicApi() {
-    window.showToast = showToast;
-    window.showFavToast = showFavToast;
-    window.openModal = openAuthModal;
-    window.closeModal = closeAuthModal;
-    window.requireAuth = requireAuth;
+  function bindFavoritesUI() {
+    const dom = getDom();
 
-    window.OreBooking = {
-      state,
-      t,
-      openAuthModal,
-      closeAuthModal,
-      openPropertyDetails,
-      handleReserveNow,
-      toggleFavorite,
-      rememberSelectedProperty,
-      getPropertyById,
-      getFavoriteIds
-    };
+    dom.myFavoritesBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      closeProfileDropdown();
+      setFavoritesViewOrRoute();
+    });
+
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("#fav-property-btn, [data-favorite-id], [data-fav-id]");
+      if (!btn) return;
+
+      const current = resolveSelectedProperty();
+      const id = btn.dataset.favoriteId || btn.dataset.favId || btn.dataset.id || getNavigationPropertyId(current);
+      const property = getPropertyById(id) || current;
+      if (!property) return;
+
+      event.preventDefault();
+      toggleFavorite(property);
+    });
+
+    document.addEventListener("click", (event) => {
+      const reserveBtn = event.target.closest("#reserve-now-btn, [data-reserve-current]");
+      if (!reserveBtn) return;
+      const property = resolveSelectedProperty();
+      if (!property) return;
+      event.preventDefault();
+      handleReserveNow(property);
+    });
+  }
+
+  function bindChatUI() {
+    const dom = getDom();
+
+    dom.chatOpenBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      openChat();
+    });
+
+    dom.chatCloseBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      closeChat();
+    });
+
+    dom.chatSendBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      sendChatMessage();
+    });
+
+    dom.chatTextarea?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendChatMessage();
+      }
+    });
+  }
+
+  function bindOverlaysAndOutsideClicks() {
+    document.addEventListener("click", (event) => {
+      const dom = getDom();
+
+      if (
+        dom.profileDropdown &&
+        dom.profileDropdown.classList.contains("active") &&
+        !event.target.closest(".profile-container")
+      ) {
+        closeProfileDropdown();
+      }
+
+      if (dom.authModal && event.target === dom.authModal) {
+        closeAuthModal();
+      }
+
+      if (dom.bookingsModal && event.target === dom.bookingsModal) {
+        closeBookings();
+      }
+
+      if (dom.chatModal && event.target === dom.chatModal) {
+        closeChat();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+
+      closeProfileDropdown();
+      closeAuthModal();
+      closeBookings();
+      closeChat();
+    });
   }
 
   /* =========================================
@@ -2153,37 +2487,73 @@
     if (state.initialized) return;
     state.initialized = true;
 
-    updateCurrentViewFromPage();
     initFirebase();
     applyInitialState();
-    getFavoriteIds();
-    updateUserUI();
-    bindGeneralEvents();
-    bindAuthEvents();
-    bindListingActions();
-    bindFirebaseAuthState();
-    exposePublicApi();
+    hydrateStateFromUrl();
 
-    const dom = getDom();
-    if (dom.listingsGrid) renderLoadingState();
+    bindGlobalButtons();
+    bindAuthUI();
+    bindSearchAndFilters();
+    bindListingsDelegation();
+    bindBookingsUI();
+    bindFavoritesUI();
+    bindChatUI();
+    bindOverlaysAndOutsideClicks();
 
-    const loaded = await loadLiveProperties();
-
-    if (!loaded && dom.listingsGrid) {
-      showToast(t("property_load_error"), "info");
+    if (auth) {
+      await setAuthPersistenceFromRemember();
+      attachAuthStateListener();
+    } else {
+      getFavoriteIds();
+      updateUserUI();
+      renderBookingsPreview();
+      renderChatMessages();
+      renderListings();
     }
 
+    renderChatMessages();
     syncCategoryButtons();
-    renderListings();
-    handleAuthPageRedirectIfNeeded();
+    syncSortOptions();
+    syncMobileButtons();
+    updateFavButtonState();
 
-    if (!auth) {
-      renderBookingsPreview();
+    await initialLoadProperties();
+
+    if (isAuthPage()) {
+      switchAuthForm(readHashView());
     }
   }
 
+  /* =========================================
+     19) PUBLIC API
+  ========================================= */
+  window.updateFavButtonState = updateFavButtonState;
+  window.OreBookingApp = {
+    state,
+    t,
+    authReady: () => !!auth,
+    dbReady: () => !!db,
+    getPropertyById,
+    getSourceProperties,
+    resolveSelectedProperty,
+    rememberSelectedProperty,
+    openPropertyDetails,
+    handleReserveNow,
+    toggleFavorite,
+    isFavorite,
+    buildDetailsUrl,
+    buildBookingUrl,
+    requireAuth,
+    renderListings,
+    renderBookingsPreview,
+    openBookings,
+    openChat,
+    formatCurrency,
+    formatDate
+  };
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", init, { once: true });
   } else {
     init();
   }
