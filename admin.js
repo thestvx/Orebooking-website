@@ -43,6 +43,41 @@ try {
 
 }
 
+// إعادة محاولة ربط Firebase بعد تحميل الصفحة
+window.addEventListener("load", () => {
+
+  try {
+
+    if (!db && typeof firebase !== "undefined") {
+
+      if (!firebase.apps.length) {
+
+        firebase.initializeApp({
+          apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+          authDomain: "orebooking-website.firebaseapp.com",
+          projectId: "orebooking-website",
+          storageBucket: "orebooking-website.firebasestorage.app",
+          messagingSenderId: "1012887567747",
+          appId: "1:1012887567747:web:153b57b60cb143d88acab6",
+          measurementId: "G-5GKMRMVHC3"
+        });
+
+      }
+
+      db = firebase.firestore();
+
+      console.log("Firebase reconnected successfully");
+
+    }
+
+  } catch (e) {
+
+    console.error("Firebase reconnect error:", e);
+
+  }
+
+});
+
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
