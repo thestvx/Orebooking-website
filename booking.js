@@ -1,7 +1,8 @@
 // =========================================
-// booking.js — OreBooking v16.0
+// booking.js — OreBooking v16.1
 // Simplified booking flow + auth + payment
-// Final fixed version for simplified booking.html
+// Compatible with current simplified booking.html
+// Final date formatting fix
 // =========================================
 
 "use strict";
@@ -105,9 +106,24 @@ function validatePhone(phone) {
   return cleaned.length >= 8;
 }
 
+function parseDateParts(dateStr) {
+  const value = cleanText(dateStr);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (!year || !month || !day) return null;
+  return { year, month, day };
+}
+
 function parseDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(`${dateStr}T12:00:00`);
+  const parts = parseDateParts(dateStr);
+  if (!parts) return null;
+
+  const d = new Date(parts.year, parts.month - 1, parts.day, 12, 0, 0, 0);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
@@ -166,21 +182,15 @@ function safeCall(fn, label = "Unknown task") {
 // State
 // ──────────────────────────────────────────
 let currentUser = null;
-let lastAuthUserKey = "__init__";
 
-const BOOKING_DRAFT_KEY = "ore_booking_draft_v6";
+const BOOKING_DRAFT_KEY = "ore_booking_draft_v5";
 const LOCAL_BOOKINGS_KEY = "ore_bookings_local_v1";
-const LEGACY_KEYS = [
-  "ore_guest_basics",
-  "ore_booking_draft_v4",
-  "ore_booking_draft_v5"
-];
 
 const bookingState = {
   initialized: false,
   currentStep: 1,
-  lang: normalizeLang(safeGet("ore_lang", safeGet("orelang", "ar"))),
-  theme: safeGet("ore_theme", safeGet("oretheme", "light")) || "light",
+  lang: normalizeLang(safeGet("ore_lang", "ar")),
+  theme: safeGet("ore_theme", "light") || "light",
 
   propertyId: null,
   property: null,
@@ -205,12 +215,25 @@ function t(en, ar) {
 }
 
 function formatDateDisplay(dateStr) {
-  const d = parseDate(dateStr);
-  if (!d) return t("Not selected", "غير محدد");
-  return d.toLocaleDateString(
-    bookingState.lang === "ar" ? "ar-DZ" : "en-GB",
-    { day: "2-digit", month: "short", year: "numeric" }
-  );
+  const parts = parseDateParts(dateStr);
+  if (!parts) return t("Not selected", "غير محدد");
+
+  const monthsAr = [
+    "جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان",
+    "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+  ];
+
+  const monthsEn = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const day = String(parts.day).padStart(2, "0");
+  const monthName = bookingState.lang === "ar"
+    ? monthsAr[parts.month - 1]
+    : monthsEn[parts.month - 1];
+
+  return `${day} ${monthName} ${parts.year}`;
 }
 
 function formatCurrency(value) {
@@ -218,62 +241,6 @@ function formatCurrency(value) {
   return bookingState.lang === "ar"
     ? `${amount.toLocaleString("ar-DZ")} د.ج`
     : `${amount.toLocaleString("en-US")} DZD`;
-}
-
-// ──────────────────────────────────────────
-// Storage Scope
-// ──────────────────────────────────────────
-function getCurrentUserKey(user = currentUser) {
-  return user?.uid ? `user:${user.uid}` : "guest";
-}
-
-function getScopedKey(baseKey, user = currentUser) {
-  return `${baseKey}__${getCurrentUserKey(user)}`;
-}
-
-function getGuestBasicsKey(user = currentUser) {
-  return getScopedKey("ore_guest_basics_v2", user);
-}
-
-function getDraftKey(user = currentUser) {
-  return getScopedKey(BOOKING_DRAFT_KEY, user);
-}
-
-function getScopedLocalBookingsKey(user = currentUser) {
-  return getScopedKey(LOCAL_BOOKINGS_KEY, user);
-}
-
-function clearLegacyStorage() {
-  LEGACY_KEYS.forEach((key) => safeRemove(key));
-}
-
-function clearUserScopedStorage(user = currentUser) {
-  safeRemove(getGuestBasicsKey(user));
-  safeRemove(getDraftKey(user));
-}
-
-function clearCurrentDraftOnly(user = currentUser) {
-  safeRemove(getDraftKey(user));
-}
-
-function getAllStorageKeys() {
-  try {
-    return Object.keys(localStorage || {});
-  } catch (_) {
-    return [];
-  }
-}
-
-function clearAllBookingScopedStorage() {
-  getAllStorageKeys().forEach((key) => {
-    if (
-      key.startsWith("ore_guest_basics_v2__") ||
-      key.startsWith(`${BOOKING_DRAFT_KEY}__`)
-    ) {
-      safeRemove(key);
-    }
-  });
-  clearLegacyStorage();
 }
 
 // ──────────────────────────────────────────
@@ -570,98 +537,6 @@ function scrollToFirstInvalid() {
 }
 
 // ──────────────────────────────────────────
-// Reset / Session Isolation
-// ──────────────────────────────────────────
-function resetPaymentUploadState() {
-  bookingState.paymentProofUrl = null;
-  bookingState.paymentProofName = "";
-  bookingState.paymentProofUploading = false;
-  if (els.paymentProof) els.paymentProof.value = "";
-  showSelectedFile("");
-}
-
-function resetBookingStateCore() {
-  bookingState.currentStep = 1;
-  bookingState.checkIn = "";
-  bookingState.checkOut = "";
-  bookingState.guestCount = 1;
-  bookingState.nights = 0;
-  bookingState.paymentMethod = "Bank Transfer";
-  bookingState.paymentValue = "ccp";
-  bookingState.rewardPoints = 0;
-  bookingState.bookingReference = "";
-  resetPaymentUploadState();
-}
-
-function resetBookingForm(options = {}) {
-  const {
-    preserveStayContext = true,
-    preserveProperty = true
-  } = options;
-
-  Object.values(bookingFields).forEach((el) => {
-    if (!el) return;
-    if (el.type === "checkbox" || el.type === "radio") {
-      el.checked = false;
-      return;
-    }
-    if (el.type === "file") {
-      el.value = "";
-      return;
-    }
-    if ("value" in el) {
-      el.value = "";
-    }
-  });
-
-  if (bookingFields.guestAdults) bookingFields.guestAdults.value = "1";
-  if (bookingFields.guestChildren) bookingFields.guestChildren.value = "0";
-
-  const firstPayment = els.paymentRadios[0];
-  if (firstPayment) firstPayment.checked = true;
-
-  if (!preserveStayContext) {
-    safeRemove("booking_check_in");
-    safeRemove("booking_check_out");
-    safeRemove("booking_guests");
-  }
-
-  resetBookingStateCore();
-
-  if (preserveProperty) {
-    bookingState.propertyId = bookingState.propertyId || resolvePropertyId();
-  }
-
-  hideGlobalAlert();
-  clearAllInvalidStates();
-  updatePaymentCardsUI();
-  updateDateConstraints();
-  updateSummary();
-  updateReview();
-  setStep(1);
-}
-
-function handleAuthContextChange(user) {
-  const nextKey = getCurrentUserKey(user);
-  const changed = lastAuthUserKey !== nextKey;
-
-  currentUser = user || null;
-
-  if (changed) {
-    clearLegacyStorage();
-    resetBookingForm({ preserveStayContext: true, preserveProperty: true });
-    hydrateGuestBasics();
-    hydrateDraft();
-  }
-
-  updateAuthUI(currentUser);
-  updateSummary();
-  updateReview();
-
-  lastAuthUserKey = nextKey;
-}
-
-// ──────────────────────────────────────────
 // Language / Theme / Direction
 // ──────────────────────────────────────────
 function updateDirection() {
@@ -783,10 +658,6 @@ function applyTranslations() {
       el.setAttribute("title", dict[key]);
     }
   });
-
-  if (dict.pageTitle) {
-    document.title = dict.pageTitle;
-  }
 }
 
 function refreshLocalizedUI() {
@@ -841,14 +712,13 @@ function toggleProfileDropdown(force = null) {
 function updateAuthUI(user) {
   currentUser = user || null;
 
-  const guestBasics = safeJsonGet(getGuestBasicsKey(currentUser), {});
+  const guestBasics = safeJsonGet("ore_guest_basics", {});
   const name =
     cleanText(user?.displayName) ||
     cleanText(guestBasics?.guestName) ||
     t("Guest User", "زائر");
   const email =
     cleanText(user?.email) ||
-    cleanText(guestBasics?.guestEmail) ||
     t("Sign in to continue", "سجل الدخول للمتابعة");
 
   setText(els.dropdownUserName, name);
@@ -905,16 +775,12 @@ async function registerWithEmail(name, email, password) {
   }
 
   try {
-    clearAllBookingScopedStorage();
     clearAuthMessage();
     setButtonLoading(getById("register-submit-btn"), true, t("Creating account...", "جارٍ إنشاء الحساب..."));
-
     const result = await auth.createUserWithEmailAndPassword(email, password);
-
     if (result?.user && name) {
       await result.user.updateProfile({ displayName: name });
     }
-
     closeAuthModal();
     showToast(t("Account created successfully.", "تم إنشاء الحساب بنجاح."), "success");
   } catch (error) {
@@ -941,11 +807,7 @@ async function sendResetEmail(email) {
 
 async function logoutUser() {
   try {
-    clearUserScopedStorage(currentUser);
-    resetBookingForm({ preserveStayContext: true, preserveProperty: true });
-
     if (auth) await auth.signOut();
-
     toggleProfileDropdown(false);
     showToast(t("Logged out successfully.", "تم تسجيل الخروج بنجاح."), "success");
   } catch (error) {
@@ -1243,7 +1105,7 @@ function applyFieldValues(values = {}) {
 }
 
 function persistGuestBasics() {
-  safeJsonSet(getGuestBasicsKey(currentUser), {
+  safeJsonSet("ore_guest_basics", {
     guestName: getFieldValue("guestName"),
     guestEmail: getFieldValue("guestEmail"),
     guestPhone: getFieldValue("guestPhone"),
@@ -1253,17 +1115,12 @@ function persistGuestBasics() {
 }
 
 function hydrateGuestBasics() {
-  const saved = safeJsonGet(getGuestBasicsKey(currentUser), {});
+  const saved = safeJsonGet("ore_guest_basics", {});
   setValueIfEmpty(bookingFields.guestName, saved?.guestName);
-  setValueIfEmpty(bookingFields.guestEmail, saved?.guestEmail || currentUser?.email);
+  setValueIfEmpty(bookingFields.guestEmail, saved?.guestEmail);
   setValueIfEmpty(bookingFields.guestPhone, saved?.guestPhone);
   setValueIfEmpty(bookingFields.guestCountry, saved?.guestCountry);
   setValueIfEmpty(bookingFields.billingName, saved?.billingName);
-
-  if (currentUser?.displayName) {
-    setValueIfEmpty(bookingFields.guestName, currentUser.displayName);
-    setValueIfEmpty(bookingFields.billingName, currentUser.displayName);
-  }
 }
 
 function saveDraft() {
@@ -1273,16 +1130,15 @@ function saveDraft() {
     paymentProofName: bookingState.paymentProofName || "",
     paymentProofUrl: bookingState.paymentProofUrl || "",
     values: collectFieldValues(),
-    savedAt: new Date().toISOString(),
-    userKey: getCurrentUserKey(currentUser)
+    savedAt: new Date().toISOString()
   };
 
-  safeJsonSet(getDraftKey(currentUser), draft);
+  safeJsonSet(BOOKING_DRAFT_KEY, draft);
   persistGuestBasics();
 }
 
 function hydrateDraft() {
-  const draft = safeJsonGet(getDraftKey(currentUser), null);
+  const draft = safeJsonGet(BOOKING_DRAFT_KEY, null);
   if (!draft) return;
   if (draft.propertyId && bookingState.propertyId && draft.propertyId !== bookingState.propertyId) return;
 
@@ -1388,6 +1244,7 @@ function updateReview() {
   setText(els.reviewPaymentMethod, bookingState.paymentMethod);
   setText(els.reviewPoints, String(bookingState.rewardPoints || 0));
   setText(els.reviewPointsInline, String(bookingState.rewardPoints || 0));
+
   setText(els.userPoints, String(bookingState.rewardPoints || 0));
 }
 
@@ -1430,7 +1287,6 @@ function updatePaymentCardsUI() {
 
   els.bankTransferBox?.classList.toggle("active", selected === "ccp" || selected === "bank" || selected === "bank-transfer");
   els.cashBox?.classList.toggle("active", selected === "cash");
-
   if (els.cardBox) {
     els.cardBox.classList.remove("active");
     els.cardBox.style.display = "none";
@@ -1459,8 +1315,7 @@ async function uploadPaymentProof(file) {
       return null;
     }
 
-    const userPart = getCurrentUserKey(currentUser).replace(/[^a-zA-Z0-9:_-]/g, "_");
-    const refPath = `booking-receipts/${userPart}/${Date.now()}-${file.name}`;
+    const refPath = `booking-receipts/${Date.now()}-${file.name}`;
     const ref = storage.ref().child(refPath);
     await ref.put(file);
     const url = await ref.getDownloadURL();
@@ -1664,23 +1519,16 @@ function buildBookingPayload() {
 
     userId: currentUser?.uid || null,
     userEmail: currentUser?.email || getFieldValue("guestEmail"),
-    userKey: getCurrentUserKey(currentUser),
     status: "pending",
     createdAt: new Date().toISOString()
   };
 }
 
 async function saveBookingLocally(payload) {
-  const scopedKey = getScopedLocalBookingsKey(currentUser);
-  const existing = safeJsonGet(scopedKey, []);
+  const existing = safeJsonGet(LOCAL_BOOKINGS_KEY, []);
   const next = Array.isArray(existing) ? existing : [];
   next.unshift(payload);
-  safeJsonSet(scopedKey, next);
-
-  const globalExisting = safeJsonGet(LOCAL_BOOKINGS_KEY, []);
-  const globalNext = Array.isArray(globalExisting) ? globalExisting : [];
-  globalNext.unshift(payload);
-  safeJsonSet(LOCAL_BOOKINGS_KEY, globalNext);
+  safeJsonSet(LOCAL_BOOKINGS_KEY, next);
 }
 
 async function saveBookingToFirestore(payload) {
@@ -1753,7 +1601,7 @@ async function confirmBooking() {
     const payload = buildBookingPayload();
     await saveBookingToFirestore(payload);
 
-    clearCurrentDraftOnly(currentUser);
+    safeRemove(BOOKING_DRAFT_KEY);
     fireSuccessConfetti();
 
     showToast(
@@ -1859,10 +1707,11 @@ function bindGeneralEvents() {
 
   if (auth) {
     auth.onAuthStateChanged((user) => {
-      handleAuthContextChange(user || null);
+      currentUser = user || null;
+      updateAuthUI(currentUser);
     });
   } else {
-    handleAuthContextChange(null);
+    updateAuthUI(null);
   }
 }
 
@@ -1910,16 +1759,6 @@ function bindAuthEvents() {
       return;
     }
     sendResetEmail(email);
-  });
-
-  qsa("[data-auth-switch]").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const target = cleanText(link.getAttribute("data-auth-switch"));
-      if (!target) return;
-      switchAuthForm(target);
-      clearAuthMessage();
-    });
   });
 
   getById("go-to-register")?.addEventListener("click", (e) => {
@@ -2052,13 +1891,6 @@ function bindBookingEvents() {
 
   els.editStep1Btns.forEach((btn) => btn.addEventListener("click", () => setStep(1)));
   els.editStep2Btns.forEach((btn) => btn.addEventListener("click", () => setStep(2)));
-
-  document.querySelectorAll("[data-edit-step]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const step = parsePositiveInt(btn.getAttribute("data-edit-step"), 1);
-      setStep(Math.min(3, Math.max(1, step)));
-    });
-  });
 }
 
 // ──────────────────────────────────────────
@@ -2067,8 +1899,6 @@ function bindBookingEvents() {
 async function init() {
   if (bookingState.initialized) return;
   bookingState.initialized = true;
-
-  clearLegacyStorage();
 
   cacheOriginalLocalizedContent();
   updateDirection();
