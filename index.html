@@ -22,9 +22,9 @@
     <script>
         (function () {
             try {
-                const savedTheme = localStorage.getItem("ore_theme") || "light";
-                const savedLang = localStorage.getItem("ore_lang") || "en";
-                document.documentElement.lang = savedLang;
+                const savedTheme = localStorage.getItem("ore_theme") || localStorage.getItem("oretheme") || "light";
+                const savedLang = localStorage.getItem("ore_lang") || localStorage.getItem("orelang") || "en";
+                document.documentElement.lang = savedLang === "ar" ? "ar" : "en";
                 document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
                 if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
             } catch (_) { }
@@ -40,6 +40,7 @@
         :root {
             --primary: #435abf;
             --primary-hover: #34459c;
+            --primary-soft: rgba(67, 90, 191, 0.1);
             --surface-color: #ffffff;
             --bg-color: #f8fafc;
             --border-color: #e2e8f0;
@@ -49,12 +50,14 @@
             --error: #ef4444;
             --warning: #f59e0b;
             --radius-full: 9999px;
+            --radius-2xl: 28px;
             --radius-xl: 24px;
             --radius-lg: 16px;
             --radius-md: 12px;
             --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --shadow-hover: 0 20px 40px -10px rgba(67, 90, 191, 0.15);
-            --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.08);
+            --shadow-hover: 0 20px 40px -10px rgba(67, 90, 191, 0.18);
+            --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             --transition-fast: 0.2s ease-out;
         }
 
@@ -68,7 +71,9 @@
 
         body {
             font-family: 'Outfit', sans-serif;
-            background-color: var(--bg-color);
+            background:
+                radial-gradient(circle at top center, rgba(67, 90, 191, 0.08), transparent 42%),
+                var(--bg-color);
             color: var(--text-main);
             margin: 0;
             -webkit-font-smoothing: antialiased;
@@ -86,12 +91,31 @@
             --border-color: #1e293b;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --primary-soft: rgba(99, 122, 255, 0.14);
             --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.25);
+            --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.26);
             --shadow-hover: 0 24px 48px rgba(0, 0, 0, 0.28);
         }
 
         body.modal-open {
             overflow: hidden;
+        }
+
+        img {
+            max-width: 100%;
+            display: block;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
         }
 
         .container {
@@ -112,37 +136,36 @@
             font-size: 0.875rem;
         }
 
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: var(--radius-full);
+            padding: 10px 16px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
         @keyframes slideUpFade {
-            0% {
+            from {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(24px);
             }
 
-            100% {
+            to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        @keyframes float {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-8px);
-            }
-        }
-
         @keyframes scaleIn {
-            0% {
+            from {
                 opacity: 0;
-                transform: scale(0.95);
+                transform: scale(0.96);
             }
 
-            100% {
+            to {
                 opacity: 1;
                 transform: scale(1);
             }
@@ -160,23 +183,23 @@
 
         .animate-up {
             opacity: 0;
-            animation: slideUpFade var(--transition-smooth) forwards;
+            animation: slideUpFade 0.55s var(--transition-smooth) forwards;
         }
 
         .delay-1 {
-            animation-delay: 0.1s;
+            animation-delay: 0.08s;
         }
 
         .delay-2 {
-            animation-delay: 0.2s;
+            animation-delay: 0.16s;
         }
 
         .delay-3 {
-            animation-delay: 0.3s;
+            animation-delay: 0.24s;
         }
 
         .delay-4 {
-            animation-delay: 0.4s;
+            animation-delay: 0.32s;
         }
 
         [class^="ph-"],
@@ -195,7 +218,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 16px 40px;
+            gap: 18px;
+            padding: 16px 24px;
             background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
@@ -216,21 +240,19 @@
             justify-content: flex-start;
             flex: 1;
             min-width: 0;
-            text-decoration: none;
         }
 
         .logo-img {
             height: 42px;
             width: auto;
             object-fit: contain;
-            display: block;
         }
 
         .nav-actions {
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 14px;
+            gap: 12px;
             flex: 1;
             flex-wrap: wrap;
         }
@@ -246,47 +268,53 @@
             font-weight: 700;
             font-size: 0.95rem;
             white-space: nowrap;
+            border: 1px solid rgba(139, 92, 246, 0.18);
         }
 
         .icon-btn,
         .lang-btn,
         .profile-menu,
         .chat-toggle-btn,
-        .auth-link-btn {
-            display: flex;
+        .auth-link-btn,
+        .secondary-btn,
+        .ghost-icon-btn {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             border: 1px solid var(--border-color);
             background: var(--surface-color);
             color: var(--text-main);
-            height: 42px;
+            min-height: 42px;
             cursor: pointer;
             transition: var(--transition-fast);
-            font-family: inherit;
             text-decoration: none;
         }
 
         .icon-btn,
-        .profile-menu {
+        .profile-menu,
+        .ghost-icon-btn {
             width: 42px;
+            height: 42px;
             border-radius: 50%;
             font-size: 1.2rem;
         }
 
         .lang-btn,
-        .auth-link-btn {
+        .auth-link-btn,
+        .secondary-btn {
             padding: 0 18px;
             border-radius: var(--radius-full);
-            font-weight: 600;
+            font-weight: 700;
             font-size: 0.95rem;
-            gap: 6px;
+            gap: 8px;
         }
 
         .icon-btn:hover,
         .lang-btn:hover,
         .profile-menu:hover,
-        .chat-toggle-btn:hover,
-        .auth-link-btn:hover {
+        .auth-link-btn:hover,
+        .secondary-btn:hover,
+        .ghost-icon-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
             transform: translateY(-2px);
@@ -309,17 +337,12 @@
             display: none;
             flex-direction: column;
             overflow: hidden;
-            transform-origin: top right;
-            z-index: 100;
-        }
-
-        html[dir="rtl"] #profile-dropdown {
-            transform-origin: top left;
+            z-index: 1200;
         }
 
         #profile-dropdown.active {
             display: flex;
-            animation: scaleIn 0.2s forwards;
+            animation: scaleIn 0.18s ease forwards;
         }
 
         .dropdown-header {
@@ -344,12 +367,11 @@
             border: none;
             color: var(--text-main);
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 10px;
             transition: var(--transition-fast);
             text-align: start;
-            font-family: inherit;
         }
 
         .dropdown-item:hover {
@@ -359,60 +381,74 @@
 
         .dropdown-item.text-danger:hover {
             background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
+            color: var(--error);
         }
 
         .hero {
             position: relative;
-            padding: 100px 20px 60px;
+            padding: 88px 0 34px;
             text-align: center;
-            background: radial-gradient(circle at top center, rgba(67, 90, 191, 0.08) 0%, transparent 60%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
         }
 
         .hero h1 {
-            font-size: clamp(2.5rem, 5vw, 3.5rem);
-            letter-spacing: -0.02em;
-            margin-bottom: 16px;
-            line-height: 1.2;
+            font-size: clamp(2.4rem, 5vw, 4rem);
+            letter-spacing: -0.03em;
+            margin: 0 0 16px;
+            line-height: 1.1;
             font-weight: 800;
             color: var(--text-main);
         }
 
         .hero p {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             color: var(--text-muted);
-            max-width: 600px;
-            margin: 0 auto 40px;
+            max-width: 760px;
+            margin: 0 auto 34px;
+            line-height: 1.8;
+        }
+
+        .hero-badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-radius: var(--radius-full);
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            box-shadow: var(--shadow-sm);
+            font-weight: 700;
         }
 
         .search-bar {
             display: flex;
-            align-items: center;
+            align-items: stretch;
             justify-content: space-between;
             background: var(--surface-color);
-            border-radius: var(--radius-full);
-            padding: 8px 8px 8px 24px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+            border-radius: 30px;
+            padding: 10px;
+            box-shadow: var(--shadow-md);
             border: 1px solid var(--border-color);
-            max-width: 980px;
+            max-width: 1080px;
             width: 100%;
-            transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth), background-color var(--transition-smooth);
+            margin: 0 auto;
             position: relative;
-            z-index: 50;
-        }
-
-        html[dir="rtl"] .search-bar {
-            padding: 8px 24px 8px 8px;
+            transition: var(--transition-smooth);
+            z-index: 20;
         }
 
         .search-bar:hover,
         .search-bar:focus-within {
-            box-shadow: var(--shadow-hover);
             border-color: var(--primary);
+            box-shadow: var(--shadow-hover);
         }
 
         .search-field {
@@ -421,10 +457,10 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            padding: 8px 16px;
-            border-radius: var(--radius-full);
+            padding: 10px 16px;
+            border-radius: 22px;
             transition: background var(--transition-fast);
-            z-index: 60;
+            min-width: 0;
             text-align: start;
         }
 
@@ -437,12 +473,11 @@
         }
 
         .search-field label {
-            font-size: 0.75rem;
-            font-weight: 700;
+            font-size: 0.76rem;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-            cursor: pointer;
+            letter-spacing: 0.6px;
+            margin-bottom: 6px;
             color: var(--text-main);
         }
 
@@ -451,31 +486,35 @@
             background: transparent;
             outline: none;
             font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-muted);
+            font-weight: 600;
+            color: var(--text-main);
             width: 100%;
-            font-family: inherit;
+        }
+
+        .search-field input::placeholder {
+            color: var(--text-muted);
+            opacity: 1;
         }
 
         .search-dropdown {
             position: absolute;
             top: calc(100% + 12px);
             inset-inline-start: 0;
-            width: min(100%, 430px);
+            width: min(100%, 420px);
             background: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 18px;
             box-shadow: var(--shadow-hover);
             padding: 8px;
             display: none;
-            max-height: 360px;
+            max-height: 320px;
             overflow-y: auto;
-            z-index: 120;
+            z-index: 100;
         }
 
         .search-dropdown.active {
             display: block;
-            animation: scaleIn .18s ease;
+            animation: scaleIn 0.18s ease;
         }
 
         .search-suggestion-item {
@@ -489,7 +528,6 @@
             cursor: pointer;
             color: var(--text-main);
             transition: var(--transition-fast);
-            font-family: inherit;
         }
 
         .search-suggestion-item:hover {
@@ -497,7 +535,7 @@
         }
 
         .search-suggestion-main {
-            font-weight: 700;
+            font-weight: 800;
             line-height: 1.35;
         }
 
@@ -515,33 +553,34 @@
 
         .search-divider {
             width: 1px;
-            height: 32px;
             background: var(--border-color);
-            margin: 0 8px;
+            margin: 8px 4px;
         }
 
-        .search-btn {
+        .search-btn,
+        .primary-btn {
             background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            color: white;
+            color: #fff;
             border: none;
             border-radius: var(--radius-full);
-            padding: 16px 32px;
+            padding: 0 24px;
+            min-height: 60px;
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 800;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            transition: box-shadow var(--transition-smooth), filter var(--transition-smooth), background var(--transition-smooth);
-            box-shadow: 0 4px 14px rgba(67, 90, 191, 0.3);
-            z-index: 60;
-            flex-shrink: 0;
+            transition: var(--transition-smooth);
+            box-shadow: 0 6px 18px rgba(67, 90, 191, 0.32);
             font-family: inherit;
         }
 
         .search-btn:hover,
-        .search-btn:focus-visible {
-            box-shadow: 0 6px 20px rgba(67, 90, 191, 0.4);
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
             filter: brightness(1.03);
         }
 
@@ -551,31 +590,24 @@
             justify-content: center;
             gap: 14px;
             flex-wrap: wrap;
-            padding: 10px 20px 30px;
-            position: relative;
-            z-index: 10;
+            padding: 12px 20px 34px;
             min-height: 72px;
         }
 
         .category-item {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 24px;
+            padding: 12px 22px;
             background: var(--surface-color);
             border: 1.5px solid var(--border-color);
             border-radius: var(--radius-full);
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-muted);
             cursor: pointer;
             transition: var(--transition-smooth);
-            font-family: inherit;
             box-shadow: var(--shadow-sm);
-        }
-
-        .category-item i {
-            font-size: 1.3rem;
         }
 
         .category-item:hover {
@@ -589,21 +621,20 @@
             background: var(--text-main);
             color: var(--surface-color);
             border-color: var(--text-main);
-            box-shadow: var(--shadow-hover);
         }
 
         .section-header-wrapper {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
             gap: 16px;
         }
 
         .section-header-wrapper h2 {
-            margin: 0;
-            font-size: 1.75rem;
+            margin: 0 0 8px;
+            font-size: 1.8rem;
         }
 
         .section-header-controls {
@@ -611,37 +642,41 @@
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
-            position: relative;
         }
 
         .sort-select,
         .clear-search-btn {
-            padding: 12px 20px;
+            min-height: 46px;
+            padding: 0 18px;
             border-radius: var(--radius-full);
             border: 1px solid var(--border-color);
             background: var(--surface-color);
             color: var(--text-main);
             font-size: 0.95rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             outline: none;
-            transition: var(--transition-smooth);
+            transition: var(--transition-fast);
             box-shadow: var(--shadow-sm);
-            font-family: inherit;
         }
 
         .clear-search-btn {
-            padding: 12px 18px;
             display: none;
             align-items: center;
             gap: 8px;
+        }
+
+        .sort-select:hover,
+        .clear-search-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         #listings-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 28px;
-            padding: 20px 0 70px;
+            padding: 16px 0 90px;
             min-height: 220px;
         }
 
@@ -667,7 +702,7 @@
         .property-card-media {
             position: relative;
             width: 100%;
-            aspect-ratio: 4/3;
+            aspect-ratio: 4 / 3;
             overflow: hidden;
             background: #e2e8f0;
         }
@@ -677,108 +712,10 @@
             height: 100%;
             object-fit: cover;
             transition: transform 0.5s ease;
-            display: block;
         }
 
         .property-card:hover .property-card-media img {
             transform: scale(1.05);
-        }
-
-        .property-card-body {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            gap: 10px;
-        }
-
-        .property-card-top {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .property-card-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin: 0;
-            line-height: 1.3;
-        }
-
-        .property-card-rating {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 0.92rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .property-card-location {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            min-height: 22px;
-        }
-
-        .property-card-price {
-            margin-top: auto;
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: var(--text-main);
-        }
-
-        .property-card-price span {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
-
-        .property-card-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .property-card-actions button,
-        .property-card-actions a,
-        .primary-btn {
-            border-radius: 12px;
-            padding: 12px 14px;
-            border: 1px solid var(--border-color);
-            background: var(--surface-color);
-            color: var(--text-main);
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
-            text-align: center;
-            text-decoration: none;
-            transition: var(--transition-fast);
-        }
-
-        .property-card-actions button,
-        .property-card-actions a {
-            flex: 1;
-        }
-
-        .property-card-actions .primary,
-        .property-card-actions .reserve-btn.primary,
-        .primary-btn {
-            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            color: #fff;
-            border-color: transparent;
-        }
-
-        .property-card-actions button:hover,
-        .property-card-actions a:hover,
-        .primary-btn:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            box-shadow: var(--shadow-sm);
         }
 
         .favorite-btn {
@@ -788,7 +725,7 @@
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.72);
             background: rgba(255, 255, 255, 0.92);
             color: #0f172a;
             display: flex;
@@ -814,14 +751,109 @@
             inset-inline-start: 14px;
             padding: 8px 12px;
             border-radius: var(--radius-full);
-            background: rgba(15, 23, 42, .78);
+            background: rgba(15, 23, 42, .82);
             color: #fff;
             font-size: 0.8rem;
-            font-weight: 700;
+            font-weight: 800;
             z-index: 3;
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .property-card-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 10px;
+        }
+
+        .property-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .property-card-title {
+            font-size: 1.12rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1.35;
+        }
+
+        .property-card-rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            white-space: nowrap;
+            color: #f59e0b;
+        }
+
+        .property-card-location,
+        .property-card-meta {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .property-card-price {
+            margin-top: auto;
+            font-size: 1.28rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .property-card-price span {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .property-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .property-card-actions button,
+        .property-card-actions a {
+            flex: 1;
+            min-height: 48px;
+            border-radius: 14px;
+            padding: 0 14px;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            font-weight: 800;
+            cursor: pointer;
+            text-align: center;
+            transition: var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .property-card-actions .primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .property-card-actions button:hover,
+        .property-card-actions a:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
         }
 
         .listings-empty-state {
@@ -835,9 +867,9 @@
         }
 
         .listings-empty-state i {
-            font-size: 2.3rem;
+            font-size: 2.5rem;
             display: block;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             color: var(--primary);
         }
 
@@ -854,7 +886,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.45rem;
             z-index: 500;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -875,9 +907,8 @@
         }
 
         #scroll-top-btn:hover {
-            transform: translateY(-4px) scale(1.1);
+            transform: translateY(-4px) scale(1.08);
             background: var(--primary-hover);
-            box-shadow: 0 12px 30px rgba(67, 90, 191, 0.5);
         }
 
         #chat-open-btn {
@@ -912,7 +943,7 @@
         .chat-modal {
             position: fixed;
             inset: 0;
-            background: rgba(2, 6, 23, 0.56);
+            background: rgba(2, 6, 23, 0.58);
             z-index: 10020;
             display: none;
             align-items: center;
@@ -949,6 +980,9 @@
         .bookings-modal-header h3 {
             margin: 0;
             font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .bookings-modal-header button,
@@ -1017,7 +1051,7 @@
             padding: 7px 12px;
             border-radius: 999px;
             font-size: 0.82rem;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .booking-status.pending {
@@ -1113,6 +1147,7 @@
             line-height: 1.6;
             font-size: 0.93rem;
             box-shadow: var(--shadow-sm);
+            word-break: break-word;
         }
 
         .chat-message.admin {
@@ -1151,11 +1186,10 @@
             min-height: 92px;
             width: 100%;
             padding: 12px 16px;
-            border-radius: 10px;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
             background: var(--bg-color);
             outline: none;
-            font-family: inherit;
             color: var(--text-main);
         }
 
@@ -1174,6 +1208,7 @@
 
         .chat-send-btn {
             min-width: 140px;
+            min-height: 46px;
         }
 
         #toast-container {
@@ -1195,7 +1230,10 @@
             padding: 14px 16px;
             box-shadow: var(--shadow-hover);
             animation: scaleIn .2s ease;
-            font-weight: 600;
+            font-weight: 700;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
 
         .toast.success {
@@ -1233,15 +1271,15 @@
             position: sticky;
             bottom: 0;
             z-index: 999;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.05);
             display: none;
         }
 
         .dark #mobile-bottom-nav {
-            background: rgba(15, 23, 42, 0.9);
-            border-top-color: rgba(255, 255, 255, 0.05);
+            background: rgba(15, 23, 42, 0.92);
+            border-top-color: rgba(255, 255, 255, 0.06);
         }
 
         .mobile-nav-inner {
@@ -1259,7 +1297,6 @@
             border: none;
             color: var(--text-muted);
             cursor: pointer;
-            font-family: inherit;
             padding: 6px 10px;
             min-width: 68px;
             transition: var(--transition-fast);
@@ -1271,12 +1308,23 @@
 
         .mob-nav-btn span {
             font-size: 0.78rem;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .mob-nav-btn.active,
         .mob-nav-btn:hover {
             color: var(--primary);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
         }
 
         @media (max-width: 1024px) {
@@ -1305,7 +1353,6 @@
 
             .search-btn {
                 width: 100%;
-                justify-content: center;
             }
         }
 
@@ -1324,11 +1371,11 @@
             }
 
             .hero {
-                padding: 70px 16px 36px;
+                padding: 64px 0 28px;
             }
 
             .hero p {
-                margin-bottom: 26px;
+                margin-bottom: 24px;
             }
 
             .container {
@@ -1379,11 +1426,23 @@
             .property-card-actions {
                 flex-direction: column;
             }
+
+            .chat-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chat-send-btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
 
 <body>
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+    <div id="fav-toast" aria-live="polite"></div>
+
     <header class="navbar">
         <a id="home-logo-btn" class="logo" href="index.html" aria-label="OreBooking Home">
             <img id="main-logo" src="logos/orebooking.png" alt="OreBooking" class="logo-img">
@@ -1401,7 +1460,7 @@
 
             <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
                 <i class="ph ph-translate"></i>
-                <span>AR</span>
+                <span id="lang-toggle-text">AR</span>
             </button>
 
             <a id="auth-cta" class="auth-link-btn" href="auth.html?redirect=index.html">
@@ -1410,11 +1469,12 @@
             </a>
 
             <div class="profile-container">
-                <button id="profile-trigger" class="profile-menu hidden" type="button" aria-label="Profile menu">
+                <button id="profile-trigger" class="profile-menu hidden" type="button" aria-label="Profile menu"
+                    aria-expanded="false">
                     <i class="ph ph-user-circle"></i>
                 </button>
 
-                <div id="profile-dropdown">
+                <div id="profile-dropdown" aria-hidden="true">
                     <div class="dropdown-header">
                         <strong id="profile-name">Guest User</strong>
                         <span id="profile-email" class="text-muted text-sm"></span>
@@ -1431,6 +1491,11 @@
                             <span data-i18n="favorites">Favorites</span>
                         </button>
 
+                        <button class="dropdown-item" id="open-chat-btn" type="button">
+                            <i class="ph ph-chat-centered-text"></i>
+                            <span data-i18n="support_chat">Support chat</span>
+                        </button>
+
                         <button class="dropdown-item text-danger" id="logout-btn" type="button">
                             <i class="ph ph-sign-out"></i>
                             <span data-i18n="sign_out">Sign out</span>
@@ -1442,165 +1507,181 @@
     </header>
 
     <main>
-        <section id="hero-section" class="hero">
-            <h1 class="animate-up" data-i18n="hero_title">Discover premium stays for every trip.</h1>
-            <p class="animate-up delay-1" data-i18n="hero_text">Browse hotels, apartments, and villas with smooth booking, secure access, and one elegant travel experience.</p>
+        <section id="hero" class="hero">
+            <div class="container">
+                <div class="hero-badges animate-up">
+                    <div class="hero-badge">
+                        <i class="ph ph-shield-check"></i>
+                        <span data-i18n="hero_badge_1">Verified stays</span>
+                    </div>
 
-            <div class="search-bar animate-up delay-2" role="search">
-                <div id="search-location-wrapper" class="search-field">
-                    <label for="destination-input" data-i18n="where_label">Where</label>
-                    <input id="destination-input" type="text" data-search="destination" data-i18n-placeholder="where_placeholder" placeholder="Search city or property" autocomplete="off">
-                    <div id="search-dropdown" class="search-dropdown" aria-live="polite"></div>
+                    <div class="hero-badge">
+                        <i class="ph ph-lightning"></i>
+                        <span data-i18n="hero_badge_2">Fast booking flow</span>
+                    </div>
+
+                    <div class="hero-badge">
+                        <i class="ph ph-headset"></i>
+                        <span data-i18n="hero_badge_3">Responsive support</span>
+                    </div>
                 </div>
 
-                <div class="search-divider"></div>
+                <h1 class="animate-up delay-1" data-i18n="hero_title">Discover premium stays with confidence</h1>
+                <p class="animate-up delay-2" data-i18n="hero_subtitle">
+                    Browse premium hotels, apartments, villas, and resorts. Search faster, save favorites, and move to
+                    booking in one clean flow.
+                </p>
 
-                <div class="search-field">
-                    <label for="checkin-input" data-i18n="checkin_label">Check in</label>
-                    <input id="checkin-input" type="date">
-                </div>
+                <form id="search-form" class="search-bar animate-up delay-3" autocomplete="off">
+                    <div class="search-field">
+                        <label for="destination-input" data-i18n="where">Where</label>
+                        <input id="destination-input" type="text" placeholder="City, area, or property"
+                            data-i18n-placeholder="where_placeholder">
+                        <div id="destination-dropdown" class="search-dropdown"></div>
+                    </div>
 
-                <div class="search-divider"></div>
+                    <div class="search-divider"></div>
 
-                <div class="search-field">
-                    <label for="checkout-input" data-i18n="checkout_label">Check out</label>
-                    <input id="checkout-input" type="date">
-                </div>
+                    <div class="search-field">
+                        <label for="checkin-input" data-i18n="check_in">Check in</label>
+                        <input id="checkin-input" type="date">
+                    </div>
 
-                <div class="search-divider"></div>
+                    <div class="search-divider"></div>
 
-                <div class="search-field">
-                    <label for="guests-input" data-i18n="guests_label">Guests</label>
-                    <input id="guests-input" type="number" min="1" max="20" value="2">
-                </div>
+                    <div class="search-field">
+                        <label for="checkout-input" data-i18n="check_out">Check out</label>
+                        <input id="checkout-input" type="date">
+                    </div>
 
-                <button id="search-btn" class="search-btn" type="button">
-                    <i class="ph ph-magnifying-glass"></i>
-                    <span data-i18n="search_btn">Search</span>
-                </button>
+                    <div class="search-divider"></div>
+
+                    <div class="search-field">
+                        <label for="guests-input" data-i18n="guests">Guests</label>
+                        <input id="guests-input" type="number" min="1" value="1" placeholder="Number of guests"
+                            data-i18n-placeholder="guests_placeholder">
+                    </div>
+
+                    <button id="search-btn" class="search-btn" type="submit">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <span data-i18n="search">Search</span>
+                    </button>
+                </form>
             </div>
         </section>
 
-        <section id="categories-container" class="categories">
+        <section class="categories" aria-label="Listing categories">
             <button class="category-item active" type="button" data-category="all">
-                <i class="ph ph-compass"></i>
-                <span data-i18n="cat_all">All stays</span>
+                <i class="ph ph-squares-four"></i>
+                <span data-i18n="all">All</span>
             </button>
 
             <button class="category-item" type="button" data-category="hotel">
                 <i class="ph ph-buildings"></i>
-                <span data-i18n="cat_hotels">Hotels</span>
+                <span data-i18n="hotel">Hotels</span>
             </button>
 
             <button class="category-item" type="button" data-category="apartment">
-                <i class="ph ph-buildings-apartment"></i>
-                <span data-i18n="cat_apartments">Apartments</span>
+                <i class="ph ph-house-line"></i>
+                <span data-i18n="apartment">Apartments</span>
             </button>
 
             <button class="category-item" type="button" data-category="villa">
                 <i class="ph ph-house"></i>
-                <span data-i18n="cat_villas">Villas</span>
+                <span data-i18n="villa">Villas</span>
+            </button>
+
+            <button class="category-item" type="button" data-category="resort">
+                <i class="ph ph-island"></i>
+                <span data-i18n="resort">Resorts</span>
             </button>
         </section>
 
-        <section class="container">
+        <section class="container" id="listings-section">
             <div class="section-header-wrapper">
-                <h2 id="section-main-title" data-i18n="featured_title">Featured properties</h2>
+                <div>
+                    <h2 data-i18n="featured_stays">Featured stays</h2>
+                    <div id="results-caption" class="text-muted">0 stays available</div>
+                </div>
 
                 <div class="section-header-controls">
-                    <select id="sort-select" class="sort-select" aria-label="Sort properties">
-                        <option value="featured">Featured</option>
-                        <option value="rating">Top rated</option>
-                        <option value="price-asc">Price: low to high</option>
-                        <option value="price-desc">Price: high to low</option>
+                    <select id="sort-select" class="sort-select" aria-label="Sort listings">
+                        <option value="recommended">Recommended</option>
+                        <option value="price-asc">Price: Low to high</option>
+                        <option value="price-desc">Price: High to low</option>
+                        <option value="rating-desc">Top rated</option>
                     </select>
 
                     <button id="clear-search-btn" class="clear-search-btn" type="button">
                         <i class="ph ph-x"></i>
-                        <span data-i18n="clear_search">Clear search</span>
+                        <span data-i18n="clear_filters">Clear filters</span>
                     </button>
                 </div>
             </div>
 
-            <div id="listings-grid" aria-live="polite">
-                <div class="listings-empty-state">
-                    <i class="ph ph-circle-notch ph-spin"></i>
-                    <div>Loading properties...</div>
-                </div>
-            </div>
+            <div id="listings-grid" aria-live="polite"></div>
         </section>
     </main>
 
     <button id="chat-open-btn" type="button" aria-label="Open support chat">
-        <i class="ph ph-chat-circle-dots"></i>
-        <span class="chat-unread-badge">1</span>
+        <i class="ph ph-chat-centered-text"></i>
+        <span class="chat-unread-badge" id="chat-unread-badge">0</span>
     </button>
 
     <button id="scroll-top-btn" type="button" aria-label="Scroll to top">
         <i class="ph ph-arrow-up"></i>
     </button>
 
-    <div id="toast-container"></div>
-    <div id="fav-toast"></div>
-
-    <div id="bookings-modal" class="bookings-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog">
+    <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
+        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-modal-title">
             <div class="bookings-modal-header">
-                <h3 data-i18n="my_bookings">My bookings</h3>
-                <button id="close-bookings-btn" type="button" aria-label="Close bookings modal">
+                <h3 id="bookings-modal-title">
+                    <i class="ph ph-calendar-check"></i>
+                    <span data-i18n="my_bookings">My bookings</span>
+                </h3>
+
+                <button id="close-bookings-btn" type="button" aria-label="Close bookings">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="bookings-modal-body">
-                <div id="bookings-list" data-bookings-list>
-                    <div class="booking-card">
-                        <div class="booking-card-sub">Loading...</div>
-                    </div>
-                </div>
-            </div>
+            <div id="bookings-modal-body" class="bookings-modal-body"></div>
         </div>
     </div>
 
-    <div id="chat-modal" class="chat-modal" aria-hidden="true">
-        <div class="chat-modal-dialog">
+    <div class="chat-modal" id="chat-modal" aria-hidden="true">
+        <div class="chat-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
             <div class="chat-modal-header">
                 <div class="chat-modal-title">
                     <div class="chat-avatar">
                         <i class="ph ph-headset"></i>
                     </div>
+
                     <div class="chat-title-text">
-                        <h3 data-i18n="chat_title">Support chat</h3>
-                        <p data-i18n="chat_subtitle">We usually reply quickly</p>
+                        <h3 id="chat-modal-title" data-i18n="support_chat">Support chat</h3>
+                        <p id="chat-subtitle" data-i18n="chat_subtitle">Ask about properties, dates, or booking
+                            details.</p>
                     </div>
                 </div>
 
-                <button id="chat-close-btn" class="chat-close-btn" type="button" aria-label="Close chat">
+                <button class="chat-close-btn" id="close-chat-btn" type="button" aria-label="Close chat">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="chat-modal-body">
-                <div class="chat-empty-state">
-                    <i class="ph ph-chat-circle-text" style="font-size: 2rem; margin-bottom: 8px;"></i>
-                    <p data-i18n="chat_subtitle">We usually reply quickly</p>
-                </div>
-
-                <div class="chat-message admin">
-                    Welcome to OreBooking support.
-                    <span class="chat-meta">09:00</span>
-                </div>
-            </div>
+            <div class="chat-modal-body" id="chat-messages"></div>
 
             <div class="chat-input-area">
-                <textarea id="chat-textarea" data-chat-textarea data-i18n-placeholder="chat_placeholder" placeholder="Type your message"></textarea>
+                <textarea id="chat-message-input" data-i18n-placeholder="type_message"
+                    placeholder="Type your message here..."></textarea>
 
                 <div class="chat-actions">
-                    <span class="chat-note">OreBooking</span>
+                    <span class="chat-note" data-i18n="chat_note">Messages are stored locally until you connect the
+                        live support backend.</span>
 
-                    <button id="chat-send-btn" class="primary-btn chat-send-btn" type="button">
+                    <button id="send-chat-btn" class="primary-btn chat-send-btn" type="button">
                         <i class="ph ph-paper-plane-tilt"></i>
-                        <span data-i18n="send_message">Send message</span>
+                        <span data-i18n="send">Send</span>
                     </button>
                 </div>
             </div>
@@ -1609,24 +1690,742 @@
 
     <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
         <div class="mobile-nav-inner">
-            <button id="mob-stays-btn" class="mob-nav-btn active" type="button">
-                <i class="ph ph-house"></i>
-                <span data-i18n="mobile_stays">Stays</span>
+            <button class="mob-nav-btn active" type="button" id="mob-home-btn">
+                <i class="ph ph-house-line"></i>
+                <span data-i18n="home">Home</span>
             </button>
 
-            <button id="mob-fav-btn" class="mob-nav-btn" type="button">
+            <button class="mob-nav-btn" type="button" id="mob-search-btn">
+                <i class="ph ph-magnifying-glass"></i>
+                <span data-i18n="search">Search</span>
+            </button>
+
+            <button class="mob-nav-btn" type="button" id="mob-favorites-btn">
                 <i class="ph ph-heart"></i>
-                <span data-i18n="mobile_favorites">Favorites</span>
+                <span data-i18n="favorites">Favorites</span>
             </button>
 
-            <button id="mob-profile-btn" class="mob-nav-btn" type="button">
+            <button class="mob-nav-btn" type="button" id="mob-profile-btn">
                 <i class="ph ph-user-circle"></i>
-                <span data-i18n="mobile_profile">Profile</span>
+                <span data-i18n="account">Account</span>
             </button>
         </div>
     </nav>
 
-    <script src="script.js?v=3.1"></script>
-</body>
+    <script>
+        (() => {
+            "use strict";
 
-</html>
+            const firebaseConfig = {
+                apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+                authDomain: "orebooking-website.firebaseapp.com",
+                projectId: "orebooking-website",
+                storageBucket: "orebooking-website.firebasestorage.app",
+                messagingSenderId: "1012887567747",
+                appId: "1:1012887567747:web:153b57b60cb143d88acab6",
+                measurementId: "G-5GKMRMVHC3"
+            };
+
+            let db = null;
+            let auth = null;
+
+            try {
+                if (typeof firebase !== "undefined") {
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    if (typeof firebase.firestore === "function") db = firebase.firestore();
+                    if (typeof firebase.auth === "function") auth = firebase.auth();
+                }
+            } catch (error) {
+                console.error("Firebase init error:", error);
+            }
+
+            const PROPERTY_DETAILS_PAGE = "property-details.html";
+            const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80";
+
+            const i18n = {
+                en: {
+                    page_title: "OreBooking - Premium Stays",
+                    page_desc: "OreBooking – Discover and book premium hotels, apartments, and villas.",
+                    rewards_badge: "Loyalty Rewards",
+                    sign_in: "Sign In",
+                    sign_out: "Sign out",
+                    my_bookings: "My bookings",
+                    favorites: "Favorites",
+                    support_chat: "Support chat",
+                    hero_badge_1: "Verified stays",
+                    hero_badge_2: "Fast booking flow",
+                    hero_badge_3: "Responsive support",
+                    hero_title: "Discover premium stays with confidence",
+                    hero_subtitle: "Browse premium hotels, apartments, villas, and resorts. Search faster, save favorites, and move to booking in one clean flow.",
+                    where: "Where",
+                    where_placeholder: "City, area, or property",
+                    check_in: "Check in",
+                    check_out: "Check out",
+                    guests: "Guests",
+                    guests_placeholder: "Number of guests",
+                    search: "Search",
+                    all: "All",
+                    hotel: "Hotels",
+                    apartment: "Apartments",
+                    villa: "Villas",
+                    resort: "Resorts",
+                    featured_stays: "Featured stays",
+                    clear_filters: "Clear filters",
+                    per_night: "/ night",
+                    view_details: "View details",
+                    reserve_now: "Reserve",
+                    no_results_title: "No listings found",
+                    no_results_text: "Try another location, change the category, or clear your filters.",
+                    type_message: "Type your message here...",
+                    send: "Send",
+                    chat_subtitle: "Ask about properties, dates, or booking details.",
+                    chat_note: "Messages are stored locally until you connect the live support backend.",
+                    no_messages: "No messages yet",
+                    no_messages_sub: "Start the conversation and support replies will appear here.",
+                    guest_user: "Guest User",
+                    sign_in_continue: "Sign in to continue",
+                    home: "Home",
+                    account: "Account",
+                    loading: "Loading...",
+                    no_bookings: "No bookings yet",
+                    no_bookings_text: "Your completed reservations will appear here after booking.",
+                    booking_property: "Property",
+                    booking_dates: "Dates",
+                    booking_guests: "Guests",
+                    booking_total: "Total",
+                    status_pending: "Pending",
+                    status_confirmed: "Confirmed",
+                    status_cancelled: "Cancelled",
+                    added_favorite: "Added to favorites",
+                    removed_favorite: "Removed from favorites",
+                    sign_in_required: "Please sign in first.",
+                    search_results: "results",
+                    only_left: "Only {count} left",
+                    top_pick: "Top pick",
+                    save: "Save",
+                    saved: "Saved",
+                    sort_recommended: "Recommended",
+                    sort_price_asc: "Price: Low to high",
+                    sort_price_desc: "Price: High to low",
+                    sort_rating_desc: "Top rated",
+                    support_welcome: "Hello! How can we help you with your stay today?",
+                    support_auto_reply: "Thanks for your message. A support reply has been queued in this demo view.",
+                    destination_suggestions: "Popular destinations",
+                    not_available: "Not provided",
+                    instant_booking: "Instant booking",
+                    verified_listing: "Verified listing"
+                },
+                ar: {
+                    page_title: "OreBooking - إقامات مميزة",
+                    page_desc: "OreBooking – اكتشف واحجز الفنادق والشقق والفيلات المميزة.",
+                    rewards_badge: "مكافآت الولاء",
+                    sign_in: "تسجيل الدخول",
+                    sign_out: "تسجيل الخروج",
+                    my_bookings: "حجوزاتي",
+                    favorites: "المفضلة",
+                    support_chat: "دردشة الدعم",
+                    hero_badge_1: "إقامات موثقة",
+                    hero_badge_2: "حجز سريع",
+                    hero_badge_3: "دعم متجاوب",
+                    hero_title: "اكتشف إقامات مميزة بثقة",
+                    hero_subtitle: "تصفح الفنادق والشقق والفيلات والمنتجعات بسهولة، واحفظ المفضلة، وانتقل إلى الحجز في تجربة نظيفة وسريعة.",
+                    where: "الوجهة",
+                    where_placeholder: "المدينة أو المنطقة أو اسم الإقامة",
+                    check_in: "تسجيل الدخول",
+                    check_out: "تسجيل الخروج",
+                    guests: "الضيوف",
+                    guests_placeholder: "عدد الضيوف",
+                    search: "بحث",
+                    all: "الكل",
+                    hotel: "فنادق",
+                    apartment: "شقق",
+                    villa: "فيلات",
+                    resort: "منتجعات",
+                    featured_stays: "إقامات مميزة",
+                    clear_filters: "مسح الفلاتر",
+                    per_night: "/ الليلة",
+                    view_details: "التفاصيل",
+                    reserve_now: "احجز الآن",
+                    no_results_title: "لا توجد نتائج",
+                    no_results_text: "جرّب وجهة أخرى أو غيّر التصنيف أو امسح الفلاتر.",
+                    type_message: "اكتب رسالتك هنا...",
+                    send: "إرسال",
+                    chat_subtitle: "اسأل عن الإقامات أو التواريخ أو تفاصيل الحجز.",
+                    chat_note: "يتم حفظ الرسائل محليًا إلى حين ربط نظام الدعم المباشر.",
+                    no_messages: "لا توجد رسائل بعد",
+                    no_messages_sub: "ابدأ المحادثة وستظهر الردود هنا.",
+                    guest_user: "مستخدم زائر",
+                    sign_in_continue: "سجّل الدخول للمتابعة",
+                    home: "الرئيسية",
+                    account: "الحساب",
+                    loading: "جارٍ التحميل...",
+                    no_bookings: "لا توجد حجوزات بعد",
+                    no_bookings_text: "ستظهر هنا الحجوزات بعد إتمام عملية الحجز.",
+                    booking_property: "الإقامة",
+                    booking_dates: "التواريخ",
+                    booking_guests: "الضيوف",
+                    booking_total: "الإجمالي",
+                    status_pending: "قيد الانتظار",
+                    status_confirmed: "مؤكد",
+                    status_cancelled: "ملغي",
+                    added_favorite: "تمت الإضافة إلى المفضلة",
+                    removed_favorite: "تمت الإزالة من المفضلة",
+                    sign_in_required: "يرجى تسجيل الدخول أولًا.",
+                    search_results: "نتيجة",
+                    only_left: "بقي {count} فقط",
+                    top_pick: "اختيار مميز",
+                    save: "حفظ",
+                    saved: "محفوظ",
+                    sort_recommended: "الأفضل",
+                    sort_price_asc: "السعر: من الأقل للأعلى",
+                    sort_price_desc: "السعر: من الأعلى للأقل",
+                    sort_rating_desc: "الأعلى تقييمًا",
+                    support_welcome: "مرحبًا! كيف يمكننا مساعدتك بخصوص إقامتك اليوم؟",
+                    support_auto_reply: "شكرًا لرسالتك. تم إنشاء رد دعم تلقائي داخل هذه النسخة التجريبية.",
+                    destination_suggestions: "وجهات شائعة",
+                    not_available: "غير متوفر",
+                    instant_booking: "حجز سريع",
+                    verified_listing: "إقامة موثقة"
+                }
+            };
+
+            const fallbackListings = [
+                {
+                    id: "ob-101",
+                    type: "hotel",
+                    title: { en: "Royal Sétif Hotel", ar: "فندق رويال سطيف" },
+                    location: { en: "Sétif Center", ar: "وسط سطيف" },
+                    price: 14500,
+                    rating: 4.8,
+                    guests: 2,
+                    featured: true,
+                    urgentCount: 2,
+                    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-102",
+                    type: "apartment",
+                    title: { en: "Skyline Executive Apartment", ar: "شقة سكاي لاين التنفيذية" },
+                    location: { en: "El Eulma", ar: "العلمة" },
+                    price: 9800,
+                    rating: 4.7,
+                    guests: 4,
+                    featured: true,
+                    urgentCount: 1,
+                    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-103",
+                    type: "villa",
+                    title: { en: "Palm View Villa", ar: "فيلا بالم فيو" },
+                    location: { en: "Ain Arnat", ar: "عين أرنات" },
+                    price: 26500,
+                    rating: 4.9,
+                    guests: 8,
+                    featured: true,
+                    urgentCount: 3,
+                    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-104",
+                    type: "resort",
+                    title: { en: "Mountain Breeze Resort", ar: "منتجع نسيم الجبل" },
+                    location: { en: "Babor Hills", ar: "مرتفعات بابور" },
+                    price: 18900,
+                    rating: 4.6,
+                    guests: 3,
+                    featured: false,
+                    urgentCount: 4,
+                    image: "https://images.unsplash.com/photo-1522798514-97ceb8c4f1c8?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-105",
+                    type: "hotel",
+                    title: { en: "Grand Business Suites", ar: "أجنحة جراند للأعمال" },
+                    location: { en: "Sétif Business District", ar: "حي الأعمال سطيف" },
+                    price: 17200,
+                    rating: 4.5,
+                    guests: 2,
+                    featured: false,
+                    urgentCount: 2,
+                    image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-106",
+                    type: "apartment",
+                    title: { en: "City Comfort Residence", ar: "إقامة سيتي كومفورت" },
+                    location: { en: "Downtown Sétif", ar: "وسط مدينة سطيف" },
+                    price: 11300,
+                    rating: 4.4,
+                    guests: 5,
+                    featured: false,
+                    urgentCount: 5,
+                    image: "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-107",
+                    type: "villa",
+                    title: { en: "Olive Garden Villa", ar: "فيلا أوليف غاردن" },
+                    location: { en: "Beni Aziz", ar: "بني عزيز" },
+                    price: 23100,
+                    rating: 4.8,
+                    guests: 7,
+                    featured: true,
+                    urgentCount: 1,
+                    image: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                    id: "ob-108",
+                    type: "resort",
+                    title: { en: "Blue Horizon Retreat", ar: "منتجع الأفق الأزرق" },
+                    location: { en: "Eastern Highlands", ar: "المرتفعات الشرقية" },
+                    price: 20500,
+                    rating: 4.7,
+                    guests: 4,
+                    featured: false,
+                    urgentCount: 2,
+                    image: "https://images.unsplash.com/photo-1578774204375-826dc5d996ed?auto=format&fit=crop&w=1200&q=80"
+                }
+            ];
+
+            const state = {
+                lang: getStoredValue("ore_lang", "orelang", "en") === "ar" ? "ar" : "en",
+                theme: getStoredValue("ore_theme", "oretheme", "light") === "dark" ? "dark" : "light",
+                currentUser: null,
+                currentCategory: "all",
+                showFavoritesOnly: false,
+                destination: "",
+                checkIn: "",
+                checkOut: "",
+                guests: 1,
+                sort: "recommended",
+                listings: [],
+                favorites: [],
+                chats: []
+            };
+
+            const els = {
+                body: document.body,
+                html: document.documentElement,
+                metaDesc: document.querySelector('meta[name="description"]'),
+                themeToggle: document.getElementById("theme-toggle"),
+                langToggle: document.getElementById("lang-toggle"),
+                langToggleText: document.getElementById("lang-toggle-text"),
+                authCta: document.getElementById("auth-cta"),
+                profileTrigger: document.getElementById("profile-trigger"),
+                profileDropdown: document.getElementById("profile-dropdown"),
+                profileName: document.getElementById("profile-name"),
+                profileEmail: document.getElementById("profile-email"),
+                logoutBtn: document.getElementById("logout-btn"),
+                openBookingsBtn: document.getElementById("open-bookings-btn"),
+                profileFavoritesBtn: document.getElementById("profile-favorites-btn"),
+                openChatBtn: document.getElementById("open-chat-btn"),
+                destinationInput: document.getElementById("destination-input"),
+                destinationDropdown: document.getElementById("destination-dropdown"),
+                checkinInput: document.getElementById("checkin-input"),
+                checkoutInput: document.getElementById("checkout-input"),
+                guestsInput: document.getElementById("guests-input"),
+                searchForm: document.getElementById("search-form"),
+                sortSelect: document.getElementById("sort-select"),
+                clearSearchBtn: document.getElementById("clear-search-btn"),
+                listingsGrid: document.getElementById("listings-grid"),
+                resultsCaption: document.getElementById("results-caption"),
+                categoryItems: Array.from(document.querySelectorAll(".category-item")),
+                scrollTopBtn: document.getElementById("scroll-top-btn"),
+                chatOpenBtn: document.getElementById("chat-open-btn"),
+                chatUnreadBadge: document.getElementById("chat-unread-badge"),
+                bookingsModal: document.getElementById("bookings-modal"),
+                bookingsModalBody: document.getElementById("bookings-modal-body"),
+                closeBookingsBtn: document.getElementById("close-bookings-btn"),
+                chatModal: document.getElementById("chat-modal"),
+                closeChatBtn: document.getElementById("close-chat-btn"),
+                chatMessages: document.getElementById("chat-messages"),
+                chatMessageInput: document.getElementById("chat-message-input"),
+                sendChatBtn: document.getElementById("send-chat-btn"),
+                toastContainer: document.getElementById("toast-container"),
+                favToast: document.getElementById("fav-toast"),
+                mobHomeBtn: document.getElementById("mob-home-btn"),
+                mobSearchBtn: document.getElementById("mob-search-btn"),
+                mobFavoritesBtn: document.getElementById("mob-favorites-btn"),
+                mobProfileBtn: document.getElementById("mob-profile-btn")
+            };
+
+            function getStoredValue(primaryKey, legacyKey, fallback = null) {
+                try {
+                    const value = localStorage.getItem(primaryKey);
+                    if (value !== null) return value;
+                    const legacyValue = localStorage.getItem(legacyKey);
+                    if (legacyValue !== null) return legacyValue;
+                    return fallback;
+                } catch {
+                    return fallback;
+                }
+            }
+
+            function setStoredValue(primaryKey, legacyKey, value) {
+                try {
+                    localStorage.setItem(primaryKey, value);
+                    localStorage.setItem(legacyKey, value);
+                } catch { }
+            }
+
+            function safeJsonGet(key, fallback = null) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    return raw ? JSON.parse(raw) : fallback;
+                } catch {
+                    return fallback;
+                }
+            }
+
+            function safeJsonSet(key, value) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch { }
+            }
+
+            function t(key) {
+                return (i18n[state.lang] && i18n[state.lang][key]) || key;
+            }
+
+            function isArabic() {
+                return state.lang === "ar";
+            }
+
+            function escapeHtml(value) {
+                const div = document.createElement("div");
+                div.textContent = String(value ?? "");
+                return div.innerHTML;
+            }
+
+            function normalizeText(value) {
+                return String(value ?? "").trim().toLowerCase();
+            }
+
+            function formatDate(dateString) {
+                if (!dateString) return t("not_available");
+                const date = new Date(dateString + "T12:00:00");
+                if (Number.isNaN(date.getTime())) return t("not_available");
+                return date.toLocaleDateString(isArabic() ? "ar-DZ" : "en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric"
+                });
+            }
+
+            function formatPrice(value) {
+                const num = Number(value || 0);
+                return new Intl.NumberFormat(isArabic() ? "ar-DZ" : "en-US").format(num) + " DZD";
+            }
+
+            function formatGuests(count) {
+                const num = Math.max(1, Number(count || 1));
+                return isArabic() ? `${num} ${num === 1 ? "ضيف" : "ضيوف"}` : `${num} guest${num > 1 ? "s" : ""}`;
+            }
+
+            function getPropertyTitle(item) {
+                if (typeof item.title === "object") return isArabic() ? (item.title.ar || item.title.en) : (item.title.en || item.title.ar);
+                return item.title || "";
+            }
+
+            function getPropertyLocation(item) {
+                if (typeof item.location === "object") return isArabic() ? (item.location.ar || item.location.en) : (item.location.en || item.location.ar);
+                return item.location || "";
+            }
+
+            function getPropertyTypeText(type) {
+                const normalized = String(type || "").toLowerCase();
+                if (normalized.includes("villa")) return t("villa");
+                if (normalized.includes("apartment")) return t("apartment");
+                if (normalized.includes("resort")) return t("resort");
+                return t("hotel");
+            }
+
+            function getTypeIcon(type) {
+                const normalized = String(type || "").toLowerCase();
+                if (normalized.includes("villa")) return "ph-house";
+                if (normalized.includes("apartment")) return "ph-house-line";
+                if (normalized.includes("resort")) return "ph-island";
+                return "ph-buildings";
+            }
+
+            function getUrgencyText(count) {
+                const template = t("only_left");
+                return template.replace("{count}", count);
+            }
+
+            function setDefaultDates() {
+                const today = new Date();
+                const checkIn = new Date(today);
+                checkIn.setDate(checkIn.getDate() + 1);
+
+                const checkOut = new Date(today);
+                checkOut.setDate(checkOut.getDate() + 2);
+
+                const toInput = (date) => {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, "0");
+                    const d = String(date.getDate()).padStart(2, "0");
+                    return `${y}-${m}-${d}`;
+                };
+
+                if (!state.checkIn) state.checkIn = toInput(checkIn);
+                if (!state.checkOut) state.checkOut = toInput(checkOut);
+
+                els.checkinInput.value = state.checkIn;
+                els.checkoutInput.value = state.checkOut;
+                els.checkinInput.min = toInput(today);
+                els.checkoutInput.min = state.checkIn || toInput(today);
+            }
+
+            function updateDateConstraints() {
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+                els.checkinInput.min = todayStr;
+
+                if (state.checkIn) {
+                    const nextDay = new Date(state.checkIn + "T12:00:00");
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const nextDayStr = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
+                    els.checkoutInput.min = nextDayStr;
+
+                    if (state.checkOut && state.checkOut <= state.checkIn) {
+                        state.checkOut = nextDayStr;
+                        els.checkoutInput.value = state.checkOut;
+                    }
+                } else {
+                    els.checkoutInput.min = todayStr;
+                }
+            }
+
+            function showToast(message, type = "success") {
+                const toast = document.createElement("div");
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `<i class="ph ${type === "error" ? "ph-warning-circle" : "ph-check-circle"}"></i><span>${escapeHtml(message)}</span>`;
+                els.toastContainer.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = "0";
+                    toast.style.transform = "translateY(-6px)";
+                    setTimeout(() => toast.remove(), 220);
+                }, 2800);
+            }
+
+            function showFavToast(message) {
+                els.favToast.textContent = message;
+                els.favToast.classList.add("show");
+                clearTimeout(showFavToast._timer);
+                showFavToast._timer = setTimeout(() => {
+                    els.favToast.classList.remove("show");
+                }, 1600);
+            }
+
+            function closeProfileDropdown() {
+                els.profileDropdown.classList.remove("active");
+                els.profileTrigger.setAttribute("aria-expanded", "false");
+                els.profileDropdown.setAttribute("aria-hidden", "true");
+            }
+
+            function toggleProfileDropdown() {
+                const active = !els.profileDropdown.classList.contains("active");
+                els.profileDropdown.classList.toggle("active", active);
+                els.profileTrigger.setAttribute("aria-expanded", String(active));
+                els.profileDropdown.setAttribute("aria-hidden", String(!active));
+            }
+
+            function applyTheme() {
+                const dark = state.theme === "dark";
+                document.documentElement.classList.remove("preload-dark");
+                els.body.classList.toggle("dark", dark);
+                const icon = els.themeToggle.querySelector("i");
+                icon.className = dark ? "ph ph-sun" : "ph ph-moon";
+                setStoredValue("ore_theme", "oretheme", state.theme);
+            }
+
+            function setLanguage(lang) {
+                state.lang = lang === "ar" ? "ar" : "en";
+                setStoredValue("ore_lang", "orelang", state.lang);
+                applyLanguage();
+                renderListings();
+                renderDestinationSuggestions(els.destinationInput.value);
+                renderBookings();
+                renderChatMessages();
+            }
+
+            function updateSortTexts() {
+                els.sortSelect.options[0].textContent = t("sort_recommended");
+                els.sortSelect.options[1].textContent = t("sort_price_asc");
+                els.sortSelect.options[2].textContent = t("sort_price_desc");
+                els.sortSelect.options[3].textContent = t("sort_rating_desc");
+            }
+
+            function applyLanguage() {
+                els.html.lang = state.lang;
+                els.html.dir = isArabic() ? "rtl" : "ltr";
+                els.langToggleText.textContent = isArabic() ? "EN" : "AR";
+                document.title = t("page_title");
+                if (els.metaDesc) els.metaDesc.setAttribute("content", t("page_desc"));
+
+                document.querySelectorAll("[data-i18n]").forEach(el => {
+                    const key = el.getAttribute("data-i18n");
+                    el.textContent = t(key);
+                });
+
+                document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+                    const key = el.getAttribute("data-i18n-placeholder");
+                    el.setAttribute("placeholder", t(key));
+                });
+
+                updateSortTexts();
+                updateProfileUI();
+            }
+
+            function getCurrentUserKey() {
+                if (state.currentUser?.uid) return `user_${state.currentUser.uid}`;
+                return "guest_user";
+            }
+
+            function getFavoritesStorageKeys() {
+                if (state.currentUser?.uid) {
+                    return [`orefavs_${state.currentUser.uid}`, `orefavs${state.currentUser.uid}`];
+                }
+                return ["ore_guest_favorites"];
+            }
+
+            function loadFavorites() {
+                const keys = getFavoritesStorageKeys();
+                for (const key of keys) {
+                    const data = safeJsonGet(key, null);
+                    if (Array.isArray(data)) {
+                        state.favorites = data.map(String);
+                        return;
+                    }
+                }
+                state.favorites = [];
+            }
+
+            function saveFavorites() {
+                const keys = getFavoritesStorageKeys();
+                keys.forEach(key => safeJsonSet(key, state.favorites));
+            }
+
+            function toggleFavorite(id) {
+                const stringId = String(id);
+                if (state.favorites.includes(stringId)) {
+                    state.favorites = state.favorites.filter(item => item !== stringId);
+                    saveFavorites();
+                    renderListings();
+                    showFavToast(t("removed_favorite"));
+                } else {
+                    state.favorites.push(stringId);
+                    saveFavorites();
+                    renderListings();
+                    showFavToast(t("added_favorite"));
+                }
+            }
+
+            function getLocalBookings() {
+                const rawLocal = safeJsonGet("orebookingslocalv1", []);
+                if (Array.isArray(rawLocal) && rawLocal.length) return rawLocal;
+
+                const userKey = state.currentUser?.uid ? `ore_bookings_${state.currentUser.uid}` : "ore_guest_bookings";
+                const alt = safeJsonGet(userKey, []);
+                return Array.isArray(alt) ? alt : [];
+            }
+
+            function getChatStorageKey() {
+                return `ore_support_chat_${getCurrentUserKey()}`;
+            }
+
+            function seedChatIfNeeded() {
+                const key = getChatStorageKey();
+                const stored = safeJsonGet(key, null);
+                if (Array.isArray(stored) && stored.length) {
+                    state.chats = stored;
+                    return;
+                }
+
+                state.chats = [{
+                    id: Date.now(),
+                    sender: "admin",
+                    text: t("support_welcome"),
+                    time: new Date().toISOString(),
+                    unread: true
+                }];
+
+                safeJsonSet(key, state.chats);
+            }
+
+            function saveChats() {
+                safeJsonSet(getChatStorageKey(), state.chats);
+                updateUnreadBadge();
+            }
+
+            function updateUnreadBadge() {
+                const unread = state.chats.filter(msg => msg.sender === "admin" && msg.unread).length;
+                els.chatUnreadBadge.textContent = String(unread);
+                els.chatUnreadBadge.style.display = unread ? "inline-flex" : "none";
+            }
+
+            function markChatsAsRead() {
+                state.chats = state.chats.map(msg => ({ ...msg, unread: false }));
+                saveChats();
+            }
+
+            function updateProfileUI() {
+                if (state.currentUser) {
+                    els.authCta.classList.add("hidden");
+                    els.profileTrigger.classList.remove("hidden");
+                    els.profileName.textContent = state.currentUser.displayName || t("guest_user");
+                    els.profileEmail.textContent = state.currentUser.email || "";
+                    els.profileTrigger.innerHTML = '<i class="ph ph-user-circle-check"></i>';
+                } else {
+                    els.authCta.classList.remove("hidden");
+                    els.profileTrigger.classList.add("hidden");
+                    els.profileName.textContent = t("guest_user");
+                    els.profileEmail.textContent = t("sign_in_continue");
+                    els.profileTrigger.innerHTML = '<i class="ph ph-user-circle"></i>';
+                }
+            }
+
+            function persistBookingContext(item) {
+                try {
+                    const id = String(item.id);
+                    localStorage.setItem("selectedPropertyId", id);
+                    localStorage.setItem("bookingcheckin", state.checkIn || "");
+                    localStorage.setItem("bookingcheckout", state.checkOut || "");
+                    localStorage.setItem("bookingguests", String(state.guests || 1));
+                    localStorage.setItem("selectedCheckIn", state.checkIn || "");
+                    localStorage.setItem("selectedCheckOut", state.checkOut || "");
+                    localStorage.setItem("selectedGuests", String(state.guests || 1));
+                    localStorage.setItem("orebookingcheckin", state.checkIn || "");
+                    localStorage.setItem("orebookingcheckout", state.checkOut || "");
+                } catch { }
+            }
+
+            function buildBookingQuery(item) {
+                const params = new URLSearchParams();
+                params.set("id", item.id);
+                if (state.checkIn) params.set("checkIn", state.checkIn);
+                if (state.checkOut) params.set("checkOut", state.checkOut);
+                if (state.guests) params.set("guests", String(state.guests));
+                return params.toString();
+            }
+
+            function normalizeProperty(doc) {
+                const data = typeof doc.data === "function" ? doc.data() : doc;
+                const id = String(doc.id || data.id || cryptoRandomId());
+                const type = String(data.type || data.category || "hotel").toLowerCase();
+                const image = Array.isArray(data.images) && data.images.length
+                    ? data.images[0]
+                    : (data.imageUrl || data.image || FALLBACK_IMAGE);
+
+                return {
+                    id,
+                    type,
+                    title: {
+                        en: data.titleEn || data.title || data.name || "Premium Stay",
+                        ar: data.titleAr || data.title || data.name || "إقامة مميزة"
+                    },
+                    location: {
+                        en: data.locationEn || data.location || "
