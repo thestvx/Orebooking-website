@@ -11,7 +11,20 @@ let db = null;
 let _firebaseReady = false;
 
 function getDb() {
+  // First try window.getDB() which is set by admin.html
+  if (typeof window.getDB === "function") {
+    try {
+      const _db = window.getDB();
+      if (_db) return _db;
+    } catch (e) {
+      console.warn("[OreBooking] window.getDB() failed:", e.message);
+    }
+  }
+
+  // Fallback to local db variable
   if (db) return db;
+
+  // Last resort: try to get from firebase global
   try {
     if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
       db = firebase.firestore();
@@ -19,7 +32,7 @@ function getDb() {
       return db;
     }
   } catch (e) {
-    console.error("getDb() failed:", e);
+    console.error("[OreBooking] getDb() failed:", e);
   }
   return null;
 }
@@ -52,74 +65,61 @@ async function testFirestoreConnection() {
   }
 }
 
+// Firebase is initialized by admin.html BEFORE this script loads.
+// We just need to grab the existing instance.
 function initFirebase() {
   try {
     if (typeof firebase === "undefined") {
-      console.error("Firebase SDK not loaded");
+      console.error("[OreBooking] Firebase SDK not loaded");
       return false;
     }
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-      authDomain: "orebooking-website.firebaseapp.com",
-      projectId: "orebooking-website",
-      storageBucket: "orebooking-website.firebasestorage.app",
-      messagingSenderId: "1012887567747",
-      appId: "1:1012887567747:web:153b57b60cb143d88acab6",
-      measurementId: "G-5GKMRMVHC3"
-    };
+    // Check if already initialized by admin.html
+    if (firebase.apps && firebase.apps.length > 0) {
+      db = firebase.firestore();
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+      // Fix connection issues in restrictive networks
+      try {
+        db.settings({
+          experimentalForceLongPolling: true,
+          experimentalAutoDetectLongPolling: false,
+          merge: true
+        });
+        console.log("[OreBooking] Firestore long polling enabled");
+      } catch (settingsErr) {
+        console.warn("[OreBooking] Could not set Firestore settings:", settingsErr.message);
+      }
+
+      const app = firebase.app();
+      const actualProjectId = app.options.projectId;
+      console.log("[OreBooking] Using existing Firebase app, projectId:", actualProjectId);
+
+      if (!actualProjectId || actualProjectId === "YOUR_PROJECT_ID") {
+        console.error("[OreBooking] ❌ CRITICAL: projectId is invalid:", actualProjectId);
+        console.error("[OreBooking] → admin.html has wrong Firebase config. Check the config in <head>");
+        showToast("خطأ فادح: projectId غير صالح في admin.html", "error");
+        _firebaseReady = false;
+        return false;
+      }
+
+      _firebaseReady = true;
+      console.log("[OreBooking] Firebase connected successfully ✅");
+      return true;
     }
 
-    db = firebase.firestore();
-
-    // Fix connection issues in restrictive networks (corporate firewalls, some ISPs)
-    try {
-      db.settings({
-        experimentalForceLongPolling: true,
-        experimentalAutoDetectLongPolling: false,
-        merge: true
-      });
-      console.log("[OreBooking] Firestore long polling enabled");
-    } catch (settingsErr) {
-      console.warn("[OreBooking] Could not set Firestore settings:", settingsErr.message);
-    }
-
-    // Explicitly verify project ID to prevent YOUR_PROJECT_ID placeholder issues
-    const app = firebase.app();
-    const actualProjectId = app.options.projectId;
-    if (!actualProjectId || actualProjectId === "YOUR_PROJECT_ID") {
-      console.error("[OreBooking] ❌ CRITICAL: projectId is invalid:", actualProjectId);
-      console.error("[OreBooking] → Check that admin_fixed.js is actually loaded, not an old cached version");
-      showToast("خطأ فادح: projectId غير صالح. امسح الـ Cache وأعد تحميل الصفحة.", "error");
-      _firebaseReady = false;
-      return false;
-    }
-    console.log("[OreBooking] Project ID verified:", actualProjectId);
-
-    _firebaseReady = true;
-    console.log("[OreBooking] Firebase initialized successfully ✅");
-    return true;
+    console.error("[OreBooking] Firebase not initialized by admin.html. Check <head> script.");
+    _firebaseReady = false;
+    return false;
 
   } catch (err) {
-    console.error("Firebase Init Error:", err);
+    console.error("[OreBooking] Firebase Init Error:", err);
     _firebaseReady = false;
     return false;
   }
 }
 
-// تهيئة فورية عند تحميل السكربت
+// Connect to existing Firebase instance
 initFirebase();
-
-// إعادة محاولة ربط Firebase بعد تحميل الصفحة (fallback)
-window.addEventListener("load", () => {
-  if (!_firebaseReady || !db) {
-    console.warn("[OreBooking] Retrying Firebase initialization on window.load...");
-    initFirebase();
-  }
-});
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin";
