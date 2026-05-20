@@ -31,6 +31,8 @@ async function testFirestoreConnection() {
     return false;
   }
   try {
+    const app = firebase.app();
+    console.log("[OreBooking] Testing connection to project:", app.options.projectId);
     // Try a lightweight operation to verify connection
     const testSnap = await _db.collection(PROPERTIES_COLLECTION).limit(1).get({ source: "server" });
     console.log("[OreBooking] ✅ Firestore connection OK");
@@ -38,7 +40,9 @@ async function testFirestoreConnection() {
   } catch (err) {
     console.error("[OreBooking] ❌ Firestore connection failed:", err.code || err.message);
     if (err.code === "permission-denied") {
-      console.error("[OreBooking] → Check Firestore Rules in Firebase Console");
+      console.error("[OreBooking] → Firestore Rules blocked the request. Check:");
+      console.error("[OreBooking]   1. Rules are published in Firebase Console");
+      console.error("[OreBooking]   2. projectId is correct (current:", firebase.app().options.projectId, ")");
     } else if (err.code === "not-found") {
       console.error("[OreBooking] → Project/database not found — check projectId");
     } else if (err.code === "unavailable" || err.message?.includes("backend")) {
@@ -82,6 +86,18 @@ function initFirebase() {
     } catch (settingsErr) {
       console.warn("[OreBooking] Could not set Firestore settings:", settingsErr.message);
     }
+
+    // Explicitly verify project ID to prevent YOUR_PROJECT_ID placeholder issues
+    const app = firebase.app();
+    const actualProjectId = app.options.projectId;
+    if (!actualProjectId || actualProjectId === "YOUR_PROJECT_ID") {
+      console.error("[OreBooking] ❌ CRITICAL: projectId is invalid:", actualProjectId);
+      console.error("[OreBooking] → Check that admin_fixed.js is actually loaded, not an old cached version");
+      showToast("خطأ فادح: projectId غير صالح. امسح الـ Cache وأعد تحميل الصفحة.", "error");
+      _firebaseReady = false;
+      return false;
+    }
+    console.log("[OreBooking] Project ID verified:", actualProjectId);
 
     _firebaseReady = true;
     console.log("[OreBooking] Firebase initialized successfully ✅");
