@@ -2574,38 +2574,43 @@
     return t("booking_status_pending");
   }
 
-  function renderBookings() {
-    refreshDom();
-    if (!dom.bookingsList) return;
+function renderBookings() {
+  refreshDom();
+  if (!dom.bookingsList) return;
 
-    if (state.loadingBookings) {
-      dom.bookingsList.innerHTML = `<p class="text-muted">${escapeHtml(t("loading_bookings"))}</p>`;
-      return;
-    }
+  if (state.loadingBookings) {
+    dom.bookingsList.innerHTML = `<p class="text-muted">${escapeHtml(t("loading_bookings"))}</p>`;
+    return;
+  }
 
-    if (!state.bookings.length) {
-      dom.bookingsList.innerHTML = `<p class="text-muted">${escapeHtml(t("no_bookings"))}</p>`;
-      return;
-    }
+  if (!state.bookings.length) {
+    dom.bookingsList.innerHTML = `<p class="text-muted">${escapeHtml(t("no_bookings"))}</p>`;
+    return;
+  }
 
-    dom.bookingsList.innerHTML = state.bookings
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .map(
-        (item) => `
-          <article class="booking-card ore-reveal">
-            <div class="booking-card-head">
-              <div>
-                <h4>${escapeHtml(item.propertyTitle)}</h4>
-                <div class="booking-card-sub">#${escapeHtml(item.id)}</div>
-              </div>
-              <span class="booking-status-badge ${escapeHtml(bookingStatusClass(item.status))}">
-                ${escapeHtml(bookingStatusLabel(item.status))}
-              </span>
+  dom.bookingsList.innerHTML = state.bookings
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(
+      (item) => `
+        <article class="booking-card ore-reveal">
+          <div class="booking-card-head">
+            <div>
+              <h4>${escapeHtml(item.propertyTitle)}</h4>
+              <div class="booking-card-sub">#${escapeHtml(item.id)}</div>
             </div>
+            <span class="booking-status-badge ${escapeHtml(bookingStatusClass(item.status))}">
+              ${escapeHtml(bookingStatusLabel(item.status))}
+            </span>
+          </div>
 
-            <div class="booking-card-grid">
-              <div><strong>${escapeHtml(t("booking_checkin"))}</strong> ${escapeHtml(formatDate(item.checkIn))}</div>
-              <div><strong>${escapeHtml(t("booking_checkout"))}</strong> ${escapeHtml(formatDate(item.checkOut))}</div>
-              <div><strong>${escapeHtml(t("booking_guests"))}</strong> ${escapeHtml(String(item.guests || 1))}</div>
-              <div><strong>${escapeHtml(t("booking_total"))}</strong> ${escapeHtml(formatCurrency(item.total))}</div>
-           
+          <div class="booking-card-grid">
+            <div><strong>${escapeHtml(t("booking_checkin"))}</strong> ${escapeHtml(formatDate(item.checkIn))}</div>
+            <div><strong>${escapeHtml(t("booking_checkout"))}</strong> ${escapeHtml(formatDate(item.checkOut))}</div>
+            <div><strong>${escapeHtml(t("booking_guests"))}</strong> ${escapeHtml(String(item.guests || 1))}</div>
+            <div><strong>${escapeHtml(t("booking_total"))}</strong> ${escapeHtml(formatCurrency(item.total))}</div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
