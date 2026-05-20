@@ -3062,9 +3062,686 @@
   /* =========================================
      16) THEME / LANGUAGE
   ========================================= */
-  function applyTheme(theme, persist = true) {
+    function applyTheme(theme, persist = true) {
     const dom = getDom();
     state.theme = theme === "dark" ? "dark" : "light";
 
-    dom.html.classList.toggle("dark", state.theme === "dark");
-    dom.body?.classList.toggle("dark", state.theme ===
+    if (dom.html) {
+      dom.html.classList.toggle("dark", state.theme === "dark");
+      dom.html.dataset.theme = state.theme;
+    }
+
+    if (dom.body) {
+      dom.body.classList.toggle("dark", state.theme === "dark");
+      dom.body.dataset.theme = state.theme;
+    }
+
+    if (persist) {
+      safeSetMany(STORAGE_ALIASES.theme, state.theme);
+    }
+
+    if (dom.themeBtn) {
+      dom.themeBtn.setAttribute(
+        "aria-label",
+        state.theme === "dark"
+          ? state.lang === "ar"
+            ? "تبديل إلى الوضع الفاتح"
+            : "Switch to light mode"
+          : state.lang === "ar"
+          ? "تبديل إلى الوضع الداكن"
+          : "Switch to dark mode"
+      );
+
+      const icon = dom.themeBtn.querySelector("i");
+      if (icon) {
+        icon.className = state.theme === "dark" ? "ph ph-sun" : "ph ph-moon";
+      }
+    }
+  }
+
+  function applyLanguage(lang, persist = true) {
+    const dom = getDom();
+    state.lang = lang === "ar" ? "ar" : "en";
+
+    if (dom.html) {
+      dom.html.lang = state.lang;
+      dom.html.dir = state.lang === "ar" ? "rtl" : "ltr";
+    }
+
+    if (persist) {
+      safeSetMany(STORAGE_ALIASES.lang, state.lang);
+    }
+
+    if (auth) {
+      try {
+        auth.languageCode = state.lang;
+      } catch (_) {}
+    }
+
+    if (dom.langBtn) {
+      const span = dom.langBtn.querySelector("span");
+      if (span) span.textContent = state.lang === "ar" ? "AR" : "EN";
+      dom.langBtn.setAttribute(
+        "aria-label",
+        state.lang === "ar" ? "Switch language" : "تبديل اللغة"
+      );
+    }
+
+    applyTranslations();
+    renderListings();
+    updateAuthUI();
+    renderBookings();
+    renderChatMessages();
+
+    if (state.currentView === "property" && state.selectedProperty) {
+      renderPropertyPage(state.selectedProperty);
+    }
+  }
+
+  function toggleTheme() {
+    applyTheme(state.theme === "dark" ? "light" : "dark", true);
+  }
+
+  function toggleLanguage() {
+    applyLanguage(state.lang === "ar" ? "en" : "ar", true);
+  }
+
+  /* =========================================
+     17) I18N DOM
+  ========================================= */
+  function translateElement(el) {
+    if (!el) return;
+
+    const key =
+      el.getAttribute("data-i18n") ||
+      el.dataset.i18n ||
+      el.getAttribute("data-translate");
+
+    if (key) {
+      const translated = translateOptional(key);
+      if (translated !== null) {
+        el.textContent = translated;
+      }
+    }
+
+    const placeholderKey =
+      el.getAttribute("data-i18n-placeholder") || el.dataset.i18nPlaceholder;
+    if (placeholderKey) {
+      const translated = translateOptional(placeholderKey);
+      if (translated !== null) {
+        el.setAttribute("placeholder", translated);
+      }
+    }
+
+    const titleKey = el.getAttribute("data-i18n-title") || el.dataset.i18nTitle;
+    if (titleKey) {
+      const translated = translateOptional(titleKey);
+      if (translated !== null) {
+        el.setAttribute("title", translated);
+      }
+    }
+
+    const ariaKey =
+      el.getAttribute("data-i18n-aria-label") || el.dataset.i18nAriaLabel;
+    if (ariaKey) {
+      const translated = translateOptional(ariaKey);
+      if (translated !== null) {
+        el.setAttribute("aria-label", translated);
+      }
+    }
+  }
+
+  function applyTranslations() {
+    document.title = t("page_title");
+
+    $all("[data-i18n], [data-i18n-placeholder], [data-i18n-title], [data-i18n-aria-label]").forEach(
+      translateElement
+    );
+
+    const dom = getDom();
+
+    if (dom.destinationInput && !dom.destinationInput.value) {
+      dom.destinationInput.placeholder = t("where_placeholder");
+    }
+
+    if (dom.chatTextarea && !dom.chatTextarea.value) {
+      dom.chatTextarea.placeholder = t("chat_placeholder");
+    }
+
+    if (dom.clearSearchBtn) {
+      dom.clearSearchBtn.textContent = t("clear_search");
+    }
+
+    if (dom.searchBtn) {
+      const span = dom.searchBtn.querySelector("span");
+      if (span) span.textContent = t("search_btn");
+    }
+
+    const backHome = document.querySelector("[data-i18n='backhome']");
+    if (backHome) backHome.textContent = t("backhome");
+
+    syncPhosphorIcons();
+  }
+
+  /* =========================================
+     18) EVENTS
+  ========================================= */
+  function bindThemeAndLanguage() {
+    const dom = getDom();
+
+    dom.themeBtn?.addEventListener("click", toggleTheme);
+    dom.langBtn?.addEventListener("click", toggleLanguage);
+  }
+
+  function setProfileDropdown(open) {
+    const dom = getDom();
+    state.profileDropdownOpen = !!open;
+
+    if (dom.profileDropdown) {
+      dom.profileDropdown.classList.toggle("active", !!open);
+    }
+
+    if (dom.profileTrigger) {
+      dom.profileTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+  }
+
+  function bindProfileMenu() {
+    const dom = getDom();
+
+    dom.profileTrigger?.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      if (!state.user && !dom.profileDropdown) {
+        openAuthModal("login");
+        return;
+      }
+
+      if (!dom.profileDropdown) {
+        openAuthModal("login");
+        return;
+      }
+
+      setProfileDropdown(!state.profileDropdownOpen);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!dom.profileContainer) return;
+      if (!dom.profileContainer.contains(e.target)) {
+        setProfileDropdown(false);
+      }
+    });
+
+    dom.logoutBtn?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      setProfileDropdown(false);
+      await handleLogout();
+    });
+
+    dom.myFavoritesBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      setProfileDropdown(false);
+      if (currentPage().toLowerCase() === ROUTES.favorites.toLowerCase()) {
+        state.currentView = "favorites";
+        renderListings();
+      } else {
+        window.location.href = ROUTES.favorites;
+      }
+    });
+
+    dom.myBookingsBtn?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      setProfileDropdown(false);
+      await openBookingsModal();
+    });
+
+    dom.homeLogoBtn?.addEventListener("click", () => {
+      setProfileDropdown(false);
+    });
+  }
+
+  function bindAuthForms() {
+    const dom = getDom();
+
+    dom.closeAuthBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeAuthModal();
+    });
+
+    dom.authModal?.addEventListener("click", (e) => {
+      if (e.target === dom.authModal) closeAuthModal();
+    });
+
+    document.addEventListener("click", (e) => {
+      const trigger = e.target.closest("#go-to-register, [data-auth-view='register']");
+      if (trigger) {
+        e.preventDefault();
+        switchAuthView("register");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      const trigger = e.target.closest("#go-to-login, [data-auth-view='login']");
+      if (trigger) {
+        e.preventDefault();
+        switchAuthView("login");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      const trigger = e.target.closest("#go-to-forgot, [data-auth-view='forgot']");
+      if (trigger) {
+        e.preventDefault();
+        switchAuthView("forgot");
+      }
+    });
+
+    $all(".toggle-pass-btn").forEach((btn) => {
+      btn.addEventListener("click", () => handlePasswordToggleClick(btn));
+    });
+
+    const registerPassword =
+      dom.registerForm?.querySelector("input[type='password']") || $("#reg-password");
+    registerPassword?.addEventListener("input", () =>
+      updatePasswordStrength(registerPassword)
+    );
+
+    dom.loginForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!auth) {
+        setAuthMessage(t("auth_unavailable"), "error");
+        return;
+      }
+
+      setAuthMessage(t("loading"), "success");
+      try {
+        await loginWithEmail(dom.loginForm);
+        setAuthMessage(t("login_success"), "success");
+      } catch (error) {
+        setAuthMessage(humanFirebaseError(error?.code), "error");
+      }
+    });
+
+    dom.registerForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!auth) {
+        setAuthMessage(t("auth_unavailable"), "error");
+        return;
+      }
+
+      setAuthMessage(t("loading"), "success");
+      try {
+        await registerWithEmail(dom.registerForm);
+        setAuthMessage(t("register_success"), "success");
+      } catch (error) {
+        setAuthMessage(humanFirebaseError(error?.code), "error");
+      }
+    });
+
+    dom.forgotForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!auth) {
+        setAuthMessage(t("auth_unavailable"), "error");
+        return;
+      }
+
+      setAuthMessage(t("loading"), "success");
+      try {
+        await sendPasswordReset(dom.forgotForm);
+      } catch (error) {
+        setAuthMessage(humanFirebaseError(error?.code), "error");
+      }
+    });
+
+    dom.googleButtons.forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+
+        if (!auth || !googleProvider) {
+          setAuthMessage(t("auth_unavailable"), "error");
+          return;
+        }
+
+        setAuthMessage(t("loading"), "success");
+        try {
+          await signInWithGoogle();
+        } catch (error) {
+          setAuthMessage(
+            humanFirebaseError(error?.code) || t("sign_in_google_failed"),
+            "error"
+          );
+        }
+      });
+    });
+
+    if (isAuthPage()) {
+      switchAuthView(readHashView());
+    }
+  }
+
+  function bindListingsEvents() {
+    const dom = getDom();
+
+    dom.searchBtn?.addEventListener("click", () => {
+      state.activeSearch = normalizeText(dom.destinationInput?.value);
+      renderListings();
+    });
+
+    dom.destinationInput?.addEventListener(
+      "input",
+      debounce(() => {
+        state.activeSearch = normalizeText(dom.destinationInput?.value);
+        renderListings();
+      }, 180)
+    );
+
+    dom.destinationInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        state.activeSearch = normalizeText(dom.destinationInput?.value);
+        renderListings();
+      }
+    });
+
+    dom.clearSearchBtn?.addEventListener("click", () => {
+      state.activeSearch = "";
+      if (dom.destinationInput) dom.destinationInput.value = "";
+      renderListings();
+    });
+
+    dom.sortSelect?.addEventListener("change", () => {
+      const raw = normalizeText(dom.sortSelect.value).toLowerCase();
+      state.sort =
+        raw === "rating" || raw === "price_low" || raw === "price_high"
+          ? raw
+          : "featured";
+      renderListings();
+    });
+
+    dom.categoryButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.activeCategory = normalizeText(
+          btn.dataset.category || btn.dataset.categoryBtn || "all"
+        ).toLowerCase();
+        renderListings();
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      const favBtn = e.target.closest("[data-fav-id]");
+      if (favBtn) {
+        e.preventDefault();
+        const propertyId = favBtn.getAttribute("data-fav-id");
+        const property = getPropertyById(propertyId) || resolveSelectedProperty();
+        if (property) toggleFavorite(property);
+        else {
+          if (isFavoriteId(propertyId)) removeFavoriteId(propertyId);
+          else addFavoriteId(propertyId);
+          showFavToast(isFavoriteId(propertyId) ? t("fav_added") : t("fav_removed"));
+        }
+        updateFavoriteButtonsEverywhere();
+
+        if (state.currentView === "favorites") {
+          renderListings();
+        }
+        return;
+      }
+
+      const detailsBtn = e.target.closest("[data-action='details']");
+      if (detailsBtn) {
+        e.preventDefault();
+        const propertyId = detailsBtn.getAttribute("data-property-id");
+        const property = getPropertyById(propertyId);
+        if (property) openPropertyDetails(property);
+        return;
+      }
+
+      const reserveBtn = e.target.closest("[data-action='reserve']");
+      if (reserveBtn) {
+        e.preventDefault();
+        const propertyId = reserveBtn.getAttribute("data-property-id");
+        const property = getPropertyById(propertyId);
+        if (property) handleReserveNow(property);
+      }
+    });
+  }
+
+  function bindPropertyPageEvents() {
+    const dom = getDom();
+
+    dom.propertyFavBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!state.selectedProperty) return;
+      toggleFavorite(state.selectedProperty);
+      updateFavoriteButtonsEverywhere();
+    });
+
+    dom.shareBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleShare();
+    });
+
+    [dom.contactHostBtn, $("#host-chat-btn"), $("#booking-chat-btn"), dom.chatOpenBtn]
+      .filter(Boolean)
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const propertyId =
+            getNavigationPropertyId(state.selectedProperty) ||
+            resolveSelectedPropertyIdFromUrlOrStorage();
+          openChatModal(propertyId);
+        });
+      });
+
+    dom.galleryPrev?.addEventListener("click", prevSlide);
+    dom.galleryNext?.addEventListener("click", nextSlide);
+    dom.galleryFullscreen?.addEventListener("click", openLightbox);
+
+    dom.galleryDots?.addEventListener("click", (e) => {
+      const dot = e.target.closest("[data-slide-index]");
+      if (!dot) return;
+      goToSlide(Number(dot.getAttribute("data-slide-index")) || 0);
+    });
+
+    dom.galleryThumbs?.addEventListener("click", (e) => {
+      const thumb = e.target.closest("[data-thumb-index]");
+      if (!thumb) return;
+      goToSlide(Number(thumb.getAttribute("data-thumb-index")) || 0);
+    });
+
+    dom.lightboxClose?.addEventListener("click", closeLightbox);
+    dom.lightboxPrev?.addEventListener("click", prevSlide);
+    dom.lightboxNext?.addEventListener("click", nextSlide);
+
+    dom.lightbox?.addEventListener("click", (e) => {
+      if (e.target === dom.lightbox) closeLightbox();
+    });
+
+    dom.lightboxImg?.addEventListener("click", toggleZoom);
+
+    document.addEventListener("keydown", (e) => {
+      const lightboxOpen = !!dom.lightbox?.classList.contains("active");
+      const chatOpen = !!dom.chatModal?.classList.contains("active");
+      const authOpen = !!dom.authModal?.classList.contains("active");
+      const bookingsOpen = !!dom.bookingsModal?.classList.contains("active");
+
+      if (e.key === "Escape") {
+        if (lightboxOpen) closeLightbox();
+        else if (chatOpen) closeChatModal();
+        else if (bookingsOpen) closeModal(dom.bookingsModal);
+        else if (authOpen) closeAuthModal();
+      }
+
+      if (lightboxOpen) {
+        if (e.key === "ArrowRight") {
+          if (isArabic()) prevSlide();
+          else nextSlide();
+        }
+        if (e.key === "ArrowLeft") {
+          if (isArabic()) nextSlide();
+          else prevSlide();
+        }
+      }
+    });
+  }
+
+  function bindBookingsEvents() {
+    const dom = getDom();
+
+    dom.closeBookingsBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeModal(dom.bookingsModal);
+    });
+
+    dom.bookingsModal?.addEventListener("click", (e) => {
+      if (e.target === dom.bookingsModal) closeModal(dom.bookingsModal);
+    });
+  }
+
+  function bindChatEvents() {
+    const dom = getDom();
+
+    dom.chatOpenBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openChatModal(
+        getNavigationPropertyId(state.selectedProperty) ||
+          resolveSelectedPropertyIdFromUrlOrStorage()
+      );
+    });
+
+    dom.chatCloseBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeChatModal();
+    });
+
+    dom.chatModal?.addEventListener("click", (e) => {
+      if (e.target === dom.chatModal) closeChatModal();
+    });
+
+    dom.chatSendBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      sendChatMessage();
+    });
+
+    dom.chatTextarea?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+  }
+
+  function bindMiscEvents() {
+    const dom = getDom();
+
+    dom.mobileFavBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = ROUTES.favorites;
+    });
+
+    dom.mobileProfileBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (state.user) {
+        setProfileDropdown(!state.profileDropdownOpen);
+      } else {
+        openAuthModal("login");
+      }
+    });
+
+    dom.mobileStaysBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = ROUTES.home;
+    });
+
+    dom.scrollTopBtn?.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    window.addEventListener("storage", (e) => {
+      if (!e.key) return;
+
+      const themeKeys = new Set(STORAGE_ALIASES.theme);
+      const langKeys = new Set(STORAGE_ALIASES.lang);
+
+      if (themeKeys.has(e.key)) {
+        applyTheme(safeGetAny(STORAGE_ALIASES.theme, "light"), false);
+      }
+
+      if (langKeys.has(e.key)) {
+        applyLanguage(safeGetAny(STORAGE_ALIASES.lang, "en"), false);
+      }
+
+      if (
+        e.key === STORAGE_KEYS.favoritesGuest ||
+        e.key === getFavoritesKeyForUser(state.user?.uid || "") ||
+        e.key === getLegacyFavoritesKey(state.user?.uid || "")
+      ) {
+        state.favorites = getFavoriteIds();
+        updateFavoriteButtonsEverywhere();
+        if (state.currentView === "favorites") renderListings();
+      }
+    });
+  }
+
+  /* =========================================
+     19) INIT
+  ========================================= */
+  async function initializeData() {
+    await loadLiveProperties();
+
+    if (state.currentView === "home" || state.currentView === "favorites") {
+      renderListings();
+    }
+
+    if (state.currentView === "property") {
+      await loadPropertyPage();
+    }
+  }
+
+  async function init() {
+    if (state.initialized) return;
+    state.initialized = true;
+    state.currentView = detectCurrentView();
+
+    initFirebase();
+    await setAuthPersistenceFromRemember();
+    attachAuthObserver();
+
+    applyTheme(state.theme, false);
+    applyLanguage(state.lang, false);
+
+    bindThemeAndLanguage();
+    bindProfileMenu();
+    bindAuthForms();
+    bindListingsEvents();
+    bindPropertyPageEvents();
+    bindBookingsEvents();
+    bindChatEvents();
+    bindMiscEvents();
+
+    updateAuthUI();
+    updateChatUnreadBadge();
+    applyTranslations();
+
+    try {
+      await initializeData();
+    } catch (error) {
+      console.error("Initialization error:", error);
+      if (state.currentView === "home" || state.currentView === "favorites") {
+        renderListings();
+      }
+      showToast(t("property_load_error"), "info");
+    }
+
+    syncPhosphorIcons();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+})();
