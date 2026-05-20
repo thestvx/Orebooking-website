@@ -16,8 +16,39 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
+  <!-- Firebase SDKs - loaded synchronously before any scripts -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- Firebase Initialization - MUST happen before admin.js loads -->
+  <script>
+    (function () {
+      // ==========================================
+      // ضع هنا إعدادات Firebase الخاصة بمشروعك
+      // ==========================================
+      var firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+      };
+
+      try {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        window.__db = firebase.firestore();
+        window.__firebaseReady = true;
+        console.log("[OreBooking] Firebase initialized successfully ✅");
+      } catch (err) {
+        console.error("[OreBooking] Firebase initialization failed:", err);
+        window.__firebaseReady = false;
+        window.__firebaseError = err.message;
+      }
+    })();
+  </script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1100,6 +1131,76 @@
       margin: 0;
     }
 
+    /* ============================================
+       BOOKINGS FILTER TABS - NEW
+    ============================================ */
+    .bookings-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      padding: 6px;
+      background: rgba(248,250,252,0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+    }
+
+    .filter-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .filter-tab-btn:hover {
+      background: rgba(67,90,191,0.06);
+      color: var(--primary);
+    }
+
+    .filter-tab-btn.active {
+      background: #fff;
+      color: var(--text-main);
+      border-color: var(--border-color);
+      box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+    }
+
+    .filter-tab-btn.active.all { color: var(--primary); }
+    .filter-tab-btn.active.pending { color: var(--warning-text); }
+    .filter-tab-btn.active.confirmed { color: var(--success-text); }
+    .filter-tab-btn.active.rejected { color: var(--danger-text); }
+
+    .filter-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      transition: var(--transition);
+    }
+
+    .filter-tab-btn .filter-count-badge { background: rgba(67,90,191,0.08); color: var(--primary); }
+    .filter-tab-btn.pending .filter-count-badge { background: var(--warning-bg); color: var(--warning-text); }
+    .filter-tab-btn.confirmed .filter-count-badge { background: var(--success-bg); color: var(--success-text); }
+    .filter-tab-btn.rejected .filter-count-badge { background: var(--danger-bg); color: var(--danger-text); }
+    .filter-tab-btn.active .filter-count-badge { transform: scale(1.05); }
+
+    /* ============================================ */
+
     #bookings-container .bookings-grid,
     #bookings-container > div.bookings-grid {
       display: grid !important;
@@ -1132,6 +1233,18 @@
       width: 4px;
       background: linear-gradient(180deg, var(--primary), var(--accent));
       opacity: 0.9;
+    }
+
+    .booking-card[data-status="confirmed"]::before {
+      background: linear-gradient(180deg, #10b981, #34d399);
+    }
+
+    .booking-card[data-status="rejected"]::before {
+      background: linear-gradient(180deg, #ef4444, #f87171);
+    }
+
+    .booking-card[data-status="pending"]::before {
+      background: linear-gradient(180deg, #f59e0b, #fbbf24);
     }
 
     .booking-card:hover {
@@ -1265,6 +1378,32 @@
       opacity: 0.85;
     }
 
+    /* Firebase status indicator */
+    .firebase-status-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .firebase-status-banner.error {
+      display: flex;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger-text);
+    }
+
+    .firebase-status-banner.success {
+      display: flex;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+    }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -1375,6 +1514,18 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.28);
     }
 
+    .dark .bookings-filter-bar,
+    body.dark .bookings-filter-bar {
+      background: rgba(15,23,42,0.72);
+      border-color: rgba(51,65,85,0.95);
+    }
+
+    .dark .filter-tab-btn.active,
+    body.dark .filter-tab-btn.active {
+      background: rgba(30,41,59,0.9);
+      border-color: rgba(51,65,85,0.95);
+    }
+
     .dark .sidebar-top-note,
     .dark .search-inline,
     .dark .map-search-row input,
@@ -1476,6 +1627,15 @@
       #bookings-container > div.bookings-grid {
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
       }
+
+      .bookings-filter-bar {
+        gap: 6px;
+      }
+
+      .filter-tab-btn {
+        padding: 9px 13px;
+        font-size: 0.82rem;
+      }
     }
 
     @media (max-width: 768px) {
@@ -1522,6 +1682,15 @@
       .admin-profile {
         width: 100%;
         justify-content: space-between;
+      }
+
+      .bookings-filter-bar {
+        padding: 4px;
+      }
+
+      .filter-tab-btn {
+        padding: 8px 10px;
+        font-size: 0.78rem;
       }
     }
   </style>
@@ -1602,6 +1771,9 @@
         </button>
         <img src="logos/orebooking.png" alt="Logo" style="height:30px; object-fit:contain;" />
       </div>
+
+      <!-- Firebase Status Banner -->
+      <div id="firebase-status-banner" class="firebase-status-banner" style="display:none;"></div>
 
       <header class="admin-header">
         <div class="header-copy">
@@ -1953,6 +2125,64 @@
               </div>
             </div>
 
+            <!-- =============================================
+                 فلتر الحجوزات - NEW
+            ============================================= -->
+            <div class="bookings-filter-bar" id="bookings-filter-bar" role="tablist" aria-label="فلتر الحجوزات">
+              <button
+                type="button"
+                class="filter-tab-btn active all"
+                data-filter="all"
+                role="tab"
+                aria-selected="true"
+                onclick="filterBookings('all')"
+              >
+                <i class="ph ph-list-bullets"></i>
+                الكل
+                <span class="filter-count-badge" id="filter-count-all">0</span>
+              </button>
+
+              <button
+                type="button"
+                class="filter-tab-btn pending"
+                data-filter="pending"
+                role="tab"
+                aria-selected="false"
+                onclick="filterBookings('pending')"
+              >
+                <i class="ph ph-clock"></i>
+                قيد الانتظار
+                <span class="filter-count-badge" id="filter-count-pending">0</span>
+              </button>
+
+              <button
+                type="button"
+                class="filter-tab-btn confirmed"
+                data-filter="confirmed"
+                role="tab"
+                aria-selected="false"
+                onclick="filterBookings('confirmed')"
+              >
+                <i class="ph ph-check-circle"></i>
+                مقبولة
+                <span class="filter-count-badge" id="filter-count-confirmed">0</span>
+              </button>
+
+              <button
+                type="button"
+                class="filter-tab-btn rejected"
+                data-filter="rejected"
+                role="tab"
+                aria-selected="false"
+                onclick="filterBookings('rejected')"
+              >
+                <i class="ph ph-x-circle"></i>
+                مرفوضة
+                <span class="filter-count-badge" id="filter-count-rejected">0</span>
+              </button>
+            </div>
+            <!-- ============================================= -->
+
             <div id="bookings-container">
               <div class="empty-state">
                 <i class="ph ph-circle-notch ph-spin"></i>
@@ -2079,12 +2309,157 @@
 
   <script>
     (function () {
+      // ==========================================
+      // Firebase Helper - unified access point
+      // ==========================================
+      window.getDB = function () {
+        if (window.__db) return window.__db;
+        if (window.__firebaseReady === false) {
+          throw new Error("Firebase غير متاح — يرجى التحقق من إعدادات المشروع في admin.html");
+        }
+        // Fallback: try accessing via firebase global
+        if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) {
+          window.__db = firebase.firestore();
+          return window.__db;
+        }
+        throw new Error("Firebase غير متاح داخل الصفحة حالياً.");
+      };
+
+      // ==========================================
+      // Show Firebase status banner
+      // ==========================================
+      function showFirebaseBanner() {
+        const banner = document.getElementById("firebase-status-banner");
+        if (!banner) return;
+
+        if (window.__firebaseReady === false) {
+          banner.className = "firebase-status-banner error";
+          banner.innerHTML = `
+            <i class="ph-fill ph-warning-circle" style="font-size:1.3rem;flex-shrink:0;"></i>
+            <span>
+              <strong>تحذير: Firebase غير متصل.</strong>
+              لن تعمل عمليات الحجوزات والعقارات حتى يتم إعداد Firebase بشكل صحيح.
+              يرجى تحديث إعدادات firebaseConfig في ملف admin.html.
+            </span>
+          `;
+          banner.style.display = "flex";
+        } else if (window.__firebaseReady === true) {
+          // Don't show success banner unless needed
+          banner.style.display = "none";
+        }
+      }
+
+      // ==========================================
+      // Bookings Filter Logic - NEW
+      // ==========================================
+      window.__allBookingsData = [];
+      window.__currentBookingFilter = "all";
+
+      window.filterBookings = function (filter) {
+        window.__currentBookingFilter = filter;
+
+        // Update active tab button
+        document.querySelectorAll(".filter-tab-btn").forEach(btn => {
+          const isActive = btn.dataset.filter === filter;
+          btn.classList.toggle("active", isActive);
+          btn.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
+
+        renderFilteredBookings();
+      };
+
+      window.updateBookingFilterCounts = function (bookings) {
+        window.__allBookingsData = bookings || [];
+
+        const counts = { all: 0, pending: 0, confirmed: 0, rejected: 0 };
+        bookings.forEach(b => {
+          counts.all++;
+          const status = (b.status || "pending").toLowerCase();
+          if (counts[status] !== undefined) counts[status]++;
+          else counts.pending++;
+        });
+
+        const ids = ["all", "pending", "confirmed", "rejected"];
+        ids.forEach(id => {
+          const el = document.getElementById("filter-count-" + id);
+          if (el) el.textContent = counts[id];
+        });
+      };
+
+      function renderFilteredBookings() {
+        const filter = window.__currentBookingFilter;
+        const container = document.getElementById("bookings-container");
+        if (!container) return;
+
+        // Find the bookings grid inside the container
+        const grid = container.querySelector(".bookings-grid");
+
+        if (!grid) {
+          // If no grid yet, let admin_bookings_addon handle first render
+          return;
+        }
+
+        const cards = grid.querySelectorAll(".booking-card");
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+          const status = (card.dataset.status || "pending").toLowerCase();
+          const show = filter === "all" || status === filter;
+          card.style.display = show ? "" : "none";
+          if (show) visibleCount++;
+        });
+
+        // Show/hide empty state within grid
+        let emptyMsg = grid.querySelector(".bookings-filter-empty");
+        if (visibleCount === 0) {
+          if (!emptyMsg) {
+            emptyMsg = document.createElement("div");
+            emptyMsg.className = "empty-state bookings-filter-empty";
+            emptyMsg.style.gridColumn = "1 / -1";
+
+            const filterLabels = {
+              pending: "قيد الانتظار",
+              confirmed: "المقبولة",
+              rejected: "المرفوضة",
+              all: "الكل"
+            };
+
+            const filterIcons = {
+              pending: "ph-clock",
+              confirmed: "ph-check-circle",
+              rejected: "ph-x-circle",
+              all: "ph-calendar-x"
+            };
+
+            emptyMsg.innerHTML = `
+              <i class="ph ${filterIcons[filter] || "ph-calendar-x"}" style="font-size:2.8rem; color:var(--primary); margin-bottom:12px; display:block; opacity:0.75;"></i>
+              <strong style="display:block; margin-bottom:8px; color:var(--text-main);">
+                لا توجد حجوزات ${filter !== "all" ? filterLabels[filter] : ""}
+              </strong>
+              <span style="font-size:0.88rem;">لم يتم العثور على حجوزات في هذه الفئة.</span>
+            `;
+            grid.appendChild(emptyMsg);
+          }
+        } else {
+          emptyMsg?.remove();
+        }
+      }
+
+      // Override renderFilteredBookings so it's called after bookings load
+      window.__renderFilteredBookings = renderFilteredBookings;
+
+      // ==========================================
+      // Theme
+      // ==========================================
       function setThemeFromStorage() {
         const theme = localStorage.getItem("ore_theme") || "light";
         document.body.classList.toggle("dark", theme === "dark");
         document.documentElement.classList.toggle("dark", theme === "dark");
       }
 
+      // ==========================================
+      // Page Meta
+      // ==========================================
       function updatePageMetaFromNav(tab) {
         const title = document.getElementById("page-title");
         const subtitle = document.getElementById("page-subtitle");
@@ -2129,6 +2504,9 @@
         }
       }
 
+      // ==========================================
+      // Sidebar UI
+      // ==========================================
       function bindSidebarUi() {
         const mobileToggle = document.getElementById("admin-mobile-toggle");
         const sidebar = document.getElementById("admin-sidebar");
@@ -2152,6 +2530,9 @@
         });
       }
 
+      // ==========================================
+      // Upload Preview
+      // ==========================================
       function bindUploadPreview(inputId, previewBoxId, imgId, nameId, sizeId, textSelector, statusId) {
         const input = document.getElementById(inputId);
         if (!input) return;
@@ -2199,6 +2580,9 @@
         });
       }
 
+      // ==========================================
+      // Reset Add Property Form
+      // ==========================================
       function resetAddPropertyUi() {
         document.getElementById("reset-property-form-btn")?.addEventListener("click", () => {
           document.getElementById("add-property-form")?.reset();
@@ -2216,6 +2600,9 @@
         });
       }
 
+      // ==========================================
+      // Map - Add Property
+      // ==========================================
       function initAddMap() {
         const mapEl = document.getElementById("admin-map-picker");
         if (!mapEl || typeof L === "undefined") return;
@@ -2253,6 +2640,9 @@
         setTimeout(() => map.invalidateSize(), 120);
       }
 
+      // ==========================================
+      // Map Search
+      // ==========================================
       async function searchMapLocation() {
         const input = document.getElementById("map-search-input");
         const query = (input?.value || "").trim();
@@ -2286,6 +2676,9 @@
         }
       }
 
+      // ==========================================
+      // Map - Edit Modal
+      // ==========================================
       function initEditMap(lat = null, lng = null) {
         const mapEl = document.getElementById("edit-map-picker");
         if (!mapEl || typeof L === "undefined") return;
@@ -2336,6 +2729,9 @@
         setTimeout(() => window.__adminEditMap.invalidateSize(), 160);
       }
 
+      // ==========================================
+      // Edit Modal
+      // ==========================================
       function bindEditModalUi() {
         document.getElementById("close-edit-modal-btn")?.addEventListener("click", () => {
           if (typeof window.closeEditModal === "function") window.closeEditModal();
@@ -2356,6 +2752,9 @@
         });
       }
 
+      // ==========================================
+      // Expose globals
+      // ==========================================
       window.searchMapLocation = searchMapLocation;
       window.initEditMapFromAdmin = function (lat, lng) {
         initEditMap(lat, lng);
@@ -2371,8 +2770,12 @@
         document.getElementById("map-picked-badge")?.classList.remove("visible");
       };
 
+      // ==========================================
+      // DOMContentLoaded
+      // ==========================================
       document.addEventListener("DOMContentLoaded", function () {
         setThemeFromStorage();
+        showFirebaseBanner();
         bindSidebarUi();
         bindEditModalUi();
         bindUploadPreview("prop-image", "upload-preview-box", "upload-preview-img", "upload-preview-name", "upload-preview-size", ".upload-zone-text", "upload-status");
@@ -2393,7 +2796,55 @@
     })();
   </script>
 
+  <!-- admin.js و admin_bookings_addon.js يُحمَّلان بعد تهيئة Firebase -->
   <script src="admin.js"></script>
   <script src="admin_bookings_addon.js"></script>
+
+  <!--
+    ================================================================
+    ملاحظات للمطور - DEVELOPER NOTES
+    ================================================================
+
+     إصلاح Firebase:
+    ─────────────────
+    تم نقل تهيئة Firebase إلى أعلى الصفحة (داخل <head>) قبل تحميل
+    أي سكريبت خارجي. وتم إنشاء window.getDB() كنقطة وصول موحدة.
+
+    في admin.js و admin_bookings_addon.js، استبدل:
+      firebase.firestore()
+      أو
+      db (إذا كانت متعرَّفة خارجياً)
+    بـ:
+      window.getDB()
+      أو
+      getDB()
+
+    مثال في admin_bookings_addon.js:
+    ─────────────────────────────────
+    // قبل التعديل:
+    const db = firebase.firestore();
+    db.collection("bookings").get()...
+
+    // بعد التعديل:
+    try {
+      const db = getDB();
+      db.collection("bookings").get()...
+    } catch (err) {
+      console.error(err.message);
+      return;
+    }
+
+    🔽 فلتر الحجوزات:
+    ─────────────────
+    بعد تحميل الحجوزات في admin_bookings_addon.js، أضف:
+      window.updateBookingFilterCounts(bookingsArray);
+    وتأكد أن كل .booking-card لها:
+      data-status="pending"  أو  "confirmed"  أو  "rejected"
+    وبعد رسم الكروت، استدعِ:
+      if (typeof window.__renderFilteredBookings === "function") {
+        window.__renderFilteredBookings();
+      }
+    ================================================================
+  -->
 </body>
 </html>
