@@ -2,9 +2,12 @@
 
 /* =========================================
    OreBooking - script.js
-   Unified + resilient + Firebase compatible
-   Works with homepage, auth, search, favorites,
-   bookings, chat, profile and theme/lang sync
+   Shared app script
+   - public property details
+   - protected booking redirect
+   - Firebase auth
+   - listings / favorites / bookings / chat
+   - theme / language sync
 ========================================= */
 
 (function () {
@@ -57,6 +60,7 @@
     lang: "ore_lang",
     theme: "ore_theme",
     favorites: "ore_favorites",
+    favoritesGuest: "ore_favorites_guest",
     remember: "ore_auth_remember",
     selectedPropertyId: "selectedPropertyId",
     selectedPropertyDocId: "selectedPropertyDocId",
@@ -69,13 +73,12 @@
   const ROUTES = {
     home: "index.html",
     auth: "auth.html",
-    details: safeGet("ore_property_page", "details.html"),
-    booking: safeGet("ore_booking_page", "booking.html")
+    details: safeGet("ore_property_page", "property.html"), // غيّرها إلى details.html لو هذا اسم صفحتك
+    booking: safeGet("ore_booking_page", "booking.html"),
+    favorites: safeGet("ore_favorites_page", "favorites.html"),
+    bookings: safeGet("ore_bookings_page", "bookings.html")
   };
 
-  /* =========================================
-     2) FIREBASE
-  ========================================= */
   const firebaseConfig = {
     apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
     authDomain: "orebooking-website.firebaseapp.com",
@@ -93,9 +96,6 @@
     initialized: false,
     lang: safeGet(STORAGE_KEYS.lang, "en") || "en",
     theme: safeGet(STORAGE_KEYS.theme, "light") || "light",
-    favorites: Array.isArray(safeJsonGet(STORAGE_KEYS.favorites, []))
-      ? safeJsonGet(STORAGE_KEYS.favorites, [])
-      : [],
     user: null,
     currentView: "home",
     activeSearch: "",
@@ -107,76 +107,30 @@
     currentCollection: "",
     propertyCollectionCandidates: ["properties", "listings", "propertyListings", "stays", "hotels"],
     authReady: false,
-    firestoreReady: false
+    firestoreReady: false,
+    bookings: [],
+    chatMessages: [],
+    favorites: []
   };
 
-  /* =========================================
-     4) FIREBASE INIT
-  ========================================= */
   let firebaseReady = false;
   let auth = null;
   let db = null;
-
-  function isFirebaseConfigUsable(cfg) {
-    if (!cfg || typeof cfg !== "object") return false;
-    const required = ["apiKey", "authDomain", "projectId", "appId"];
-    return required.every((key) => cfg[key] && !String(cfg[key]).includes("YOUR_"));
-  }
-
-  function initFirebase() {
-    try {
-      if (typeof window.firebase === "undefined") return false;
-      if (!isFirebaseConfigUsable(firebaseConfig)) return false;
-
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-
-      auth = typeof firebase.auth === "function" ? firebase.auth() : null;
-      db = typeof firebase.firestore === "function" ? firebase.firestore() : null;
-
-      firebaseReady = !!window.firebase;
-      state.authReady = !!auth;
-      state.firestoreReady = !!db;
-
-      if (auth && state.lang) {
-        try {
-          auth.languageCode = state.lang;
-        } catch (_) {}
-      }
-
-      return state.authReady;
-    } catch (error) {
-      console.error("Firebase init error:", error);
-      firebaseReady = false;
-      state.authReady = false;
-      state.firestoreReady = false;
-      auth = null;
-      db = null;
-      return false;
-    }
-  }
+  let googleProvider = null;
 
   /* =========================================
-     5) TRANSLATIONS
+     4) TRANSLATIONS
   ========================================= */
   const translations = {
     en: {
       page_title: "OreBooking - Premium Stays",
-      hero_title: "Discover premium stays for every trip.",
-      hero_text: "Browse hotels, apartments, and villas with smooth booking, secure access, and one elegant travel experience.",
-      rewards_badge: "Loyalty Rewards",
       sign_in: "Sign In",
       sign_out: "Sign out",
       my_bookings: "My bookings",
       favorites: "Favorites",
       guest_user: "Guest User",
       logged_in_as: "Signed in",
-      where_label: "Where",
       where_placeholder: "Search city or property",
-      checkin_label: "Check in",
-      checkout_label: "Check out",
-      guests_label: "Guests",
       search_btn: "Search",
       clear_search: "Clear search",
       cat_all: "All stays",
@@ -231,24 +185,29 @@
       password: "Password",
       full_name: "Full Name",
       remember_me: "Remember me",
-      forgot_pass: "Forgot password?"
+      forgot_pass: "Forgot password?",
+      send_link: "Send reset link",
+      continue_google: "Continue with Google",
+      popular_this_week: "Popular this week",
+      great_value: "Great value",
+      luxury_pick: "Luxury pick",
+      breakfast_included: "Breakfast included",
+      weekend_favorite: "Weekend favorite",
+      only_rooms_left: "Only 2 rooms left",
+      no_bookings: "No bookings yet.",
+      bookings_load_error: "Could not load your bookings.",
+      loading_bookings: "Loading bookings...",
+      message_required: "Please type a message first."
     },
     ar: {
       page_title: "OreBooking - إقامات مميزة",
-      hero_title: "اكتشف إقامات مميزة لكل رحلة.",
-      hero_text: "تصفح الفنادق والشقق والفلل مع تجربة حجز سلسة، ودخول آمن، وتجربة سفر أنيقة.",
-      rewards_badge: "مكافآت الولاء",
       sign_in: "تسجيل الدخول",
       sign_out: "تسجيل الخروج",
       my_bookings: "حجوزاتي",
       favorites: "المفضلة",
       guest_user: "زائر",
       logged_in_as: "تم تسجيل الدخول",
-      where_label: "إلى أين",
       where_placeholder: "ابحث عن مدينة أو عقار",
-      checkin_label: "تسجيل الوصول",
-      checkout_label: "تسجيل المغادرة",
-      guests_label: "الضيوف",
       search_btn: "ابحث",
       clear_search: "مسح البحث",
       cat_all: "كل الإقامات",
@@ -303,7 +262,19 @@
       password: "كلمة المرور",
       full_name: "الاسم الكامل",
       remember_me: "تذكرني",
-      forgot_pass: "نسيت كلمة المرور؟"
+      forgot_pass: "نسيت كلمة المرور؟",
+      send_link: "إرسال الرابط",
+      continue_google: "المتابعة عبر Google",
+      popular_this_week: "شائع هذا الأسبوع",
+      great_value: "قيمة ممتازة",
+      luxury_pick: "خيار فاخر",
+      breakfast_included: "الإفطار مشمول",
+      weekend_favorite: "مفضل عطلة نهاية الأسبوع",
+      only_rooms_left: "تبقّت غرفتان فقط",
+      no_bookings: "لا توجد حجوزات بعد.",
+      bookings_load_error: "تعذر تحميل الحجوزات.",
+      loading_bookings: "جارٍ تحميل الحجوزات...",
+      message_required: "اكتب رسالة أولًا."
     }
   };
 
@@ -319,10 +290,6 @@
     const aliases = new Set([k]);
 
     const custom = {
-      herotitle: "hero_title",
-      herosubtitle: "hero_text",
-      hero_title: "hero_title",
-      hero_text: "hero_text",
       signin: "sign_in",
       signout: "sign_out",
       mybookings: "my_bookings",
@@ -330,20 +297,20 @@
       searchhint: "search_hint",
       whereplaceholder: "where_placeholder",
       chatplaceholder: "chat_placeholder",
-      where_label: "where_label",
-      guests_label: "guests_label"
+      fullname: "full_name",
+      forgotpassword: "forgot_pass",
+      rememberme: "remember_me"
     };
 
     if (custom[k]) aliases.add(custom[k]);
-
     return Array.from(aliases);
   }
 
   function t(key) {
     const langDict = translations[state.lang] || translations.en;
     const baseDict = translations.en;
-
     const keys = keyAliases(key);
+
     for (const candidate of keys) {
       if (candidate in langDict) return langDict[candidate];
       if (candidate in baseDict) return baseDict[candidate];
@@ -353,7 +320,7 @@
   }
 
   /* =========================================
-     6) STATIC DATA
+     5) FALLBACK DATA
   ========================================= */
   const fallbackProperties = [
     {
@@ -460,26 +427,8 @@
     }
   ];
 
-  const categories = [
-    { key: "all", label_en: "All stays", label_ar: "كل الإقامات" },
-    { key: "hotel", label_en: "Hotels", label_ar: "فنادق" },
-    { key: "apartment", label_en: "Apartments", label_ar: "شقق" },
-    { key: "villa", label_en: "Villas", label_ar: "فلل" }
-  ];
-
-  const algerianWilayas = [
-    { id: 16, ar: "الجزائر", en: "Algiers" },
-    { id: 31, ar: "وهران", en: "Oran" },
-    { id: 19, ar: "سطيف", en: "Setif" },
-    { id: 23, ar: "عنابة", en: "Annaba" },
-    { id: 47, ar: "غرداية", en: "Ghardaia" },
-    { id: 6, ar: "بجاية", en: "Bejaia" },
-    { id: 39, ar: "الوادي", en: "El Oued" },
-    { id: 25, ar: "قسنطينة", en: "Constantine" }
-  ];
-
   /* =========================================
-     7) DOM HELPERS
+     6) DOM HELPERS
   ========================================= */
   function $(selector, root = document) {
     return root.querySelector(selector);
@@ -521,7 +470,8 @@
       langBtn: firstExisting(["#lang-toggle", "[data-action='toggle-lang']"]),
 
       authCta: firstExisting(["#auth-cta", "#open-auth-btn", "[data-auth-open]"]),
-      profileTrigger: firstExisting(["#profile-trigger", ".profile-menu", "[data-profile-trigger]"]),
+      profileContainer: firstExisting([".profile-container"]),
+      profileTrigger: firstExisting(["#profile-trigger", "#open-auth-btn", ".profile-menu", "[data-profile-trigger]"]),
       profileDropdown: firstExisting(["#profile-dropdown", ".profile-dropdown"]),
       logoutBtn: firstExisting(["#logout-btn", "[data-logout]"]),
       myFavoritesBtn: firstExisting(["#my-favorites-btn", "#profile-favorites-btn", "[data-open-favorites]"]),
@@ -530,7 +480,7 @@
       profileName: firstExisting(["#profile-name", "#dropdown-user-name", "[data-profile-name]"]),
       profileEmail: firstExisting(["#profile-email", "#dropdown-user-email", "[data-profile-email]"]),
 
-      authModal: firstExisting(["#auth-modal", ".auth-modal"]),
+      authModal: firstExisting(["#auth-modal", ".auth-modal", ".modal-overlay.auth-modal"]),
       closeAuthBtn: firstExisting(["#close-auth-btn", ".close-modal-btn"]),
       authMessage: firstExisting(["#auth-message", ".auth-message"]),
       loginForm: firstExisting(["#login-form", "form[data-auth-form='login']"]),
@@ -543,24 +493,23 @@
       clearSearchBtn: firstExisting(["#clear-search-btn", "[data-clear-search]"]),
 
       destinationInput: firstExisting(["#destination-input", "#search-location", "input[data-search='destination']"]),
-      searchInput: firstExisting(["#destination-input", "#search-location", "input[data-search='destination']"]),
       searchBtn: firstExisting(["#search-btn", "#main-search-btn", "[data-main-search]"]),
-      searchDropdown: firstExisting(["#search-dropdown", "[data-search-dropdown]"]),
-      searchWrapper: firstExisting(["#search-location-wrapper", ".search-field", "[data-search-wrapper]"]),
-
-      categoryButtons: $all(".category-item[data-category], [data-category-btn]"),
+      categoryButtons: $all(".category-item[data-category], [data-category-btn], .category-chip[data-category]"),
 
       sectionTitle: firstExisting(["#section-main-title", "[data-section-title]", ".section-header-wrapper h2"]),
 
       bookingsModal: firstExisting(["#bookings-modal", ".bookings-modal"]),
-      closeBookingsBtn: firstExisting(["#close-bookings-btn", "[data-close-bookings]"]),
+      closeBookingsBtn: firstExisting(["#close-bookings-btn", "[data-close-bookings]", ".close-bookings-btn"]),
       bookingsList: firstExisting(["#bookings-list", "[data-bookings-list]"]),
 
       chatModal: firstExisting(["#chat-modal", ".chat-modal"]),
-      chatOpenBtn: firstExisting(["#chat-open-btn", "[data-chat-open]"]),
-      chatCloseBtn: firstExisting(["#chat-close-btn", "[data-chat-close]"]),
-      chatSendBtn: firstExisting(["#chat-send-btn", "[data-chat-send]"]),
-      chatTextarea: firstExisting(["#chat-textarea", "[data-chat-textarea]"]),
+      chatOpenBtn: firstExisting(["#chat-open-btn", "[data-chat-open]", ".chat-fab-btn"]),
+      chatCloseBtn: firstExisting(["#chat-close-btn", "#close-chat-btn", "[data-chat-close]"]),
+      chatSendBtn: firstExisting(["#chat-send-btn", "#send-chat-btn", "[data-chat-send]"]),
+      chatTextarea: firstExisting(["#chat-textarea", "#chat-message-input", "[data-chat-textarea]"]),
+      chatMessages: firstExisting(["#chat-messages"]),
+      chatEmptyState: firstExisting(["#chat-empty-state"]),
+      chatPropertyId: firstExisting(["#chat-property-id"]),
 
       scrollTopBtn: firstExisting(["#scroll-top-btn", "[data-scroll-top]"]),
       favToast: firstExisting(["#fav-toast"]),
@@ -568,29 +517,17 @@
 
       mobileFavBtn: firstExisting(["#mob-fav-btn"]),
       mobileProfileBtn: firstExisting(["#mob-profile-btn"]),
-      mobileStaysBtn: firstExisting(["#mob-stays-btn"]),
-
-      heroSection: firstExisting(["#hero-section", ".hero"]),
-      categoriesContainer: firstExisting(["#categories-container", ".categories"])
+      mobileStaysBtn: firstExisting(["#mob-stays-btn"])
     };
   }
 
   /* =========================================
-     8) HELPERS
+     7) HELPERS
   ========================================= */
   function escapeHtml(str) {
     const div = document.createElement("div");
     div.textContent = String(str ?? "");
     return div.innerHTML;
-  }
-
-  function escapeAttr(str) {
-    return String(str ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
   }
 
   function normalizeText(value) {
@@ -608,11 +545,6 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeText(email));
   }
 
-  function isStrongPassword(password) {
-    const value = String(password || "");
-    return value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
-  }
-
   function formatCurrency(value) {
     const locale = state.lang === "ar" ? "ar-DZ" : "en-US";
     return `${Number(value || 0).toLocaleString(locale)} DZD`;
@@ -623,19 +555,6 @@
     const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
     if (Number.isNaN(date.getTime())) return "—";
     return date.toLocaleDateString(state.lang === "ar" ? "ar-DZ" : "en-GB");
-  }
-
-  function formatDateTime(value) {
-    if (!value) return "—";
-    const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "—";
-    return date.toLocaleString(state.lang === "ar" ? "ar-DZ" : "en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    });
   }
 
   function showToast(message, type = "success") {
@@ -651,10 +570,7 @@
     }
 
     const toast = document.createElement("div");
-    toast.className =
-      host === dom.toastContainer
-        ? `toast toast-${type}`
-        : `toast toast-${type}`;
+    toast.className = `toast toast-${type}`;
     toast.textContent = message;
 
     if (host.id === "global-toast-host") {
@@ -687,6 +603,7 @@
       showToast(message, "success");
       return;
     }
+
     dom.favToast.textContent = message;
     dom.favToast.classList.add("show");
     clearTimeout(showFavToast._timer);
@@ -708,7 +625,65 @@
       "auth/popup-closed-by-user": state.lang === "ar" ? "تم إغلاق نافذة تسجيل الدخول." : "Popup was closed before completing sign-in.",
       "auth/network-request-failed": state.lang === "ar" ? "خطأ في الشبكة. تحقق من الاتصال." : "Network error. Check your connection."
     };
+
     return map[code] || (state.lang === "ar" ? "حدث خطأ غير متوقع." : "Something went wrong.");
+  }
+
+  function safeCall(fn) {
+    try {
+      return fn();
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+
+  /* =========================================
+     8) FIREBASE
+  ========================================= */
+  function isFirebaseConfigUsable(cfg) {
+    if (!cfg || typeof cfg !== "object") return false;
+    const required = ["apiKey", "authDomain", "projectId", "appId"];
+    return required.every((key) => cfg[key] && !String(cfg[key]).includes("YOUR_"));
+  }
+
+  function initFirebase() {
+    try {
+      if (typeof window.firebase === "undefined") return false;
+      if (!isFirebaseConfigUsable(firebaseConfig)) return false;
+
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+
+      auth = typeof firebase.auth === "function" ? firebase.auth() : null;
+      db = typeof firebase.firestore === "function" ? firebase.firestore() : null;
+      googleProvider =
+        typeof firebase.auth?.GoogleAuthProvider === "function"
+          ? new firebase.auth.GoogleAuthProvider()
+          : null;
+
+      firebaseReady = !!window.firebase;
+      state.authReady = !!auth;
+      state.firestoreReady = !!db;
+
+      if (auth && state.lang) {
+        try {
+          auth.languageCode = state.lang;
+        } catch (_) {}
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Firebase init error:", error);
+      firebaseReady = false;
+      state.authReady = false;
+      state.firestoreReady = false;
+      auth = null;
+      db = null;
+      googleProvider = null;
+      return false;
+    }
   }
 
   /* =========================================
@@ -733,7 +708,14 @@
     const titleAr = p.title_ar || p.titleAr || p.nameAr || p.title || "";
     const locationEn = p.location_en || p.locationEn || p.cityEn || p.location || p.address || "";
     const locationAr = p.location_ar || p.locationAr || p.cityAr || p.location || p.address || "";
-    const baseImage = p.image || p.imageUrl || p.mainImage || p.coverImage || "images/placeholder.jpg";
+    const baseImage =
+      p.image ||
+      p.imageUrl ||
+      p.mainImage ||
+      p.coverImage ||
+      (Array.isArray(p.images) && p.images[0]) ||
+      "images/placeholder.jpg";
+
     const images = Array.isArray(p.images) && p.images.length ? p.images.filter(Boolean) : [baseImage];
     const customId = normalizeText(p.id);
     const realDocId = normalizeText(docId || p.docId || "");
@@ -756,6 +738,9 @@
       urgency: p.urgency || "",
       desc_en: p.desc_en || p.descEn || p.descriptionEn || p.description || "",
       desc_ar: p.desc_ar || p.descAr || p.descriptionAr || p.description || "",
+      type: String(p.type || p.category || "").toLowerCase(),
+      typeEn: p.typeEn || p.categoryEn || p.type || "",
+      typeAr: p.typeAr || p.categoryAr || p.type || "",
       features_en: Array.isArray(p.features_en)
         ? p.features_en
         : Array.isArray(p.featuresEn)
@@ -770,24 +755,27 @@
         : Array.isArray(p.amenitiesAr)
         ? p.amenitiesAr
         : [],
-      type: String(p.type || p.category || "").toLowerCase(),
-      typeEn: p.typeEn || p.categoryEn || p.type || "",
-      typeAr: p.typeAr || p.categoryAr || p.type || "",
       createdAt: p.createdAt || null,
       updatedAt: p.updatedAt || null
     };
   }
 
   function getSourceProperties() {
-    const source = state.liveProperties.length
-      ? state.liveProperties
-      : fallbackProperties.map((p) => normalizeProperty(p, p.id, "fallback"));
-    return source;
+    if (state.liveProperties.length) return state.liveProperties;
+    return fallbackProperties.map((p) => normalizeProperty(p, p.id, "fallback"));
   }
 
   function getPropertyById(id) {
     const target = String(id || "");
-    return getSourceProperties().find((p) => String(p.id) === target || String(p.docId) === target || String(p.navId) === target) || null;
+    return (
+      getSourceProperties().find(
+        (p) =>
+          String(p.id) === target ||
+          String(p.docId) === target ||
+          String(p.navId) === target ||
+          String(p.customId) === target
+      ) || null
+    );
   }
 
   function getPropertyTitle(property) {
@@ -806,11 +794,9 @@
 
   function getPropertyType(property) {
     if (!property) return "";
-    const value =
-      state.lang === "ar"
-        ? property.typeAr || property.type || ""
-        : property.typeEn || property.type || "";
-    return String(value || "").toLowerCase();
+    return state.lang === "ar"
+      ? property.typeAr || property.type || ""
+      : property.typeEn || property.type || "";
   }
 
   function propertyMatchesCategory(property, category) {
@@ -840,6 +826,7 @@
 
   function rememberSelectedProperty(property) {
     if (!property) return;
+
     const navId = getNavigationPropertyId(property);
     const snapshot = { ...property, navId, rememberedAt: new Date().toISOString() };
 
@@ -848,6 +835,69 @@
     safeJsonSet(STORAGE_KEYS.selectedPropertyData, snapshot);
     safeJsonSet(STORAGE_KEYS.oreSelectedProperty, snapshot);
     safeJsonSet(STORAGE_KEYS.bookingPropertySnapshot, snapshot);
+  }
+
+  function buildDetailsUrl(property) {
+    const propertyId = encodeURIComponent(getNavigationPropertyId(property));
+    return `${ROUTES.details}?id=${propertyId}`;
+  }
+
+  function buildBookingUrl(property) {
+    const propertyId = encodeURIComponent(getNavigationPropertyId(property));
+    const params = new URLSearchParams();
+    params.set("id", propertyId);
+
+    const dom = getDom();
+    const destinationInput = dom.destinationInput?.value?.trim();
+    const checkIn =
+      firstExisting(["#checkin-date", "#arrival-date", "#search-checkin", "input[name='checkin']"])?.value || "";
+    const checkOut =
+      firstExisting(["#checkout-date", "#departure-date", "#search-checkout", "input[name='checkout']"])?.value || "";
+    const guests =
+      firstExisting(["#guest-count", "#guest-adults", "#search-guests", "input[name='guests']"])?.value || "";
+
+    if (destinationInput) params.set("destination", destinationInput);
+    if (checkIn) params.set("checkIn", checkIn);
+    if (checkOut) params.set("checkOut", checkOut);
+    if (guests) params.set("guests", guests);
+
+    return `${ROUTES.booking}?${params.toString()}`;
+  }
+
+  function openPropertyDetails(property) {
+    if (!property) return;
+    rememberSelectedProperty(property);
+    window.location.href = buildDetailsUrl(property);
+  }
+
+  function continuePendingBookingAfterAuth() {
+    const ctx = safeJsonGet(STORAGE_KEYS.bookingContext, null);
+    if (!ctx || !ctx.redirectTo) return false;
+
+    safeRemove(STORAGE_KEYS.bookingContext);
+    window.location.href = ctx.redirectTo;
+    return true;
+  }
+
+  function handleReserveNow(property) {
+    if (!property) return;
+
+    rememberSelectedProperty(property);
+    const redirectTo = buildBookingUrl(property);
+
+    if (!state.user) {
+      safeJsonSet(STORAGE_KEYS.bookingContext, {
+        type: "booking",
+        propertyId: getNavigationPropertyId(property),
+        redirectTo,
+        createdAt: new Date().toISOString()
+      });
+
+      requireAuth(t("auth_redirect_book"), "login");
+      return;
+    }
+
+    window.location.href = redirectTo;
   }
 
   async function loadLiveProperties() {
@@ -894,19 +944,84 @@
   }
 
   /* =========================================
-     10) THEME / LANGUAGE
+     10) FAVORITES
+  ========================================= */
+  function getFavoritesKeyForUser(uid) {
+    return uid ? `orefavs_${uid}` : STORAGE_KEYS.favoritesGuest;
+  }
+
+  function getLegacyFavoritesKey(uid) {
+    return uid ? `orefavs-${uid}` : STORAGE_KEYS.favorites;
+  }
+
+  function getFavoriteIds() {
+    const uid = state.user?.uid || "";
+    const key = getFavoritesKeyForUser(uid);
+    const legacy = getLegacyFavoritesKey(uid);
+
+    const primary = safeJsonGet(key, null);
+    const secondary = safeJsonGet(legacy, null);
+    const common = safeJsonGet(STORAGE_KEYS.favorites, null);
+
+    const merged = []
+      .concat(Array.isArray(primary) ? primary : [])
+      .concat(Array.isArray(secondary) ? secondary : [])
+      .concat(Array.isArray(common) ? common : []);
+
+    const unique = [...new Set(merged.map((x) => String(x)))];
+    state.favorites = unique;
+    return unique;
+  }
+
+  function saveFavoriteIds(list) {
+    const uid = state.user?.uid || "";
+    const unique = [...new Set((Array.isArray(list) ? list : []).map((x) => String(x)))];
+
+    safeJsonSet(getFavoritesKeyForUser(uid), unique);
+    safeJsonSet(getLegacyFavoritesKey(uid), unique);
+    safeJsonSet(STORAGE_KEYS.favorites, unique);
+
+    state.favorites = unique;
+  }
+
+  function isFavorite(propertyId) {
+    const id = String(propertyId || "");
+    return getFavoriteIds().includes(id);
+  }
+
+  function toggleFavorite(property) {
+    if (!property) return;
+
+    const propertyId = getNavigationPropertyId(property);
+    const list = getFavoriteIds();
+    const exists = list.includes(propertyId);
+    const next = exists ? list.filter((x) => x !== propertyId) : [...list, propertyId];
+
+    saveFavoriteIds(next);
+    renderListings();
+
+    if (typeof window.updateFavButtonState === "function") {
+      safeCall(() => window.updateFavButtonState());
+    }
+
+    showFavToast(exists ? t("fav_removed") : t("fav_added"));
+  }
+
+  /* =========================================
+     11) THEME / LANGUAGE
   ========================================= */
   function updateLogo() {
     const mainLogo = firstExisting(["#main-logo", ".logo-img"]);
-    const modalLogo = firstExisting(["#modal-logo"]);
+    const modalLogo = firstExisting(["#modal-logo", ".auth-header img"]);
     const logoPath = state.theme === "dark" ? "logos/orebooking2.png" : "logos/orebooking.png";
 
-    if (mainLogo) mainLogo.src = logoPath;
-    if (modalLogo) modalLogo.src = logoPath;
+    if (mainLogo && !/favicon/i.test(mainLogo.src)) mainLogo.src = logoPath;
+    if (modalLogo && !/favicon/i.test(modalLogo.src)) modalLogo.src = logoPath;
   }
 
   function updateTextNodes() {
     const dom = getDom();
+
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
       if (!key) return;
@@ -922,7 +1037,8 @@
     document.title = t("page_title");
 
     if (dom.langBtn) {
-      dom.langBtn.innerHTML = dom.langBtn.querySelector("i")
+      const hasIcon = !!dom.langBtn.querySelector("i");
+      dom.langBtn.innerHTML = hasIcon
         ? `<i class="ph ph-translate"></i><span>${state.lang === "en" ? "AR" : "EN"}</span>`
         : state.lang === "en"
         ? "AR"
@@ -930,9 +1046,8 @@
     }
 
     if (dom.themeBtn) {
-      dom.themeBtn.innerHTML = state.theme === "dark"
-        ? `<i class="ph ph-sun"></i>`
-        : `<i class="ph ph-moon"></i>`;
+      dom.themeBtn.innerHTML =
+        state.theme === "dark" ? `<i class="ph ph-sun"></i>` : `<i class="ph ph-moon"></i>`;
     }
 
     if (dom.destinationInput && !dom.destinationInput.value) {
@@ -940,15 +1055,14 @@
     }
 
     if (dom.sectionTitle) {
-      if (state.currentView === "favorites") dom.sectionTitle.textContent = t("favorites");
-      else if (state.currentView === "search") dom.sectionTitle.textContent = t("featured_title");
-      else dom.sectionTitle.textContent = t("featured_title");
+      dom.sectionTitle.textContent = state.currentView === "favorites" ? t("favorites") : t("featured_title");
     }
   }
 
   function applyTheme() {
     const dom = getDom();
-    dom.body.classList.toggle("dark", state.theme === "dark");
+    dom.body?.classList.toggle("dark", state.theme === "dark");
+    dom.html?.classList.toggle("dark", state.theme === "dark");
     safeSet(STORAGE_KEYS.theme, state.theme);
     updateLogo();
 
@@ -991,12 +1105,11 @@
     applyLanguage();
     syncCategoryButtons();
     renderListings();
-    updateSmartSearchPlaceholder();
     renderBookingsPreview();
   }
 
   /* =========================================
-     11) AUTH
+     12) AUTH
   ========================================= */
   function showAuthMessage(message = "", type = "error") {
     const dom = getDom();
@@ -1014,8 +1127,24 @@
     dom.authMessage.style.display = "block";
   }
 
+  function switchAuthForm(formType = "login") {
+    const dom = getDom();
+    const forms = {
+      login: dom.loginForm,
+      register: dom.registerForm,
+      forgot: dom.forgotForm
+    };
+
+    Object.entries(forms).forEach(([key, form]) => {
+      if (!form) return;
+      form.style.display = key === formType ? "flex" : "none";
+      form.classList.toggle("active", key === formType);
+    });
+  }
+
   function openAuthModal(view = "login") {
     const dom = getDom();
+
     if (!dom.authModal) {
       window.location.href = getAuthUrl(view);
       return;
@@ -1035,41 +1164,23 @@
     showAuthMessage("", "");
   }
 
-  function switchAuthForm(formType = "login") {
-    const dom = getDom();
-    const forms = {
-      login: dom.loginForm,
-      register: dom.registerForm,
-      forgot: dom.forgotForm
-    };
-
-    Object.entries(forms).forEach(([key, form]) => {
-      if (!form) return;
-      form.style.display = key === formType ? "flex" : "none";
-      form.classList.toggle("active", key === formType);
-    });
-  }
-
   function updateUserUI() {
     const dom = getDom();
+    const name = state.user?.displayName || t("guest_user");
+    const email = state.user?.email || "";
 
-    if (dom.profileName) {
-      dom.profileName.textContent = state.user?.displayName || t("guest_user");
-    }
-
-    if (dom.profileEmail) {
-      dom.profileEmail.textContent = state.user?.email || "";
-    }
+    if (dom.profileName) dom.profileName.textContent = name;
+    if (dom.profileEmail) dom.profileEmail.textContent = email;
 
     if (dom.authCta && dom.profileTrigger && dom.authCta !== dom.profileTrigger) {
       dom.authCta.classList.toggle("hidden", !!state.user);
       dom.profileTrigger.classList.toggle("hidden", !state.user);
-    } else if (dom.authCta && !dom.profileTrigger) {
+    } else if (dom.authCta) {
       const icon = dom.authCta.querySelector("i");
       const span = dom.authCta.querySelector("span");
 
       if (state.user) {
-        if (icon) icon.className = "ph-fill ph-user-circle";
+        if (icon) icon.className = "ph ph-user-circle-check";
         if (span) span.textContent = state.user.displayName || t("logged_in_as");
       } else {
         if (icon) icon.className = "ph ph-sign-in";
@@ -1085,6 +1196,7 @@
   function requireAuth(message = t("auth_required"), view = "login") {
     showToast(message, "error");
     const dom = getDom();
+
     if (dom.authModal) openAuthModal(view);
     else window.location.href = getAuthUrl(view);
   }
@@ -1099,7 +1211,10 @@
 
     const email = $("#login-email")?.value.trim() || $("#auth-login-email")?.value.trim() || "";
     const password = $("#login-password")?.value || $("#auth-login-password")?.value || "";
-    const remember = ($("#login-remember")?.checked ?? $("#remember-me")?.checked ?? safeGet(STORAGE_KEYS.remember, "1") !== "0");
+    const remember =
+      $("#login-remember")?.checked ??
+      $("#remember-me")?.checked ??
+      safeGet(STORAGE_KEYS.remember, "1") !== "0";
 
     if (!validateEmail(email)) {
       showAuthMessage(t("invalid_email"), "error");
@@ -1112,11 +1227,15 @@
     }
 
     try {
-      const persistence = remember
-        ? firebase.auth.Auth.Persistence.LOCAL
-        : firebase.auth.Auth.Persistence.SESSION;
+      const persistence =
+        remember && firebase?.auth?.Auth?.Persistence?.LOCAL
+          ? firebase.auth.Auth.Persistence.LOCAL
+          : firebase?.auth?.Auth?.Persistence?.SESSION || undefined;
 
-      await auth.setPersistence(persistence);
+      if (persistence) {
+        await auth.setPersistence(persistence);
+      }
+
       safeSet(STORAGE_KEYS.remember, remember ? "1" : "0");
       await auth.signInWithEmailAndPassword(email, password);
 
@@ -1133,12 +1252,12 @@
   async function handleRegister(event) {
     event.preventDefault();
 
-    if (!auth || !db) {
+    if (!auth) {
       showAuthMessage(t("auth_unavailable"), "error");
       return;
     }
 
-    const name =
+    const fullName =
       $("#reg-name")?.value.trim() ||
       $("#register-name")?.value.trim() ||
       $("#auth-register-name")?.value.trim() ||
@@ -1156,13 +1275,7 @@
       $("#auth-register-password")?.value ||
       "";
 
-    const confirmPassword =
-      $("#reg-confirm-password")?.value ||
-      $("#register-confirm-password")?.value ||
-      $("#auth-register-confirm-password")?.value ||
-      password;
-
-    if (!name || !email || !password) {
+    if (!fullName || !email || !password) {
       showAuthMessage(t("fill_required"), "error");
       return;
     }
@@ -1172,39 +1285,17 @@
       return;
     }
 
-    if (!isStrongPassword(password)) {
-      showAuthMessage(
-        state.lang === "ar"
-          ? "يجب أن تكون كلمة المرور 8 أحرف على الأقل وتحتوي على حروف وأرقام."
-          : "Password must be at least 8 characters and contain letters and numbers.",
-        "error"
-      );
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      showAuthMessage(state.lang === "ar" ? "كلمتا المرور غير متطابقتين." : "Passwords do not match.", "error");
+    if (String(password).length < 6) {
+      showAuthMessage(state.lang === "ar" ? "كلمة المرور قصيرة جدًا." : "Password is too short.", "error");
       return;
     }
 
     try {
-      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const result = await auth.createUserWithEmailAndPassword(email, password);
 
-      if (cred?.user?.updateProfile) {
-        await cred.user.updateProfile({ displayName: name });
+      if (result?.user && fullName) {
+        await result.user.updateProfile({ displayName: fullName });
       }
-
-      await db.collection("users").doc(cred.user.uid).set(
-        {
-          name,
-          email,
-          points: 0,
-          role: "guest",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        },
-        { merge: true }
-      );
 
       showToast(t("register_success"), "success");
       showAuthMessage("", "");
@@ -1212,43 +1303,6 @@
       closeAuthModal();
     } catch (error) {
       console.error("Register error:", error);
-      showAuthMessage(humanFirebaseError(error.code), "error");
-    }
-  }
-
-  async function handleGoogleLogin() {
-    if (!auth || !db || typeof firebase === "undefined") {
-      showAuthMessage(t("auth_unavailable"), "error");
-      return;
-    }
-
-    try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      const result = await auth.signInWithPopup(provider);
-
-      if (result?.user) {
-        const userRef = db.collection("users").doc(result.user.uid);
-        const snap = await userRef.get();
-
-        if (!snap.exists) {
-          await userRef.set(
-            {
-              name: result.user.displayName || "",
-              email: result.user.email || "",
-              points: 0,
-              role: "guest",
-              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            },
-            { merge: true }
-          );
-        }
-      }
-
-      showToast(t("login_success"), "success");
-      closeAuthModal();
-    } catch (error) {
-      console.error("Google login error:", error);
       showAuthMessage(humanFirebaseError(error.code), "error");
     }
   }
@@ -1261,7 +1315,7 @@
       return;
     }
 
-    const email = $("#forgot-email")?.value.trim() || $("#auth-forgot-email")?.value.trim() || "";
+    const email = $("#forgot-email")?.value.trim() || $("#reset-email")?.value.trim() || "";
 
     if (!validateEmail(email)) {
       showAuthMessage(t("invalid_email"), "error");
@@ -1271,408 +1325,189 @@
     try {
       await auth.sendPasswordResetEmail(email);
       showAuthMessage(t("reset_sent"), "success");
-      getDom().forgotForm?.reset();
     } catch (error) {
       console.error("Reset error:", error);
       showAuthMessage(humanFirebaseError(error.code), "error");
     }
   }
 
+  async function handleGoogleLogin(event) {
+    event?.preventDefault?.();
+
+    if (!auth || !googleProvider) {
+      showAuthMessage(t("auth_unavailable"), "error");
+      return;
+    }
+
+    try {
+      await auth.signInWithPopup(googleProvider);
+      closeAuthModal();
+      showToast(t("login_success"), "success");
+    } catch (error) {
+      console.error("Google login error:", error);
+      showAuthMessage(humanFirebaseError(error.code), "error");
+    }
+  }
+
   async function handleLogout() {
     try {
-      if (auth) {
-        await auth.signOut();
-      }
+      if (auth) await auth.signOut();
       state.user = null;
+      getFavoriteIds();
       updateUserUI();
+      renderListings();
       showToast(t("logout_success"), "success");
     } catch (error) {
       console.error("Logout error:", error);
-      showToast(t("auth_unavailable"), "error");
+      showToast(state.lang === "ar" ? "تعذر تسجيل الخروج." : "Could not sign out.", "error");
     }
   }
 
-  function watchAuthState() {
-    if (!auth) return;
-
-    auth.onAuthStateChanged((user) => {
-      state.user = user || null;
-      updateUserUI();
-      renderListings();
-      renderBookingsPreview();
-    });
-  }
-
   /* =========================================
-     12) FAVORITES
+     13) BOOKINGS PREVIEW
   ========================================= */
-  function loadFavorites() {
-    const raw = safeJsonGet(STORAGE_KEYS.favorites, []);
-    state.favorites = Array.isArray(raw) ? raw.map(String) : [];
+  function bookingStatusText(status) {
+    const raw = String(status || "pending").toLowerCase();
+
+    if (raw === "confirmed") return t("booking_status_confirmed");
+    if (raw === "cancelled") return t("booking_status_cancelled");
+    if (raw === "rejected") return t("booking_status_rejected");
+    return t("booking_status_pending");
   }
 
-  function saveFavorites() {
-    safeJsonSet(STORAGE_KEYS.favorites, state.favorites);
+  function getLocalBookings() {
+    const list = safeJsonGet("orebookingslocalv1", []);
+    return Array.isArray(list) ? list : [];
   }
 
-  function isFavorite(propertyId) {
-    return state.favorites.includes(String(propertyId));
-  }
-
-  function toggleFavoriteById(propertyId) {
-    const id = String(propertyId);
-
+  async function loadUserBookings() {
     if (!state.user) {
-      requireAuth(t("auth_required"), "login");
-      return;
+      state.bookings = [];
+      return [];
     }
 
-    const index = state.favorites.indexOf(id);
-    if (index > -1) {
-      state.favorites.splice(index, 1);
-      showFavToast(t("fav_removed"));
-    } else {
-      state.favorites.push(id);
-      showFavToast(t("fav_added"));
-    }
-
-    saveFavorites();
-    renderListings();
-  }
-
-  window.toggleFavorite = function (event, propertyId) {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    toggleFavoriteById(propertyId);
-  };
-
-  /* =========================================
-     13) SEARCH / FILTER / SORT
-  ========================================= */
-  function updateSmartSearchPlaceholder() {
-    const dom = getDom();
-    if (dom.searchInput && !dom.searchInput.value) {
-      dom.searchInput.setAttribute("placeholder", t("search_hint"));
-    }
-  }
-
-  function setCurrentView(view) {
-    state.currentView = view;
-    const dom = getDom();
-
-    if (!dom.sectionTitle) return;
-
-    if (view === "favorites") dom.sectionTitle.textContent = t("favorites");
-    else dom.sectionTitle.textContent = t("featured_title");
-  }
-
-  function syncCategoryButtons() {
-    const dom = getDom();
-    dom.categoryButtons.forEach((btn) => {
-      const key = btn.getAttribute("data-category") || btn.getAttribute("data-category-btn");
-      btn.classList.toggle("active", (key || "all") === state.activeCategory);
+    const local = getLocalBookings().filter((item) => {
+      return (
+        String(item?.userId || "") === String(state.user.uid || "") ||
+        String(item?.userEmail || "").toLowerCase() === String(state.user.email || "").toLowerCase()
+      );
     });
-  }
 
-  function showClearSearchBtn() {
-    const dom = getDom();
-    if (dom.clearSearchBtn) dom.clearSearchBtn.style.display = "inline-flex";
-  }
-
-  function hideClearSearchBtn() {
-    const dom = getDom();
-    if (dom.clearSearchBtn) dom.clearSearchBtn.style.display = "none";
-  }
-
-  function getFilteredProperties() {
-    let items = getSourceProperties().slice();
-
-    if (state.currentView === "favorites") {
-      items = items.filter((item) => isFavorite(getNavigationPropertyId(item)));
+    if (!db) {
+      state.bookings = local;
+      return local;
     }
 
-    if (state.activeCategory && state.activeCategory !== "all") {
-      items = items.filter((item) => propertyMatchesCategory(item, state.activeCategory));
-    }
+    try {
+      let remote = [];
 
-    const query = normalizeText(state.activeSearch).toLowerCase();
-    if (query) {
-      items = items.filter((item) => {
-        const haystack = [
-          item.title_en,
-          item.title_ar,
-          item.location_en,
-          item.location_ar,
-          item.desc_en,
-          item.desc_ar,
-          item.type,
-          item.typeEn,
-          item.typeAr,
-          ...(item.features_en || []),
-          ...(item.features_ar || [])
-        ]
-          .join(" ")
-          .toLowerCase();
+      try {
+        const byUserId = await db
+          .collection("bookings")
+          .where("userId", "==", state.user.uid)
+          .limit(20)
+          .get();
 
-        return haystack.includes(query);
+        byUserId.forEach((doc) => remote.push({ id: doc.id, ...doc.data() }));
+      } catch (_) {}
+
+      if (!remote.length && state.user.email) {
+        try {
+          const byEmail = await db
+            .collection("bookings")
+            .where("userEmail", "==", state.user.email)
+            .limit(20)
+            .get();
+
+          byEmail.forEach((doc) => remote.push({ id: doc.id, ...doc.data() }));
+        } catch (_) {}
+      }
+
+      const mergedMap = new Map();
+
+      [...remote, ...local].forEach((item) => {
+        const key = String(item?.id || item?.bookingReference || item?.createdAt || Math.random());
+        mergedMap.set(key, item);
       });
+
+      state.bookings = Array.from(mergedMap.values()).sort((a, b) => {
+        const da = new Date(a?.createdAt?.toDate ? a.createdAt.toDate() : a?.createdAt || 0).getTime();
+        const dbb = new Date(b?.createdAt?.toDate ? b.createdAt.toDate() : b?.createdAt || 0).getTime();
+        return dbb - da;
+      });
+
+      return state.bookings;
+    } catch (error) {
+      console.error("Bookings load error:", error);
+      state.bookings = local;
+      return local;
     }
-
-    switch (state.sort) {
-      case "rating":
-        items.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case "price-asc":
-        items.sort((a, b) => (a.price || 0) - (b.price || 0));
-        break;
-      case "price-desc":
-        items.sort((a, b) => (b.price || 0) - (a.price || 0));
-        break;
-      default:
-        items.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-    }
-
-    return items;
-  }
-
-  function renderEmptyState() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-    dom.listingsGrid.innerHTML = `
-      <div class="listings-empty-state">
-        <i class="ph ph-magnifying-glass"></i>
-        <strong>${escapeHtml(t("no_results_title"))}</strong>
-        <p>${escapeHtml(t("no_results_text"))}</p>
-      </div>
-    `;
-  }
-
-  function propertyUrgencyText(property) {
-    if (property.urgency && typeof property.urgency === "string") return property.urgency;
-    const type = String(property.type || "").toLowerCase();
-    if (type.includes("villa")) return state.lang === "ar" ? "خيار فاخر" : "Luxury pick";
-    if (type.includes("apartment")) return state.lang === "ar" ? "قيمة ممتازة" : "Great value";
-    return state.lang === "ar" ? "الأكثر طلبًا" : "Popular stay";
-  }
-
-  function renderListings() {
-    const dom = getDom();
-    if (!dom.listingsGrid) return;
-
-    const items = getFilteredProperties();
-    syncCategoryButtons();
-
-    if (!items.length) {
-      renderEmptyState();
-      return;
-    }
-
-    dom.listingsGrid.innerHTML = items
-      .map((property) => {
-        const id = getNavigationPropertyId(property);
-        return `
-          <article class="property-card" data-property-id="${escapeAttr(id)}">
-            <div class="property-card-media">
-              <img src="${escapeAttr(property.image)}" alt="${escapeAttr(getPropertyTitle(property))}">
-              <button class="favorite-btn ${isFavorite(id) ? "active" : ""}" type="button" data-action="favorite" data-property-id="${escapeAttr(id)}" aria-label="favorite">
-                <i class="ph-fill ph-heart"></i>
-              </button>
-              <div class="property-urgency">
-                <i class="ph ph-fire"></i>
-                <span>${escapeHtml(propertyUrgencyText(property))}</span>
-              </div>
-            </div>
-
-            <div class="property-card-body">
-              <div class="property-card-top">
-                <h3 class="property-card-title">${escapeHtml(getPropertyTitle(property))}</h3>
-                <div class="property-card-rating">
-                  <i class="ph-fill ph-star"></i>
-                  <span>${Number(property.rating || 0).toFixed(1)}</span>
-                </div>
-              </div>
-
-              <div class="property-card-location">
-                <i class="ph ph-map-pin"></i>
-                <span>${escapeHtml(getPropertyLocation(property))}</span>
-              </div>
-
-              <div class="property-card-price">
-                ${escapeHtml(formatCurrency(property.price))}
-                <span>${escapeHtml(t("night_suffix"))}</span>
-              </div>
-
-              <div class="property-card-actions">
-                <button type="button" class="details-btn" data-action="details" data-property-id="${escapeAttr(id)}">
-                  ${escapeHtml(t("view_details"))}
-                </button>
-                <button type="button" class="reserve-btn primary" data-action="reserve" data-property-id="${escapeAttr(id)}">
-                  ${escapeHtml(state.user ? t("reserve_now") : t("reserve_cta_signed_out"))}
-                </button>
-              </div>
-            </div>
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  function performSearch(rawQuery = "") {
-    const query = normalizeText(rawQuery);
-    state.activeSearch = query;
-    state.activeCategory = "all";
-    setCurrentView(query ? "search" : "home");
-
-    if (query) showClearSearchBtn();
-    else hideClearSearchBtn();
-
-    const dom = getDom();
-    if (dom.searchInput && dom.searchInput.value !== query) {
-      dom.searchInput.value = query;
-    }
-
-    renderListings();
-  }
-
-  function resetToHome() {
-    const dom = getDom();
-
-    state.currentView = "home";
-    state.activeSearch = "";
-    state.activeCategory = "all";
-
-    if (dom.searchInput) dom.searchInput.value = "";
-    hideClearSearchBtn();
-    syncCategoryButtons();
-    setCurrentView("home");
-    renderListings();
-
-    if (dom.heroSection) dom.heroSection.style.display = "";
-    if (dom.categoriesContainer) dom.categoriesContainer.style.display = "";
-  }
-
-  function showFavoritesView() {
-    state.currentView = "favorites";
-    state.activeSearch = "";
-    state.activeCategory = "all";
-    hideClearSearchBtn();
-    setCurrentView("favorites");
-    renderListings();
-  }
-
-  function openPropertyDetails(propertyId) {
-    const property = getPropertyById(propertyId);
-    if (!property) return;
-
-    rememberSelectedProperty(property);
-    try {
-      window.location.href = ROUTES.details;
-    } catch (_) {
-      showToast(getPropertyTitle(property), "info");
-    }
-  }
-
-  function proceedToBooking(propertyId) {
-    const property = getPropertyById(propertyId);
-    if (!property) return;
-
-    if (!state.user) {
-      requireAuth(t("auth_redirect_book"), "login");
-      return;
-    }
-
-    rememberSelectedProperty(property);
-    safeJsonSet(STORAGE_KEYS.bookingContext, {
-      propertyId: getNavigationPropertyId(property),
-      createdAt: new Date().toISOString()
-    });
-
-    try {
-      window.location.href = ROUTES.booking;
-    } catch (_) {
-      showToast(getPropertyTitle(property), "success");
-    }
-  }
-
-  function renderSearchSuggestions(query = "") {
-    const dom = getDom();
-    if (!dom.searchDropdown || !dom.searchInput) return;
-
-    const q = normalizeText(query).toLowerCase();
-    const source = getSourceProperties();
-
-    const wilayaMatches = algerianWilayas
-      .filter((w) => !q || w.en.toLowerCase().includes(q) || w.ar.includes(query))
-      .slice(0, 6)
-      .map((w) => ({
-        type: "wilaya",
-        label: state.lang === "ar" ? w.ar : w.en,
-        value: state.lang === "ar" ? w.ar : w.en,
-        subtitle: state.lang === "ar" ? "عرض العقارات في هذه الولاية" : "Show stays in this wilaya"
-      }));
-
-    const propertyMatches = source
-      .filter((p) => {
-        if (!q) return true;
-        const haystack = `${p.title_en} ${p.title_ar} ${p.location_en} ${p.location_ar}`.toLowerCase();
-        return haystack.includes(q);
-      })
-      .slice(0, 6)
-      .map((p) => ({
-        type: "property",
-        label: getPropertyTitle(p),
-        value: getPropertyTitle(p),
-        subtitle: getPropertyLocation(p),
-        id: getNavigationPropertyId(p)
-      }));
-
-    const results = [...wilayaMatches, ...propertyMatches].slice(0, 10);
-
-    dom.searchDropdown.innerHTML = results.length
-      ? results
-          .map(
-            (item) => `
-            <button class="search-suggestion-item" type="button" data-type="${escapeAttr(item.type)}" data-value="${escapeAttr(item.value)}" ${item.id ? `data-id="${escapeAttr(item.id)}"` : ""}>
-              <div class="search-suggestion-main">${escapeHtml(item.label)}</div>
-              <div class="search-suggestion-sub">${escapeHtml(item.subtitle || "")}</div>
-            </button>
-          `
-          )
-          .join("")
-      : `<div class="search-empty">${escapeHtml(t("no_results_title"))}</div>`;
-
-    dom.searchDropdown.classList.add("active");
-  }
-
-  /* =========================================
-     14) BOOKINGS
-  ========================================= */
-  function getStatusMeta(status) {
-    const map = {
-      pending: { label: t("booking_status_pending"), cls: "pending", icon: "ph-hourglass-medium" },
-      confirmed: { label: t("booking_status_confirmed"), cls: "confirmed", icon: "ph-check-circle" },
-      cancelled: { label: t("booking_status_cancelled"), cls: "cancelled", icon: "ph-x-circle" },
-      rejected: { label: t("booking_status_rejected"), cls: "cancelled", icon: "ph-x-circle" }
-    };
-    return map[String(status || "").toLowerCase()] || map.pending;
   }
 
   function renderBookingsPreview() {
     const dom = getDom();
     if (!dom.bookingsList) return;
 
-    if (!state.user) return;
+    if (!state.user) {
+      dom.bookingsList.innerHTML = `
+        <div style="text-align:center;padding:28px;color:var(--text-muted);">
+          ${escapeHtml(t("auth_required"))}
+        </div>
+      `;
+      return;
+    }
 
-    const demoTitle = $("#booking-demo-title");
-    const demoLocation = $("#booking-demo-location");
-    const demoStatus = $("#booking-demo-status");
+    const bookings = Array.isArray(state.bookings) ? state.bookings : [];
 
-    if (demoTitle) demoTitle.textContent = state.lang === "ar" ? "فندق سكاي لاين" : "Skyline Hotel";
-    if (demoLocation) demoLocation.textContent = state.lang === "ar" ? "الجزائر العاصمة، الجزائر" : "Algiers, Algeria";
-    if (demoStatus) demoStatus.textContent = t("booking_status_confirmed");
+    if (!bookings.length) {
+      dom.bookingsList.innerHTML = `
+        <div style="text-align:center;padding:28px;color:var(--text-muted);">
+          ${escapeHtml(t("no_bookings"))}
+        </div>
+      `;
+      return;
+    }
+
+    dom.bookingsList.innerHTML = bookings
+      .map((item) => {
+        const title =
+          item?.propertyTitle ||
+          item?.propertyName ||
+          item?.title ||
+          (state.lang === "ar" ? "عقار" : "Property");
+
+        const checkIn = item?.stay?.checkIn || item?.checkIn || item?.arrivalDate || "";
+        const checkOut = item?.stay?.checkOut || item?.checkOut || item?.departureDate || "";
+        const guests =
+          item?.stay?.adults + item?.stay?.children ||
+          item?.guestCount ||
+          item?.guests ||
+          item?.stay?.adults ||
+          1;
+
+        const total = item?.pricing?.total || item?.total || item?.amount || 0;
+        const status = bookingStatusText(item?.status);
+
+        return `
+          <article style="padding:16px;border:1px solid var(--border-color,#e2e8f0);border-radius:16px;background:var(--surface-color,#fff);margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+              <div>
+                <strong style="display:block;margin-bottom:6px;">${escapeHtml(title)}</strong>
+                <div style="color:var(--text-muted,#64748b);font-size:.92rem;line-height:1.8;">
+                  <div>${escapeHtml(t("booking_checkin"))} ${escapeHtml(formatDate(checkIn))}</div>
+                  <div>${escapeHtml(t("booking_checkout"))} ${escapeHtml(formatDate(checkOut))}</div>
+                  <div>${escapeHtml(t("booking_guests"))} ${escapeHtml(String(guests || 1))}</div>
+                  <div>${escapeHtml(t("booking_total"))} ${escapeHtml(formatCurrency(total))}</div>
+                </div>
+              </div>
+              <span style="padding:6px 10px;border-radius:999px;background:rgba(67,90,191,.08);color:#435abf;font-weight:800;font-size:.82rem;">
+                ${escapeHtml(status)}
+              </span>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
   }
 
   async function openBookingsModal() {
@@ -1683,82 +1518,46 @@
       return;
     }
 
-    if (!dom.bookingsModal) return;
+    if (dom.bookingsModal) {
+      dom.bookingsModal.classList.add("active");
+      dom.body.classList.add("modal-open");
+    }
 
-    dom.bookingsModal.classList.add("active");
-    dom.body.classList.add("modal-open");
-
-    if (!db || !dom.bookingsList) return;
-
-    dom.bookingsList.innerHTML = `<div class="booking-card">${escapeHtml(t("loading"))}</div>`;
-
-    try {
-      const snap = await db
-        .collection("bookings")
-        .where("userId", "==", state.user.uid)
-        .limit(20)
-        .get();
-
-      if (snap.empty) {
-        dom.bookingsList.innerHTML = `
-          <div class="booking-card">
-            <div class="booking-card-sub">${escapeHtml(state.lang === "ar" ? "لا توجد حجوزات بعد." : "No bookings yet.")}</div>
-          </div>
-        `;
-        return;
-      }
-
-      const cards = [];
-      snap.forEach((doc) => {
-        const data = doc.data() || {};
-        const status = getStatusMeta(data.status);
-        cards.push(`
-          <div class="booking-card">
-            <div class="booking-card-head">
-              <div>
-                <h4>${escapeHtml(data.propertyTitle || data.title || "OreBooking Stay")}</h4>
-                <div class="booking-card-sub">${escapeHtml(data.location || "")}</div>
-              </div>
-              <span class="booking-status ${escapeAttr(status.cls)}">
-                <i class="ph ${escapeAttr(status.icon)}"></i>
-                ${escapeHtml(status.label)}
-              </span>
-            </div>
-
-            <div class="booking-card-grid">
-              <div><strong>${escapeHtml(t("booking_checkin"))}</strong> ${escapeHtml(formatDate(data.checkIn || data.checkin))}</div>
-              <div><strong>${escapeHtml(t("booking_checkout"))}</strong> ${escapeHtml(formatDate(data.checkOut || data.checkout))}</div>
-              <div><strong>${escapeHtml(t("booking_guests"))}</strong> ${escapeHtml(String(data.guests || "—"))}</div>
-              <div><strong>${escapeHtml(t("booking_total"))}</strong> ${escapeHtml(formatCurrency(data.total || data.amount || 0))}</div>
-            </div>
-          </div>
-        `);
-      });
-
-      dom.bookingsList.innerHTML = cards.join("");
-    } catch (error) {
-      console.error("Bookings load error:", error);
+    if (dom.bookingsList) {
       dom.bookingsList.innerHTML = `
-        <div class="booking-card">
-          <div class="booking-card-sub">${escapeHtml(state.lang === "ar" ? "تعذر تحميل الحجوزات." : "Could not load bookings.")}</div>
+        <div style="text-align:center;padding:28px;color:var(--text-muted);">
+          ${escapeHtml(t("loading_bookings"))}
         </div>
       `;
+    }
+
+    try {
+      await loadUserBookings();
+      renderBookingsPreview();
+    } catch (_) {
+      if (dom.bookingsList) {
+        dom.bookingsList.innerHTML = `
+          <div style="text-align:center;padding:28px;color:var(--text-muted);">
+            ${escapeHtml(t("bookings_load_error"))}
+          </div>
+        `;
+      }
     }
   }
 
   function closeBookingsModal() {
     const dom = getDom();
-    if (!dom.bookingsModal) return;
-    dom.bookingsModal.classList.remove("active");
+    dom.bookingsModal?.classList.remove("active");
     dom.body.classList.remove("modal-open");
   }
 
   /* =========================================
-     15) CHAT
+     14) CHAT
   ========================================= */
   function openChatModal() {
     const dom = getDom();
     if (!dom.chatModal) return;
+
     dom.chatModal.classList.add("active");
     dom.body.classList.add("modal-open");
   }
@@ -1766,381 +1565,625 @@
   function closeChatModal() {
     const dom = getDom();
     if (!dom.chatModal) return;
+
     dom.chatModal.classList.remove("active");
     dom.body.classList.remove("modal-open");
   }
 
-  function sendChatMessage() {
+  function appendChatMessage(text, from = "user") {
     const dom = getDom();
-    if (!dom.chatTextarea) return;
+    if (!dom.chatMessages) return;
 
-    const value = dom.chatTextarea.value.trim();
-    if (!value) return;
+    if (dom.chatEmptyState) dom.chatEmptyState.style.display = "none";
 
-    const body = $(".chat-modal-body");
-    if (body) {
-      const message = document.createElement("div");
-      message.className = "chat-message customer";
-      message.innerHTML = `${escapeHtml(value)}<span class="chat-meta">${escapeHtml(new Date().toLocaleTimeString(state.lang === "ar" ? "ar-DZ" : "en-GB", { hour: "2-digit", minute: "2-digit" }))}</span>`;
-      body.appendChild(message);
-      body.scrollTop = body.scrollHeight;
+    const item = document.createElement("div");
+    item.style.cssText = `
+      display:flex;
+      justify-content:${from === "user" ? "flex-end" : "flex-start"};
+      margin-bottom:10px;
+    `;
+
+    const bubble = document.createElement("div");
+    bubble.style.cssText = `
+      max-width:min(85%,420px);
+      padding:12px 14px;
+      border-radius:16px;
+      line-height:1.7;
+      font-weight:600;
+      background:${from === "user" ? "#435abf" : "rgba(148,163,184,.14)"};
+      color:${from === "user" ? "#fff" : "inherit"};
+    `;
+    bubble.textContent = text;
+
+    item.appendChild(bubble);
+    dom.chatMessages.appendChild(item);
+    dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
+  }
+
+  function handleChatSend() {
+    const dom = getDom();
+    const text = normalizeText(dom.chatTextarea?.value || "");
+
+    if (!text) {
+      showToast(t("message_required"), "error");
+      return;
     }
 
-    dom.chatTextarea.value = "";
+    appendChatMessage(text, "user");
+    if (dom.chatTextarea) dom.chatTextarea.value = "";
+
+    setTimeout(() => {
+      appendChatMessage(
+        state.lang === "ar"
+          ? "تم استلام رسالتك، وسيرد فريق الدعم قريبًا."
+          : "Your message has been received. Our support team will reply soon.",
+        "support"
+      );
+    }, 500);
+
     showToast(t("support_toast"), "success");
+  }
+
+  /* =========================================
+     15) LISTINGS RENDER
+  ========================================= */
+  function renderStars(rating) {
+    const val = Number(rating || 0).toFixed(1);
+    return `
+      <span style="display:inline-flex;align-items:center;gap:6px;">
+        <i class="ph-fill ph-star" style="color:#f59e0b;"></i>
+        <span>${escapeHtml(val)}</span>
+      </span>
+    `;
+  }
+
+  function getUrgencyText(property) {
+    if (property?.urgency) return property.urgency;
+    const type = String(property?.type || "").toLowerCase();
+
+    if (type === "hotel") return t("only_rooms_left");
+    if (type === "apartment") return t("great_value");
+    if (type === "villa") return t("luxury_pick");
+    return "";
+  }
+
+  function buildPropertyCard(property) {
+    const title = getPropertyTitle(property);
+    const location = getPropertyLocation(property);
+    const type = getPropertyType(property);
+    const isFav = isFavorite(getNavigationPropertyId(property));
+    const reserveLabel = state.user ? t("reserve_now") : t("reserve_cta_signed_out");
+    const urgency = getUrgencyText(property);
+
+    return `
+      <article class="listing-card" data-property-id="${escapeHtml(getNavigationPropertyId(property))}" style="
+        background:var(--surface-color,#fff);
+        border:1px solid var(--border-color,#e2e8f0);
+        border-radius:24px;
+        overflow:hidden;
+        box-shadow:0 10px 30px rgba(15,23,42,.06);
+      ">
+        <div style="position:relative;">
+          <img
+            src="${escapeHtml(property.image)}"
+            alt="${escapeHtml(title)}"
+            style="width:100%;height:240px;object-fit:cover;background:#f8fafc;"
+            onerror="this.src='images/placeholder.jpg'"
+          />
+          <button
+            type="button"
+            data-action="favorite"
+            data-id="${escapeHtml(getNavigationPropertyId(property))}"
+            style="
+              position:absolute;top:14px;${state.lang === "ar" ? "left" : "right"}:14px;
+              width:44px;height:44px;border:none;border-radius:999px;cursor:pointer;
+              background:${isFav ? "rgba(225,29,72,.12)" : "rgba(255,255,255,.92)"};
+              color:${isFav ? "#e11d48" : "#0f172a"};
+              box-shadow:0 8px 24px rgba(15,23,42,.12);
+              display:flex;align-items:center;justify-content:center;
+            "
+            aria-label="favorite"
+          >
+            <i class="${isFav ? "ph-fill ph-heart" : "ph ph-heart"}"></i>
+          </button>
+        </div>
+
+        <div style="padding:18px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;">
+            <div style="min-width:0;">
+              <h3 style="margin:0 0 6px;font-size:1.15rem;line-height:1.3;">${escapeHtml(title)}</h3>
+              <p style="margin:0;color:var(--text-muted,#64748b);display:flex;align-items:center;gap:6px;">
+                <i class="ph ph-map-pin"></i>
+                <span>${escapeHtml(location)}</span>
+              </p>
+            </div>
+            <div style="white-space:nowrap;font-weight:800;">${renderStars(property.rating)}</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="padding:6px 10px;border-radius:999px;background:rgba(67,90,191,.08);color:#435abf;font-weight:800;font-size:.82rem;">
+              ${escapeHtml(type)}
+            </span>
+            ${urgency ? `
+              <span style="color:var(--text-muted,#64748b);font-size:.86rem;font-weight:700;">
+                ${escapeHtml(urgency)}
+              </span>
+            ` : ""}
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:16px;">
+            <div>
+              <strong style="font-size:1.25rem;">${escapeHtml(formatCurrency(property.price))}</strong>
+              <span style="color:var(--text-muted,#64748b);">${escapeHtml(t("night_suffix"))}</span>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button
+              type="button"
+              data-action="details"
+              data-id="${escapeHtml(getNavigationPropertyId(property))}"
+              class="listing-details-btn"
+              style="
+                min-height:48px;border-radius:14px;border:1px solid var(--border-color,#e2e8f0);
+                background:var(--surface-color,#fff);cursor:pointer;font-weight:800;
+              "
+            >
+              ${escapeHtml(t("view_details"))}
+            </button>
+
+            <button
+              type="button"
+              data-action="reserve"
+              data-id="${escapeHtml(getNavigationPropertyId(property))}"
+              class="listing-reserve-btn"
+              style="
+                min-height:48px;border-radius:14px;border:none;cursor:pointer;font-weight:800;color:#fff;
+                background:linear-gradient(135deg,#435abf,#34459c);
+              "
+            >
+              ${escapeHtml(reserveLabel)}
+            </button>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function getFilteredProperties() {
+    const source = getSourceProperties();
+    const searchText = normalizeText(state.activeSearch).toLowerCase();
+
+    let filtered = source.filter((property) => {
+      const inCategory = propertyMatchesCategory(property, state.activeCategory);
+
+      const haystack = [
+        property.title_en,
+        property.title_ar,
+        property.location_en,
+        property.location_ar,
+        property.type,
+        property.typeEn,
+        property.typeAr,
+        property.desc_en,
+        property.desc_ar
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const inSearch = !searchText || haystack.includes(searchText);
+      return inCategory && inSearch;
+    });
+
+    if (state.currentView === "favorites") {
+      const ids = getFavoriteIds();
+      filtered = filtered.filter((item) => ids.includes(getNavigationPropertyId(item)));
+    }
+
+    if (state.sort === "rating") {
+      filtered.sort((a, b) => b.rating - a.rating);
+    } else if (state.sort === "price-low") {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (state.sort === "price-high") {
+      filtered.sort((a, b) => b.price - a.price);
+    }
+
+    return filtered;
+  }
+
+  function renderEmptyState() {
+    const dom = getDom();
+    if (!dom.listingsGrid) return;
+
+    dom.listingsGrid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-muted,#64748b);">
+        <h3 style="margin-bottom:10px;">${escapeHtml(t("no_results_title"))}</h3>
+        <p style="margin:0;">${escapeHtml(t("no_results_text"))}</p>
+      </div>
+    `;
+  }
+
+  function renderLoadingState() {
+    const dom = getDom();
+    if (!dom.listingsGrid) return;
+
+    dom.listingsGrid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-muted,#64748b);">
+        ${escapeHtml(t("loading"))}
+      </div>
+    `;
+  }
+
+  function renderListings() {
+    const dom = getDom();
+    if (!dom.listingsGrid) return;
+
+    const items = getFilteredProperties();
+
+    if (!items.length) {
+      renderEmptyState();
+      return;
+    }
+
+    dom.listingsGrid.innerHTML = items.map(buildPropertyCard).join("");
+  }
+
+  function syncCategoryButtons() {
+    const dom = getDom();
+
+    dom.categoryButtons.forEach((btn) => {
+      const category = btn.getAttribute("data-category") || btn.getAttribute("data-category-btn") || "all";
+      const isActive = category === state.activeCategory;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  }
+
+  function updateCurrentViewFromPage() {
+    const page = currentPage().toLowerCase();
+    if (page.includes("favorite")) state.currentView = "favorites";
+    else state.currentView = "home";
   }
 
   /* =========================================
      16) EVENTS
   ========================================= */
-  function bindCoreEvents() {
+  function bindListingActions() {
+    document.addEventListener("click", (event) => {
+      const actionBtn = event.target.closest("[data-action]");
+      if (!actionBtn) return;
+
+      const action = actionBtn.getAttribute("data-action");
+      const id = actionBtn.getAttribute("data-id");
+      const property = getPropertyById(id);
+
+      if (action === "favorite") {
+        event.preventDefault();
+        if (property) toggleFavorite(property);
+      }
+
+      if (action === "details") {
+        event.preventDefault();
+        if (property) openPropertyDetails(property);
+      }
+
+      if (action === "reserve") {
+        event.preventDefault();
+        if (property) handleReserveNow(property);
+      }
+
+      if (action === "toggle-theme") {
+        toggleTheme();
+      }
+
+      if (action === "toggle-lang") {
+        toggleLanguage();
+      }
+    });
+  }
+
+  function bindGeneralEvents() {
     const dom = getDom();
 
-    if (dom.themeBtn && !dom.themeBtn.dataset.bound) {
-      dom.themeBtn.dataset.bound = "1";
-      dom.themeBtn.addEventListener("click", toggleTheme);
-    }
+    dom.themeBtn?.addEventListener("click", toggleTheme);
+    dom.langBtn?.addEventListener("click", toggleLanguage);
 
-    if (dom.langBtn && !dom.langBtn.dataset.bound) {
-      dom.langBtn.dataset.bound = "1";
-      dom.langBtn.addEventListener("click", toggleLanguage);
-    }
+    dom.searchBtn?.addEventListener("click", () => {
+      state.activeSearch = normalizeText(dom.destinationInput?.value || "");
+      renderListings();
+    });
 
-    if (dom.authCta && !dom.authCta.dataset.bound) {
-      dom.authCta.dataset.bound = "1";
-      dom.authCta.addEventListener("click", (e) => {
-        if (state.user && dom.profileDropdown) {
-          e.preventDefault();
-          dom.profileDropdown.classList.toggle("active");
-        } else if (dom.authModal) {
-          e.preventDefault();
-          openAuthModal("login");
-        }
-      });
-    }
+    dom.destinationInput?.addEventListener("input", (e) => {
+      state.activeSearch = normalizeText(e.target.value || "");
+      renderListings();
+    });
 
-    if (dom.profileTrigger && !dom.profileTrigger.dataset.bound) {
-      dom.profileTrigger.dataset.bound = "1";
-      dom.profileTrigger.addEventListener("click", (e) => {
+    dom.destinationInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
         e.preventDefault();
-        if (!state.user) {
-          requireAuth(t("auth_required"), "login");
-          return;
-        }
-        dom.profileDropdown?.classList.toggle("active");
-      });
-    }
-
-    if (dom.closeAuthBtn && !dom.closeAuthBtn.dataset.bound) {
-      dom.closeAuthBtn.dataset.bound = "1";
-      dom.closeAuthBtn.addEventListener("click", closeAuthModal);
-    }
-
-    if (dom.loginForm && !dom.loginForm.dataset.bound) {
-      dom.loginForm.dataset.bound = "1";
-      dom.loginForm.addEventListener("submit", handleLogin);
-    }
-
-    if (dom.registerForm && !dom.registerForm.dataset.bound) {
-      dom.registerForm.dataset.bound = "1";
-      dom.registerForm.addEventListener("submit", handleRegister);
-    }
-
-    if (dom.forgotForm && !dom.forgotForm.dataset.bound) {
-      dom.forgotForm.dataset.bound = "1";
-      dom.forgotForm.addEventListener("submit", handleForgotPassword);
-    }
-
-    if (dom.googleLoginBtn && !dom.googleLoginBtn.dataset.bound) {
-      dom.googleLoginBtn.dataset.bound = "1";
-      dom.googleLoginBtn.addEventListener("click", handleGoogleLogin);
-    }
-
-    if (dom.logoutBtn && !dom.logoutBtn.dataset.bound) {
-      dom.logoutBtn.dataset.bound = "1";
-      dom.logoutBtn.addEventListener("click", handleLogout);
-    }
-
-    if (dom.myFavoritesBtn && !dom.myFavoritesBtn.dataset.bound) {
-      dom.myFavoritesBtn.dataset.bound = "1";
-      dom.myFavoritesBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (!state.user) {
-          requireAuth(t("auth_redirect_profile"), "login");
-          return;
-        }
-        showFavoritesView();
-        dom.profileDropdown?.classList.remove("active");
-      });
-    }
-
-    if (dom.myBookingsBtn && !dom.myBookingsBtn.dataset.bound) {
-      dom.myBookingsBtn.dataset.bound = "1";
-      dom.myBookingsBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        openBookingsModal();
-        dom.profileDropdown?.classList.remove("active");
-      });
-    }
-
-    if (dom.sortSelect && !dom.sortSelect.dataset.bound) {
-      dom.sortSelect.dataset.bound = "1";
-      dom.sortSelect.addEventListener("change", () => {
-        state.sort = dom.sortSelect.value || "featured";
+        state.activeSearch = normalizeText(dom.destinationInput?.value || "");
         renderListings();
-      });
-    }
+      }
+    });
 
-    if (dom.searchInput && !dom.searchInput.dataset.bound) {
-      dom.searchInput.dataset.bound = "1";
-      dom.searchInput.addEventListener("focus", () => renderSearchSuggestions(dom.searchInput.value));
-      dom.searchInput.addEventListener("input", () => renderSearchSuggestions(dom.searchInput.value));
-      dom.searchInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          performSearch(dom.searchInput.value);
-          dom.searchDropdown?.classList.remove("active");
-        }
-      });
-    }
+    dom.clearSearchBtn?.addEventListener("click", () => {
+      state.activeSearch = "";
+      if (dom.destinationInput) dom.destinationInput.value = "";
+      renderListings();
+    });
 
-    if (dom.searchBtn && !dom.searchBtn.dataset.bound) {
-      dom.searchBtn.dataset.bound = "1";
-      dom.searchBtn.addEventListener("click", () => {
-        performSearch(dom.searchInput?.value || "");
-        dom.searchDropdown?.classList.remove("active");
-      });
-    }
+    dom.sortSelect?.addEventListener("change", (e) => {
+      const value = String(e.target.value || "featured").toLowerCase();
+      const map = {
+        featured: "featured",
+        rating: "rating",
+        "top-rated": "rating",
+        price_low: "price-low",
+        "price-low": "price-low",
+        price_high: "price-high",
+        "price-high": "price-high"
+      };
 
-    if (dom.clearSearchBtn && !dom.clearSearchBtn.dataset.bound) {
-      dom.clearSearchBtn.dataset.bound = "1";
-      dom.clearSearchBtn.addEventListener("click", resetToHome);
-    }
+      state.sort = map[value] || "featured";
+      renderListings();
+    });
 
     dom.categoryButtons.forEach((btn) => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = "1";
       btn.addEventListener("click", () => {
-        const key = btn.getAttribute("data-category") || btn.getAttribute("data-category-btn") || "all";
-        state.activeCategory = key;
-        state.currentView = "home";
-        state.activeSearch = "";
-        if (dom.searchInput) dom.searchInput.value = "";
-        hideClearSearchBtn();
+        state.activeCategory =
+          btn.getAttribute("data-category") || btn.getAttribute("data-category-btn") || "all";
+        syncCategoryButtons();
         renderListings();
       });
     });
 
-    if (dom.closeBookingsBtn && !dom.closeBookingsBtn.dataset.bound) {
-      dom.closeBookingsBtn.dataset.bound = "1";
-      dom.closeBookingsBtn.addEventListener("click", closeBookingsModal);
-    }
-
-    if (dom.chatOpenBtn && !dom.chatOpenBtn.dataset.bound) {
-      dom.chatOpenBtn.dataset.bound = "1";
-      dom.chatOpenBtn.addEventListener("click", openChatModal);
-    }
-
-    if (dom.chatCloseBtn && !dom.chatCloseBtn.dataset.bound) {
-      dom.chatCloseBtn.dataset.bound = "1";
-      dom.chatCloseBtn.addEventListener("click", closeChatModal);
-    }
-
-    if (dom.chatSendBtn && !dom.chatSendBtn.dataset.bound) {
-      dom.chatSendBtn.dataset.bound = "1";
-      dom.chatSendBtn.addEventListener("click", sendChatMessage);
-    }
-
-    if (dom.scrollTopBtn && !dom.scrollTopBtn.dataset.bound) {
-      dom.scrollTopBtn.dataset.bound = "1";
-      dom.scrollTopBtn.addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    }
-
-    if (dom.mobileFavBtn && !dom.mobileFavBtn.dataset.bound) {
-      dom.mobileFavBtn.dataset.bound = "1";
-      dom.mobileFavBtn.addEventListener("click", () => {
-        if (!state.user) {
-          requireAuth(t("auth_redirect_profile"), "login");
-          return;
-        }
-        showFavoritesView();
-      });
-    }
-
-    if (dom.mobileProfileBtn && !dom.mobileProfileBtn.dataset.bound) {
-      dom.mobileProfileBtn.dataset.bound = "1";
-      dom.mobileProfileBtn.addEventListener("click", () => {
-        if (!state.user) {
-          window.location.href = getAuthUrl("login");
-          return;
-        }
-        dom.profileDropdown?.classList.toggle("active");
-      });
-    }
-
-    if (dom.mobileStaysBtn && !dom.mobileStaysBtn.dataset.bound) {
-      dom.mobileStaysBtn.dataset.bound = "1";
-      dom.mobileStaysBtn.addEventListener("click", () => {
-        const section = dom.listingsGrid?.closest(".container") || dom.listingsGrid;
-        section?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-
-    document.addEventListener("click", (e) => {
-      const favoriteBtn = e.target.closest("[data-action='favorite']");
-      const detailsBtn = e.target.closest("[data-action='details']");
-      const reserveBtn = e.target.closest("[data-action='reserve']");
-      const suggestionBtn = e.target.closest(".search-suggestion-item");
-
-      if (favoriteBtn) {
+    dom.authCta?.addEventListener("click", (e) => {
+      if (!state.user) {
         e.preventDefault();
-        e.stopPropagation();
-        toggleFavoriteById(favoriteBtn.getAttribute("data-property-id"));
-        return;
-      }
-
-      if (detailsBtn) {
-        e.preventDefault();
-        openPropertyDetails(detailsBtn.getAttribute("data-property-id"));
-        return;
-      }
-
-      if (reserveBtn) {
-        e.preventDefault();
-        proceedToBooking(reserveBtn.getAttribute("data-property-id"));
-        return;
-      }
-
-      if (suggestionBtn) {
-        const type = suggestionBtn.getAttribute("data-type");
-        const value = suggestionBtn.getAttribute("data-value") || "";
-        const id = suggestionBtn.getAttribute("data-id") || "";
-
-        if (type === "property" && id) {
-          openPropertyDetails(id);
-          return;
-        }
-
-        if (dom.searchInput) dom.searchInput.value = value;
-        performSearch(value);
-        dom.searchDropdown?.classList.remove("active");
-        return;
-      }
-
-      if (!e.target.closest(".profile-container")) {
-        dom.profileDropdown?.classList.remove("active");
-      }
-
-      if (dom.searchDropdown && dom.searchInput && !e.target.closest("#search-location-wrapper") && !e.target.closest(".search-bar")) {
-        dom.searchDropdown.classList.remove("active");
-      }
-
-      if (dom.authModal && e.target === dom.authModal) {
-        closeAuthModal();
-      }
-
-      if (dom.bookingsModal && e.target === dom.bookingsModal) {
-        closeBookingsModal();
-      }
-
-      if (dom.chatModal && e.target === dom.chatModal) {
-        closeChatModal();
+        openAuthModal("login");
+      } else if (dom.profileDropdown) {
+        dom.profileDropdown.classList.toggle("active");
       }
     });
 
-    window.addEventListener("scroll", () => {
-      if (!dom.scrollTopBtn) return;
-      if (window.scrollY > 320) dom.scrollTopBtn.classList.add("visible");
-      else dom.scrollTopBtn.classList.remove("visible");
+    dom.profileTrigger?.addEventListener("click", (e) => {
+      if (!state.user) {
+        e.preventDefault();
+        openAuthModal("login");
+        return;
+      }
+
+      if (dom.profileDropdown) {
+        e.preventDefault();
+        dom.profileDropdown.classList.toggle("active");
+      }
+    });
+
+    dom.closeAuthBtn?.addEventListener("click", closeAuthModal);
+    dom.authModal?.addEventListener("click", (e) => {
+      if (e.target === dom.authModal) closeAuthModal();
+    });
+
+    dom.logoutBtn?.addEventListener("click", handleLogout);
+    dom.myFavoritesBtn?.addEventListener("click", () => {
+      window.location.href = ROUTES.favorites;
+    });
+    dom.myBookingsBtn?.addEventListener("click", openBookingsModal);
+
+    dom.closeBookingsBtn?.addEventListener("click", closeBookingsModal);
+    dom.bookingsModal?.addEventListener("click", (e) => {
+      if (e.target === dom.bookingsModal) closeBookingsModal();
+    });
+
+    dom.chatOpenBtn?.addEventListener("click", openChatModal);
+    dom.chatCloseBtn?.addEventListener("click", closeChatModal);
+    dom.chatModal?.addEventListener("click", (e) => {
+      if (e.target === dom.chatModal) closeChatModal();
+    });
+    dom.chatSendBtn?.addEventListener("click", handleChatSend);
+    dom.chatTextarea?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleChatSend();
+      }
+    });
+
+    dom.mobileFavBtn?.addEventListener("click", () => {
+      window.location.href = ROUTES.favorites;
+    });
+
+    dom.mobileProfileBtn?.addEventListener("click", () => {
+      if (!state.user) openAuthModal("login");
+      else if (dom.profileDropdown) dom.profileDropdown.classList.toggle("active");
+    });
+
+    dom.mobileStaysBtn?.addEventListener("click", () => {
+      window.location.href = ROUTES.home;
+    });
+
+    dom.homeLogoBtn?.addEventListener("click", (e) => {
+      const tag = dom.homeLogoBtn?.tagName?.toLowerCase();
+      if (tag !== "a") {
+        e.preventDefault();
+        window.location.href = ROUTES.home;
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!dom.profileDropdown || !dom.profileTrigger || !dom.profileContainer) return;
+      const insideDropdown = dom.profileDropdown.contains(event.target);
+      const insideTrigger = dom.profileTrigger.contains(event.target);
+      const insideContainer = dom.profileContainer.contains(event.target);
+
+      if (!insideDropdown && !insideTrigger && !insideContainer) {
+        dom.profileDropdown.classList.remove("active");
+      }
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-      closeAuthModal();
-      closeBookingsModal();
-      closeChatModal();
-      dom.profileDropdown?.classList.remove("active");
-      dom.searchDropdown?.classList.remove("active");
+      if (e.key === "Escape") {
+        closeAuthModal();
+        closeBookingsModal();
+        closeChatModal();
+        dom.profileDropdown?.classList.remove("active");
+      }
     });
 
-    document.querySelectorAll("[data-switch-auth]").forEach((btn) => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = "1";
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        switchAuthForm(btn.getAttribute("data-switch-auth") || "login");
-      });
+    dom.scrollTopBtn?.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    document.querySelectorAll("[data-pass-toggle]").forEach((btn) => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = "1";
-      btn.addEventListener("click", () => {
-        const targetId = btn.getAttribute("data-pass-toggle");
-        const input = targetId ? document.getElementById(targetId) : btn.parentElement?.querySelector("input");
-        if (!input) return;
-        input.type = input.type === "password" ? "text" : "password";
-        btn.innerHTML = input.type === "password"
-          ? `<i class="ph ph-eye"></i>`
-          : `<i class="ph ph-eye-slash"></i>`;
-      });
+    window.addEventListener("storage", (e) => {
+      if ([STORAGE_KEYS.lang, STORAGE_KEYS.theme, STORAGE_KEYS.favorites].includes(e.key)) {
+        if (e.key === STORAGE_KEYS.lang) {
+          state.lang = safeGet(STORAGE_KEYS.lang, state.lang);
+          applyLanguage();
+        }
+
+        if (e.key === STORAGE_KEYS.theme) {
+          state.theme = safeGet(STORAGE_KEYS.theme, state.theme);
+          applyTheme();
+        }
+
+        getFavoriteIds();
+        renderListings();
+      }
+    });
+  }
+
+  function bindAuthEvents() {
+    const dom = getDom();
+
+    dom.loginForm?.addEventListener("submit", handleLogin);
+    dom.registerForm?.addEventListener("submit", handleRegister);
+    dom.forgotForm?.addEventListener("submit", handleForgotPassword);
+    dom.googleLoginBtn?.addEventListener("click", handleGoogleLogin);
+
+    $("#go-to-register")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAuthForm("register");
+      showAuthMessage("", "");
+    });
+
+    $("#go-to-login")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAuthForm("login");
+      showAuthMessage("", "");
+    });
+
+    $("#go-to-forgot")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAuthForm("forgot");
+      showAuthMessage("", "");
+    });
+
+    $("#back-to-login")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchAuthForm("login");
+      showAuthMessage("", "");
+    });
+  }
+
+  function bindFirebaseAuthState() {
+    if (!auth) {
+      updateUserUI();
+      return;
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      state.user = user || null;
+      getFavoriteIds();
+      updateUserUI();
+      renderListings();
+
+      if (state.user) {
+        await loadUserBookings();
+        renderBookingsPreview();
+
+        if (continuePendingBookingAfterAuth()) return;
+      } else {
+        state.bookings = [];
+        renderBookingsPreview();
+      }
     });
   }
 
   /* =========================================
-     17) PAGE INIT
+     17) PAGE HELPERS
   ========================================= */
-  async function initPageData() {
-    const dom = getDom();
-    if (dom.listingsGrid) {
-      dom.listingsGrid.innerHTML = `
-        <div class="listings-empty-state">
-          <i class="ph ph-circle-notch ph-spin"></i>
-          <p>${escapeHtml(t("loading"))}</p>
-        </div>
-      `;
-    }
+  function handleAuthPageRedirectIfNeeded() {
+    if (currentPage() !== ROUTES.auth) return;
 
-    const loaded = await loadLiveProperties();
-    if (!loaded && db) {
-      showToast(t("property_load_error"), "info");
-    }
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    const hashView = decodeURIComponent((window.location.hash || "").replace(/^#/, "") || "login");
 
-    renderListings();
+    if (hashView) switchAuthForm(hashView);
+
+    if (!state.user || !redirect) return;
+
+    window.location.href = redirect;
   }
 
-  function initRememberToggle() {
-    const checkbox = $("#login-remember") || $("#remember-me");
-    if (!checkbox) return;
-    checkbox.checked = safeGet(STORAGE_KEYS.remember, "1") !== "0";
-    checkbox.addEventListener("change", () => {
-      safeSet(STORAGE_KEYS.remember, checkbox.checked ? "1" : "0");
-    });
+  function exposePublicApi() {
+    window.showToast = showToast;
+    window.showFavToast = showFavToast;
+    window.openModal = openAuthModal;
+    window.closeModal = closeAuthModal;
+    window.requireAuth = requireAuth;
+
+    window.OreBooking = {
+      state,
+      t,
+      openAuthModal,
+      closeAuthModal,
+      openPropertyDetails,
+      handleReserveNow,
+      toggleFavorite,
+      rememberSelectedProperty,
+      getPropertyById,
+      getFavoriteIds
+    };
   }
 
-  function init() {
+  /* =========================================
+     18) INIT
+  ========================================= */
+  async function init() {
     if (state.initialized) return;
     state.initialized = true;
 
+    updateCurrentViewFromPage();
     initFirebase();
-    loadFavorites();
     applyInitialState();
-    bindCoreEvents();
-    initRememberToggle();
-    updateSmartSearchPlaceholder();
+    getFavoriteIds();
     updateUserUI();
-    renderBookingsPreview();
-    initPageData();
+    bindGeneralEvents();
+    bindAuthEvents();
+    bindListingActions();
+    bindFirebaseAuthState();
+    exposePublicApi();
 
-    if (auth) {
-      watchAuthState();
+    const dom = getDom();
+    if (dom.listingsGrid) renderLoadingState();
+
+    const loaded = await loadLiveProperties();
+
+    if (!loaded && dom.listingsGrid) {
+      showToast(t("property_load_error"), "info");
+    }
+
+    syncCategoryButtons();
+    renderListings();
+    handleAuthPageRedirectIfNeeded();
+
+    if (!auth) {
+      renderBookingsPreview();
     }
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
+    document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
