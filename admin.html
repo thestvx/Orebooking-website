@@ -16,16 +16,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- Firebase SDKs - loaded synchronously before any scripts -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- Firebase Initialization - MUST happen before admin.js loads -->
   <script>
     (function () {
-      // ==========================================
-      // ضع هنا إعدادات Firebase الخاصة بمشروعك
-      // ==========================================
       var firebaseConfig = {
         apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
         authDomain: "orebooking-website.firebaseapp.com",
@@ -36,16 +31,20 @@
       };
 
       try {
+        if (typeof firebase === "undefined") throw new Error("Firebase SDK not loaded");
         if (!firebase.apps || !firebase.apps.length) {
           firebase.initializeApp(firebaseConfig);
         }
-        window.__db = firebase.firestore();
+        var _db = firebase.firestore();
+        window.__db = _db;
         window.__firebaseReady = true;
+        window.getDB = function () { return window.__db || _db; };
         console.log("[OreBooking] Firebase initialized successfully ✅");
       } catch (err) {
         console.error("[OreBooking] Firebase initialization failed:", err);
         window.__firebaseReady = false;
-        window.__firebaseError = err.message;
+        window.__firebaseError = err && err.message ? err.message : String(err);
+        window.getDB = function () { return null; };
       }
     })();
   </script>
@@ -55,8 +54,10 @@
 
   <script>
     (function () {
-      const savedTheme = localStorage.getItem("ore_theme") || "light";
-      if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+      try {
+        const savedTheme = localStorage.getItem("ore_theme") || "light";
+        if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+      } catch (_) {}
     })();
   </script>
 
@@ -85,7 +86,6 @@
       --radius-2xl: 2rem;
       --radius-full: 9999px;
       --transition: all .3s cubic-bezier(.16,1,.3,1);
-
       --admin-bg: linear-gradient(180deg, #f8fbff 0%, #f6f8fc 100%);
       --admin-surface: rgba(255,255,255,0.92);
       --admin-surface-strong: #ffffff;
@@ -102,6 +102,9 @@
       --warning-bg: #fff7ed;
       --warning-border: #fdba74;
       --warning-text: #ea580c;
+      --info-bg: #eff6ff;
+      --info-border: #93c5fd;
+      --info-text: #1d4ed8;
     }
 
     .preload-dark body,
@@ -117,11 +120,13 @@
       --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.4);
       --shadow-card: 0 14px 40px rgba(0,0,0,.28);
       --shadow-hover: 0 20px 40px rgba(67,90,191,.22);
+      --admin-bg: linear-gradient(180deg, #081120 0%, #0f172a 100%);
+      --admin-surface: rgba(15,23,42,0.78);
+      --admin-surface-strong: rgba(15,23,42,0.9);
     }
 
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-
     body {
       margin: 0;
       font-family: "Tajawal", "Outfit", sans-serif;
@@ -130,43 +135,10 @@
       transition: background-color .3s ease, color .3s ease;
       overflow-x: hidden;
     }
-
-    body.admin-body {
-      min-height: 100vh;
-      background: var(--admin-bg);
-      background-attachment: fixed;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    body.admin-body::before,
-    body.admin-body::after {
-      content: "";
-      position: fixed;
-      inset: auto;
-      width: 380px;
-      height: 380px;
-      border-radius: 999px;
-      filter: blur(80px);
-      z-index: 0;
-      pointer-events: none;
-      opacity: 0.45;
-    }
-
-    body.admin-body::before {
-      top: -100px;
-      right: -90px;
-      background: rgba(101, 123, 224, 0.20);
-    }
-
-    body.admin-body::after {
-      bottom: -120px;
-      left: -90px;
-      background: rgba(67, 90, 191, 0.12);
-    }
-
+    body.modal-open { overflow: hidden; }
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
+    button, input, textarea, select { font: inherit; }
     .hidden { display: none !important; }
 
     .admin-login-screen,
@@ -186,7 +158,6 @@
       width: min(100%, 460px);
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
       border: 1px solid rgba(255,255,255,0.65);
       border-radius: 28px;
       padding: 32px;
@@ -194,29 +165,26 @@
       animation: fadeIn 0.45s ease;
     }
 
-    .login-badge {
-      display: inline-flex;
+    .login-badge,
+    .firebase-status-banner,
+    .login-message,
+    .map-picked-badge {
+      display: none;
       align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(67,90,191,0.08);
-      color: var(--primary);
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: .88rem;
       font-weight: 700;
-      font-size: 0.82rem;
-      margin: 0 auto 18px;
+      line-height: 1.6;
     }
-
-    .login-help {
-      margin-top: 16px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: #f8fafc;
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      font-size: 0.83rem;
-      line-height: 1.7;
-    }
+    .login-badge { display: inline-flex; margin-bottom: 18px; background: rgba(67,90,191,0.08); color: var(--primary); }
+    .firebase-status-banner.error,
+    .login-message.error.show { display: flex; background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger-text); }
+    .firebase-status-banner.success,
+    .login-message.success.show,
+    .map-picked-badge.visible { display: flex; background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success-text); }
+    .login-message.info.show { display: flex; background: var(--info-bg); border: 1px solid var(--info-border); color: var(--info-text); }
 
     .font-bold { font-weight: 800; }
     .mt-2 { margin-top: 8px; }
@@ -224,80 +192,65 @@
     .mt-4 { margin-top: 24px; }
     .text-danger { color: var(--error); }
     .text-primary { color: var(--primary); }
+    .logo-img { height: 46px; width: auto; max-width: 170px; object-fit: contain; }
 
-    .logo-img {
-      height: 46px;
-      width: auto;
-      max-width: 170px;
-      object-fit: contain;
-    }
-
-    .primary-btn {
-      min-height: 48px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: #fff;
-      border: none;
-      font-family: inherit;
-      font-size: .96rem;
+    .primary-btn,
+    .ghost-action,
+    .table-actions button,
+    .table-actions a,
+    .filter-tab-btn,
+    .btn-approve,
+    .btn-reject,
+    .admin-mobile-toggle,
+    .admin-theme-toggle {
+      min-height: 44px;
+      border-radius: 14px;
       font-weight: 800;
       cursor: pointer;
       transition: var(--transition);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+
+    .primary-btn {
       padding: 0 22px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border: none;
       box-shadow: 0 12px 26px rgba(67,90,191,0.18);
     }
+    .primary-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 32px rgba(67,90,191,0.24); }
+    .primary-btn:disabled { opacity: .7; cursor: not-allowed; box-shadow: none; }
 
-    .primary-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 18px 32px rgba(67,90,191,0.24);
-    }
-
-    .primary-btn:disabled {
-      opacity: .7;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    .ghost-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 48px;
-      padding: 0 16px;
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
+    .ghost-action,
+    .table-actions button,
+    .table-actions a,
+    .admin-mobile-toggle,
+    .admin-theme-toggle {
+      padding: 0 14px;
       background: rgba(255,255,255,0.72);
+      border-color: var(--border-color);
       color: var(--text-main);
-      font-family: inherit;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      text-decoration: none;
     }
-
-    .ghost-action:hover {
+    .ghost-action:hover,
+    .table-actions button:hover,
+    .table-actions a:hover,
+    .admin-mobile-toggle:hover,
+    .admin-theme-toggle:hover {
       border-color: rgba(67,90,191,0.20);
       color: var(--primary);
       background: rgba(67,90,191,0.05);
     }
 
-    .admin-layout {
-      display: flex;
-      min-height: 100vh;
-      align-items: stretch;
-    }
-
+    .admin-layout { display: none; min-height: 100vh; align-items: stretch; }
     .admin-sidebar {
       width: 300px;
       flex-shrink: 0;
       background: rgba(255,255,255,0.80);
       backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
       border-inline-end: 1px solid rgba(226,232,240,0.9);
       padding: 22px 18px;
       display: flex;
@@ -307,1195 +260,178 @@
       top: 0;
       height: 100vh;
       box-shadow: 10px 0 40px rgba(15,23,42,0.03);
+      z-index: 20;
     }
 
-    .sidebar-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 10px 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .sidebar-top-note {
-      background: linear-gradient(135deg, rgba(67,90,191,0.09), rgba(101,123,224,0.06));
-      border: 1px solid rgba(67,90,191,0.10);
-      border-radius: 18px;
-      padding: 16px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .sidebar-top-note strong {
-      font-size: 0.95rem;
-      color: var(--text-main);
-    }
-
-    .sidebar-top-note span {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      line-height: 1.7;
-    }
-
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1;
-    }
-
+    .sidebar-logo { display: flex; align-items: center; justify-content: center; padding: 12px 10px 16px; border-bottom: 1px solid var(--border-color); }
+    .sidebar-top-note { background: linear-gradient(135deg, rgba(67,90,191,0.09), rgba(101,123,224,0.06)); border: 1px solid rgba(67,90,191,0.10); border-radius: 18px; padding: 16px; display: grid; gap: 8px; }
+    .sidebar-top-note strong { font-size: 0.95rem; }
+    .sidebar-top-note span { font-size: 0.82rem; color: var(--text-muted); line-height: 1.7; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 10px; flex: 1; }
     .sidebar-nav .nav-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-main);
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: start;
-      min-height: 52px;
-      text-decoration: none;
+      width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px;
+      border: 1px solid transparent; background: transparent; color: var(--text-main); font-size: 0.95rem;
+      font-weight: 700; cursor: pointer; transition: var(--transition); text-align: start; min-height: 52px;
     }
-
-    .sidebar-nav .nav-item i {
-      width: 20px;
-      height: 20px;
-      font-size: 1.15rem;
-      color: var(--primary);
-    }
-
-    .sidebar-nav .nav-item:hover {
-      background: rgba(67,90,191,0.06);
-      border-color: rgba(67,90,191,0.10);
-      transform: translateX(-2px);
-    }
-
-    .sidebar-nav .nav-item.active {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: #fff;
-      box-shadow: 0 18px 30px rgba(67,90,191,0.18);
-    }
-
+    .sidebar-nav .nav-item i { width: 20px; height: 20px; font-size: 1.15rem; color: var(--primary); }
+    .sidebar-nav .nav-item:hover { background: rgba(67,90,191,0.06); border-color: rgba(67,90,191,0.10); transform: translateX(-2px); }
+    .sidebar-nav .nav-item.active { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; box-shadow: 0 18px 30px rgba(67,90,191,0.18); }
     .sidebar-nav .nav-item.active i { color: #fff; }
+    .sidebar-nav .nav-item.logout-item { margin-top: auto; background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+    .sidebar-nav .nav-item.logout-item i { color: var(--danger-text); }
 
-    .sidebar-nav .nav-item.logout-item {
-      margin-top: auto;
-      background: var(--danger-bg);
-      color: var(--danger-text);
-      border-color: var(--danger-border);
-    }
-
-    .sidebar-nav .nav-item.logout-item i {
-      color: var(--danger-text);
-    }
-
-    .sidebar-nav .nav-item.logout-item:hover {
-      background: #ffe4e6;
-      transform: none;
-    }
-
-    .admin-main {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 24px;
-      gap: 20px;
-    }
-
-    .admin-mobile-topbar {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .admin-mobile-toggle {
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
-      background: rgba(255,255,255,0.85);
-      display: grid;
-      place-items: center;
-      font-size: 1.2rem;
-      color: var(--text-main);
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-    }
+    .admin-main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 24px; gap: 20px; }
+    .admin-mobile-topbar { display: none; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .mobile-actions { display: flex; gap: 10px; }
 
     .admin-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 22px 24px;
-      border: 1px solid rgba(255,255,255,0.55);
-      background: rgba(255,255,255,0.82);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-radius: 24px;
-      box-shadow: var(--admin-shadow);
+      display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 24px;
+      border: 1px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.82); backdrop-filter: blur(16px);
+      border-radius: 24px; box-shadow: var(--admin-shadow);
     }
+    .header-copy { display: grid; gap: 6px; }
+    .header-copy h1 { margin: 0; font-size: clamp(1.4rem, 1.1rem + 1vw, 2rem); }
+    .header-copy p { color: var(--text-muted); font-size: 0.92rem; margin: 0; line-height: 1.7; }
+    .admin-profile { display: flex; align-items: center; gap: 12px; background: rgba(67,90,191,0.05); border: 1px solid rgba(67,90,191,0.08); border-radius: 18px; padding: 10px 12px; }
+    .admin-profile .avatar { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; font-size: 1.45rem; box-shadow: 0 10px 24px rgba(67,90,191,0.18); background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; }
 
-    .header-copy {
-      display: grid;
-      gap: 6px;
-    }
-
-    .header-copy p {
-      color: var(--text-muted);
-      font-size: 0.92rem;
-      margin: 0;
-      line-height: 1.7;
-    }
-
-    .admin-profile {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(67,90,191,0.05);
-      border: 1px solid rgba(67,90,191,0.08);
-      border-radius: 18px;
-      padding: 10px 12px;
-      flex-shrink: 0;
-    }
-
-    .admin-profile .avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      font-size: 1.45rem;
-      box-shadow: 0 10px 24px rgba(67,90,191,0.18);
-    }
-
-    .admin-content {
-      display: grid;
-      gap: 22px;
-    }
-
-    .dashboard-strip {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    .stat-mini-card {
-      background: rgba(255,255,255,0.86);
-      border: 1px solid rgba(255,255,255,0.7);
-      border-radius: 22px;
-      padding: 18px;
-      box-shadow: var(--admin-shadow);
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      transition: var(--transition);
-    }
-
-    .stat-mini-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--admin-shadow-hover);
-    }
-
-    .stat-mini-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      font-size: 1.45rem;
-      color: var(--primary);
-      background: rgba(67,90,191,0.08);
-      flex-shrink: 0;
-    }
-
-    .stat-mini-meta {
-      display: grid;
-      gap: 3px;
-    }
-
-    .stat-mini-meta span {
-      color: var(--text-muted);
-      font-size: 0.82rem;
-      font-weight: 600;
-    }
-
-    .stat-mini-meta strong {
-      color: var(--text-main);
-      font-size: 1.15rem;
-      font-weight: 800;
-    }
-
+    .admin-content { display: grid; gap: 22px; }
+    .dashboard-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .stat-mini-card,
     .admin-card,
-    .modern-section {
-      background: var(--admin-surface);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.65);
-      border-radius: 24px;
-      padding: 24px;
-      box-shadow: var(--admin-shadow);
-      transition: var(--transition);
-    }
-
-    .admin-card:hover,
-    .modern-section:hover {
-      box-shadow: var(--admin-shadow-hover);
-    }
-
-    .tab-pane {
-      display: none;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .tab-pane.active { display: block; }
-
-    .pane-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
-
-    .pane-head h3 {
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1.15rem;
-    }
-
-    .pane-tools {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .search-inline {
-      min-width: 240px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 0 12px;
-      min-height: 48px;
-    }
-
-    .search-inline input {
-      border: none;
-      outline: none;
-      background: transparent;
-      width: 100%;
-      font-family: inherit;
-      color: var(--text-main);
-      font-size: 0.92rem;
-    }
-
-    .stats-chip-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-
-    .stats-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(67,90,191,0.06);
-      border: 1px solid rgba(67,90,191,0.10);
-      color: var(--text-main);
-      font-size: 0.84rem;
-      font-weight: 700;
-    }
-
-    .table-responsive {
-      overflow-x: auto;
-      border-radius: 20px;
-      border: 1px solid var(--border-color);
-      background: var(--admin-surface-strong);
-    }
-
-    .admin-table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 860px;
-    }
-
-    .admin-table thead th {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      background: #f8fafc;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      padding: 16px 14px;
-      text-align: start;
-      border-bottom: 1px solid var(--border-color);
-      white-space: nowrap;
-    }
-
-    .admin-table tbody td {
-      padding: 16px 14px;
-      border-bottom: 1px solid rgba(226,232,240,0.85);
-      vertical-align: middle;
-      color: var(--text-main);
-      font-size: 0.92rem;
-    }
-
-    .admin-table tbody tr {
-      transition: background 0.22s ease;
-    }
-
-    .admin-table tbody tr:hover {
-      background: rgba(67,90,191,0.035);
-    }
-
-    .prop-thumb {
-      width: 74px;
-      height: 58px;
-      border-radius: 14px;
-      object-fit: cover;
-      border: 1px solid var(--border-color);
-      background: #f1f5f9;
-      display: block;
-    }
-
-    .prop-name-cell {
-      display: grid;
-      gap: 4px;
-    }
-
-    .prop-name-cell strong {
-      font-size: 0.95rem;
-      color: var(--text-main);
-    }
-
-    .prop-name-cell span {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    .price-pill,
-    .status-badge,
-    .pill-soft {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .price-pill {
-      background: rgba(67,90,191,0.08);
-      color: var(--primary);
-    }
-
-    .status-badge.pending {
-      background: var(--warning-bg);
-      color: var(--warning-text);
-      border: 1px solid var(--warning-border);
-    }
-
-    .status-badge.confirmed,
-    .status-badge.visible {
-      background: var(--success-bg);
-      color: var(--success-text);
-      border: 1px solid var(--success-border);
-    }
-
-    .status-badge.rejected,
-    .status-badge.hidden {
-      background: var(--danger-bg);
-      color: var(--danger-text);
-      border: 1px solid var(--danger-border);
-    }
-
-    .table-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .table-actions button,
-    .table-actions a {
-      min-height: 38px;
-      padding: 0 12px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      background: #fff;
-      color: var(--text-main);
-      font-family: inherit;
-      font-size: 0.82rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      text-decoration: none;
-    }
-
-    .table-actions button:hover,
-    .table-actions a:hover {
-      border-color: rgba(67,90,191,0.22);
-      color: var(--primary);
-      background: rgba(67,90,191,0.05);
-    }
-
-    .modern-form-wrapper {
-      display: grid;
-      gap: 22px;
-      max-width: 1120px;
-      margin: 0 auto;
-    }
-
-    .modern-section { padding: 28px; }
-
-    .modern-section-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid rgba(226,232,240,0.85);
-    }
-
-    .modern-section-header i {
-      font-size: 1.45rem;
-      color: var(--primary);
-      background: rgba(67,90,191,0.08);
-      width: 48px;
-      height: 48px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-    }
-
-    .modern-section-header h4 {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: var(--text-main);
-      margin: 0;
-    }
-
-    .section-note {
-      margin-top: 2px;
-      color: var(--text-muted);
-      font-size: 0.84rem;
-      line-height: 1.7;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
-
-    .modern-form-wrapper .input-group,
-    .admin-form .input-group {
-      margin-bottom: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-
-    .modern-form-wrapper .input-group label,
-    .admin-form .input-group label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.86rem;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 0;
-    }
-
-    .modern-form-wrapper .input-group small,
-    .admin-form .input-group small {
-      color: var(--text-muted);
-      font-size: 0.76rem;
-      line-height: 1.6;
-    }
-
-    .modern-form-wrapper .input-group input,
-    .modern-form-wrapper .input-group textarea,
-    .modern-form-wrapper .input-group select,
-    .admin-form .input-group input,
-    .admin-form .input-group textarea,
-    .admin-form .input-group select,
-    #admin-user,
-    #admin-pass {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(203,213,225,0.95);
-      background-color: rgba(248,250,252,0.92);
-      color: var(--text-main);
-      font-family: inherit;
-      font-size: 0.95rem;
-      outline: none;
-      transition: var(--transition);
-      box-sizing: border-box;
-      display: block;
-    }
-
-    .modern-form-wrapper .input-group textarea,
-    .admin-form .input-group textarea {
-      min-height: 120px;
-      resize: vertical;
-      line-height: 1.8;
-    }
-
-    .modern-form-wrapper .input-group input:focus,
-    .modern-form-wrapper .input-group textarea:focus,
-    .modern-form-wrapper .input-group select:focus,
-    .admin-form .input-group input:focus,
-    .admin-form .input-group textarea:focus,
-    .admin-form .input-group select:focus,
-    #admin-user:focus,
-    #admin-pass:focus {
-      border-color: var(--primary);
-      box-shadow: var(--admin-ring);
-      background-color: #fff;
-    }
-
-    .upload-zone {
-      border: 2px dashed rgba(148,163,184,0.55);
-      border-radius: 22px;
-      padding: 34px 20px;
-      text-align: center;
-      background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
-      position: relative;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      overflow: hidden;
-    }
-
-    .upload-zone::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top, rgba(67,90,191,0.06), transparent 50%);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-    }
-
-    .upload-zone:hover::before { opacity: 1; }
-
-    .upload-zone:hover {
-      border-color: var(--primary);
-      transform: translateY(-2px);
-      box-shadow: 0 16px 35px rgba(67,90,191,0.08);
-    }
-
-    .upload-zone i {
-      font-size: 3rem;
-      color: var(--primary);
-    }
-
-    .upload-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .upload-zone-text {
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--text-main);
-    }
-
-    .upload-zone-sub {
-      font-size: 0.84rem;
-      color: var(--text-muted);
-    }
-
-    .upload-preview {
-      margin-top: 14px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid var(--border-color);
-      background: rgba(248,250,252,0.75);
-    }
-
-    .upload-preview.visible { display: flex; }
-
-    .upload-preview img {
-      width: 72px;
-      height: 58px;
-      object-fit: cover;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      background: #fff;
-    }
-
-    .upload-preview-meta {
-      display: grid;
-      gap: 4px;
-      text-align: start;
-    }
-
-    .upload-preview-meta strong {
-      font-size: 0.9rem;
-      color: var(--text-main);
-    }
-
-    .upload-preview-meta span {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .map-picker-wrapper {
-      margin-top: 8px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .map-picker-hint {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      line-height: 1.7;
-    }
-
-    #admin-map-picker,
-    #edit-map-picker {
-      width: 100%;
-      border-radius: 20px;
-      border: 2px solid rgba(203,213,225,0.9);
-      cursor: crosshair;
-      z-index: 1;
-      display: block;
-      overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-    }
-
-    #admin-map-picker { height: 380px; }
-    #edit-map-picker { height: 260px; }
-
-    .coords-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    .coords-row input {
-      background-color: var(--bg-color);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-weight: 800;
-      color: var(--primary);
-      letter-spacing: 0.2px;
-    }
-
-    .map-search-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 2px;
-    }
-
-    .map-search-row input {
-      flex: 1;
-      padding: 13px 16px;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      font-size: 0.95rem;
-      font-family: inherit;
-      background: var(--bg-color);
-      color: var(--text-main);
-      outline: none;
-      transition: var(--transition);
-      min-height: 50px;
-    }
-
-    .map-search-row input:focus {
-      border-color: var(--primary);
-      box-shadow: var(--admin-ring);
-    }
-
-    .map-search-row button {
-      padding: 0 20px;
-      min-height: 50px;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: #fff;
-      border: none;
-      border-radius: 16px;
-      font-weight: 800;
-      font-family: inherit;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-      box-shadow: 0 12px 26px rgba(67,90,191,0.18);
-    }
-
-    .map-search-row button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 18px 32px rgba(67,90,191,0.24);
-    }
-
-    .map-picked-badge {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: var(--success-bg);
-      border: 1px solid var(--success-border);
-      border-radius: 14px;
-      color: var(--success-text);
-      font-weight: 800;
-      font-size: 0.9rem;
-    }
-
-    .map-picked-badge.visible {
-      display: flex;
-      animation: fadeIn 0.25s ease;
-    }
-
-    .quick-tips {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 8px;
-    }
-
-    .tip-card {
-      border: 1px solid var(--border-color);
-      border-radius: 18px;
-      padding: 16px;
-      background: rgba(248,250,252,0.75);
-      display: grid;
-      gap: 8px;
-    }
-
-    .tip-card i {
-      width: 42px;
-      height: 42px;
-      border-radius: 14px;
-      display: grid;
-      place-items: center;
-      color: var(--primary);
-      background: rgba(67,90,191,0.08);
-      font-size: 1.2rem;
-    }
-
-    .tip-card strong {
-      color: var(--text-main);
-      font-size: 0.92rem;
-    }
-
-    .tip-card p {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      line-height: 1.7;
-      margin: 0;
-    }
-
-    /* ============================================
-       BOOKINGS FILTER TABS - NEW
-    ============================================ */
-    .bookings-filter-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      padding: 6px;
-      background: rgba(248,250,252,0.9);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-    }
-
-    .filter-tab-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: 14px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      white-space: nowrap;
-    }
-
-    .filter-tab-btn:hover {
-      background: rgba(67,90,191,0.06);
-      color: var(--primary);
-    }
-
-    .filter-tab-btn.active {
-      background: #fff;
-      color: var(--text-main);
-      border-color: var(--border-color);
-      box-shadow: 0 4px 14px rgba(15,23,42,0.06);
-    }
-
-    .filter-tab-btn.active.all { color: var(--primary); }
-    .filter-tab-btn.active.pending { color: var(--warning-text); }
-    .filter-tab-btn.active.confirmed { color: var(--success-text); }
-    .filter-tab-btn.active.rejected { color: var(--danger-text); }
-
-    .filter-count-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 22px;
-      height: 22px;
-      padding: 0 6px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 800;
-      transition: var(--transition);
-    }
-
-    .filter-tab-btn .filter-count-badge { background: rgba(67,90,191,0.08); color: var(--primary); }
-    .filter-tab-btn.pending .filter-count-badge { background: var(--warning-bg); color: var(--warning-text); }
-    .filter-tab-btn.confirmed .filter-count-badge { background: var(--success-bg); color: var(--success-text); }
-    .filter-tab-btn.rejected .filter-count-badge { background: var(--danger-bg); color: var(--danger-text); }
-    .filter-tab-btn.active .filter-count-badge { transform: scale(1.05); }
-
-    /* ============================================ */
-
-    #bookings-container .bookings-grid,
-    #bookings-container > div.bookings-grid {
-      display: grid !important;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
-      gap: 20px !important;
-      width: 100% !important;
-      align-items: start !important;
-    }
-
+    .modern-section,
     .booking-card {
       background: var(--admin-surface);
+      backdrop-filter: blur(14px);
       border: 1px solid rgba(255,255,255,0.65);
-      border-radius: 22px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      box-shadow: var(--admin-shadow);
-      transition: var(--transition);
-      width: 100%;
-      box-sizing: border-box;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .booking-card::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 4px;
-      background: linear-gradient(180deg, var(--primary), var(--accent));
-      opacity: 0.9;
-    }
-
-    .booking-card[data-status="confirmed"]::before {
-      background: linear-gradient(180deg, #10b981, #34d399);
-    }
-
-    .booking-card[data-status="rejected"]::before {
-      background: linear-gradient(180deg, #ef4444, #f87171);
-    }
-
-    .booking-card[data-status="pending"]::before {
-      background: linear-gradient(180deg, #f59e0b, #fbbf24);
-    }
-
-    .booking-card:hover {
-      box-shadow: var(--admin-shadow-hover);
-      border-color: rgba(67,90,191,0.16);
-      transform: translateY(-3px);
-    }
-
-    .booking-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .booking-title {
-      display: grid;
-      gap: 5px;
-    }
-
-    .booking-title strong {
-      color: var(--text-main);
-      font-size: 1rem;
-    }
-
-    .booking-title span {
-      color: var(--text-muted);
-      font-size: 0.82rem;
-    }
-
-    .booking-meta-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .booking-meta-item {
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: rgba(248,250,252,0.82);
-      border: 1px solid var(--border-color);
-      display: grid;
-      gap: 4px;
-    }
-
-    .booking-meta-item label {
-      font-size: 0.73rem;
-      color: var(--text-muted);
-      font-weight: 700;
-    }
-
-    .booking-meta-item strong,
-    .booking-meta-item span {
-      font-size: 0.9rem;
-      color: var(--text-main);
-      font-weight: 700;
-      word-break: break-word;
-    }
-
-    .booking-actions-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 2px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .btn-approve,
-    .btn-reject {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 46px;
-      padding: 0 12px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 0.9rem;
-      font-family: inherit;
-      border: none;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .btn-approve {
-      background: var(--success-bg);
-      color: var(--success-text);
-      border: 1px solid #10b981;
-    }
-
-    .btn-approve:hover:not(:disabled) {
-      background: #10b981;
-      color: white;
-      transform: translateY(-1px);
-    }
-
-    .btn-reject {
-      background: var(--danger-bg);
-      color: var(--danger-text);
-      border: 1px solid #ef4444;
-    }
-
-    .btn-reject:hover:not(:disabled) {
-      background: #ef4444;
-      color: white;
-      transform: translateY(-1px);
-    }
-
-    .btn-approve:disabled,
-    .btn-reject:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 54px 24px;
-      background: rgba(255,255,255,0.76);
-      border: 1px dashed rgba(148,163,184,0.45);
       border-radius: 24px;
-      color: var(--text-muted);
+      box-shadow: var(--admin-shadow);
     }
+    .stat-mini-card { padding: 18px; display: flex; align-items: center; gap: 14px; transition: var(--transition); }
+    .stat-mini-card:hover, .admin-card:hover, .modern-section:hover, .booking-card:hover { transform: translateY(-3px); box-shadow: var(--admin-shadow-hover); }
+    .stat-mini-icon { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-size: 1.45rem; color: var(--primary); background: rgba(67,90,191,0.08); flex-shrink: 0; }
+    .stat-mini-meta { display: grid; gap: 3px; }
+    .stat-mini-meta span { color: var(--text-muted); font-size: 0.82rem; font-weight: 600; }
+    .stat-mini-meta strong { color: var(--text-main); font-size: 1.15rem; font-weight: 800; }
 
-    .empty-state i {
-      font-size: 2.8rem;
-      color: var(--primary);
-      margin-bottom: 12px;
-      display: block;
-      opacity: 0.85;
+    .admin-card, .modern-section { padding: 24px; }
+    .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+    .tab-pane.active { display: block; }
+    .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+    .pane-head h3 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+    .pane-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .search-inline { min-width: 240px; display: flex; align-items: center; gap: 8px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 14px; padding: 0 12px; min-height: 48px; }
+    .search-inline input { border: none; outline: none; background: transparent; width: 100%; color: var(--text-main); font-size: 0.92rem; }
+    .stats-chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    .stats-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: rgba(67,90,191,0.06); border: 1px solid rgba(67,90,191,0.10); font-size: 0.84rem; font-weight: 700; }
+
+    .table-responsive { overflow-x: auto; border-radius: 20px; border: 1px solid var(--border-color); background: var(--admin-surface-strong); }
+    .admin-table { width: 100%; border-collapse: collapse; min-width: 860px; }
+    .admin-table thead th { background: #f8fafc; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.4px; padding: 16px 14px; text-align: start; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    .admin-table tbody td { padding: 16px 14px; border-bottom: 1px solid rgba(226,232,240,0.85); vertical-align: middle; color: var(--text-main); font-size: 0.92rem; }
+    .admin-table tbody tr:hover { background: rgba(67,90,191,0.035); }
+
+    .prop-thumb { width: 74px; height: 58px; border-radius: 14px; object-fit: cover; border: 1px solid var(--border-color); background: #f1f5f9; display: block; }
+    .prop-name-cell { display: grid; gap: 4px; }
+    .prop-name-cell strong { font-size: 0.95rem; }
+    .prop-name-cell span { font-size: 0.78rem; color: var(--text-muted); }
+    .price-pill, .status-badge, .pill-soft, .switch-pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border-radius: 999px; font-size: 0.76rem; font-weight: 800; white-space: nowrap; }
+    .price-pill { background: rgba(67,90,191,0.08); color: var(--primary); }
+    .status-badge.pending { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-border); }
+    .status-badge.confirmed, .status-badge.visible { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+    .status-badge.rejected, .status-badge.hidden { background: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-border); }
+    .table-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .modern-form-wrapper { display: grid; gap: 22px; max-width: 1120px; margin: 0 auto; }
+    .modern-section { padding: 28px; }
+    .modern-section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(226,232,240,0.85); }
+    .modern-section-header i { font-size: 1.45rem; color: var(--primary); background: rgba(67,90,191,0.08); width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; flex-shrink: 0; }
+    .modern-section-header h4 { font-size: 1.15rem; font-weight: 800; margin: 0; }
+    .section-note { margin-top: 2px; color: var(--text-muted); font-size: 0.84rem; line-height: 1.7; }
+    .form-grid, .owner-form-grid, .coords-row, .booking-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .input-group { display: flex; flex-direction: column; gap: 7px; }
+    .input-group label { display: flex; align-items: center; gap: 6px; font-size: 0.86rem; font-weight: 700; color: var(--text-main); }
+    .input-group small { color: var(--text-muted); font-size: 0.76rem; line-height: 1.6; }
+    .input-group input,
+    .input-group textarea,
+    .input-group select,
+    #admin-user,
+    #admin-pass {
+      width: 100%; padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(203,213,225,0.95); background-color: rgba(248,250,252,0.92); color: var(--text-main); font-size: 0.95rem; outline: none; transition: var(--transition);
     }
+    .input-group textarea { min-height: 120px; resize: vertical; line-height: 1.8; }
+    .input-group input:focus, .input-group textarea:focus, .input-group select:focus, #admin-user:focus, #admin-pass:focus { border-color: var(--primary); box-shadow: var(--admin-ring); background-color: #fff; }
 
-    /* Firebase status indicator */
-    .firebase-status-banner {
-      display: none;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: 16px;
-      margin-bottom: 16px;
-      font-size: 0.88rem;
-      font-weight: 700;
-    }
+    .upload-zone { border: 2px dashed rgba(148,163,184,0.55); border-radius: 22px; padding: 34px 20px; text-align: center; background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%); position: relative; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; align-items: center; gap: 12px; overflow: hidden; }
+    .upload-zone:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 16px 35px rgba(67,90,191,0.08); }
+    .upload-zone i { font-size: 3rem; color: var(--primary); }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .upload-zone-text { font-size: 1rem; font-weight: 800; }
+    .upload-zone-sub { font-size: 0.84rem; color: var(--text-muted); }
+    .upload-preview { margin-top: 14px; display: none; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; border: 1px solid var(--border-color); background: rgba(248,250,252,0.75); }
+    .upload-preview.visible { display: flex; }
+    .upload-preview img { width: 72px; height: 58px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-color); background: #fff; }
+    .upload-preview-meta { display: grid; gap: 4px; text-align: start; }
+    .upload-preview-meta strong { font-size: 0.9rem; }
+    .upload-preview-meta span { font-size: 0.8rem; color: var(--text-muted); }
 
-    .firebase-status-banner.error {
-      display: flex;
-      background: var(--danger-bg);
-      border: 1px solid var(--danger-border);
-      color: var(--danger-text);
-    }
+    .map-picker-wrapper { margin-top: 8px; display: grid; gap: 14px; }
+    .map-picker-hint { font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; line-height: 1.7; }
+    #admin-map-picker, #edit-map-picker { width: 100%; border-radius: 20px; border: 2px solid rgba(203,213,225,0.9); cursor: crosshair; z-index: 1; display: block; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); }
+    #admin-map-picker { height: 380px; }
+    #edit-map-picker { height: 260px; }
+    .coords-row input { background-color: var(--bg-color); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-weight: 800; color: var(--primary); }
+    .map-search-row { display: flex; gap: 12px; margin-bottom: 2px; }
+    .map-search-row input { flex: 1; padding: 13px 16px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--bg-color); color: var(--text-main); outline: none; min-height: 50px; }
+    .map-search-row button { padding: 0 20px; min-height: 50px; background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; }
 
-    .firebase-status-banner.success {
-      display: flex;
-      background: var(--success-bg);
-      border: 1px solid var(--success-border);
-      color: var(--success-text);
-    }
+    .bookings-filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; padding: 6px; background: rgba(248,250,252,0.9); border: 1px solid var(--border-color); border-radius: 20px; }
+    .filter-tab-btn { padding: 10px 18px; background: transparent; color: var(--text-muted); font-size: 0.88rem; }
+    .filter-tab-btn:hover { background: rgba(67,90,191,0.06); color: var(--primary); }
+    .filter-tab-btn.active { background: #fff; color: var(--text-main); border-color: var(--border-color); box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
+    .filter-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; background: rgba(67,90,191,0.08); color: var(--primary); }
 
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,0.55);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      z-index: 4000;
-    }
+    #bookings-container .bookings-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important; gap: 20px !important; width: 100% !important; }
+    .booking-card { padding: 20px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; }
+    .booking-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: linear-gradient(180deg, var(--primary), var(--accent)); }
+    .booking-card[data-status="confirmed"]::before { background: linear-gradient(180deg, #10b981, #34d399); }
+    .booking-card[data-status="rejected"]::before, .booking-card[data-status="cancelled"]::before { background: linear-gradient(180deg, #ef4444, #f87171); }
+    .booking-card[data-status="pending"]::before { background: linear-gradient(180deg, #f59e0b, #fbbf24); }
+    .booking-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .booking-title { display: grid; gap: 5px; }
+    .booking-title strong { font-size: 1rem; }
+    .booking-title span { color: var(--text-muted); font-size: 0.82rem; }
+    .booking-meta-item { padding: 12px 14px; border-radius: 16px; background: rgba(248,250,252,0.82); border: 1px solid var(--border-color); display: grid; gap: 4px; }
+    .booking-meta-item label { font-size: 0.73rem; color: var(--text-muted); font-weight: 700; }
+    .booking-meta-item strong, .booking-meta-item span { font-size: 0.9rem; color: var(--text-main); font-weight: 700; word-break: break-word; }
+    .booking-actions-row { display: flex; gap: 10px; margin-top: 2px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+    .btn-approve { flex: 1; background: var(--success-bg); color: var(--success-text); border-color: #10b981; }
+    .btn-approve:hover:not(:disabled) { background: #10b981; color: white; }
+    .btn-reject { flex: 1; background: var(--danger-bg); color: var(--danger-text); border-color: #ef4444; }
+    .btn-reject:hover:not(:disabled) { background: #ef4444; color: white; }
+    .btn-approve:disabled, .btn-reject:disabled { opacity: 0.55; cursor: not-allowed; }
 
+    .empty-state { text-align: center; padding: 54px 24px; background: rgba(255,255,255,0.76); border: 1px dashed rgba(148,163,184,0.45); border-radius: 24px; color: var(--text-muted); }
+    .empty-state i { font-size: 2.8rem; color: var(--primary); margin-bottom: 12px; display: block; opacity: 0.85; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 4000; }
     .modal-overlay.active { display: flex; }
+    .modal-content.admin-card { width: 100%; max-width: 820px; padding: 26px; border-radius: 28px; background: rgba(255,255,255,0.94); max-height: calc(100vh - 36px); overflow-y: auto; position: relative; }
+    .close-modal-btn { position: absolute; top: 16px; left: 16px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-color); background: #fff; color: var(--text-main); display: grid; place-items: center; cursor: pointer; font-size: 1.15rem; }
+    .modal-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color); }
+    .modal-topbar h3 { margin: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .admin-footer-actions { display: flex; justify-content: flex-start; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .owner-note { padding: 14px 16px; border-radius: 16px; background: rgba(67,90,191,0.06); border: 1px solid rgba(67,90,191,0.1); color: var(--text-muted); line-height: 1.8; font-size: .88rem; margin-bottom: 18px; }
 
-    .modal-content.admin-card {
-      width: 100%;
-      max-width: 820px !important;
-      padding: 26px;
-      border-radius: 28px;
-      background: rgba(255,255,255,0.94);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      max-height: calc(100vh - 36px);
-      overflow-y: auto;
-      position: relative;
-    }
-
-    .close-modal-btn {
-      position: absolute;
-      top: 16px;
-      left: 16px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 1px solid var(--border-color);
-      background: #fff;
-      color: var(--text-main);
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      font-size: 1.15rem;
-    }
-
-    .modal-topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 20px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .modal-topbar h3 {
-      margin: 0;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .admin-footer-actions {
-      display: flex;
-      justify-content: flex-start;
-      gap: 12px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-
-    .owner-form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-      margin-bottom: 22px;
-    }
-
-    .owner-note {
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(67,90,191,0.06);
-      border: 1px solid rgba(67,90,191,0.1);
-      color: var(--text-muted);
-      line-height: 1.8;
-      font-size: .88rem;
-      margin-bottom: 18px;
-    }
-
-    .dark body.admin-body,
-    body.dark.admin-body {
-      background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
-    }
+    .switch { position: relative; display: inline-block; width: 54px; height: 30px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; cursor: pointer; background-color: #cbd5e1; transition: .3s; }
+    .slider:before { position: absolute; content: ""; height: 22px; width: 22px; right: 4px; bottom: 4px; background-color: white; transition: .3s; }
+    input:checked + .slider { background: linear-gradient(135deg, var(--primary), var(--accent)); }
+    input:focus + .slider { box-shadow: var(--admin-ring); }
+    input:checked + .slider:before { transform: translateX(-24px); }
+    .slider.round { border-radius: 999px; }
+    .slider.round:before { border-radius: 50%; }
 
     .dark .admin-login-card,
     .dark .admin-sidebar,
@@ -1503,30 +439,19 @@
     .dark .admin-card,
     .dark .modern-section,
     .dark .stat-mini-card,
+    .dark .booking-card,
     body.dark .admin-login-card,
     body.dark .admin-sidebar,
     body.dark .admin-header,
     body.dark .admin-card,
     body.dark .modern-section,
-    body.dark .stat-mini-card {
+    body.dark .stat-mini-card,
+    body.dark .booking-card {
       background: rgba(15,23,42,0.78);
       border-color: rgba(51,65,85,0.82);
       box-shadow: 0 20px 50px rgba(0,0,0,0.28);
     }
-
     .dark .bookings-filter-bar,
-    body.dark .bookings-filter-bar {
-      background: rgba(15,23,42,0.72);
-      border-color: rgba(51,65,85,0.95);
-    }
-
-    .dark .filter-tab-btn.active,
-    body.dark .filter-tab-btn.active {
-      background: rgba(30,41,59,0.9);
-      border-color: rgba(51,65,85,0.95);
-    }
-
-    .dark .sidebar-top-note,
     .dark .search-inline,
     .dark .map-search-row input,
     .dark .ghost-action,
@@ -1536,7 +461,9 @@
     .dark .table-actions button,
     .dark .table-actions a,
     .dark .admin-mobile-toggle,
-    body.dark .sidebar-top-note,
+    .dark .admin-theme-toggle,
+    .dark .booking-meta-item,
+    body.dark .bookings-filter-bar,
     body.dark .search-inline,
     body.dark .map-search-row input,
     body.dark .ghost-action,
@@ -1545,1307 +472,582 @@
     body.dark .admin-table thead th,
     body.dark .table-actions button,
     body.dark .table-actions a,
-    body.dark .admin-mobile-toggle {
-      background: rgba(15,23,42,0.72);
-      border-color: rgba(51,65,85,0.95);
-    }
-
-    .dark .modern-form-wrapper .input-group input,
-    .dark .modern-form-wrapper .input-group textarea,
-    .dark .modern-form-wrapper .input-group select,
-    .dark .admin-form .input-group input,
-    .dark .admin-form .input-group textarea,
-    .dark .admin-form .input-group select,
-    .dark .coords-row input,
+    body.dark .admin-mobile-toggle,
+    body.dark .admin-theme-toggle,
+    body.dark .booking-meta-item { background: rgba(15,23,42,0.72); border-color: rgba(51,65,85,0.95); }
+    .dark .input-group input,
+    .dark .input-group textarea,
+    .dark .input-group select,
     .dark #admin-user,
     .dark #admin-pass,
-    body.dark .modern-form-wrapper .input-group input,
-    body.dark .modern-form-wrapper .input-group textarea,
-    body.dark .modern-form-wrapper .input-group select,
-    body.dark .admin-form .input-group input,
-    body.dark .admin-form .input-group textarea,
-    body.dark .admin-form .input-group select,
-    body.dark .coords-row input,
+    body.dark .input-group input,
+    body.dark .input-group textarea,
+    body.dark .input-group select,
     body.dark #admin-user,
-    body.dark #admin-pass {
-      background-color: rgba(15,23,42,0.88);
-      border-color: rgba(51,65,85,0.95);
-      color: var(--text-main);
-    }
-
+    body.dark #admin-pass { background-color: rgba(15,23,42,0.88); border-color: rgba(51,65,85,0.95); color: var(--text-main); }
     .dark #admin-map-picker,
     .dark #edit-map-picker,
     body.dark #admin-map-picker,
-    body.dark #edit-map-picker {
-      border-color: rgba(51,65,85,0.95);
-      filter: brightness(0.92) contrast(1.04);
-    }
+    body.dark #edit-map-picker { border-color: rgba(51,65,85,0.95); filter: brightness(0.92) contrast(1.04); }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes spin { to { transform: rotate(360deg); } }
     .ph-spin { animation: spin 0.8s linear infinite; display: inline-block; }
 
     @media (max-width: 1280px) {
       .dashboard-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-
     @media (max-width: 1100px) {
       .admin-layout { display: block; }
-
       .admin-sidebar {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        transform: translateX(100%);
-        transition: transform 0.32s ease;
-        z-index: 3000;
-        width: min(88vw, 320px);
-        height: 100vh;
+        position: fixed; top: 0; right: 0; bottom: 0; transform: translateX(100%); transition: transform 0.32s ease;
+        z-index: 100; width: min(88vw, 320px); height: 100vh;
       }
-
       .admin-sidebar.open { transform: translateX(0); }
-
-      .admin-main { padding: 18px; }
       .admin-mobile-topbar { display: flex; }
+      .admin-header { flex-direction: column; align-items: stretch; }
+      .admin-profile { width: 100%; justify-content: flex-start; }
     }
-
-    @media (max-width: 900px) {
-      .form-grid,
-      .coords-row,
-      .quick-tips,
-      .booking-meta-grid,
-      .owner-form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      #bookings-container .bookings-grid,
-      #bookings-container > div.bookings-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
-      }
-
-      .bookings-filter-bar {
-        gap: 6px;
-      }
-
-      .filter-tab-btn {
-        padding: 9px 13px;
-        font-size: 0.82rem;
-      }
+    @media (max-width: 860px) {
+      .form-grid, .owner-form-grid, .coords-row, .booking-meta-grid { grid-template-columns: 1fr; }
+      #bookings-container .bookings-grid { grid-template-columns: 1fr !important; }
+      .pane-head { align-items: stretch; }
+      .pane-tools { width: 100%; }
+      .search-inline { min-width: 100%; }
     }
-
-    @media (max-width: 768px) {
-      .admin-header {
-        padding: 18px;
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .pane-head,
-      .pane-tools,
-      .admin-footer-actions,
-      .map-search-row {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .search-inline,
-      .ghost-action,
-      .map-search-row button,
-      .primary-btn {
-        width: 100%;
-      }
-
-      .modern-section,
-      .admin-card,
-      .modal-content.admin-card,
-      .admin-login-card {
-        padding: 20px;
-        border-radius: 22px;
-      }
-
+    @media (max-width: 720px) {
       .dashboard-strip { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 600px) {
-      #bookings-container .bookings-grid,
-      #bookings-container > div.bookings-grid {
-        grid-template-columns: 1fr !important;
-      }
-
-      .admin-main { padding: 14px; }
-
-      .admin-profile {
-        width: 100%;
-        justify-content: space-between;
-      }
-
-      .bookings-filter-bar {
-        padding: 4px;
-      }
-
-      .filter-tab-btn {
-        padding: 8px 10px;
-        font-size: 0.78rem;
-      }
+      .admin-main { padding: 16px; }
+      .admin-header, .admin-card, .modern-section, .modal-content.admin-card { padding: 18px; border-radius: 20px; }
+      .booking-actions-row { flex-direction: column; }
+      .map-search-row { flex-direction: column; }
     }
   </style>
-<base target="_blank">
 </head>
 <body class="admin-body">
-  <div id="admin-login-screen" class="admin-login-screen">
+  <div id="admin-toast-host" aria-live="polite"></div>
+
+  <section id="admin-login-screen" class="admin-login-screen">
     <div class="admin-login-card">
-      <div class="login-badge"><i class="ph-fill ph-shield-check"></i> بوابة الإدارة الآمنة</div>
-      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:58px; margin:0 auto 24px; display:block;" />
+      <div class="login-badge"><i class="ph ph-shield-check"></i><span>OreBooking Admin</span></div>
+      <div style="display:flex;justify-content:center;margin-bottom:18px;">
+        <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" onerror="this.style.display='none'" />
+      </div>
+      <h2 style="margin:0 0 10px;font-size:1.6rem;">تسجيل الدخول إلى لوحة التحكم</h2>
+      <p style="margin:0 0 22px;color:var(--text-muted);line-height:1.8;">استخدم حساب المدير أو حساب المالك للدخول إلى لوحة التحكم وإدارة العقارات والحجوزات.</p>
 
-      <h2 class="font-bold" style="text-align:center; margin-bottom:8px; font-size:1.75rem;">تسجيل الدخول</h2>
-      <p style="text-align:center; color:var(--text-muted); margin-bottom:24px; font-size:0.92rem; line-height:1.8;">
-        لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات وحسابات الملاك بشكل احترافي وآمن.
-      </p>
+      <div id="firebase-status-banner" class="firebase-status-banner"></div>
+      <div id="admin-login-message" class="login-message"></div>
 
-      <form id="admin-login-form" novalidate>
+      <form id="admin-login-form" class="admin-form" novalidate>
         <div class="input-group">
-          <label for="admin-user">اسم المستخدم</label>
-          <input type="text" id="admin-user" required placeholder="أدخل اسم المستخدم" autocomplete="username" />
+          <label for="admin-user"><i class="ph ph-user"></i><span>اسم المستخدم</span></label>
+          <input id="admin-user" name="username" type="text" autocomplete="username" placeholder="admin" required />
         </div>
-
         <div class="input-group mt-3">
-          <label for="admin-pass">كلمة المرور</label>
-          <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور" autocomplete="current-password" />
+          <label for="admin-pass"><i class="ph ph-lock-key"></i><span>كلمة المرور</span></label>
+          <input id="admin-pass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
         </div>
-
-        <button type="submit" class="primary-btn mt-4" id="admin-login-btn" style="height:52px;">
-          <i class="ph ph-sign-in" style="font-size:1.2rem;"></i> تسجيل الدخول
+        <button id="admin-login-btn" type="submit" class="primary-btn mt-4" style="width:100%;">
+          <i class="ph ph-sign-in"></i><span>دخول</span>
         </button>
       </form>
 
       <div class="login-help">
-        <strong style="display:block; margin-bottom:4px; color:var(--text-main);">بيانات الأدمن الرئيسية:</strong>
-        username: admin<br>
-        password: admin
+        <div class="font-bold">ملاحظات مهمة</div>
+        <div class="mt-2">- المدير العام: <span class="text-primary">admin / admin</span></div>
+        <div>- الملاك: يتم التحقق من بياناتهم من قاعدة البيانات.</div>
+        <div>- عند فشل Firebase ستظهر رسالة توضيحية أعلى النموذج.</div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="admin-layout" id="admin-layout" style="display:none;">
-    <aside class="admin-sidebar" id="admin-sidebar">
+  <div id="admin-layout" class="admin-layout">
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="القائمة الجانبية">
       <div class="sidebar-logo">
-        <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:42px;" />
+        <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" onerror="this.style.display='none'" />
       </div>
 
       <div class="sidebar-top-note">
-        <strong>لوحة الإدارة الذكية</strong>
-        <span>إدارة أسرع للعقارات، مراجعة احترافية للحجوزات، وإنشاء حسابات لأصحاب العقارات من مكان واحد.</span>
+        <strong>لوحة التحكم الذكية</strong>
+        <span>إدارة العقارات والحجوزات وحسابات الملاك من مكان واحد مع عرض حديث وواضح.</span>
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" type="button" data-tab-target="manage-props" onclick="switchTab('manage-props')">
-          <i class="ph ph-buildings"></i> إدارة العقارات
+        <button type="button" class="nav-item active" data-tab-target="manage-props">
+          <i class="ph ph-buildings"></i><span>إدارة العقارات</span>
         </button>
-
-        <button class="nav-item" id="nav-add-property" type="button" data-tab-target="add-property" onclick="switchTab('add-property')">
-          <i class="ph ph-plus-square"></i> إضافة عقار جديد
+        <button type="button" class="nav-item" data-tab-target="add-property">
+          <i class="ph ph-plus-circle"></i><span>إضافة عقار</span>
         </button>
-
-        <button class="nav-item" id="nav-owner-accounts" type="button" data-tab-target="owner-accounts" onclick="switchTab('owner-accounts')">
-          <i class="ph ph-users-three"></i> حسابات الملاك
+        <button type="button" class="nav-item" data-tab-target="bookings">
+          <i class="ph ph-calendar-check"></i><span>الحجوزات</span>
         </button>
-
-        <button class="nav-item" type="button" data-tab-target="bookings" onclick="switchTab('bookings')">
-          <i class="ph ph-calendar-check"></i> الحجوزات
+        <button type="button" class="nav-item" data-tab-target="owner-accounts">
+          <i class="ph ph-users-three"></i><span>حسابات الملاك</span>
         </button>
-
-        <button type="button" id="admin-logout-btn" class="nav-item logout-item">
-          <i class="ph ph-sign-out"></i> تسجيل الخروج
+        <button id="admin-logout-btn" type="button" class="nav-item logout-item">
+          <i class="ph ph-sign-out"></i><span>تسجيل الخروج</span>
         </button>
       </nav>
     </aside>
 
     <main class="admin-main">
       <div class="admin-mobile-topbar">
-        <button type="button" class="admin-mobile-toggle" id="admin-mobile-toggle" aria-label="فتح القائمة">
+        <button id="admin-mobile-toggle" class="admin-mobile-toggle" type="button" aria-label="فتح القائمة">
           <i class="ph ph-list"></i>
         </button>
-        <img src="logos/orebooking.png" alt="Logo" style="height:30px; object-fit:contain;" />
+        <div class="mobile-actions">
+          <button id="admin-theme-toggle" class="admin-theme-toggle" type="button" aria-label="تبديل النمط">
+            <i class="ph ph-moon"></i>
+          </button>
+        </div>
       </div>
-
-      <!-- Firebase Status Banner -->
-      <div id="firebase-status-banner" class="firebase-status-banner" style="display:none;"></div>
 
       <header class="admin-header">
         <div class="header-copy">
-          <h2 id="page-title" class="font-bold" style="font-size:1.45rem; margin:0;">إدارة العقارات</h2>
+          <h1 id="page-title">إدارة العقارات</h1>
           <p id="page-subtitle">واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح.</p>
         </div>
-
         <div class="admin-profile">
-          <div style="text-align:left; line-height:1.25;">
-            <span class="font-bold" id="admin-profile-name" style="display:block; font-size:0.96rem;">مدير النظام</span>
-            <span style="font-size:0.76rem; color:var(--text-muted);" id="admin-profile-role">بصلاحيات كاملة</span>
-          </div>
-          <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--accent)); color:white;">
-            <i class="ph-fill ph-user-circle"></i>
+          <div class="avatar"><i class="ph ph-user-gear"></i></div>
+          <div>
+            <strong id="admin-profile-name">مدير النظام</strong>
+            <div id="admin-profile-role" style="color:var(--text-muted);font-size:.88rem;margin-top:4px;">بصلاحيات كاملة</div>
           </div>
         </div>
       </header>
 
-      <section class="dashboard-strip" aria-label="إحصائيات سريعة">
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-house-line"></i></div>
-          <div class="stat-mini-meta">
-            <span>إجمالي العقارات</span>
-            <strong id="stat-total-properties">0</strong>
-          </div>
+      <section class="admin-content">
+        <div class="dashboard-strip">
+          <div class="stat-mini-card"><div class="stat-mini-icon"><i class="ph ph-house-line"></i></div><div class="stat-mini-meta"><span>إجمالي العقارات</span><strong id="stat-total-properties">0</strong></div></div>
+          <div class="stat-mini-card"><div class="stat-mini-icon"><i class="ph ph-eye"></i></div><div class="stat-mini-meta"><span>العقارات النشطة</span><strong id="stat-active-properties">0</strong></div></div>
+          <div class="stat-mini-card"><div class="stat-mini-icon"><i class="ph ph-calendar-check"></i></div><div class="stat-mini-meta"><span>إجمالي الحجوزات</span><strong id="stat-total-bookings">0</strong></div></div>
+          <div class="stat-mini-card"><div class="stat-mini-icon"><i class="ph ph-users-three"></i></div><div class="stat-mini-meta"><span>حسابات الملاك</span><strong id="stat-owner-accounts">0</strong></div></div>
         </div>
 
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-eye"></i></div>
-          <div class="stat-mini-meta">
-            <span>العقارات النشطة</span>
-            <strong id="stat-active-properties">0</strong>
-          </div>
-        </div>
-
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-users-three"></i></div>
-          <div class="stat-mini-meta">
-            <span>حسابات الملاك</span>
-            <strong id="stat-owner-accounts">0</strong>
-          </div>
-        </div>
-
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-calendar-check"></i></div>
-          <div class="stat-mini-meta">
-            <span>إجمالي الحجوزات</span>
-            <strong id="stat-total-bookings">0</strong>
-          </div>
-        </div>
-      </section>
-
-      <div class="admin-content">
-        <div id="tab-manage-props" class="tab-pane active">
-          <div class="admin-card">
-            <div class="pane-head">
-              <h3><i class="ph-fill ph-buildings" style="color:var(--primary);"></i> العقارات المضافة</h3>
-
-              <div class="pane-tools">
-                <label class="search-inline">
-                  <i class="ph ph-magnifying-glass" style="color:var(--text-muted);"></i>
-                  <input type="text" id="property-search-input" placeholder="ابحث باسم العقار أو الموقع..." />
-                </label>
-
-                <button type="button" class="ghost-action" id="refresh-properties-btn">
-                  <i class="ph ph-arrows-clockwise"></i> تحديث القائمة
-                </button>
+        <section id="tab-manage-props" class="tab-pane active admin-card">
+          <div class="pane-head">
+            <h3><i class="ph ph-buildings"></i><span>العقارات</span></h3>
+            <div class="pane-tools">
+              <div class="search-inline">
+                <i class="ph ph-magnifying-glass"></i>
+                <input id="property-search-input" type="search" placeholder="ابحث بالاسم أو الموقع أو النوع" />
               </div>
-            </div>
-
-            <div class="stats-chip-row">
-              <span class="stats-chip"><i class="ph ph-stack"></i> متابعة كل العقارات من مكان واحد</span>
-              <span class="stats-chip"><i class="ph ph-faders-horizontal"></i> تحكم سريع بالحالة والتعديل</span>
-              <span class="stats-chip"><i class="ph ph-lightning"></i> واجهة أخف وأوضح للإدارة اليومية</span>
-            </div>
-
-            <div class="table-responsive">
-              <table class="admin-table">
-                <thead>
-                  <tr>
-                    <th>الصورة</th>
-                    <th>العقار</th>
-                    <th>الموقع</th>
-                    <th>السعر</th>
-                    <th>الحالة</th>
-                    <th>إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody id="properties-tbody"></tbody>
-              </table>
+              <button id="refresh-properties-btn" type="button" class="ghost-action"><i class="ph ph-arrows-clockwise"></i><span>تحديث</span></button>
             </div>
           </div>
-        </div>
 
-        <div id="tab-add-property" class="tab-pane">
-          <form id="add-property-form" class="modern-form-wrapper">
-            <div class="modern-section">
+          <div class="stats-chip-row">
+            <div class="stats-chip"><i class="ph ph-lightning"></i><span>عرض سريع ومباشر</span></div>
+            <div class="stats-chip"><i class="ph ph-map-pin"></i><span>مواقع العقارات</span></div>
+            <div class="stats-chip"><i class="ph ph-eye"></i><span>إدارة الظهور</span></div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>الصورة</th>
+                  <th>العقار</th>
+                  <th>الموقع</th>
+                  <th>السعر</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="properties-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text-muted);">جارٍ تحميل العقارات...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="tab-add-property" class="tab-pane">
+          <form id="add-property-form" class="modern-form-wrapper" novalidate>
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-text-aa"></i>
+                <i class="ph ph-house-line"></i>
                 <div>
                   <h4>المعلومات الأساسية</h4>
-                  <div class="section-note">أدخل البيانات التعريفية الرئيسية للعقار بلغتين بشكل منظم وواضح.</div>
+                  <div class="section-note">أدخل الاسم والوصف والسعر ونوع العقار باللغتين العربية والإنجليزية.</div>
                 </div>
               </div>
-
               <div class="form-grid">
-                <div class="input-group">
-                  <label for="prop-title-ar">اسم العقار (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-ar" placeholder="مثال: شاليه الأحلام" required />
-                </div>
-
-                <div class="input-group">
-                  <label for="prop-title-en">اسم العقار (إنجليزي)</label>
-                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" />
-                </div>
-
-                <div class="input-group" style="grid-column:1/-1;">
-                  <label for="prop-desc-ar">وصف العقار (عربي) <span class="text-danger">*</span></label>
-                  <textarea id="prop-desc-ar" rows="4" placeholder="اكتب وصفاً جذاباً ومقنعاً للعقار بالعربية..." required></textarea>
-                  <small>يفضل ذكر نوع الإقامة، المميزات، والأجواء المحيطة بالعقار.</small>
-                </div>
-
-                <div class="input-group" style="grid-column:1/-1;">
-                  <label for="prop-desc-en">وصف العقار (إنجليزي)</label>
-                  <textarea id="prop-desc-en" rows="4" placeholder="Write a polished and attractive English description..."></textarea>
-                </div>
+                <div class="input-group"><label for="title-ar">الاسم بالعربية</label><input id="title-ar" name="titleAr" required /></div>
+                <div class="input-group"><label for="title-en">الاسم بالإنجليزية</label><input id="title-en" name="titleEn" required /></div>
+                <div class="input-group"><label for="loc-ar">الموقع بالعربية</label><input id="loc-ar" name="locationAr" required /></div>
+                <div class="input-group"><label for="loc-en">الموقع بالإنجليزية</label><input id="loc-en" name="locationEn" required /></div>
+                <div class="input-group"><label for="price">السعر</label><input id="price" name="price" type="number" min="0" step="1" required /></div>
+                <div class="input-group"><label for="type">نوع العقار</label><select id="type" name="type"><option value="apartment">شقة</option><option value="villa">فيلا</option><option value="resort">منتجع</option><option value="pool">مسبح</option></select></div>
+                <div class="input-group"><label for="desc-ar">الوصف بالعربية</label><textarea id="desc-ar" name="descAr" required></textarea></div>
+                <div class="input-group"><label for="desc-en">الوصف بالإنجليزية</label><textarea id="desc-en" name="descEn" required></textarea></div>
               </div>
-            </div>
+            </section>
 
-            <div class="modern-section">
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-money"></i>
+                <i class="ph ph-image"></i>
                 <div>
-                  <h4>التسعير والصور ونوع العقار</h4>
-                  <div class="section-note">حدد نوع العقار، سعر الليلة، ثم أرفق صورة رئيسية احترافية واضحة.</div>
+                  <h4>الصورة الرئيسية</h4>
+                  <div class="section-note">ارفع صورة تمثل العقار بوضوح. إذا كان مشروعك يستخدم رفعًا خارجيًا في JS فسيتم التعامل معها هناك.</div>
                 </div>
               </div>
-
-              <div class="form-grid" style="align-items:start;">
-                <div class="input-group">
-                  <label for="prop-type">نوع العقار <span class="text-danger">*</span></label>
-                  <select id="prop-type" required style="font-size:1.03rem; font-weight:800; color:var(--primary); min-height:52px;">
-                    <option value="apartment">شقة (Apartment)</option>
-                    <option value="villa">فيلا (Villa)</option>
-                    <option value="resort">منتجع (Resort)</option>
-                    <option value="pool">مسبح (Pool)</option>
-                  </select>
-                </div>
-
-                <div class="input-group">
-                  <label for="prop-price">السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
-                  <input type="number" id="prop-price" placeholder="مثال: 15000" style="font-size:1.1rem; font-weight:800; color:var(--primary); min-height:52px;" required />
-                </div>
-
-                <div class="input-group" style="grid-column:1/-1; margin-top:4px;">
-                  <label for="prop-image">الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
-
-                  <div class="upload-zone">
-                    <i class="ph ph-cloud-arrow-up"></i>
-                    <span class="upload-zone-text">اضغط هنا أو اسحب الصورة</span>
-                    <span class="upload-zone-sub">PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
-                    <input type="file" id="prop-image" accept="image/*" required />
-                  </div>
-
-                  <div class="upload-preview" id="upload-preview-box">
-                    <img id="upload-preview-img" alt="Preview" />
-                    <div class="upload-preview-meta">
-                      <strong id="upload-preview-name">معاينة الصورة</strong>
-                      <span id="upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
-                    </div>
-                  </div>
-
-                  <small id="upload-status" class="text-primary mt-2" style="display:block; text-align:center; font-weight:700;"></small>
+              <label class="upload-zone" for="image">
+                <i class="ph ph-upload-simple"></i>
+                <div class="upload-zone-text">اضغط أو اسحب الصورة هنا</div>
+                <div class="upload-zone-sub">JPG / PNG / WEBP</div>
+                <input id="image" name="image" type="file" accept="image/*" />
+              </label>
+              <div id="upload-preview" class="upload-preview">
+                <img id="upload-preview-img" src="" alt="Preview" />
+                <div class="upload-preview-meta">
+                  <strong id="upload-preview-name">—</strong>
+                  <span id="upload-preview-size">—</span>
                 </div>
               </div>
-            </div>
+              <div id="upload-status" class="section-note"></div>
+            </section>
 
-            <div class="modern-section">
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-map-pin-line"></i>
+                <i class="ph ph-map-trifold"></i>
                 <div>
-                  <h4>الموقع الجغرافي للخريطة</h4>
-                  <div class="section-note">حدد العنوان النصي بدقة ثم اختر الإحداثيات مباشرة من الخريطة أو عبر البحث الذكي.</div>
+                  <h4>اختيار الموقع على الخريطة</h4>
+                  <div class="section-note">اضغط على الخريطة أو ابحث عن موقع لتحديد الإحداثيات بدقة.</div>
                 </div>
               </div>
-
-              <div class="form-grid" style="margin-bottom:12px;">
-                <div class="input-group">
-                  <label for="prop-loc-ar">العنوان النصي (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-ar" placeholder="مثال: حي الرياض، الجزائر العاصمة" required />
-                </div>
-
-                <div class="input-group">
-                  <label for="prop-loc-en">العنوان النصي (إنجليزي)</label>
-                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" />
-                </div>
-              </div>
-
               <div class="map-picker-wrapper">
                 <div class="map-search-row">
-                  <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة..." />
-                  <button type="button" id="map-search-btn">
-                    <i class="ph ph-magnifying-glass"></i> بحث ذكي
-                  </button>
+                  <input id="admin-map-search" type="text" placeholder="ابحث عن مدينة أو حي أو عنوان..." />
+                  <button id="admin-map-search-btn" type="button"><i class="ph ph-magnifying-glass"></i><span>بحث</span></button>
                 </div>
-
-                <p class="map-picker-hint">
-                  <i class="ph-fill ph-info"></i>
-                  اسحب الخريطة وانقر بدقة لتحديد الإحداثيات الدقيقة للعقار، ثم تأكد من القيم الظاهرة في الحقول التالية.
-                </p>
-
+                <div class="map-picker-hint"><i class="ph ph-cursor-click"></i><span>يمكنك الضغط على الخريطة لتحديد الموقع أو تعديل الإحداثيات يدويًا.</span></div>
                 <div id="admin-map-picker"></div>
-
-                <div class="map-picked-badge" id="map-picked-badge">
-                  <i class="ph-fill ph-check-circle"></i> تم التقاط الإحداثيات بنجاح
-                </div>
-
                 <div class="coords-row">
-                  <div class="input-group">
-                    <label for="prop-lat">خط العرض (Latitude)</label>
-                    <input type="text" id="prop-lat" placeholder="سيتم تعبئته تلقائياً" readonly />
-                  </div>
-
-                  <div class="input-group">
-                    <label for="prop-lng">خط الطول (Longitude)</label>
-                    <input type="text" id="prop-lng" placeholder="سيتم تعبئته تلقائياً" readonly />
-                  </div>
+                  <div class="input-group"><label for="lat">Latitude</label><input id="lat" name="lat" readonly /></div>
+                  <div class="input-group"><label for="lng">Longitude</label><input id="lng" name="lng" readonly /></div>
                 </div>
+                <div id="admin-map-picked-badge" class="map-picked-badge"><i class="ph ph-check-circle"></i><span>تم تحديد الموقع على الخريطة</span></div>
               </div>
-            </div>
+            </section>
 
-            <div class="modern-section">
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-lightbulb"></i>
+                <i class="ph ph-lightbulb"></i>
                 <div>
-                  <h4>نصائح قبل النشر</h4>
-                  <div class="section-note">هذه التوصيات تساعد في إظهار العقار بشكل أقوى أمام الزوار ورفع جودة العرض.</div>
+                  <h4>نصائح سريعة</h4>
+                  <div class="section-note">هذه النقاط تساعدك على إدخال بيانات أوضح وأفضل للعرض.</div>
                 </div>
               </div>
-
               <div class="quick-tips">
-                <div class="tip-card">
-                  <i class="ph ph-image"></i>
-                  <strong>اختر صورة جذابة</strong>
-                  <p>استخدم صورة مضيئة وواضحة بزاوية واسعة تعكس أفضل ما في العقار.</p>
-                </div>
-
-                <div class="tip-card">
-                  <i class="ph ph-text-align-right"></i>
-                  <strong>اكتب وصفاً مقنعاً</strong>
-                  <p>اذكر المميزات الحقيقية، عدد الغرف، القرب من الخدمات، ونوع التجربة التي يقدمها المكان.</p>
-                </div>
-
-                <div class="tip-card">
-                  <i class="ph ph-map-trifold"></i>
-                  <strong>ثبت الموقع بدقة</strong>
-                  <p>تحديد الإحداثيات بدقة يقلل الاستفسارات ويرفع الثقة عند المستخدم قبل الحجز.</p>
-                </div>
+                <div class="tip-card"><i class="ph ph-translate"></i><strong>اكتب بلغتين</strong><p>احرص أن يكون الاسم والوصف متوافقين بين العربية والإنجليزية.</p></div>
+                <div class="tip-card"><i class="ph ph-currency-circle-dollar"></i><strong>سعر واضح</strong><p>أدخل السعر النهائي بشكل صحيح لتجنب الأخطاء في صفحة العرض.</p></div>
+                <div class="tip-card"><i class="ph ph-map-pin"></i><strong>موقع دقيق</strong><p>تحديد الإحداثيات يساعد في إظهار العقار على الخريطة بشكل صحيح.</p></div>
               </div>
-            </div>
+            </section>
 
             <div class="admin-footer-actions">
-              <button type="submit" class="primary-btn" id="submit-prop-btn" style="width:auto; padding:16px 40px; font-size:1.05rem; display:inline-flex; gap:10px; align-items:center;">
-                <i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة
-              </button>
-
-              <button type="button" class="ghost-action" id="reset-property-form-btn">
-                <i class="ph ph-eraser"></i> تفريغ الحقول
-              </button>
+              <button id="submit-prop-btn" type="submit" class="primary-btn"><i class="ph ph-floppy-disk"></i><span>حفظ العقار</span></button>
             </div>
           </form>
-        </div>
+        </section>
 
-        <div id="tab-owner-accounts" class="tab-pane">
-          <div class="admin-card">
-            <div class="pane-head">
-              <h3><i class="ph-fill ph-users-three" style="color:var(--primary);"></i> حسابات ملاك العقارات</h3>
-
-              <div class="pane-tools">
-                <button type="button" class="ghost-action" id="refresh-owner-accounts-btn">
-                  <i class="ph ph-arrows-clockwise"></i> تحديث الحسابات
-                </button>
-              </div>
-            </div>
-
-            <div class="owner-note">
-              من هنا يستطيع الأدمن الرئيسي إنشاء حسابات خاصة بأصحاب العقارات، وتسليم كل مالك اسم مستخدم وكلمة مرور للدخول إلى لوحة التحكم الخاصة بعقاره فقط.
-            </div>
-
-            <form id="owner-account-form" class="admin-form">
-              <div class="owner-form-grid">
-                <div class="input-group">
-                  <label for="owner-full-name">اسم صاحب العقار <span class="text-danger">*</span></label>
-                  <input type="text" id="owner-full-name" placeholder="مثال: محمد علي" required />
-                </div>
-
-                <div class="input-group">
-                  <label for="owner-property-id">العقار المرتبط بالحساب <span class="text-danger">*</span></label>
-                  <select id="owner-property-id" required>
-                    <option value="">اختر العقار</option>
-                  </select>
-                </div>
-
-                <div class="input-group">
-                  <label for="owner-username">اسم المستخدم <span class="text-danger">*</span></label>
-                  <input type="text" id="owner-username" placeholder="مثال: owner_palm_01" required />
-                </div>
-
-                <div class="input-group">
-                  <label for="owner-password">كلمة المرور <span class="text-danger">*</span></label>
-                  <input type="text" id="owner-password" placeholder="مثال: 123456" required />
-                </div>
-              </div>
-
-              <div class="admin-footer-actions">
-                <button type="submit" class="primary-btn" id="create-owner-account-btn">
-                  <i class="ph ph-user-plus"></i> إنشاء حساب المالك
-                </button>
-              </div>
-            </form>
-
-            <div class="table-responsive" style="margin-top:24px;">
-              <table class="admin-table">
-                <thead>
-                  <tr>
-                    <th>اسم المالك</th>
-                    <th>اسم المستخدم</th>
-                    <th>كلمة المرور</th>
-                    <th>العقار</th>
-                    <th>الحالة</th>
-                    <th>إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody id="owner-accounts-tbody"></tbody>
-              </table>
+        <section id="tab-bookings" class="tab-pane admin-card">
+          <div class="pane-head">
+            <h3><i class="ph ph-calendar-check"></i><span>الحجوزات</span></h3>
+            <div class="pane-tools">
+              <button id="refresh-bookings-btn" type="button" class="ghost-action"><i class="ph ph-arrows-clockwise"></i><span>تحديث</span></button>
+              <button id="clear-bookings-btn" type="button" class="ghost-action"><i class="ph ph-trash"></i><span>تنظيف الحجوزات</span></button>
             </div>
           </div>
-        </div>
 
-        <div id="tab-bookings" class="tab-pane">
-          <div class="admin-card" style="background:transparent; border:none; box-shadow:none; padding:0;">
-            <div class="pane-head">
-              <h3><i class="ph-fill ph-calendar-check" style="color:var(--primary);"></i> طلبات الحجوزات</h3>
+          <div class="bookings-filter-bar booking-filter-bar">
+            <button type="button" class="filter-tab-btn booking-filter-btn active" data-filter="all"><span>الكل</span><span id="booking-count-all" class="filter-count-badge">0</span></button>
+            <button type="button" class="filter-tab-btn booking-filter-btn pending" data-filter="pending"><span>قيد الانتظار</span><span id="booking-count-pending" class="filter-count-badge">0</span></button>
+            <button type="button" class="filter-tab-btn booking-filter-btn confirmed" data-filter="confirmed"><span>مؤكد</span><span id="booking-count-confirmed" class="filter-count-badge">0</span></button>
+            <button type="button" class="filter-tab-btn booking-filter-btn rejected" data-filter="rejected"><span>مرفوض / ملغي</span><span id="booking-count-rejected" class="filter-count-badge">0</span></button>
+          </div>
 
-              <div class="pane-tools">
-                <button type="button" class="ghost-action" id="refresh-bookings-btn">
-                  <i class="ph ph-arrows-clockwise"></i> تحديث الحجوزات
-                </button>
-              </div>
-            </div>
-
-            <!-- =============================================
-                 فلتر الحجوزات - NEW
-            ============================================= -->
-            <div class="bookings-filter-bar" id="bookings-filter-bar" role="tablist" aria-label="فلتر الحجوزات">
-              <button
-                type="button"
-                class="filter-tab-btn active all"
-                data-filter="all"
-                role="tab"
-                aria-selected="true"
-                onclick="filterBookings('all')"
-              >
-                <i class="ph ph-list-bullets"></i>
-                الكل
-                <span class="filter-count-badge" id="filter-count-all">0</span>
-              </button>
-
-              <button
-                type="button"
-                class="filter-tab-btn pending"
-                data-filter="pending"
-                role="tab"
-                aria-selected="false"
-                onclick="filterBookings('pending')"
-              >
-                <i class="ph ph-clock"></i>
-                قيد الانتظار
-                <span class="filter-count-badge" id="filter-count-pending">0</span>
-              </button>
-
-              <button
-                type="button"
-                class="filter-tab-btn confirmed"
-                data-filter="confirmed"
-                role="tab"
-                aria-selected="false"
-                onclick="filterBookings('confirmed')"
-              >
-                <i class="ph ph-check-circle"></i>
-                مقبولة
-                <span class="filter-count-badge" id="filter-count-confirmed">0</span>
-              </button>
-
-              <button
-                type="button"
-                class="filter-tab-btn rejected"
-                data-filter="rejected"
-                role="tab"
-                aria-selected="false"
-                onclick="filterBookings('rejected')"
-              >
-                <i class="ph ph-x-circle"></i>
-                مرفوضة
-                <span class="filter-count-badge" id="filter-count-rejected">0</span>
-              </button>
-            </div>
-            <!-- ============================================= -->
-
-            <div id="bookings-container">
-              <div class="empty-state">
-                <i class="ph ph-circle-notch ph-spin"></i>
-                جارٍ تحميل بيانات الحجوزات...
-              </div>
+          <div id="bookings-container">
+            <div class="empty-state">
+              <i class="ph ph-calendar-blank"></i>
+              <div>سيتم عرض الحجوزات هنا بعد تحميلها من قاعدة البيانات.</div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section id="tab-owner-accounts" class="tab-pane admin-card">
+          <div class="pane-head">
+            <h3><i class="ph ph-users-three"></i><span>حسابات الملاك</span></h3>
+            <div class="pane-tools">
+              <button id="refresh-owner-accounts-btn" type="button" class="ghost-action"><i class="ph ph-arrows-clockwise"></i><span>تحديث</span></button>
+            </div>
+          </div>
+
+          <div class="owner-note">أنشئ لكل مالك حسابًا مرتبطًا بعقار واحد أو أكثر حسب منطق مشروعك. هذا القسم ظاهر للمدير العام فقط.</div>
+
+          <form id="owner-account-form" class="admin-form" novalidate>
+            <div class="owner-form-grid">
+              <div class="input-group"><label for="owner-full-name">اسم المالك</label><input id="owner-full-name" name="fullName" required /></div>
+              <div class="input-group"><label for="owner-property-id">العقار المرتبط</label><select id="owner-property-id" name="propertyId" required><option value="">اختر العقار</option></select></div>
+              <div class="input-group"><label for="owner-username">اسم المستخدم</label><input id="owner-username" name="username" required /></div>
+              <div class="input-group"><label for="owner-password">كلمة المرور</label><input id="owner-password" name="password" required /></div>
+            </div>
+            <div class="admin-footer-actions">
+              <button id="save-owner-account-btn" type="submit" class="primary-btn"><i class="ph ph-user-plus"></i><span>حفظ الحساب</span></button>
+            </div>
+          </form>
+
+          <div class="table-responsive mt-4">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>المالك</th>
+                  <th>اسم المستخدم</th>
+                  <th>العقار</th>
+                  <th>الدور</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="owner-accounts-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text-muted);">جارٍ تحميل الحسابات...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
     </main>
   </div>
 
-  <div class="modal-overlay" id="edit-modal">
+  <div id="edit-modal" class="modal-overlay" aria-hidden="true">
     <div class="modal-content admin-card">
-      <button class="close-modal-btn" id="close-edit-modal-btn" type="button" aria-label="إغلاق">
-        <i class="ph ph-x"></i>
-      </button>
-
-      <div class="modal-topbar">
-        <h3><i class="ph-fill ph-pencil-simple-line"></i> تعديل العقار</h3>
-      </div>
-
-      <form id="edit-property-form" class="admin-form">
-        <input type="hidden" id="edit-prop-id" />
-
+      <button class="close-modal-btn" type="button" onclick="closeEditModal()" aria-label="إغلاق"><i class="ph ph-x"></i></button>
+      <div class="modal-topbar"><h3><i class="ph ph-pencil-simple"></i><span>تعديل العقار</span></h3></div>
+      <form id="edit-property-form" class="admin-form" novalidate>
+        <input id="edit-prop-id" type="hidden" />
         <div class="form-grid">
-          <div class="input-group">
-            <label for="edit-title-ar">الاسم (عربي)</label>
-            <input type="text" id="edit-title-ar" required />
-          </div>
-
-          <div class="input-group">
-            <label for="edit-title-en">الاسم (إنجليزي)</label>
-            <input type="text" id="edit-title-en" />
-          </div>
-
-          <div class="input-group">
-            <label for="edit-price">السعر (DZD)</label>
-            <input type="number" id="edit-price" required />
-          </div>
-
-          <div class="input-group">
-            <label for="edit-type">نوع العقار</label>
-            <select id="edit-type" required>
-              <option value="apartment">شقة (Apartment)</option>
-              <option value="villa">فيلا (Villa)</option>
-              <option value="resort">منتجع (Resort)</option>
-              <option value="pool">مسبح (Pool)</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label for="edit-loc-ar">العنوان (عربي)</label>
-            <input type="text" id="edit-loc-ar" />
-          </div>
-
-          <div class="input-group">
-            <label for="edit-loc-en">العنوان (إنجليزي)</label>
-            <input type="text" id="edit-loc-en" />
-          </div>
-
-          <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-desc-ar">الوصف (عربي)</label>
-            <textarea id="edit-desc-ar" rows="4" required></textarea>
-          </div>
-
-          <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-desc-en">الوصف (إنجليزي)</label>
-            <textarea id="edit-desc-en" rows="4"></textarea>
-          </div>
-
-          <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-image">تغيير الصورة الرئيسية</label>
-            <div class="upload-zone" style="padding:24px 16px;">
-              <i class="ph ph-image-square"></i>
-              <span class="upload-zone-text" id="edit-upload-zone-text">اختر صورة جديدة إن أردت استبدال الحالية</span>
-              <span class="upload-zone-sub">اختياري — PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
-              <input type="file" id="edit-image" accept="image/*" />
-            </div>
-
-            <div class="upload-preview" id="edit-upload-preview-box">
-              <img id="edit-upload-preview-img" alt="Preview" />
-              <div class="upload-preview-meta">
-                <strong id="edit-upload-preview-name">معاينة الصورة الجديدة</strong>
-                <span id="edit-upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
-              </div>
-            </div>
-          </div>
+          <div class="input-group"><label for="edit-title-ar">الاسم بالعربية</label><input id="edit-title-ar" required /></div>
+          <div class="input-group"><label for="edit-title-en">الاسم بالإنجليزية</label><input id="edit-title-en" required /></div>
+          <div class="input-group"><label for="edit-loc-ar">الموقع بالعربية</label><input id="edit-loc-ar" required /></div>
+          <div class="input-group"><label for="edit-loc-en">الموقع بالإنجليزية</label><input id="edit-loc-en" required /></div>
+          <div class="input-group"><label for="edit-price">السعر</label><input id="edit-price" type="number" min="0" step="1" required /></div>
+          <div class="input-group"><label for="edit-type">النوع</label><select id="edit-type"><option value="apartment">شقة</option><option value="villa">فيلا</option><option value="resort">منتجع</option><option value="pool">مسبح</option></select></div>
+          <div class="input-group"><label for="edit-desc-ar">الوصف بالعربية</label><textarea id="edit-desc-ar" required></textarea></div>
+          <div class="input-group"><label for="edit-desc-en">الوصف بالإنجليزية</label><textarea id="edit-desc-en" required></textarea></div>
         </div>
 
-        <div class="input-group" style="margin-top:20px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <i class="ph-fill ph-map-pin" style="color:var(--primary); font-size:1.1rem;"></i>
-            تعديل موقع العقار
+        <div class="modern-section mt-4" style="padding:20px;">
+          <div class="modern-section-header" style="margin-bottom:16px;"><i class="ph ph-image"></i><div><h4>تحديث الصورة</h4></div></div>
+          <label class="upload-zone" for="edit-image">
+            <i class="ph ph-upload-simple"></i>
+            <div class="upload-zone-text">رفع صورة جديدة</div>
+            <div class="upload-zone-sub">اختياري — اتركه فارغًا إذا لم ترغب بالتغيير</div>
+            <input id="edit-image" type="file" accept="image/*" />
           </label>
-
-          <div class="map-picker-wrapper">
-            <div id="edit-map-picker"></div>
-
-            <div class="map-picked-badge" id="edit-map-picked-badge">
-              <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع
-            </div>
-
-            <div class="coords-row">
-              <div class="input-group">
-                <label for="edit-lat">خط العرض</label>
-                <input type="text" id="edit-lat" readonly />
-              </div>
-
-              <div class="input-group">
-                <label for="edit-lng">خط الطول</label>
-                <input type="text" id="edit-lng" readonly />
-              </div>
+          <div id="edit-upload-preview" class="upload-preview">
+            <img id="edit-upload-preview-img" src="" alt="Preview" />
+            <div class="upload-preview-meta">
+              <strong id="edit-upload-preview-name">—</strong>
+              <span id="edit-upload-preview-size">—</span>
             </div>
           </div>
         </div>
 
-        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn" style="height:52px; display:flex; align-items:center; justify-content:center; gap:8px;">
-          حفظ التعديلات <i class="ph ph-floppy-disk"></i>
-        </button>
+        <div class="modern-section mt-4" style="padding:20px;">
+          <div class="modern-section-header" style="margin-bottom:16px;"><i class="ph ph-map-trifold"></i><div><h4>موقع العقار</h4></div></div>
+          <div class="map-picker-wrapper">
+            <div class="map-search-row">
+              <input id="edit-map-search" type="text" placeholder="ابحث عن الموقع..." />
+              <button id="edit-map-search-btn" type="button"><i class="ph ph-magnifying-glass"></i><span>بحث</span></button>
+            </div>
+            <div id="edit-map-picker"></div>
+            <div class="coords-row">
+              <div class="input-group"><label for="edit-lat">Latitude</label><input id="edit-lat" readonly /></div>
+              <div class="input-group"><label for="edit-lng">Longitude</label><input id="edit-lng" readonly /></div>
+            </div>
+            <div id="edit-map-picked-badge" class="map-picked-badge"><i class="ph ph-check-circle"></i><span>تم تحديد الموقع</span></div>
+          </div>
+        </div>
+
+        <div class="admin-footer-actions">
+          <button id="submit-edit-btn" type="submit" class="primary-btn"><i class="ph ph-floppy-disk"></i><span>حفظ التعديلات</span></button>
+          <button type="button" class="ghost-action" onclick="closeEditModal()"><i class="ph ph-x"></i><span>إلغاء</span></button>
+        </div>
       </form>
     </div>
   </div>
 
   <script>
     (function () {
-      // ==========================================
-      // Firebase Helper - unified access point
-      // ==========================================
-      window.getDB = function () {
-        if (window.__db) return window.__db;
-        if (window.__firebaseReady === false) {
-          throw new Error("Firebase غير متاح — يرجى التحقق من إعدادات المشروع في admin.html");
-        }
-        // Fallback: try accessing via firebase global
-        if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) {
-          window.__db = firebase.firestore();
-          return window.__db;
-        }
-        throw new Error("Firebase غير متاح داخل الصفحة حالياً.");
-      };
-
-      // ==========================================
-      // Show Firebase status banner
-      // ==========================================
-      function showFirebaseBanner() {
-        const banner = document.getElementById("firebase-status-banner");
-        if (!banner) return;
-
-        if (window.__firebaseReady === false) {
-          banner.className = "firebase-status-banner error";
-          banner.innerHTML = `
-            <i class="ph-fill ph-warning-circle" style="font-size:1.3rem;flex-shrink:0;"></i>
-            <span>
-              <strong>تحذير: Firebase غير متصل.</strong>
-              لن تعمل عمليات الحجوزات والعقارات حتى يتم إعداد Firebase بشكل صحيح.
-              يرجى تحديث إعدادات firebaseConfig في ملف admin.html.
-            </span>
-          `;
-          banner.style.display = "flex";
-        } else if (window.__firebaseReady === true) {
-          // Don't show success banner unless needed
-          banner.style.display = "none";
-        }
-      }
-
-      // ==========================================
-      // Bookings Filter Logic - NEW
-      // ==========================================
-      window.__allBookingsData = [];
-      window.__currentBookingFilter = "all";
-
-      window.filterBookings = function (filter) {
-        window.__currentBookingFilter = filter;
-
-        // Update active tab button
-        document.querySelectorAll(".filter-tab-btn").forEach(btn => {
-          const isActive = btn.dataset.filter === filter;
-          btn.classList.toggle("active", isActive);
-          btn.setAttribute("aria-selected", isActive ? "true" : "false");
-        });
-
-        renderFilteredBookings();
-      };
-
-      window.updateBookingFilterCounts = function (bookings) {
-        window.__allBookingsData = bookings || [];
-
-        const counts = { all: 0, pending: 0, confirmed: 0, rejected: 0 };
-        bookings.forEach(b => {
-          counts.all++;
-          const status = (b.status || "pending").toLowerCase();
-          if (counts[status] !== undefined) counts[status]++;
-          else counts.pending++;
-        });
-
-        const ids = ["all", "pending", "confirmed", "rejected"];
-        ids.forEach(id => {
-          const el = document.getElementById("filter-count-" + id);
-          if (el) el.textContent = counts[id];
-        });
-      };
-
-      function renderFilteredBookings() {
-        const filter = window.__currentBookingFilter;
-        const container = document.getElementById("bookings-container");
-        if (!container) return;
-
-        // Find the bookings grid inside the container
-        const grid = container.querySelector(".bookings-grid");
-
-        if (!grid) {
-          // If no grid yet, let admin_bookings_addon handle first render
-          return;
-        }
-
-        const cards = grid.querySelectorAll(".booking-card");
-        let visibleCount = 0;
-
-        cards.forEach(card => {
-          const status = (card.dataset.status || "pending").toLowerCase();
-          const show = filter === "all" || status === filter;
-          card.style.display = show ? "" : "none";
-          if (show) visibleCount++;
-        });
-
-        // Show/hide empty state within grid
-        let emptyMsg = grid.querySelector(".bookings-filter-empty");
-        if (visibleCount === 0) {
-          if (!emptyMsg) {
-            emptyMsg = document.createElement("div");
-            emptyMsg.className = "empty-state bookings-filter-empty";
-            emptyMsg.style.gridColumn = "1 / -1";
-
-            const filterLabels = {
-              pending: "قيد الانتظار",
-              confirmed: "المقبولة",
-              rejected: "المرفوضة",
-              all: "الكل"
-            };
-
-            const filterIcons = {
-              pending: "ph-clock",
-              confirmed: "ph-check-circle",
-              rejected: "ph-x-circle",
-              all: "ph-calendar-x"
-            };
-
-            emptyMsg.innerHTML = `
-              <i class="ph ${filterIcons[filter] || "ph-calendar-x"}" style="font-size:2.8rem; color:var(--primary); margin-bottom:12px; display:block; opacity:0.75;"></i>
-              <strong style="display:block; margin-bottom:8px; color:var(--text-main);">
-                لا توجد حجوزات ${filter !== "all" ? filterLabels[filter] : ""}
-              </strong>
-              <span style="font-size:0.88rem;">لم يتم العثور على حجوزات في هذه الفئة.</span>
-            `;
-            grid.appendChild(emptyMsg);
-          }
+      const firebaseBanner = document.getElementById('firebase-status-banner');
+      if (firebaseBanner) {
+        if (window.__firebaseReady) {
+          firebaseBanner.className = 'firebase-status-banner success';
+          firebaseBanner.innerHTML = '<i class="ph ph-check-circle"></i><span>تم الاتصال بـ Firebase بنجاح.</span>';
         } else {
-          emptyMsg?.remove();
+          firebaseBanner.className = 'firebase-status-banner error';
+          firebaseBanner.innerHTML = '<i class="ph ph-warning-circle"></i><span>تعذر الاتصال بـ Firebase: ' + (window.__firebaseError || 'خطأ غير معروف') + '</span>';
         }
       }
 
-      // Override renderFilteredBookings so it's called after bookings load
-      window.__renderFilteredBookings = renderFilteredBookings;
+      const body = document.body;
+      const mobileToggle = document.getElementById('admin-mobile-toggle');
+      const sidebar = document.getElementById('admin-sidebar');
+      const themeToggle = document.getElementById('admin-theme-toggle');
 
-      // ==========================================
-      // Theme
-      // ==========================================
-      function setThemeFromStorage() {
-        const theme = localStorage.getItem("ore_theme") || "light";
-        document.body.classList.toggle("dark", theme === "dark");
-        document.documentElement.classList.toggle("dark", theme === "dark");
+      function applyTheme(mode) {
+        if (mode === 'dark') body.classList.add('dark');
+        else body.classList.remove('dark');
+        try { localStorage.setItem('ore_theme', mode); } catch (_) {}
+        if (themeToggle) themeToggle.innerHTML = mode === 'dark' ? '<i class="ph ph-sun"></i>' : '<i class="ph ph-moon"></i>';
       }
 
-      // ==========================================
-      // Page Meta
-      // ==========================================
-      function updatePageMetaFromNav(tab) {
-        const title = document.getElementById("page-title");
-        const subtitle = document.getElementById("page-subtitle");
-        const profileName = document.getElementById("admin-profile-name");
-        const profileRole = document.getElementById("admin-profile-role");
+      try {
+        applyTheme(localStorage.getItem('ore_theme') || (document.documentElement.classList.contains('preload-dark') ? 'dark' : 'light'));
+      } catch (_) { applyTheme('light'); }
 
-        const map = {
-          "manage-props": {
-            title: "إدارة العقارات",
-            subtitle: "واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح."
-          },
-          "add-property": {
-            title: "إضافة عقار جديد",
-            subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
-          },
-          "owner-accounts": {
-            title: "حسابات ملاك العقارات",
-            subtitle: "أنشئ حسابات خاصة لأصحاب العقارات وحدد من يمكنه الدخول إلى لوحة التحكم الخاصة بعقاره."
-          },
-          "bookings": {
-            title: "إدارة الحجوزات",
-            subtitle: "مراجعة طلبات الحجز، اعتمادها أو رفضها، ومتابعة الحالة الحالية بسهولة."
-          }
-        };
-
-        const current = map[tab] || map["manage-props"];
-        if (title) title.textContent = current.title;
-        if (subtitle) subtitle.textContent = current.subtitle;
-
-        const isOwnerMode = !!localStorage.getItem("ownerPropId");
-        const ownerName = localStorage.getItem("ownerPropName") || "صاحب العقار";
-        const ownerUsername = localStorage.getItem("ownerUsername") || "";
-
-        if (profileName && profileRole) {
-          if (isOwnerMode) {
-            profileName.textContent = ownerName;
-            profileRole.textContent = ownerUsername ? `حساب مالك • ${ownerUsername}` : "حساب مالك";
-          } else {
-            profileName.textContent = "مدير النظام";
-            profileRole.textContent = "بصلاحيات كاملة";
-          }
-        }
-      }
-
-      // ==========================================
-      // Sidebar UI
-      // ==========================================
-      function bindSidebarUi() {
-        const mobileToggle = document.getElementById("admin-mobile-toggle");
-        const sidebar = document.getElementById("admin-sidebar");
-
-        mobileToggle?.addEventListener("click", () => {
-          sidebar?.classList.toggle("open");
+      if (themeToggle) {
+        themeToggle.addEventListener('click', function () {
+          applyTheme(body.classList.contains('dark') ? 'light' : 'dark');
         });
+      }
 
-        document.addEventListener("click", e => {
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', function () {
+          sidebar.classList.toggle('open');
+        });
+        document.addEventListener('click', function (e) {
           if (window.innerWidth > 1100) return;
-          if (!sidebar || !mobileToggle) return;
+          if (!sidebar.classList.contains('open')) return;
           if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
-          sidebar.classList.remove("open");
-        });
-
-        document.querySelectorAll("[data-tab-target]").forEach(btn => {
-          btn.addEventListener("click", () => {
-            updatePageMetaFromNav(btn.dataset.tabTarget);
-            sidebar?.classList.remove("open");
-          });
+          sidebar.classList.remove('open');
         });
       }
 
-      // ==========================================
-      // Upload Preview
-      // ==========================================
-      function bindUploadPreview(inputId, previewBoxId, imgId, nameId, sizeId, textSelector, statusId) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
+      document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-tab-target]');
+        if (!btn) return;
+        document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => item.classList.remove('active'));
+        btn.classList.add('active');
 
-        input.addEventListener("change", function () {
-          const file = this.files?.[0] || null;
-          const previewBox = document.getElementById(previewBoxId);
-          const img = document.getElementById(imgId);
-          const name = document.getElementById(nameId);
-          const size = document.getElementById(sizeId);
-          const status = statusId ? document.getElementById(statusId) : null;
-          const text = textSelector ? document.querySelector(textSelector) : null;
+        const target = btn.getAttribute('data-tab-target');
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        const activePane = document.getElementById('tab-' + target);
+        if (activePane) activePane.classList.add('active');
+        if (sidebar && window.innerWidth <= 1100) sidebar.classList.remove('open');
+      });
 
+      function attachPreview(fileInputId, previewWrapId, imgId, nameId, sizeId) {
+        const input = document.getElementById(fileInputId);
+        const wrap = document.getElementById(previewWrapId);
+        const img = document.getElementById(imgId);
+        const name = document.getElementById(nameId);
+        const size = document.getElementById(sizeId);
+        if (!input || !wrap || !img || !name || !size) return;
+        input.addEventListener('change', function () {
+          const file = input.files && input.files[0];
           if (!file) {
-            previewBox?.classList.remove("visible");
-            if (img) img.removeAttribute("src");
-            if (name) name.textContent = "معاينة الصورة";
-            if (size) size.textContent = "سيظهر اسم وحجم الملف هنا";
-            if (status) status.textContent = "";
-            if (text) text.textContent = inputId === "edit-image" ? "اختر صورة جديدة إن أردت استبدال الحالية" : "اضغط هنا أو اسحب الصورة";
+            wrap.classList.remove('visible');
+            img.src = '';
+            name.textContent = '—';
+            size.textContent = '—';
             return;
           }
-
-          if (file.size > 5 * 1024 * 1024) {
-            alert("حجم الصورة يتجاوز 5 ميجابايت، يرجى اختيار صورة أصغر.");
-            input.value = "";
-            previewBox?.classList.remove("visible");
-            if (img) img.removeAttribute("src");
-            return;
-          }
-
-          if (text) text.textContent = "✅ " + file.name;
-          if (name) name.textContent = file.name;
-          if (size) size.textContent = `الحجم: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
-          if (status) status.textContent = "تم اختيار ملف الصورة بنجاح";
-
-          if (file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.onload = e => {
-              if (img) img.src = e.target.result;
-              previewBox?.classList.add("visible");
-            };
-            reader.readAsDataURL(file);
-          }
+          img.src = URL.createObjectURL(file);
+          name.textContent = file.name;
+          size.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+          wrap.classList.add('visible');
         });
       }
+      attachPreview('image', 'upload-preview', 'upload-preview-img', 'upload-preview-name', 'upload-preview-size');
+      attachPreview('edit-image', 'edit-upload-preview', 'edit-upload-preview-img', 'edit-upload-preview-name', 'edit-upload-preview-size');
 
-      // ==========================================
-      // Reset Add Property Form
-      // ==========================================
-      function resetAddPropertyUi() {
-        document.getElementById("reset-property-form-btn")?.addEventListener("click", () => {
-          document.getElementById("add-property-form")?.reset();
-          document.getElementById("map-picked-badge")?.classList.remove("visible");
-          document.getElementById("prop-lat").value = "";
-          document.getElementById("prop-lng").value = "";
-          document.getElementById("upload-status").textContent = "";
-          document.getElementById("upload-preview-box")?.classList.remove("visible");
-          document.getElementById("upload-preview-img")?.removeAttribute("src");
-          document.getElementById("upload-preview-name").textContent = "معاينة الصورة";
-          document.getElementById("upload-preview-size").textContent = "سيظهر اسم وحجم الملف هنا";
-          const text = document.querySelector(".upload-zone-text");
-          if (text) text.textContent = "اضغط هنا أو اسحب الصورة";
-          if (typeof window._resetAddMap === "function") window._resetAddMap();
-        });
-      }
-
-      // ==========================================
-      // Map - Add Property
-      // ==========================================
-      function initAddMap() {
-        const mapEl = document.getElementById("admin-map-picker");
-        if (!mapEl || typeof L === "undefined") return;
-
-        if (window.__adminAddMap) {
-          setTimeout(() => window.__adminAddMap.invalidateSize(), 100);
-          return;
-        }
-
-        const defaultLatLng = [33.3561, 6.8632];
-        const map = L.map("admin-map-picker", { zoomControl: true }).setView(defaultLatLng, 6);
-        window.__adminAddMap = map;
-        window.__adminAddMarker = null;
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      function setupMap(mapId, latId, lngId, badgeId, defaultCoords) {
+        const mapEl = document.getElementById(mapId);
+        if (!mapEl || typeof L === 'undefined') return null;
+        const latInput = document.getElementById(latId);
+        const lngInput = document.getElementById(lngId);
+        const badge = document.getElementById(badgeId);
+        const map = L.map(mapId).setView(defaultCoords || [36.1911, 5.4137], defaultCoords ? 13 : 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          attribution: "&copy; OpenStreetMap"
+          attribution: '&copy; OpenStreetMap'
         }).addTo(map);
+        let marker = null;
 
-        map.on("click", function (e) {
-          const lat = e.latlng.lat.toFixed(6);
-          const lng = e.latlng.lng.toFixed(6);
-
-          document.getElementById("prop-lat").value = lat;
-          document.getElementById("prop-lng").value = lng;
-          document.getElementById("map-picked-badge")?.classList.add("visible");
-
-          if (window.__adminAddMarker) {
-            window.__adminAddMarker.setLatLng(e.latlng);
-          } else {
-            window.__adminAddMarker = L.marker(e.latlng).addTo(map);
-          }
-        });
-
-        setTimeout(() => map.invalidateSize(), 120);
-      }
-
-      // ==========================================
-      // Map Search
-      // ==========================================
-      async function searchMapLocation() {
-        const input = document.getElementById("map-search-input");
-        const query = (input?.value || "").trim();
-        if (!query || !window.__adminAddMap) return;
-
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-          const data = await res.json();
-          if (!Array.isArray(data) || !data.length) {
-            alert("لم يتم العثور على الموقع المطلوب.");
-            return;
-          }
-
-          const first = data[0];
-          const lat = parseFloat(first.lat);
-          const lng = parseFloat(first.lon);
-          const target = [lat, lng];
-
-          window.__adminAddMap.setView(target, 13);
-          document.getElementById("prop-lat").value = lat.toFixed(6);
-          document.getElementById("prop-lng").value = lng.toFixed(6);
-          document.getElementById("map-picked-badge")?.classList.add("visible");
-
-          if (window.__adminAddMarker) {
-            window.__adminAddMarker.setLatLng(target);
-          } else {
-            window.__adminAddMarker = L.marker(target).addTo(window.__adminAddMap);
-          }
-        } catch (_) {
-          alert("تعذر تنفيذ البحث على الخريطة حالياً.");
-        }
-      }
-
-      // ==========================================
-      // Map - Edit Modal
-      // ==========================================
-      function initEditMap(lat = null, lng = null) {
-        const mapEl = document.getElementById("edit-map-picker");
-        if (!mapEl || typeof L === "undefined") return;
-
-        const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
-        const center = hasCoords ? [lat, lng] : [33.3561, 6.8632];
-
-        if (!window.__adminEditMap) {
-          window.__adminEditMap = L.map("edit-map-picker", { zoomControl: true }).setView(center, hasCoords ? 14 : 6);
-
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: "&copy; OpenStreetMap"
-          }).addTo(window.__adminEditMap);
-
-          window.__adminEditMap.on("click", function (e) {
-            const pickedLat = e.latlng.lat.toFixed(6);
-            const pickedLng = e.latlng.lng.toFixed(6);
-
-            document.getElementById("edit-lat").value = pickedLat;
-            document.getElementById("edit-lng").value = pickedLng;
-            document.getElementById("edit-map-picked-badge")?.classList.add("visible");
-
-            if (window.__adminEditMarker) {
-              window.__adminEditMarker.setLatLng(e.latlng);
-            } else {
-              window.__adminEditMarker = L.marker(e.latlng).addTo(window.__adminEditMap);
-            }
-          });
-        } else {
-          window.__adminEditMap.setView(center, hasCoords ? 14 : 6);
+        function setPoint(lat, lng) {
+          if (latInput) latInput.value = Number(lat).toFixed(6);
+          if (lngInput) lngInput.value = Number(lng).toFixed(6);
+          if (!marker) marker = L.marker([lat, lng]).addTo(map);
+          else marker.setLatLng([lat, lng]);
+          map.setView([lat, lng], 14);
+          if (badge) badge.classList.add('visible');
         }
 
-        if (hasCoords) {
-          document.getElementById("edit-lat").value = Number(lat).toFixed(6);
-          document.getElementById("edit-lng").value = Number(lng).toFixed(6);
-          document.getElementById("edit-map-picked-badge")?.classList.add("visible");
+        map.on('click', function (e) {
+          setPoint(e.latlng.lat, e.latlng.lng);
+        });
 
-          if (window.__adminEditMarker) {
-            window.__adminEditMarker.setLatLng(center);
-          } else {
-            window.__adminEditMarker = L.marker(center).addTo(window.__adminEditMap);
-          }
-        } else {
-          document.getElementById("edit-map-picked-badge")?.classList.remove("visible");
-        }
-
-        setTimeout(() => window.__adminEditMap.invalidateSize(), 160);
+        if (defaultCoords && defaultCoords.length === 2) setPoint(defaultCoords[0], defaultCoords[1]);
+        return { map, setPoint };
       }
 
-      // ==========================================
-      // Edit Modal
-      // ==========================================
-      function bindEditModalUi() {
-        document.getElementById("close-edit-modal-btn")?.addEventListener("click", () => {
-          if (typeof window.closeEditModal === "function") window.closeEditModal();
-          else document.getElementById("edit-modal")?.classList.remove("active");
-        });
+      const addMapApi = setupMap('admin-map-picker', 'lat', 'lng', 'admin-map-picked-badge');
+      let editMapApi = null;
 
-        document.getElementById("edit-modal")?.addEventListener("click", e => {
-          if (e.target.id === "edit-modal") {
-            if (typeof window.closeEditModal === "function") window.closeEditModal();
-            else document.getElementById("edit-modal")?.classList.remove("active");
-          }
-        });
-
-        document.addEventListener("keydown", e => {
-          if (e.key === "Escape") {
-            document.getElementById("admin-sidebar")?.classList.remove("open");
-          }
-        });
-      }
-
-      // ==========================================
-      // Expose globals
-      // ==========================================
-      window.searchMapLocation = searchMapLocation;
       window.initEditMapFromAdmin = function (lat, lng) {
-        initEditMap(lat, lng);
-      };
-      window._resetAddMap = function () {
-        if (window.__adminAddMap) {
-          window.__adminAddMap.setView([33.3561, 6.8632], 6);
-        }
-        if (window.__adminAddMarker && window.__adminAddMap) {
-          window.__adminAddMap.removeLayer(window.__adminAddMarker);
-          window.__adminAddMarker = null;
-        }
-        document.getElementById("map-picked-badge")?.classList.remove("visible");
+        const hasCoords = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+        if (!editMapApi) editMapApi = setupMap('edit-map-picker', 'edit-lat', 'edit-lng', 'edit-map-picked-badge', hasCoords ? [Number(lat), Number(lng)] : [36.1911, 5.4137]);
+        setTimeout(function () {
+          if (editMapApi && editMapApi.map) {
+            editMapApi.map.invalidateSize();
+            if (hasCoords) editMapApi.setPoint(Number(lat), Number(lng));
+          }
+        }, 180);
       };
 
-      // ==========================================
-      // DOMContentLoaded
-      // ==========================================
-      document.addEventListener("DOMContentLoaded", function () {
-        setThemeFromStorage();
-        showFirebaseBanner();
-        bindSidebarUi();
-        bindEditModalUi();
-        bindUploadPreview("prop-image", "upload-preview-box", "upload-preview-img", "upload-preview-name", "upload-preview-size", ".upload-zone-text", "upload-status");
-        bindUploadPreview("edit-image", "edit-upload-preview-box", "edit-upload-preview-img", "edit-upload-preview-name", "edit-upload-preview-size", "#edit-upload-zone-text", null);
-        resetAddPropertyUi();
-        initAddMap();
+      window.resetEditUploadPreview = function () {
+        const wrap = document.getElementById('edit-upload-preview');
+        const img = document.getElementById('edit-upload-preview-img');
+        const name = document.getElementById('edit-upload-preview-name');
+        const size = document.getElementById('edit-upload-preview-size');
+        if (wrap) wrap.classList.remove('visible');
+        if (img) img.src = '';
+        if (name) name.textContent = '—';
+        if (size) size.textContent = '—';
+      };
 
-        document.getElementById("map-search-btn")?.addEventListener("click", searchMapLocation);
-        document.getElementById("map-search-input")?.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            searchMapLocation();
+      document.getElementById('clear-bookings-btn')?.addEventListener('click', function () {
+        if (typeof window.clearAllBookings === 'function') {
+          window.clearAllBookings();
+        }
+      });
+
+      ['admin-map-search-btn', 'edit-map-search-btn'].forEach(function (btnId) {
+        const btn = document.getElementById(btnId);
+        btn?.addEventListener('click', async function () {
+          const isEdit = btnId === 'edit-map-search-btn';
+          const input = document.getElementById(isEdit ? 'edit-map-search' : 'admin-map-search');
+          const q = (input?.value || '').trim();
+          if (!q) return;
+          try {
+            const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q));
+            const data = await res.json();
+            if (!Array.isArray(data) || !data.length) return;
+            const lat = Number(data[0].lat), lng = Number(data[0].lon);
+            if (isEdit) {
+              window.initEditMapFromAdmin(lat, lng);
+            } else if (addMapApi) {
+              addMapApi.setPoint(lat, lng);
+            }
+          } catch (err) {
+            console.warn('Map search failed', err);
           }
         });
-
-        updatePageMetaFromNav("manage-props");
       });
     })();
   </script>
-
-  <!-- admin.js و admin_bookings_addon.js يُحمَّلان بعد تهيئة Firebase -->
-  <script src="admin.js?v=2"></script>
-  <script src="admin_bookings_addon.js"></script>
-
-  <!--
-    ================================================================
-    ملاحظات للمطور - DEVELOPER NOTES
-    ================================================================
-
-     إصلاح Firebase:
-    ─────────────────
-    تم نقل تهيئة Firebase إلى أعلى الصفحة (داخل <head>) قبل تحميل
-    أي سكريبت خارجي. وتم إنشاء window.getDB() كنقطة وصول موحدة.
-
-    في admin.js و admin_bookings_addon.js، استبدل:
-      firebase.firestore()
-      أو
-      db (إذا كانت متعرَّفة خارجياً)
-    بـ:
-      window.getDB()
-      أو
-      getDB()
-
-    مثال في admin_bookings_addon.js:
-    ─────────────────────────────────
-    // قبل التعديل:
-    const db = firebase.firestore();
-    db.collection("bookings").get()...
-
-    // بعد التعديل:
-    try {
-      const db = getDB();
-      db.collection("bookings").get()...
-    } catch (err) {
-      console.error(err.message);
-      return;
-    }
-
-    🔽 فلتر الحجوزات:
-    ─────────────────
-    بعد تحميل الحجوزات في admin_bookings_addon.js، أضف:
-      window.updateBookingFilterCounts(bookingsArray);
-    وتأكد أن كل .booking-card لها:
-      data-status="pending"  أو  "confirmed"  أو  "rejected"
-    وبعد رسم الكروت، استدعِ:
-      if (typeof window.__renderFilteredBookings === "function") {
-        window.__renderFilteredBookings();
-      }
-    ================================================================
-  -->
 </body>
 </html>
