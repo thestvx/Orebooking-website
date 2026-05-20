@@ -18,13 +18,40 @@
 
   <script>
     try {
-      const rawLang = localStorage.getItem("orelang") || "ar";
+      const rawLang =
+        localStorage.getItem("ore_lang") ||
+        localStorage.getItem("orelang") ||
+        "ar";
       const savedLang = rawLang === "en" ? "en" : "ar";
-      const savedTheme = localStorage.getItem("oretheme") || "light";
+
+      const savedTheme =
+        localStorage.getItem("ore_theme") ||
+        localStorage.getItem("oretheme") ||
+        "light";
+
       document.documentElement.lang = savedLang;
       document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
-      if (savedTheme === "dark") document.documentElement.classList.add("dark");
-    } catch (_) { }
+
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    } catch (_) {}
+  </script>
+
+  <script>
+    try {
+      const legacyKeys = [
+        "ore_guest_basics",
+        "ore_booking_draft_v4",
+        "ore_booking_draft_v5"
+      ];
+
+      legacyKeys.forEach((key) => {
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (_) {}
   </script>
 
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
@@ -159,8 +186,15 @@
                     <span data-i18n="fullname">الاسم الكامل</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="guest-name" class="form-control" type="text" data-i18n-placeholder="fullnameplaceholder"
-                    placeholder="الاسم الكامل" autocomplete="name" required />
+                  <input
+                    id="guest-name"
+                    class="form-control"
+                    type="text"
+                    data-i18n-placeholder="fullnameplaceholder"
+                    placeholder="الاسم الكامل"
+                    autocomplete="name"
+                    required
+                  />
                 </div>
 
                 <div class="form-group">
@@ -168,9 +202,15 @@
                     <span data-i18n="emailaddress">البريد الإلكتروني</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="guest-email" class="form-control" type="email"
-                    data-i18n-placeholder="emailplaceholder" placeholder="name@example.com" autocomplete="email"
-                    required />
+                  <input
+                    id="guest-email"
+                    class="form-control"
+                    type="email"
+                    data-i18n-placeholder="emailplaceholder"
+                    placeholder="name@example.com"
+                    autocomplete="email"
+                    required
+                  />
                 </div>
 
                 <div class="form-group">
@@ -178,8 +218,15 @@
                     <span data-i18n="phonenumber">رقم الهاتف</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="guest-phone" class="form-control" type="tel" data-i18n-placeholder="phoneplaceholder"
-                    placeholder="+213 ..." autocomplete="tel" required />
+                  <input
+                    id="guest-phone"
+                    class="form-control"
+                    type="tel"
+                    data-i18n-placeholder="phoneplaceholder"
+                    placeholder="+213 ..."
+                    autocomplete="tel"
+                    required
+                  />
                 </div>
 
                 <div class="form-group">
@@ -187,9 +234,15 @@
                     <span data-i18n="countryregion">الدولة / الجنسية</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="guest-country" class="form-control" type="text"
-                    data-i18n-placeholder="countryregionplaceholder" placeholder="الدولة أو الجنسية"
-                    autocomplete="country-name" required />
+                  <input
+                    id="guest-country"
+                    class="form-control"
+                    type="text"
+                    data-i18n-placeholder="countryregionplaceholder"
+                    placeholder="الدولة أو الجنسية"
+                    autocomplete="country-name"
+                    required
+                  />
                 </div>
               </div>
             </div>
@@ -265,9 +318,12 @@
 
                 <div class="form-group full-width">
                   <label for="special-requests" class="form-label" data-i18n="specialrequests">طلبات خاصة</label>
-                  <textarea id="special-requests" class="form-control"
+                  <textarea
+                    id="special-requests"
+                    class="form-control"
                     data-i18n-placeholder="specialrequestsplaceholder"
-                    placeholder="ملاحظة اختيارية للمضيف"></textarea>
+                    placeholder="ملاحظة اختيارية للمضيف"
+                  ></textarea>
                   <span class="hint-text" data-i18n="specialrequestshint">
                     اجعل الطلبات قصيرة وواضحة.
                   </span>
@@ -355,15 +411,24 @@
                     <span data-i18n="billingname">اسم الفوترة</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="billing-name" class="form-control" type="text"
-                    data-i18n-placeholder="billingnameplaceholder" placeholder="الاسم الكامل للفوترة" required />
+                  <input
+                    id="billing-name"
+                    class="form-control"
+                    type="text"
+                    data-i18n-placeholder="billingnameplaceholder"
+                    placeholder="الاسم الكامل للفوترة"
+                    required
+                  />
                 </div>
 
                 <div class="form-group full-width">
                   <label for="billing-note" class="form-label" data-i18n="billingnote">ملاحظة الفوترة</label>
-                  <textarea id="billing-note" class="form-control"
+                  <textarea
+                    id="billing-note"
+                    class="form-control"
                     data-i18n-placeholder="billingnoteplaceholder"
-                    placeholder="ملاحظة اختيارية للفوترة أو الدفع"></textarea>
+                    placeholder="ملاحظة اختيارية للفوترة أو الدفع"
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -415,8 +480,13 @@
                     <span data-i18n="senderfullname">اسم المرسل</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="sender-name" class="form-control" type="text"
-                    data-i18n-placeholder="sendernameplaceholder" placeholder="الاسم المستخدم في التحويل" />
+                  <input
+                    id="sender-name"
+                    class="form-control"
+                    type="text"
+                    data-i18n-placeholder="sendernameplaceholder"
+                    placeholder="الاسم المستخدم في التحويل"
+                  />
                 </div>
 
                 <div class="form-group">
@@ -424,8 +494,14 @@
                     <span data-i18n="transferredamount">المبلغ المحول</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="transfer-amount" class="form-control" type="number" min="0"
-                    data-i18n-placeholder="transferamountplaceholder" placeholder="المبلغ المدفوع" />
+                  <input
+                    id="transfer-amount"
+                    class="form-control"
+                    type="number"
+                    min="0"
+                    data-i18n-placeholder="transferamountplaceholder"
+                    placeholder="المبلغ المدفوع"
+                  />
                 </div>
 
                 <div class="form-group">
@@ -448,8 +524,12 @@
                       اضغط لرفع إيصال الدفع
                     </div>
                     <div class="file-upload-hint" data-i18n="uploadhint">JPG, PNG, PDF, WEBP - 5MB</div>
-                    <input id="receipt-upload" class="file-upload-input" type="file"
-                      accept=".jpg,.jpeg,.png,.pdf,.webp" />
+                    <input
+                      id="receipt-upload"
+                      class="file-upload-input"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,.webp"
+                    />
                   </label>
                 </div>
               </div>
@@ -471,8 +551,13 @@
                     <span data-i18n="whowillpaycheckin">من سيدفع عند الوصول</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="cash-payer-name" class="form-control" type="text"
-                    data-i18n-placeholder="cashpayerplaceholder" placeholder="اسم الشخص المسؤول عن الدفع" />
+                  <input
+                    id="cash-payer-name"
+                    class="form-control"
+                    type="text"
+                    data-i18n-placeholder="cashpayerplaceholder"
+                    placeholder="اسم الشخص المسؤول عن الدفع"
+                  />
                 </div>
 
                 <div class="form-group">
@@ -490,8 +575,11 @@
 
                 <div class="form-group full-width">
                   <label for="cash-payment-note" class="form-label">ملاحظة الدفع</label>
-                  <textarea id="cash-payment-note" class="form-control"
-                    placeholder="ملاحظة اختيارية حول الدفع"></textarea>
+                  <textarea
+                    id="cash-payment-note"
+                    class="form-control"
+                    placeholder="ملاحظة اختيارية حول الدفع"
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -573,7 +661,7 @@
 
                   <div class="review-card-body">
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="checkincheckout">الدخول / الخروج</span>
+                      <span class="rd-label" data-i18n="checkincheckout">الدخول والخروج</span>
                       <span id="rev-dates" class="rd-value"></span>
                     </div>
                     <div class="review-data">
@@ -581,20 +669,20 @@
                       <span id="rev-guests" class="rd-value"></span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="purposearrival">الغرض / الوصول</span>
+                      <span class="rd-label" data-i18n="purposeofstay">غرض الإقامة</span>
                       <span id="rev-purpose-arrival" class="rd-value"></span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="specialrequests">طلبات خاصة</span>
-                      <span id="rev-room-preferences" class="rd-value"></span>
+                      <span class="rd-label" data-i18n="specialrequests">طلبات إضافية</span>
+                      <span id="rev-additional-guests" class="rd-value"></span>
                     </div>
                   </div>
                 </div>
 
-                <div class="review-card full-width">
+                <div class="review-card">
                   <div class="review-card-header">
                     <h3>
-                      <i class="ph ph-files"></i>
+                      <i class="ph ph-credit-card"></i>
                       <span data-i18n="payment">الدفع</span>
                     </h3>
                     <button id="btn-edit-payment" class="edit-btn" type="button">
@@ -605,19 +693,47 @@
 
                   <div class="review-card-body">
                     <div class="review-data">
-                      <span class="rd-label" data-i18n="billing">الفوترة</span>
-                      <span id="rev-billings" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label">الملفات / الإيصال</span>
-                      <span id="rev-documents" class="rd-value"></span>
-                    </div>
-                    <div class="review-data full-width">
-                      <span class="rd-label" data-i18n="selectedpaymentmethod">طريقة الدفع المختارة</span>
+                      <span class="rd-label" data-i18n="paymentmethod">طريقة الدفع</span>
                       <span id="rev-payment-method" class="rd-value"></span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label">النقاط</span>
+                      <span class="rd-label" data-i18n="documents">المستندات</span>
+                      <span id="rev-documents" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="billingdetails">الفوترة</span>
+                      <span id="rev-billings" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="specialrequests">ملاحظات</span>
+                      <span id="rev-room-preferences" class="rd-value"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="review-card full-width">
+                  <div class="review-card-header">
+                    <h3>
+                      <i class="ph ph-gift"></i>
+                      <span data-i18n="rewardpoints">نقاط المكافأة</span>
+                    </h3>
+                  </div>
+
+                  <div class="review-card-body">
+                    <div class="points-box">
+                      <div class="points-icon">
+                        <i class="ph ph-gift"></i>
+                      </div>
+                      <div class="points-text">
+                        <span class="points-title" data-i18n="rewardpoints">نقاط المكافأة</span>
+                        <p data-i18n="rewardpointstext">
+                          ستحصل على نقاط تقديرية بعد تأكيد الحجز.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="rewardpoints">النقاط</span>
                       <span id="rev-points" class="rd-value">0</span>
                     </div>
                   </div>
@@ -625,27 +741,12 @@
               </div>
             </div>
 
-            <div class="points-box">
-              <div class="points-icon">
-                <i class="ph ph-gift"></i>
-              </div>
-              <div class="points-text">
-                <span class="points-title" data-i18n="earnpointstitle">اكسب نقاط OreBooking!</span>
-                <p>
-                  <span data-i18n="earnpointsprefix">ستكسب</span>
-                  <strong id="review-points-inline">0</strong>
-                  <span data-i18n="pts">نقطة</span>
-                  <span data-i18n="earnpointssuffix">بعد إكمال هذه الإقامة.</span>
-                </p>
-              </div>
-            </div>
-
             <div class="policy-agreement">
               <label class="checkbox-container">
                 <input id="agree-policy" type="checkbox" />
                 <span class="checkmark"></span>
-                <span class="agree-text" data-i18n="policyagreement">
-                  أؤكد أن معلومات الحجز صحيحة وأوافق على الشروط والسياسات.
+                <span class="agree-text" data-i18n="agreepolicy">
+                  أوافق على الشروط والأحكام وسياسة الحجز.
                 </span>
               </label>
             </div>
@@ -657,7 +758,7 @@
               </button>
 
               <button id="btn-confirm-booking" class="primary-btn green-btn" type="button">
-                <span data-i18n="confirmbook">تأكيد الحجز</span>
+                <span data-i18n="confirmbooking">تأكيد الحجز</span>
                 <i class="ph ph-check"></i>
               </button>
             </div>
@@ -671,26 +772,31 @@
           </h3>
 
           <div class="prop-mini-card">
-            <img id="prop-mini-img" class="prop-mini-img" src="images/placeholder.jpg" alt="Property" />
+            <img
+              id="prop-mini-img"
+              class="prop-mini-img"
+              src="images/placeholder.jpg"
+              alt="Property"
+            />
             <div class="prop-mini-details">
-              <h4 id="prop-mini-title" data-i18n="loading">جاري التحميل...</h4>
+              <h4 id="prop-mini-title">Selected Property</h4>
               <p id="prop-mini-loc">
                 <i class="ph ph-map-pin"></i>
-                <span></span>
+                <span>Location unavailable</span>
               </p>
-              <div id="prop-mini-type" class="prop-type-badge"></div>
+              <span id="prop-mini-type" class="prop-type-badge">Stay</span>
             </div>
           </div>
 
-          <div class="summary-details">
+          <div class="summary-list">
             <div class="summary-row">
               <span data-i18n="checkindate">تاريخ الدخول</span>
-              <strong id="summary-checkin"></strong>
+              <strong id="summary-checkin">-</strong>
             </div>
 
             <div class="summary-row">
               <span data-i18n="checkoutdate">تاريخ الخروج</span>
-              <strong id="summary-checkout"></strong>
+              <strong id="summary-checkout">-</strong>
             </div>
 
             <div class="summary-row">
@@ -699,8 +805,8 @@
             </div>
 
             <div class="summary-row">
-              <span data-i18n="pricepernight">السعر لليلة</span>
-              <strong id="sb-night-price">0</strong>
+              <span data-i18n="pricepernight">السعر لكل ليلة</span>
+              <strong id="sb-night-price">0 DZD</strong>
             </div>
 
             <div class="summary-row">
@@ -710,17 +816,17 @@
 
             <div class="summary-row">
               <span data-i18n="servicefee">رسوم الخدمة</span>
-              <strong id="sb-fee-amount">0</strong>
+              <strong id="sb-fee-amount">0 DZD</strong>
             </div>
 
             <div class="summary-row">
-              <span data-i18n="addons">إضافات</span>
-              <strong id="sb-addons-amount">0</strong>
+              <span data-i18n="taxes">الضرائب والرسوم</span>
+              <strong id="sb-addons-amount">0 DZD</strong>
             </div>
 
             <div class="summary-row total">
               <span data-i18n="total">الإجمالي</span>
-              <strong id="sb-final-total">0</strong>
+              <strong id="sb-final-total">0 DZD</strong>
             </div>
           </div>
         </aside>
@@ -729,7 +835,7 @@
   </main>
 
   <!-- Auth Modal -->
-  <div id="auth-modal" class="auth-modal">
+  <div id="auth-modal" class="auth-modal" aria-hidden="true">
     <div class="modal-content">
       <div class="auth-card">
         <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
@@ -743,86 +849,95 @@
         <div class="auth-content">
           <div id="auth-message" class="auth-message"></div>
 
+          <!-- Login -->
           <form id="login-form" class="auth-form active">
-            <h3 class="auth-title" data-i18n="welcomeback">مرحبًا بعودتك</h3>
-            <p class="auth-subtitle" data-i18n="loginsubtitle">أدخل بياناتك للوصول إلى حسابك.</p>
+            <h2 class="auth-title" data-i18n="welcomeback">مرحبًا بعودتك</h2>
+            <p class="auth-subtitle" data-i18n="loginsubtitle">
+              أدخل بياناتك للوصول إلى حسابك.
+            </p>
 
             <div class="input-group">
               <label for="login-email" data-i18n="emailaddress">البريد الإلكتروني</label>
-              <input id="login-email" type="email" data-i18n-placeholder="emailplaceholder"
-                placeholder="name@example.com" />
+              <input id="login-email" type="email" placeholder="name@example.com" autocomplete="email" />
             </div>
 
             <div class="input-group">
               <label for="login-password" data-i18n="password">كلمة المرور</label>
-              <input id="login-password" type="password" />
+              <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
             </div>
 
-            <button id="login-submit-btn" class="primary-btn" type="submit" style="width:100%;margin-top:18px;">
+            <div class="auth-options">
+              <a href="#" class="forgot-link" data-auth-switch="forgot" data-i18n="forgotpassword">نسيت كلمة المرور؟</a>
+            </div>
+
+            <button id="login-submit-btn" class="primary-btn" type="submit">
               <span data-i18n="signin">تسجيل الدخول</span>
             </button>
 
-            <div class="switch-form-text">
-              <span data-i18n="donthaveaccount">ليس لديك حساب؟</span>
-              <a href="#" id="go-to-register" data-i18n="signup">إنشاء حساب</a>
-            </div>
+            <div class="divider">OR</div>
 
-            <div class="switch-form-text">
-              <a href="#" id="go-to-forgot" data-i18n="forgotpassword">نسيت كلمة المرور؟</a>
-            </div>
+            <button id="google-signin-btn" class="google-btn" type="button">
+              <i class="ph ph-google-logo"></i>
+              <span>Google</span>
+            </button>
+
+            <p class="switch-form-text">
+              <span data-i18n="donthaveaccount">ليس لديك حساب؟</span>
+              <a href="#" data-auth-switch="register" data-i18n="signup">إنشاء حساب</a>
+            </p>
           </form>
 
+          <!-- Register -->
           <form id="register-form" class="auth-form">
-            <h3 class="auth-title" data-i18n="createaccount">إنشاء حساب</h3>
-            <p class="auth-subtitle" data-i18n="registersubtitle">انضم إلى OreBooking للوصول إلى مزايا إضافية.</p>
+            <h2 class="auth-title" data-i18n="createaccount">إنشاء حساب</h2>
+            <p class="auth-subtitle" data-i18n="registersubtitle">
+              انضم إلى OreBooking للوصول إلى مزايا إضافية.
+            </p>
 
             <div class="input-group">
               <label for="reg-name" data-i18n="fullname">الاسم الكامل</label>
-              <input id="reg-name" type="text" data-i18n-placeholder="fullnameplaceholderaccount"
-                placeholder="اسمك الكامل" />
+              <input id="reg-name" type="text" placeholder="الاسم الكامل" autocomplete="name" />
             </div>
 
             <div class="input-group">
               <label for="reg-email" data-i18n="emailaddress">البريد الإلكتروني</label>
-              <input id="reg-email" type="email" data-i18n-placeholder="emailexample"
-                placeholder="john@example.com" />
+              <input id="reg-email" type="email" placeholder="name@example.com" autocomplete="email" />
             </div>
 
             <div class="input-group">
               <label for="reg-password" data-i18n="password">كلمة المرور</label>
-              <input id="reg-password" type="password" data-i18n-placeholder="createpassword"
-                placeholder="أنشئ كلمة مرور" />
+              <input id="reg-password" type="password" placeholder="••••••••" autocomplete="new-password" />
             </div>
 
-            <button id="register-submit-btn" class="primary-btn" type="submit" style="width:100%;margin-top:18px;">
+            <button id="register-submit-btn" class="primary-btn" type="submit">
               <span data-i18n="createaccountbtn">إنشاء الحساب</span>
             </button>
 
-            <div class="switch-form-text">
+            <p class="switch-form-text">
               <span data-i18n="alreadyhaveaccount">لديك حساب بالفعل؟</span>
-              <a href="#" id="go-to-login" data-i18n="signin">تسجيل الدخول</a>
-            </div>
+              <a href="#" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
+            </p>
           </form>
 
+          <!-- Forgot -->
           <form id="forgot-form" class="auth-form">
-            <h3 class="auth-title" data-i18n="resetpassword">إعادة تعيين كلمة المرور</h3>
+            <h2 class="auth-title" data-i18n="resetpassword">إعادة تعيين كلمة المرور</h2>
             <p class="auth-subtitle" data-i18n="resetpasswordsubtitle">
               أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.
             </p>
 
             <div class="input-group">
               <label for="forgot-email" data-i18n="emailaddress">البريد الإلكتروني</label>
-              <input id="forgot-email" type="email" data-i18n-placeholder="emailplaceholder"
-                placeholder="name@example.com" />
+              <input id="forgot-email" type="email" placeholder="name@example.com" autocomplete="email" />
             </div>
 
-            <button class="primary-btn" type="submit" style="width:100%;margin-top:18px;">
+            <button id="forgot-submit-btn" class="primary-btn" type="submit">
               <span data-i18n="sendresetlink">إرسال رابط إعادة التعيين</span>
             </button>
 
-            <div class="switch-form-text">
-              <a href="#" id="back-to-login" data-i18n="backtologin">العودة لتسجيل الدخول</a>
-            </div>
+            <p class="switch-form-text">
+              <a href="#" data-auth-switch="login" data-i18n="backtologin">العودة لتسجيل الدخول</a>
+            </p>
           </form>
         </div>
       </div>
@@ -832,6 +947,7 @@
   <script>
     const bookingI18n = {
       ar: {
+        pageTitle: "OreBooking",
         home: "الرئيسية",
         pts: "نقطة",
         guestuser: "مستخدم ضيف",
@@ -842,6 +958,7 @@
         welcomeback: "مرحبًا بعودتك",
         loginsubtitle: "أدخل بياناتك للوصول إلى حسابك.",
         emailaddress: "البريد الإلكتروني",
+        email: "البريد الإلكتروني",
         password: "كلمة المرور",
         forgotpassword: "نسيت كلمة المرور؟",
         signin: "تسجيل الدخول",
@@ -850,6 +967,16 @@
         createaccount: "إنشاء حساب",
         registersubtitle: "انضم إلى OreBooking للوصول إلى مزايا إضافية.",
         fullname: "الاسم الكامل",
+        fullnameplaceholder: "الاسم الكامل",
+        emailplaceholder: "name@example.com",
+        phoneplaceholder: "+213 ...",
+        countryregionplaceholder: "الدولة أو الجنسية",
+        billingnameplaceholder: "الاسم الكامل للفوترة",
+        billingnoteplaceholder: "ملاحظة اختيارية للفوترة أو الدفع",
+        sendernameplaceholder: "الاسم المستخدم في التحويل",
+        transferamountplaceholder: "المبلغ المدفوع",
+        cashpayerplaceholder: "اسم الشخص المسؤول عن الدفع",
+        specialrequestsplaceholder: "ملاحظة اختيارية للمضيف",
         createaccountbtn: "إنشاء الحساب",
         alreadyhaveaccount: "لديك حساب بالفعل؟",
         resetpassword: "إعادة تعيين كلمة المرور",
@@ -866,12 +993,15 @@
         guestreservationsubtitle: "أدخل فقط البيانات الأساسية المطلوبة لإتمام الحجز.",
         primaryguestinformation: "معلومات الضيف الأساسية",
         phonenumber: "رقم الهاتف",
+        phone: "الهاتف",
         countryregion: "الدولة / الجنسية",
         staydetails: "تفاصيل الإقامة",
         checkindate: "تاريخ الدخول",
         checkoutdate: "تاريخ الخروج",
+        checkincheckout: "الدخول والخروج",
         adults: "البالغون",
         children: "الأطفال",
+        guests: "الضيوف",
         expectedarrivaltime: "وقت الوصول المتوقع",
         selectarrivaltime: "اختر وقت الوصول",
         after20: "بعد 20:00",
@@ -920,167 +1050,143 @@
         reviewconfirmsubtitle: "راجع بيانات الضيف والإقامة والدفع قبل التأكيد النهائي.",
         guestinformation: "معلومات الضيف",
         edit: "تعديل",
-        email: "البريد الإلكتروني",
-        phone: "الهاتف",
-        checkincheckout: "الدخول / الخروج",
-        guests: "الضيوف",
-        purposearrival: "الغرض / الوصول",
-        billing: "الفوترة",
-        selectedpaymentmethod: "طريقة الدفع المختارة",
-        earnpointstitle: "اكسب نقاط OreBooking!",
-        earnpointsprefix: "ستكسب",
-        earnpointssuffix: "بعد إكمال هذه الإقامة.",
-        policyagreement: "أؤكد أن معلومات الحجز صحيحة وأوافق على الشروط والسياسات.",
+        paymentmethod: "طريقة الدفع",
+        documents: "المستندات",
+        rewardpoints: "نقاط المكافأة",
+        rewardpointstext: "ستحصل على نقاط تقديرية بعد تأكيد الحجز.",
+        agreepolicy: "أوافق على الشروط والأحكام وسياسة الحجز.",
         backtopayment: "العودة للدفع",
-        confirmbook: "تأكيد الحجز",
+        confirmbooking: "تأكيد الحجز",
         bookingsummary: "ملخص الحجز",
-        loading: "جاري التحميل...",
-        pricepernight: "السعر لليلة",
+        pricepernight: "السعر لكل ليلة",
         nights: "الليالي",
         servicefee: "رسوم الخدمة",
-        addons: "إضافات",
-        total: "الإجمالي",
-        fullnameplaceholder: "الاسم الكامل",
-        emailplaceholder: "name@example.com",
-        phoneplaceholder: "+213 ...",
-        countryregionplaceholder: "الدولة أو الجنسية",
-        specialrequestsplaceholder: "ملاحظة اختيارية للمضيف",
-        billingnameplaceholder: "الاسم الكامل للفوترة",
-        billingnoteplaceholder: "ملاحظة اختيارية للفوترة أو الدفع",
-        sendernameplaceholder: "الاسم المستخدم في التحويل",
-        transferamountplaceholder: "المبلغ المدفوع",
-        cashpayerplaceholder: "اسم الشخص المسؤول عن الدفع",
-        emailexample: "john@example.com",
-        fullnameplaceholderaccount: "اسمك الكامل",
-        createpassword: "أنشئ كلمة مرور"
+        taxes: "الضرائب والرسوم",
+        total: "الإجمالي"
       },
       en: {
+        pageTitle: "OreBooking",
         home: "Home",
-        pts: "Pts",
+        pts: "pts",
         guestuser: "Guest User",
         signintocontinue: "Sign in to continue",
         mybookings: "My Bookings",
         myfavorites: "My Favorites",
-        logout: "Log Out",
+        logout: "Logout",
         welcomeback: "Welcome back",
         loginsubtitle: "Enter your details to access your account.",
-        emailaddress: "Email Address",
+        emailaddress: "Email address",
+        email: "Email",
         password: "Password",
         forgotpassword: "Forgot password?",
-        signin: "Sign In",
+        signin: "Sign in",
         donthaveaccount: "Don't have an account?",
         signup: "Sign up",
-        createaccount: "Create an account",
-        registersubtitle: "Join OreBooking to unlock extra features.",
-        fullname: "Full Name",
-        createaccountbtn: "Create Account",
+        createaccount: "Create account",
+        registersubtitle: "Join OreBooking to unlock extra benefits.",
+        fullname: "Full name",
+        fullnameplaceholder: "Full name",
+        emailplaceholder: "name@example.com",
+        phoneplaceholder: "+213 ...",
+        countryregionplaceholder: "Country or nationality",
+        billingnameplaceholder: "Full billing name",
+        billingnoteplaceholder: "Optional billing or payment note",
+        sendernameplaceholder: "Name used in transfer",
+        transferamountplaceholder: "Transferred amount",
+        cashpayerplaceholder: "Person responsible for payment",
+        specialrequestsplaceholder: "Optional note for the host",
+        createaccountbtn: "Create account",
         alreadyhaveaccount: "Already have an account?",
-        resetpassword: "Reset Password",
+        resetpassword: "Reset password",
         resetpasswordsubtitle: "Enter your email and we'll send you a reset link.",
-        sendresetlink: "Send Reset Link",
+        sendresetlink: "Send reset link",
         backtologin: "Back to login",
         completebooking: "Complete your booking",
-        bookingherotext: "Fill in only the essential information to complete your booking quickly and clearly.",
+        bookingherotext: "Enter only the essential details to finish your booking quickly and clearly.",
         completerequiredfields: "Please complete all required fields before continuing.",
         details: "Details",
         payment: "Payment",
         review: "Review",
-        guestreservationdetails: "Guest & Booking Details",
-        guestreservationsubtitle: "Enter only the essential information required to complete the booking.",
+        guestreservationdetails: "Guest and booking details",
+        guestreservationsubtitle: "Enter only the essential information needed to complete the booking.",
         primaryguestinformation: "Primary guest information",
-        phonenumber: "Phone Number",
+        phonenumber: "Phone number",
+        phone: "Phone",
         countryregion: "Country / Nationality",
-        staydetails: "Stay Details",
-        checkindate: "Check-in Date",
-        checkoutdate: "Check-out Date",
+        staydetails: "Stay details",
+        checkindate: "Check-in date",
+        checkoutdate: "Check-out date",
+        checkincheckout: "Check-in / Check-out",
         adults: "Adults",
         children: "Children",
-        expectedarrivaltime: "Expected Arrival Time",
+        guests: "Guests",
+        expectedarrivaltime: "Expected arrival time",
         selectarrivaltime: "Select arrival time",
         after20: "After 20:00",
-        aftermidnight: "After Midnight",
-        purposeofstay: "Purpose of Stay",
+        aftermidnight: "After midnight",
+        purposeofstay: "Purpose of stay",
         selectpurpose: "Select purpose",
         familystay: "Family",
         business: "Business",
         tourism: "Tourism",
         medical: "Medical",
         other: "Other",
-        specialrequests: "Special Requests",
+        specialrequests: "Special requests",
         specialrequestshint: "Keep requests short and clear.",
-        propertyamenities: "Property Amenities",
-        wifi: "WiFi",
+        propertyamenities: "Property amenities",
+        wifi: "Wi-Fi",
         parking: "Parking",
-        airconditioning: "Air Conditioning",
+        airconditioning: "Air conditioning",
         kitchen: "Kitchen",
-        continuetopayment: "Continue to Payment",
-        paymentbilling: "Payment & Billing",
-        paymentbillingsubtitle: "Choose the payment method and provide only the essential payment details.",
-        banktransferccp: "Bank Transfer / CCP",
-        banktransferdesc: "Transfer the booking amount, then upload your payment receipt.",
-        payatproperty: "Pay on Arrival",
-        payatpropertydesc: "Pay in cash at check-in, subject to host approval.",
-        billingdetails: "Billing Details",
-        billingname: "Billing Name",
-        billingnote: "Billing Note",
-        banktransferdetails: "Bank Transfer Details",
-        banktransferinstruction: "Please transfer the full amount, then upload the receipt and enter sender details.",
-        accountname: "Account Name",
+        continuetopayment: "Continue to payment",
+        paymentbilling: "Payment and billing",
+        paymentbillingsubtitle: "Choose a payment method and enter only the essential details.",
+        banktransferccp: "Bank transfer / CCP",
+        banktransferdesc: "Transfer the booking amount, then upload the receipt.",
+        payatproperty: "Pay on arrival",
+        payatpropertydesc: "Pay in cash at check-in subject to host approval.",
+        billingdetails: "Billing details",
+        billingname: "Billing name",
+        billingnote: "Billing note",
+        banktransferdetails: "Bank transfer details",
+        banktransferinstruction: "Please transfer the full amount, upload the receipt, and enter sender details.",
+        accountname: "Account name",
         bank: "Bank",
-        senderfullname: "Sender Full Name",
-        transferredamount: "Transferred Amount",
-        transferdate: "Transfer Date",
+        senderfullname: "Sender name",
+        transferredamount: "Transferred amount",
+        transferdate: "Transfer date",
         clickuploadreceipt: "Click to upload payment receipt",
         uploadhint: "JPG, PNG, PDF, WEBP - 5MB",
-        cashpaymentconfirmation: "Cash Payment Confirmation",
-        cashpaymentinstruction: "Confirm who will pay at check-in.",
+        cashpaymentconfirmation: "Cash payment confirmation",
+        cashpaymentinstruction: "Confirm who will pay on arrival.",
         whowillpaycheckin: "Who will pay at check-in",
-        preferredcurrency: "Preferred Currency",
+        preferredcurrency: "Preferred currency",
         selectcurrency: "Select currency",
-        backtodetails: "Back to Details",
-        reviewbooking: "Review Booking",
-        reviewconfirm: "Review & Confirm",
-        reviewconfirmsubtitle: "Review the guest, stay, and payment details before final confirmation.",
-        guestinformation: "Guest Information",
+        backtodetails: "Back to details",
+        reviewbooking: "Review booking",
+        reviewconfirm: "Review and confirm",
+        reviewconfirmsubtitle: "Review guest, stay, and payment details before final confirmation.",
+        guestinformation: "Guest information",
         edit: "Edit",
-        email: "Email",
-        phone: "Phone",
-        checkincheckout: "Check-in / Check-out",
-        guests: "Guests",
-        purposearrival: "Purpose / Arrival",
-        billing: "Billing",
-        selectedpaymentmethod: "Selected Payment Method",
-        earnpointstitle: "Earn OreBooking Points!",
-        earnpointsprefix: "You will earn",
-        earnpointssuffix: "after completing this stay.",
-        policyagreement: "I confirm that the booking information is accurate and I agree to the terms and policies.",
-        backtopayment: "Back to Payment",
-        confirmbook: "Confirm Booking",
-        bookingsummary: "Booking Summary",
-        loading: "Loading...",
+        paymentmethod: "Payment method",
+        documents: "Documents",
+        rewardpoints: "Reward points",
+        rewardpointstext: "You will receive estimated points after booking confirmation.",
+        agreepolicy: "I agree to the terms, conditions, and booking policy.",
+        backtopayment: "Back to payment",
+        confirmbooking: "Confirm booking",
+        bookingsummary: "Booking summary",
         pricepernight: "Price per night",
         nights: "Nights",
         servicefee: "Service fee",
-        addons: "Add-ons",
-        total: "Total",
-        fullnameplaceholder: "Full name",
-        emailplaceholder: "name@example.com",
-        phoneplaceholder: "+213 ...",
-        countryregionplaceholder: "Country or nationality",
-        specialrequestsplaceholder: "Optional note for the host",
-        billingnameplaceholder: "Full billing name",
-        billingnoteplaceholder: "Optional billing or payment note",
-        sendernameplaceholder: "Name used in transfer",
-        transferamountplaceholder: "Amount paid",
-        cashpayerplaceholder: "Person responsible for payment",
-        emailexample: "john@example.com",
-        fullnameplaceholderaccount: "Your full name",
-        createpassword: "Create a password"
+        taxes: "Taxes and fees",
+        total: "Total"
       }
     };
+
+    window.bookingI18n = bookingI18n;
   </script>
 
   <script src="booking.js"></script>
 </body>
-
 </html>
