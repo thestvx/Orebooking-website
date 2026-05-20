@@ -1,7 +1,8 @@
 /* =========================================================
-   booking.css — OreBooking v13.2
-   Fixed RTL/LTR language display issues
-   Compatible with updated booking.html + booking.js
+   booking.css — OreBooking v14.0
+   Updated for simplified booking form
+   Compatible with current booking.html
+   RTL/LTR safe + responsive + auth modal support
    ========================================================= */
 
 /* ═══════════════════════════════════════════
@@ -116,13 +117,15 @@ html[dir="rtl"] .auth-options {
 }
 
 html[dir="rtl"] .bank-row strong,
-html[dir="rtl"] .summary-row span:last-child {
+html[dir="rtl"] .summary-row span:last-child,
+html[dir="rtl"] .summary-row strong {
   text-align: left;
   direction: ltr;
 }
 
 html[dir="ltr"] .bank-row strong,
-html[dir="ltr"] .summary-row span:last-child {
+html[dir="ltr"] .summary-row span:last-child,
+html[dir="ltr"] .summary-row strong {
   text-align: right;
   direction: ltr;
 }
@@ -171,7 +174,12 @@ html[dir="rtl"] input[type="number"],
 html[dir="rtl"] input[type="date"],
 html[dir="rtl"] input[type="time"],
 html[dir="rtl"] #bank-iban,
-html[dir="rtl"] #payment-reference {
+html[dir="rtl"] #payment-reference,
+html[dir="rtl"] #sb-night-price,
+html[dir="rtl"] #sb-nights-count,
+html[dir="rtl"] #sb-fee-amount,
+html[dir="rtl"] #sb-addons-amount,
+html[dir="rtl"] #sb-final-total {
   direction: ltr;
   text-align: left;
 }
@@ -182,7 +190,12 @@ html[dir="ltr"] input[type="number"],
 html[dir="ltr"] input[type="date"],
 html[dir="ltr"] input[type="time"],
 html[dir="ltr"] #bank-iban,
-html[dir="ltr"] #payment-reference {
+html[dir="ltr"] #payment-reference,
+html[dir="ltr"] #sb-night-price,
+html[dir="ltr"] #sb-nights-count,
+html[dir="ltr"] #sb-fee-amount,
+html[dir="ltr"] #sb-addons-amount,
+html[dir="ltr"] #sb-final-total {
   direction: ltr;
   text-align: left;
 }
@@ -1653,6 +1666,7 @@ body.dark .review-card-header {
   color: var(--text-main, #0f172a);
   font-size: 1.5rem;
   font-weight: 800;
+  text-align: center;
 }
 
 .auth-subtitle {
@@ -1660,6 +1674,7 @@ body.dark .review-card-header {
   color: var(--text-muted, #64748b);
   font-size: 0.9rem;
   line-height: 1.6;
+  text-align: center;
 }
 
 .auth-message {
@@ -1669,6 +1684,7 @@ body.dark .review-card-header {
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 600;
+  text-align: center;
 }
 
 .auth-message.error {
