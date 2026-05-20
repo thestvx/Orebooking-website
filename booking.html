@@ -4,14 +4,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="إتمام حجزك على OreBooking بطريقة آمنة وسهلة." />
+  <meta name="description" content="OreBooking - Complete your booking." />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#435abf" />
-  <title>إتمام الحجز — OreBooking</title>
-
+  <title>OreBooking</title>
   <link rel="canonical" href="booking.html" />
   <link rel="icon" href="logos/favicon.ico" type="image/x-icon" />
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -19,18 +17,14 @@
     rel="stylesheet" />
 
   <script>
-    (function () {
-      try {
-        const rawLang = localStorage.getItem("ore_lang") || "ar";
-        const savedLang = rawLang === "en" ? "en" : "ar";
-        const savedTheme = localStorage.getItem("ore_theme") || "light";
-        document.documentElement.lang = savedLang;
-        document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
-        if (savedTheme === "dark") {
-          document.documentElement.classList.add("dark");
-        }
-      } catch (_) { }
-    })();
+    try {
+      const rawLang = localStorage.getItem("orelang") || "ar";
+      const savedLang = rawLang === "en" ? "en" : "ar";
+      const savedTheme = localStorage.getItem("oretheme") || "light";
+      document.documentElement.lang = savedLang;
+      document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
+      if (savedTheme === "dark") document.documentElement.classList.add("dark");
+    } catch (_) { }
   </script>
 
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
@@ -40,1332 +34,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
 
-  <style>
-    :root {
-      --primary: #435abf;
-      --primary-hover: #34459c;
-      --accent: #657be0;
-      --bg-color: #f8fafc;
-      --surface-color: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --border-color: #e2e8f0;
-      --success: #10b981;
-      --error: #ef4444;
-      --warning: #f59e0b;
-      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
-      --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
-      --shadow-hover: 0 20px 40px -10px rgba(67, 90, 191, 0.15);
-      --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
-      --radius-sm: 0.75rem;
-      --radius-lg: 1rem;
-      --radius-xl: 1.5rem;
-      --radius-2xl: 2rem;
-      --radius-full: 9999px;
-      --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .dark {
-      --bg-color: #0f172a;
-      --surface-color: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
-      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
-      --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.4);
-      --shadow-hover: 0 20px 40px -10px rgba(67, 90, 191, 0.25);
-      --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.28);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      background:
-        radial-gradient(circle at top center, rgba(67, 90, 191, 0.05) 0%, transparent 35%),
-        var(--bg-color);
-      color: var(--text-main);
-      transition: background-color 0.3s ease, color 0.3s ease;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    body.modal-open {
-      overflow: hidden;
-    }
-
-    html[dir="ltr"] body {
-      font-family: "Outfit", "Poppins", sans-serif;
-    }
-
-    html[dir="rtl"] body {
-      font-family: "Tajawal", sans-serif;
-    }
-
-    img {
-      display: block;
-      max-width: 100%;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 40px;
-      background-color: var(--surface-color);
-      border-bottom: 1px solid var(--border-color);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      transition: var(--transition);
-      gap: 12px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .logo-img {
-      height: 56px;
-      max-width: 200px;
-      object-fit: contain;
-      transition: transform 0.3s;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-      margin-inline-start: auto;
-    }
-
-    .rewards-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background-color: rgba(245, 158, 11, 0.1);
-      color: #d97706;
-      padding: 7px 14px;
-      border-radius: var(--radius-full);
-      font-weight: 600;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .dark .rewards-badge {
-      color: #fbbf24;
-    }
-
-    .icon-btn,
-    .lang-btn,
-    .back-home-btn {
-      background: none;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-full);
-      padding: 10px;
-      cursor: pointer;
-      color: var(--text-main);
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 44px;
-      min-height: 44px;
-      font-family: inherit;
-      flex-shrink: 0;
-    }
-
-    .lang-btn {
-      padding: 8px 14px;
-      font-size: 0.875rem;
-      white-space: nowrap;
-      gap: 6px;
-    }
-
-    .back-home-btn {
-      padding: 0 16px;
-      gap: 8px;
-      font-size: 0.92rem;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .icon-btn:hover,
-    .lang-btn:hover,
-    .back-home-btn:hover {
-      background-color: var(--bg-color);
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-1px);
-    }
-
-    .icon-btn i,
-    .back-home-btn i {
-      font-size: 1.1rem;
-    }
-
-    .profile-container {
-      position: relative;
-    }
-
-    .profile-menu {
-      width: 44px;
-      height: 44px;
-      border: none;
-      border-radius: var(--radius-full);
-      background-color: var(--primary);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition);
-      font-size: 1.2rem;
-      flex-shrink: 0;
-    }
-
-    .profile-menu:hover {
-      background-color: var(--primary-hover);
-      transform: scale(1.05);
-    }
-
-    .profile-dropdown {
-      position: absolute;
-      top: 120%;
-      inset-inline-end: 0;
-      width: 240px;
-      background-color: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-soft);
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-10px);
-      transition: var(--transition);
-      z-index: 1010;
-      overflow: hidden;
-    }
-
-    .profile-dropdown.active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-    }
-
-    .dropdown-header {
-      padding: 16px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      background-color: var(--bg-color);
-    }
-
-    .dropdown-header span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .dropdown-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: none;
-      border: none;
-      color: var(--text-main);
-      font-size: 0.95rem;
-      font-family: inherit;
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: start;
-      min-height: 44px;
-    }
-
-    .dropdown-item:hover {
-      background-color: rgba(67, 90, 191, 0.05);
-      color: var(--primary);
-      padding-inline-start: 22px;
-    }
-
-    .booking-page {
-      padding: 34px 0 64px;
-    }
-
-    .booking-hero {
-      margin-bottom: 26px;
-    }
-
-    .booking-hero-card {
-      background: linear-gradient(180deg, rgba(67, 90, 191, 0.05), rgba(67, 90, 191, 0.01));
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-2xl);
-      padding: 28px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .booking-hero-card h1 {
-      font-size: clamp(1.8rem, 3vw, 2.8rem);
-      line-height: 1.1;
-      margin-bottom: 10px;
-      letter-spacing: -0.02em;
-    }
-
-    .booking-hero-card p {
-      color: var(--text-muted);
-      max-width: 760px;
-      line-height: 1.7;
-      font-size: 1rem;
-    }
-
-    .booking-steps-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--surface-color);
-      padding: 24px 32px;
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-card);
-      border: 1px solid var(--border-color);
-      margin-bottom: 26px;
-    }
-
-    .step-indicator {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      opacity: 0.45;
-      transition: var(--transition);
-      flex-shrink: 0;
-    }
-
-    .step-indicator.active,
-    .step-indicator.completed {
-      opacity: 1;
-    }
-
-    .step-num {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: var(--bg-color);
-      border: 2px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: var(--text-muted);
-      transition: var(--transition);
-      font-size: 0.95rem;
-      position: relative;
-    }
-
-    .step-indicator.active .step-num {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      border-color: transparent;
-      color: white;
-      box-shadow: 0 0 0 4px rgba(67, 90, 191, 0.18);
-    }
-
-    .step-indicator.completed .step-num {
-      background: var(--success);
-      border-color: transparent;
-      color: white;
-    }
-
-    .step-indicator.completed .step-num::after {
-      content: "✓";
-      position: absolute;
-    }
-
-    .step-label {
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: var(--text-main);
-      white-space: nowrap;
-    }
-
-    .step-connector {
-      flex: 1;
-      height: 2px;
-      background: var(--border-color);
-      margin: 0 10px;
-      align-self: center;
-      margin-bottom: 28px;
-      transition: background 0.4s;
-      border-radius: 2px;
-    }
-
-    .step-connector.completed {
-      background: var(--success);
-    }
-
-    .booking-wrapper {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: 28px;
-      align-items: start;
-    }
-
-    .booking-main-card,
-    .booking-summary-sidebar {
-      background: var(--surface-color);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-card);
-      border: 1px solid var(--border-color);
-    }
-
-    .booking-main-card {
-      padding: 34px 36px;
-      min-height: 500px;
-      position: relative;
-    }
-
-    .booking-step {
-      display: none;
-    }
-
-    .booking-step.active {
-      display: block;
-      animation: fadeStepIn 0.35s ease forwards;
-    }
-
-    @keyframes fadeStepIn {
-      from {
-        opacity: 0;
-        transform: translateX(14px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
-
-    .step-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 30px;
-      padding-bottom: 22px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .step-header-icon {
-      width: 54px;
-      height: 54px;
-      min-width: 54px;
-      border-radius: 16px;
-      background: rgba(67, 90, 191, 0.1);
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.7rem;
-      flex-shrink: 0;
-    }
-
-    .dark .step-header-icon {
-      background: rgba(67, 90, 191, 0.18);
-    }
-
-    .step-title {
-      font-size: 1.45rem;
-      font-weight: 800;
-      color: var(--text-main);
-      margin-bottom: 4px;
-      line-height: 1.2;
-    }
-
-    .step-subtitle {
-      font-size: 0.94rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-      margin: 0;
-    }
-
-    .section-block {
-      margin-bottom: 28px;
-      padding: 22px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      background: linear-gradient(180deg, rgba(67, 90, 191, 0.02), transparent);
-    }
-
-    .section-block h3 {
-      font-size: 1.02rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-block h3 i {
-      color: var(--primary);
-      font-size: 1.15rem;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .form-group.full-width {
-      grid-column: 1 / -1;
-    }
-
-    .form-label {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .required-star {
-      color: var(--error);
-      margin-inline-start: 4px;
-    }
-
-    .form-control {
-      padding: 14px 16px;
-      border: 1.5px solid var(--border-color);
-      border-radius: 12px;
-      font-family: inherit;
-      font-size: 0.97rem;
-      color: var(--text-main);
-      background: var(--bg-color);
-      transition: var(--transition);
-      width: 100%;
-      min-height: 50px;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: var(--surface-color);
-      box-shadow: 0 0 0 4px rgba(67, 90, 191, 0.1);
-    }
-
-    .form-control.invalid {
-      border-color: var(--error);
-      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
-    }
-
-    textarea.form-control {
-      resize: vertical;
-      min-height: 110px;
-      line-height: 1.7;
-    }
-
-    .hint-text {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: -2px;
-    }
-
-    .amenities-box {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-    }
-
-    .amenity-chip {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 14px;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      background: var(--surface-color);
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .amenity-chip i {
-      color: var(--primary);
-      font-size: 1.1rem;
-    }
-
-    .payment-methods-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .payment-method-card {
-      border: 1.5px solid var(--border-color);
-      border-radius: 14px;
-      padding: 20px;
-      cursor: pointer;
-      transition: var(--transition);
-      text-align: center;
-      background: var(--surface-color);
-      position: relative;
-    }
-
-    .payment-method-card:hover {
-      border-color: var(--primary);
-      background: rgba(67, 90, 191, 0.02);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .payment-method-card.selected {
-      border-color: var(--primary);
-      background: rgba(67, 90, 191, 0.05);
-      box-shadow: 0 0 0 1.5px var(--primary);
-    }
-
-    .payment-method-icon {
-      font-size: 2rem;
-      color: var(--primary);
-      margin-bottom: 12px;
-    }
-
-    .payment-method-title {
-      font-weight: 800;
-      font-size: 1rem;
-      color: var(--text-main);
-      margin-bottom: 4px;
-    }
-
-    .payment-method-desc {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      margin: 0;
-      line-height: 1.5;
-    }
-
-    .payment-radio {
-      display: none;
-    }
-
-    .payment-details-box {
-      display: none;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 24px;
-      margin-top: 10px;
-      animation: fadeStepIn 0.3s ease;
-    }
-
-    .payment-details-box.active {
-      display: block;
-    }
-
-    .bank-box {
-      background: var(--surface-color);
-      padding: 16px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 16px;
-    }
-
-    .bank-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 10px 0;
-      border-bottom: 1px dashed var(--border-color);
-      font-size: 0.9rem;
-    }
-
-    .bank-row:last-child {
-      border-bottom: none;
-    }
-
-    .bank-row span:first-child {
-      color: var(--text-muted);
-    }
-
-    .file-upload-wrapper {
-      border: 2px dashed var(--border-color);
-      border-radius: 14px;
-      padding: 28px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: var(--transition);
-      background: var(--surface-color);
-      display: block;
-      margin-top: 18px;
-    }
-
-    .file-upload-wrapper:hover {
-      border-color: var(--primary);
-      background: rgba(67, 90, 191, 0.02);
-    }
-
-    .file-upload-icon {
-      font-size: 2.4rem;
-      color: var(--accent);
-      margin-bottom: 10px;
-    }
-
-    .file-upload-text {
-      font-size: 0.96rem;
-      color: var(--text-main);
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .file-upload-hint {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .file-upload-input {
-      display: none;
-    }
-
-    .step-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 14px;
-      margin-top: 34px;
-      padding-top: 22px;
-      border-top: 1px solid var(--border-color);
-      flex-wrap: wrap;
-    }
-
-    .step-actions-between {
-      justify-content: space-between;
-    }
-
-    .primary-btn,
-    .ghost-btn {
-      min-height: 50px;
-      padding: 0 28px;
-      border-radius: 14px;
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: var(--transition);
-      white-space: nowrap;
-      border: none;
-    }
-
-    .primary-btn {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: white;
-      box-shadow: 0 6px 16px rgba(67, 90, 191, 0.3);
-    }
-
-    .primary-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .primary-btn.green-btn {
-      background: linear-gradient(135deg, var(--success), #059669);
-      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
-    }
-
-    .ghost-btn {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1.5px solid var(--border-color);
-    }
-
-    .ghost-btn:hover {
-      background: var(--bg-color);
-      color: var(--text-main);
-      border-color: var(--text-muted);
-    }
-
-    .review-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 18px;
-      margin-bottom: 24px;
-    }
-
-    .review-card {
-      background: var(--bg-color);
-      border: 1.5px solid var(--border-color);
-      border-radius: 14px;
-      overflow: hidden;
-      transition: var(--transition);
-    }
-
-    .review-card:hover {
-      border-color: var(--primary);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .review-card.full-width {
-      grid-column: 1 / -1;
-    }
-
-    .review-card-header {
-      background: rgba(67, 90, 191, 0.05);
-      border-bottom: 1.5px solid var(--border-color);
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .dark .review-card-header {
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    .review-card-header h3 {
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-    }
-
-    .review-card-header h3 i {
-      color: var(--primary);
-      font-size: 1.15rem;
-    }
-
-    .edit-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      transition: var(--transition);
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-
-    .edit-btn:hover {
-      background: rgba(67, 90, 191, 0.1);
-    }
-
-    .review-card-body {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .review-data {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .rd-label {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 800;
-    }
-
-    .rd-value {
-      font-size: 0.98rem;
-      font-weight: 700;
-      color: var(--text-main);
-      line-height: 1.6;
-      word-break: break-word;
-    }
-
-    .points-box {
-      background: rgba(101, 123, 224, 0.08);
-      border: 1px solid rgba(101, 123, 224, 0.18);
-      border-radius: 14px;
-      padding: 16px 20px;
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      margin-bottom: 22px;
-    }
-
-    .points-icon {
-      background: var(--accent);
-      color: white;
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      flex-shrink: 0;
-    }
-
-    .points-title {
-      font-weight: 800;
-      color: var(--primary);
-      margin-bottom: 6px;
-      display: block;
-      font-size: 1rem;
-    }
-
-    .points-text p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      margin: 0;
-    }
-
-    .policy-agreement {
-      padding: 20px;
-      background: rgba(245, 158, 11, 0.08);
-      border: 1.5px solid rgba(245, 158, 11, 0.2);
-      border-radius: 14px;
-    }
-
-    .checkbox-container {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .checkbox-container input {
-      display: none;
-    }
-
-    .checkmark {
-      width: 22px;
-      height: 22px;
-      border: 2px solid var(--text-muted);
-      border-radius: 6px;
-      position: relative;
-      transition: var(--transition);
-      flex-shrink: 0;
-      margin-top: 2px;
-      background: var(--surface-color);
-    }
-
-    .checkbox-container input:checked~.checkmark {
-      background: var(--primary);
-      border-color: var(--primary);
-    }
-
-    .checkbox-container input:checked~.checkmark::after {
-      content: "";
-      position: absolute;
-      top: 3px;
-      left: 7px;
-      width: 5px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2.5px 2.5px 0;
-      transform: rotate(45deg);
-    }
-
-    .agree-text {
-      font-size: 0.95rem;
-      color: var(--text-main);
-      line-height: 1.6;
-    }
-
-    .agree-text a {
-      color: var(--primary);
-      font-weight: 800;
-    }
-
-    .booking-summary-sidebar {
-      padding: 24px;
-      position: sticky;
-      top: 92px;
-    }
-
-    .sidebar-title {
-      font-size: 1rem;
-      font-weight: 800;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-main);
-    }
-
-    .sidebar-title i {
-      color: var(--primary);
-    }
-
-    .prop-mini-card {
-      display: flex;
-      gap: 14px;
-      padding-bottom: 18px;
-      border-bottom: 1px dashed var(--border-color);
-      margin-bottom: 18px;
-    }
-
-    .prop-mini-img {
-      width: 92px;
-      min-width: 92px;
-      height: 76px;
-      border-radius: 12px;
-      object-fit: cover;
-      border: 1px solid var(--border-color);
-      flex-shrink: 0;
-      background: var(--bg-color);
-    }
-
-    .prop-mini-details h4 {
-      font-size: 0.96rem;
-      font-weight: 800;
-      color: var(--text-main);
-      margin-bottom: 4px;
-      line-height: 1.35;
-    }
-
-    .prop-mini-details p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-      line-height: 1.5;
-    }
-
-    .prop-type-badge {
-      font-size: 0.75rem;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      padding: 4px 8px;
-      border-radius: 12px;
-      display: inline-block;
-      margin-top: 8px;
-      font-weight: 700;
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      font-size: 0.9rem;
-      color: var(--text-main);
-      gap: 8px;
-    }
-
-    .summary-row span:first-child {
-      color: var(--text-muted);
-    }
-
-    .summary-row.total {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1.5px dashed var(--border-color);
-      font-size: 1.08rem;
-      font-weight: 800;
-      color: var(--primary);
-    }
-
-    .summary-row.total span {
-      color: var(--primary);
-    }
-
-    .booking-alert {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .booking-alert.error {
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--error);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .booking-alert.error i {
-      color: var(--error);
-      font-size: 1.2rem;
-    }
-
-    .d-none {
-      display: none !important;
-    }
-
-    .auth-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 3000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      opacity: 0;
-      pointer-events: none;
-      transition: 0.3s ease;
-    }
-
-    .auth-modal.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-content {
-      width: 100%;
-      max-width: 460px;
-      border-radius: var(--radius-xl);
-      background: var(--surface-color);
-      border: 1px solid var(--border-color);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
-      transform: translateY(20px) scale(0.96);
-      transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      overflow: hidden;
-    }
-
-    .auth-modal.active .modal-content {
-      transform: translateY(0) scale(1);
-    }
-
-    .auth-card {
-      position: relative;
-    }
-
-    .close-modal-btn {
-      position: absolute;
-      top: 16px;
-      inset-inline-end: 16px;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--text-main);
-      transition: var(--transition);
-      z-index: 10;
-    }
-
-    .close-modal-btn:hover {
-      background: var(--border-color);
-    }
-
-    .auth-header {
-      padding: 22px 24px 18px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: center;
-    }
-
-    .auth-header img {
-      height: 42px;
-      width: auto;
-      object-fit: contain;
-    }
-
-    .auth-content {
-      padding: 28px 24px 28px;
-    }
-
-    .auth-form {
-      display: none;
-    }
-
-    .auth-form.active {
-      display: flex;
-      flex-direction: column;
-      animation: fadeStepIn 0.3s ease;
-    }
-
-    .auth-title {
-      font-size: 1.5rem;
-      margin-bottom: 6px;
-      color: var(--text-main);
-      font-weight: 800;
-    }
-
-    .auth-subtitle {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-bottom: 22px;
-      line-height: 1.6;
-    }
-
-    .auth-message {
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 18px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-      display: none;
-    }
-
-    .auth-message.error {
-      display: block;
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--error);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .auth-message.success {
-      display: block;
-      background: rgba(16, 185, 129, 0.1);
-      color: var(--success);
-      border: 1px solid rgba(16, 185, 129, 0.2);
-    }
-
-    .auth-footer-link {
-      margin-top: 16px;
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--text-muted);
-    }
-
-    .auth-footer-link a,
-    .auth-inline-link {
-      color: var(--primary);
-      font-weight: 800;
-    }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 18px 0;
-      color: var(--text-muted);
-      font-size: 0.82rem;
-      font-weight: 700;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: var(--border-color);
-    }
-
-    .google-btn {
-      width: 100%;
-      min-height: 50px;
-      border-radius: 14px;
-      border: 1.5px solid var(--border-color);
-      background: var(--surface-color);
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 800;
-      color: var(--text-main);
-      cursor: pointer;
-      transition: var(--transition);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .google-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    @media (max-width: 1100px) {
-      .booking-wrapper {
-        grid-template-columns: 1fr;
-      }
-
-      .booking-summary-sidebar {
-        position: static;
-      }
-    }
-
-    @media (max-width: 780px) {
-      .navbar {
-        padding: 12px 16px;
-        flex-wrap: wrap;
-      }
-
-      .container {
-        padding: 0 16px;
-      }
-
-      .booking-main-card {
-        padding: 24px 18px;
-      }
-
-      .booking-steps-header {
-        padding: 18px 14px;
-        gap: 10px;
-      }
-
-      .step-label {
-        font-size: 0.72rem;
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .step-actions,
-      .step-actions-between {
-        flex-direction: column-reverse;
-        align-items: stretch;
-      }
-
-      .primary-btn,
-      .ghost-btn {
-        width: 100%;
-      }
-
-      .prop-mini-card {
-        align-items: center;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="booking.css" />
 </head>
 
 <body>
@@ -1402,20 +71,23 @@
 
         <div id="profile-dropdown" class="profile-dropdown">
           <div class="dropdown-header">
-            <strong id="dropdown-user-name" data-i18n="guest_user">مستخدم ضيف</strong>
-            <span id="dropdown-user-email" data-i18n="sign_in_to_continue">سجّل الدخول للمتابعة</span>
+            <strong id="dropdown-user-name" data-i18n="guestuser">مستخدم ضيف</strong>
+            <span id="dropdown-user-email" data-i18n="signintocontinue">سجل الدخول للمتابعة</span>
           </div>
+
           <button id="my-bookings-btn" class="dropdown-item" type="button">
             <i class="ph ph-suitcase-rolling"></i>
-            <span data-i18n="my_bookings">حجوزاتي</span>
+            <span data-i18n="mybookings">حجوزاتي</span>
           </button>
+
           <button id="my-favorites-btn" class="dropdown-item" type="button">
             <i class="ph ph-heart-straight"></i>
-            <span data-i18n="my_favorites">مفضلتي</span>
+            <span data-i18n="myfavorites">المفضلة</span>
           </button>
+
           <button id="logout-btn" class="dropdown-item" type="button">
             <i class="ph ph-sign-out"></i>
-            <span data-i18n="log_out">تسجيل الخروج</span>
+            <span data-i18n="logout">تسجيل الخروج</span>
           </button>
         </div>
       </div>
@@ -1426,9 +98,9 @@
     <div class="container">
       <section class="booking-hero">
         <div class="booking-hero-card">
-          <h1 data-i18n="complete_booking">إتمام الحجز</h1>
-          <p data-i18n="booking_hero_text">
-            أدخل بيانات الضيف والإقامة الأساسية لإكمال حجزك بسرعة ووضوح.
+          <h1 data-i18n="completebooking">أكمل حجزك</h1>
+          <p data-i18n="bookingherotext">
+            أدخل المعلومات الأساسية فقط لإتمام الحجز بسرعة ووضوح.
           </p>
         </div>
       </section>
@@ -1436,14 +108,18 @@
       <section class="booking-steps-header">
         <div class="step-indicator active">
           <div class="step-num">1</div>
-          <div class="step-label" data-i18n="details">التفاصيل</div>
+          <div class="step-label" data-i18n="details">البيانات</div>
         </div>
+
         <div id="connector-1" class="step-connector"></div>
+
         <div class="step-indicator">
           <div class="step-num">2</div>
           <div class="step-label" data-i18n="payment">الدفع</div>
         </div>
+
         <div id="connector-2" class="step-connector"></div>
+
         <div class="step-indicator">
           <div class="step-num">3</div>
           <div class="step-label" data-i18n="review">المراجعة</div>
@@ -1454,7 +130,7 @@
         <section class="booking-main-card">
           <div id="booking-global-alert" class="booking-alert error d-none">
             <i class="ph ph-warning-circle"></i>
-            <span data-i18n="complete_required_fields">يرجى إكمال جميع الحقول المطلوبة قبل المتابعة.</span>
+            <span data-i18n="completerequiredfields">يرجى إكمال المعلومات المطلوبة.</span>
           </div>
 
           <!-- Step 1 -->
@@ -1464,9 +140,9 @@
                 <i class="ph ph-user-circle"></i>
               </div>
               <div>
-                <h2 class="step-title" data-i18n="guest_reservation_details">تفاصيل الضيف والحجز</h2>
-                <p class="step-subtitle" data-i18n="guest_reservation_subtitle">
-                  أدخل فقط المعلومات الأساسية اللازمة لإكمال الحجز.
+                <h2 class="step-title" data-i18n="guestreservationdetails">بيانات الحجز والضيف</h2>
+                <p class="step-subtitle" data-i18n="guestreservationsubtitle">
+                  أدخل فقط البيانات الأساسية المطلوبة لإتمام الحجز.
                 </p>
               </div>
             </div>
@@ -1474,235 +150,46 @@
             <div class="section-block">
               <h3>
                 <i class="ph ph-identification-card"></i>
-                <span data-i18n="primary_guest_information">معلومات الضيف الأساسية</span>
+                <span data-i18n="primaryguestinformation">معلومات الضيف الأساسية</span>
               </h3>
 
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="guest-name" class="form-label">الاسم <span class="required-star">*</span></label>
-                  <input id="guest-name" class="form-control" type="text" placeholder="الاسم" />
+                  <label for="guest-name" class="form-label">
+                    <span data-i18n="fullname">الاسم الكامل</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="guest-name" class="form-control" type="text" data-i18n-placeholder="fullnameplaceholder"
+                    placeholder="الاسم الكامل" autocomplete="name" required />
                 </div>
 
                 <div class="form-group">
-                  <label for="guest-father-name" class="form-label">اسم الأب <span class="required-star">*</span></label>
-                  <input id="guest-father-name" class="form-control" type="text" placeholder="اسم الأب" />
+                  <label for="guest-email" class="form-label">
+                    <span data-i18n="emailaddress">البريد الإلكتروني</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="guest-email" class="form-control" type="email"
+                    data-i18n-placeholder="emailplaceholder" placeholder="name@example.com" autocomplete="email"
+                    required />
                 </div>
 
                 <div class="form-group">
-                  <label for="guest-family-name" class="form-label">اللقب <span class="required-star">*</span></label>
-                  <input id="guest-family-name" class="form-control" type="text" placeholder="اللقب" />
+                  <label for="guest-phone" class="form-label">
+                    <span data-i18n="phonenumber">رقم الهاتف</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="guest-phone" class="form-control" type="tel" data-i18n-placeholder="phoneplaceholder"
+                    placeholder="+213 ..." autocomplete="tel" required />
                 </div>
 
                 <div class="form-group">
-                  <label for="guest-gender" class="form-label">الجنس <span class="required-star">*</span></label>
-                  <select id="guest-gender" class="form-control">
-                    <option value="">اختر الجنس</option>
-                    <option value="male">ذكر</option>
-                    <option value="female">أنثى</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-dob" class="form-label">تاريخ الميلاد <span class="required-star">*</span></label>
-                  <input id="guest-dob" class="form-control" type="date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-nationality" class="form-label">الجنسية <span class="required-star">*</span></label>
-                  <input id="guest-nationality" class="form-control" type="text" placeholder="الجنسية" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-occupation" class="form-label">المهنة <span class="required-star">*</span></label>
-                  <input id="guest-occupation" class="form-control" type="text" placeholder="المهنة" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-marital-status" class="form-label">الحالة الاجتماعية <span class="required-star">*</span></label>
-                  <select id="guest-marital-status" class="form-control">
-                    <option value="">اختر الحالة</option>
-                    <option value="single">أعزب</option>
-                    <option value="married">متزوج</option>
-                    <option value="other">أخرى</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-phone"></i>
-                <span>معلومات التواصل</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="guest-email" class="form-label" data-i18n="email_address">البريد الإلكتروني <span class="required-star">*</span></label>
-                  <input id="guest-email" class="form-control" type="email" data-i18n-placeholder="email_placeholder" placeholder="name@example.com" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-phone" class="form-label" data-i18n="phone_number">رقم الهاتف <span class="required-star">*</span></label>
-                  <input id="guest-phone" class="form-control" type="tel" data-i18n-placeholder="phone_placeholder" placeholder="+213 ..." />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-whatsapp" class="form-label">واتساب <span class="required-star">*</span></label>
-                  <input id="guest-whatsapp" class="form-control" type="tel" placeholder="+213 ..." />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-alt-phone" class="form-label">هاتف بديل</label>
-                  <input id="guest-alt-phone" class="form-control" type="tel" placeholder="+213 ..." />
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="guest-address" class="form-label">العنوان <span class="required-star">*</span></label>
-                  <input id="guest-address" class="form-control" type="text" placeholder="العنوان الكامل" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-city" class="form-label">المدينة <span class="required-star">*</span></label>
-                  <input id="guest-city" class="form-control" type="text" placeholder="المدينة" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-state" class="form-label">الولاية / المنطقة <span class="required-star">*</span></label>
-                  <input id="guest-state" class="form-control" type="text" placeholder="الولاية / المنطقة" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-postal" class="form-label">الرمز البريدي</label>
-                  <input id="guest-postal" class="form-control" type="text" placeholder="الرمز البريدي" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-country" class="form-label" data-i18n="country_region">الدولة / المنطقة <span class="required-star">*</span></label>
-                  <input id="guest-country" class="form-control" type="text" data-i18n-placeholder="country_region_placeholder" placeholder="الدولة أو المنطقة" />
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-shield-check"></i>
-                <span>الهوية والتحقق</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="guest-id-type" class="form-label">نوع الوثيقة <span class="required-star">*</span></label>
-                  <select id="guest-id-type" class="form-control">
-                    <option value="">اختر النوع</option>
-                    <option value="id">بطاقة تعريف</option>
-                    <option value="passport">جواز سفر</option>
-                    <option value="license">رخصة</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-id-number" class="form-label">رقم الوثيقة <span class="required-star">*</span></label>
-                  <input id="guest-id-number" class="form-control" type="text" placeholder="رقم الوثيقة" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-id-issue-place" class="form-label">مكان الإصدار <span class="required-star">*</span></label>
-                  <input id="guest-id-issue-place" class="form-control" type="text" placeholder="مكان الإصدار" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-id-issue-date" class="form-label">تاريخ الإصدار <span class="required-star">*</span></label>
-                  <input id="guest-id-issue-date" class="form-control" type="date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-id-expiry" class="form-label">تاريخ الانتهاء <span class="required-star">*</span></label>
-                  <input id="guest-id-expiry" class="form-control" type="date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-id-upload" class="form-label">رفع نسخة الوثيقة</label>
-                  <input id="guest-id-upload" class="form-control" type="file" />
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-bed"></i>
-                <span>تفضيلات الغرفة والإقامة</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="room-type" class="form-label">نوع الغرفة <span class="required-star">*</span></label>
-                  <select id="room-type" class="form-control">
-                    <option value="">اختر النوع</option>
-                    <option value="standard">Standard</option>
-                    <option value="double">Double</option>
-                    <option value="suite">Suite</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="bed-type" class="form-label">نوع السرير</label>
-                  <select id="bed-type" class="form-control">
-                    <option value="">اختر النوع</option>
-                    <option value="single">Single</option>
-                    <option value="double">Double</option>
-                    <option value="king">King</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="room-view" class="form-label">الإطلالة</label>
-                  <select id="room-view" class="form-control">
-                    <option value="">اختر الإطلالة</option>
-                    <option value="city">City</option>
-                    <option value="garden">Garden</option>
-                    <option value="pool">Pool</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="floor-preference" class="form-label">الطابق المفضل</label>
-                  <input id="floor-preference" class="form-control" type="text" placeholder="مثال: طابق علوي" />
-                </div>
-
-                <div class="form-group">
-                  <label for="smoking-preference" class="form-label">التدخين <span class="required-star">*</span></label>
-                  <select id="smoking-preference" class="form-control">
-                    <option value="">اختر</option>
-                    <option value="non-smoking">غير مدخنين</option>
-                    <option value="smoking">مدخنين</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="quiet-room" class="form-label">غرفة هادئة</label>
-                  <select id="quiet-room" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="near-elevator" class="form-label">قرب المصعد</label>
-                  <select id="near-elevator" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="connected-rooms" class="form-label">غرف متصلة</label>
-                  <select id="connected-rooms" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
+                  <label for="guest-country" class="form-label">
+                    <span data-i18n="countryregion">الدولة / الجنسية</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="guest-country" class="form-control" type="text"
+                    data-i18n-placeholder="countryregionplaceholder" placeholder="الدولة أو الجنسية"
+                    autocomplete="country-name" required />
                 </div>
               </div>
             </div>
@@ -1710,23 +197,32 @@
             <div class="section-block">
               <h3>
                 <i class="ph ph-calendar-check"></i>
-                <span data-i18n="stay_details">تفاصيل الإقامة</span>
+                <span data-i18n="staydetails">تفاصيل الإقامة</span>
               </h3>
 
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="arrival-date" class="form-label" data-i18n="checkin_date">تاريخ تسجيل الوصول <span class="required-star">*</span></label>
-                  <input id="arrival-date" class="form-control" type="date" />
+                  <label for="arrival-date" class="form-label">
+                    <span data-i18n="checkindate">تاريخ الدخول</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="arrival-date" class="form-control" type="date" required />
                 </div>
 
                 <div class="form-group">
-                  <label for="departure-date" class="form-label" data-i18n="checkout_date">تاريخ تسجيل المغادرة <span class="required-star">*</span></label>
-                  <input id="departure-date" class="form-control" type="date" />
+                  <label for="departure-date" class="form-label">
+                    <span data-i18n="checkoutdate">تاريخ الخروج</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="departure-date" class="form-control" type="date" required />
                 </div>
 
                 <div class="form-group">
-                  <label for="guest-adults" class="form-label" data-i18n="adults">البالغون <span class="required-star">*</span></label>
-                  <input id="guest-adults" class="form-control" type="number" min="1" value="1" />
+                  <label for="guest-adults" class="form-label">
+                    <span data-i18n="adults">البالغون</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="guest-adults" class="form-control" type="number" min="1" value="1" required />
                 </div>
 
                 <div class="form-group">
@@ -1735,27 +231,31 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="guest-infants" class="form-label">الرضع</label>
-                  <input id="guest-infants" class="form-control" type="number" min="0" value="0" />
-                </div>
-
-                <div class="form-group">
-                  <label for="arrival-time" class="form-label" data-i18n="expected_arrival_time">وقت الوصول المتوقع <span class="required-star">*</span></label>
-                  <select id="arrival-time" class="form-control">
-                    <option value="" data-i18n-option="select_arrival_time">اختر وقت الوصول</option>
-                    <option value="12:00-15:00">12:00 - 15:00</option>
-                    <option value="15:00-18:00">15:00 - 18:00</option>
-                    <option value="18:00-20:00">18:00 - 20:00</option>
-                    <option value="after-20" data-i18n-option="after_20">بعد 20:00</option>
-                    <option value="after-midnight" data-i18n-option="after_midnight">بعد منتصف الليل</option>
+                  <label for="arrival-time" class="form-label">
+                    <span data-i18n="expectedarrivaltime">وقت الوصول المتوقع</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <select id="arrival-time" class="form-control" required>
+                    <option value="" data-i18n-option="selectarrivaltime">اختر وقت الوصول</option>
+                    <option value="08:00 - 10:00">08:00 - 10:00</option>
+                    <option value="10:00 - 12:00">10:00 - 12:00</option>
+                    <option value="12:00 - 14:00">12:00 - 14:00</option>
+                    <option value="14:00 - 16:00">14:00 - 16:00</option>
+                    <option value="16:00 - 18:00">16:00 - 18:00</option>
+                    <option value="18:00 - 20:00">18:00 - 20:00</option>
+                    <option value="after-20" data-i18n-option="after20">بعد 20:00</option>
+                    <option value="after-midnight" data-i18n-option="aftermidnight">بعد منتصف الليل</option>
                   </select>
                 </div>
 
                 <div class="form-group">
-                  <label for="stay-purpose" class="form-label" data-i18n="purpose_of_stay">غرض الإقامة <span class="required-star">*</span></label>
-                  <select id="stay-purpose" class="form-control">
-                    <option value="" data-i18n-option="select_purpose">اختر الغرض</option>
-                    <option value="family" data-i18n-option="family_stay">إقامة عائلية</option>
+                  <label for="stay-purpose" class="form-label">
+                    <span data-i18n="purposeofstay">غرض الإقامة</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <select id="stay-purpose" class="form-control" required>
+                    <option value="" data-i18n-option="selectpurpose">اختر الغرض</option>
+                    <option value="family" data-i18n-option="familystay">عائلية</option>
                     <option value="business" data-i18n-option="business">عمل</option>
                     <option value="tourism" data-i18n-option="tourism">سياحة</option>
                     <option value="medical" data-i18n-option="medical">علاج</option>
@@ -1763,129 +263,14 @@
                   </select>
                 </div>
 
-                <div class="form-group">
-                  <label for="arrival-method" class="form-label">طريقة الوصول <span class="required-star">*</span></label>
-                  <select id="arrival-method" class="form-control">
-                    <option value="">اختر الطريقة</option>
-                    <option value="car">سيارة</option>
-                    <option value="taxi">تاكسي</option>
-                    <option value="bus">حافلة</option>
-                    <option value="walk">مشياً</option>
-                    <option value="other">أخرى</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="vehicle-plate" class="form-label">رقم المركبة</label>
-                  <input id="vehicle-plate" class="form-control" type="text" placeholder="اختياري" />
-                </div>
-
-                <div class="form-group">
-                  <label for="checkin-contact-person" class="form-label">شخص الاستقبال</label>
-                  <input id="checkin-contact-person" class="form-control" type="text" placeholder="اختياري" />
-                </div>
-
                 <div class="form-group full-width">
-                  <label for="additional-guests" class="form-label">أسماء المرافقين <span class="required-star">*</span></label>
-                  <textarea id="additional-guests" class="form-control" placeholder="اذكر أسماء المرافقين أو اكتب: لا يوجد"></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-sparkle"></i>
-                <span>الخدمات والإضافات</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="breakfast-option" class="form-label">الإفطار</label>
-                  <select id="breakfast-option" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="airport-transfer" class="form-label">نقل</label>
-                  <select id="airport-transfer" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="extra-bed" class="form-label">سرير إضافي</label>
-                  <select id="extra-bed" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="late-checkout" class="form-label">مغادرة متأخرة</label>
-                  <select id="late-checkout" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="early-checkin" class="form-label">دخول مبكر</label>
-                  <select id="early-checkin" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="housekeeping" class="form-label">تنظيف إضافي</label>
-                  <select id="housekeeping" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="baby-crib" class="form-label">سرير أطفال</label>
-                  <select id="baby-crib" class="form-control">
-                    <option value="">اختياري</option>
-                    <option value="yes">نعم</option>
-                    <option value="no">لا</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="accessibility-need" class="form-label">احتياج خاص</label>
-                  <input id="accessibility-need" class="form-control" type="text" placeholder="اختياري" />
-                </div>
-
-                <div class="form-group">
-                  <label for="emergency-name" class="form-label">اسم الطوارئ</label>
-                  <input id="emergency-name" class="form-control" type="text" placeholder="اختياري" />
-                </div>
-
-                <div class="form-group">
-                  <label for="emergency-phone" class="form-label">هاتف الطوارئ</label>
-                  <input id="emergency-phone" class="form-control" type="tel" placeholder="اختياري" />
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="medical-condition" class="form-label">ملاحظات صحية</label>
-                  <textarea id="medical-condition" class="form-control" placeholder="اختياري"></textarea>
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="special-requests" class="form-label" data-i18n="special_requests">طلبات خاصة</label>
-                  <textarea id="special-requests" class="form-control" data-i18n-placeholder="special_requests_placeholder" placeholder="ملاحظة اختيارية للمضيف مثل وقت الوصول أو طلب بسيط"></textarea>
-                  <span class="hint-text" data-i18n="special_requests_hint">اجعل الطلبات مختصرة وأساسية.</span>
+                  <label for="special-requests" class="form-label" data-i18n="specialrequests">طلبات خاصة</label>
+                  <textarea id="special-requests" class="form-control"
+                    data-i18n-placeholder="specialrequestsplaceholder"
+                    placeholder="ملاحظة اختيارية للمضيف"></textarea>
+                  <span class="hint-text" data-i18n="specialrequestshint">
+                    اجعل الطلبات قصيرة وواضحة.
+                  </span>
                 </div>
               </div>
             </div>
@@ -1893,20 +278,32 @@
             <div class="section-block">
               <h3>
                 <i class="ph ph-grid-four"></i>
-                <span data-i18n="property_amenities">مرافق العقار</span>
+                <span data-i18n="propertyamenities">مرافق العقار</span>
               </h3>
 
               <div class="amenities-box">
-                <div class="amenity-chip"><i class="ph ph-wifi-high"></i><span data-i18n="wifi">واي فاي</span></div>
-                <div class="amenity-chip"><i class="ph ph-car"></i><span data-i18n="parking">موقف سيارات</span></div>
-                <div class="amenity-chip"><i class="ph ph-snowflake"></i><span data-i18n="air_conditioning">تكييف هواء</span></div>
-                <div class="amenity-chip"><i class="ph ph-cooking-pot"></i><span data-i18n="kitchen">مطبخ</span></div>
+                <div class="amenity-chip">
+                  <i class="ph ph-wifi-high"></i>
+                  <span data-i18n="wifi">واي فاي</span>
+                </div>
+                <div class="amenity-chip">
+                  <i class="ph ph-car"></i>
+                  <span data-i18n="parking">موقف سيارات</span>
+                </div>
+                <div class="amenity-chip">
+                  <i class="ph ph-snowflake"></i>
+                  <span data-i18n="airconditioning">تكييف</span>
+                </div>
+                <div class="amenity-chip">
+                  <i class="ph ph-cooking-pot"></i>
+                  <span data-i18n="kitchen">مطبخ</span>
+                </div>
               </div>
             </div>
 
             <div class="step-actions">
               <button id="btn-next-1" class="primary-btn" type="button">
-                <span data-i18n="continue_to_payment">المتابعة إلى الدفع</span>
+                <span data-i18n="continuetopayment">متابعة إلى الدفع</span>
                 <i class="ph ph-arrow-left"></i>
               </button>
             </div>
@@ -1919,9 +316,9 @@
                 <i class="ph ph-credit-card"></i>
               </div>
               <div>
-                <h2 class="step-title" data-i18n="payment_billing">الدفع والفوترة</h2>
-                <p class="step-subtitle" data-i18n="payment_billing_subtitle">
-                  اختر طريقة الدفع وأدخل فقط بيانات الدفع الأساسية.
+                <h2 class="step-title" data-i18n="paymentbilling">الدفع والفوترة</h2>
+                <p class="step-subtitle" data-i18n="paymentbillingsubtitle">
+                  اختر طريقة الدفع وأدخل فقط التفاصيل الأساسية.
                 </p>
               </div>
             </div>
@@ -1930,33 +327,43 @@
               <label class="payment-method-card selected">
                 <input class="payment-radio" type="radio" name="paymentmethod" value="ccp" checked />
                 <div class="payment-method-icon"><i class="ph ph-bank"></i></div>
-                <div class="payment-method-title" data-i18n="bank_transfer_ccp">تحويل بنكي (CCP)</div>
-                <p class="payment-method-desc" data-i18n="bank_transfer_desc">حوّل مبلغ الحجز ثم ارفع وصل الدفع.</p>
+                <div class="payment-method-title" data-i18n="banktransferccp">تحويل بنكي / CCP</div>
+                <p class="payment-method-desc" data-i18n="banktransferdesc">
+                  حول قيمة الحجز ثم ارفع وصل الدفع.
+                </p>
               </label>
 
               <label class="payment-method-card">
                 <input class="payment-radio" type="radio" name="paymentmethod" value="cash" />
                 <div class="payment-method-icon"><i class="ph ph-money"></i></div>
-                <div class="payment-method-title" data-i18n="pay_at_property">الدفع عند الوصول</div>
-                <p class="payment-method-desc" data-i18n="pay_at_property_desc">ادفع نقدًا عند تسجيل الوصول حسب موافقة المضيف.</p>
+                <div class="payment-method-title" data-i18n="payatproperty">الدفع عند الوصول</div>
+                <p class="payment-method-desc" data-i18n="payatpropertydesc">
+                  الدفع نقدًا عند تسجيل الدخول حسب موافقة المضيف.
+                </p>
               </label>
             </div>
 
             <div class="section-block">
               <h3>
                 <i class="ph ph-receipt"></i>
-                <span data-i18n="billing_details">بيانات الفوترة</span>
+                <span data-i18n="billingdetails">بيانات الفوترة</span>
               </h3>
 
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="billing-name" class="form-label" data-i18n="billing_name">اسم الفاتورة <span class="required-star">*</span></label>
-                  <input id="billing-name" class="form-control" type="text" data-i18n-placeholder="billing_name_placeholder" placeholder="اسم الفوترة الكامل" />
+                  <label for="billing-name" class="form-label">
+                    <span data-i18n="billingname">اسم الفوترة</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="billing-name" class="form-control" type="text"
+                    data-i18n-placeholder="billingnameplaceholder" placeholder="الاسم الكامل للفوترة" required />
                 </div>
 
                 <div class="form-group full-width">
-                  <label for="billing-note" class="form-label" data-i18n="billing_note">ملاحظة الفوترة</label>
-                  <textarea id="billing-note" class="form-control" data-i18n-placeholder="billing_note_placeholder" placeholder="ملاحظة اختيارية للفوترة أو الدفع"></textarea>
+                  <label for="billing-note" class="form-label" data-i18n="billingnote">ملاحظة الفوترة</label>
+                  <textarea id="billing-note" class="form-control"
+                    data-i18n-placeholder="billingnoteplaceholder"
+                    placeholder="ملاحظة اختيارية للفوترة أو الدفع"></textarea>
                 </div>
               </div>
             </div>
@@ -1964,16 +371,16 @@
             <div id="ccp-details" class="payment-details-box active">
               <h3 style="margin-bottom:16px;">
                 <i class="ph ph-bank"></i>
-                <span data-i18n="bank_transfer_details">تفاصيل التحويل البنكي</span>
+                <span data-i18n="banktransferdetails">تفاصيل التحويل البنكي</span>
               </h3>
 
-              <p class="hint-text" style="margin-bottom:16px;" data-i18n="bank_transfer_instruction">
-                يرجى تحويل المبلغ الإجمالي إلى الحساب التالي ثم رفع الوصل وإدخال بيانات المُرسِل.
+              <p class="hint-text" style="margin-bottom:16px;" data-i18n="banktransferinstruction">
+                يرجى تحويل المبلغ الكامل ثم رفع الإيصال وإدخال بيانات المرسل.
               </p>
 
               <div class="bank-box">
                 <div class="bank-row">
-                  <span data-i18n="account_name">اسم الحساب</span>
+                  <span data-i18n="accountname">اسم الحساب</span>
                   <strong>OreBooking LLC</strong>
                 </div>
                 <div class="bank-row">
@@ -1993,28 +400,39 @@
               <div class="step-actions" style="margin-top:0;padding-top:0;border-top:none;justify-content:flex-start;">
                 <button id="copy-rib-btn" class="ghost-btn" type="button">
                   <i class="ph ph-copy"></i>
-                  <span>نسخ رقم الحساب</span>
+                  <span>Copy RIB</span>
                 </button>
 
                 <button id="copy-reference-btn" class="ghost-btn" type="button">
                   <i class="ph ph-copy"></i>
-                  <span>نسخ المرجع</span>
+                  <span>Copy Reference</span>
                 </button>
               </div>
 
               <div class="form-grid" style="margin-top:18px;">
                 <div class="form-group">
-                  <label for="sender-name" class="form-label" data-i18n="sender_full_name">اسم المرسل الكامل <span class="required-star">*</span></label>
-                  <input id="sender-name" class="form-control" type="text" data-i18n-placeholder="sender_name_placeholder" placeholder="الاسم المستخدم في التحويل" />
+                  <label for="sender-name" class="form-label">
+                    <span data-i18n="senderfullname">اسم المرسل</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="sender-name" class="form-control" type="text"
+                    data-i18n-placeholder="sendernameplaceholder" placeholder="الاسم المستخدم في التحويل" />
                 </div>
 
                 <div class="form-group">
-                  <label for="transfer-amount" class="form-label" data-i18n="transferred_amount">المبلغ المحوّل <span class="required-star">*</span></label>
-                  <input id="transfer-amount" class="form-control" type="number" min="0" data-i18n-placeholder="transfer_amount_placeholder" placeholder="المبلغ المدفوع" />
+                  <label for="transfer-amount" class="form-label">
+                    <span data-i18n="transferredamount">المبلغ المحول</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="transfer-amount" class="form-control" type="number" min="0"
+                    data-i18n-placeholder="transferamountplaceholder" placeholder="المبلغ المدفوع" />
                 </div>
 
                 <div class="form-group">
-                  <label for="transfer-date" class="form-label" data-i18n="transfer_date">تاريخ التحويل <span class="required-star">*</span></label>
+                  <label for="transfer-date" class="form-label">
+                    <span data-i18n="transferdate">تاريخ التحويل</span>
+                    <span class="required-star">*</span>
+                  </label>
                   <input id="transfer-date" class="form-control" type="date" />
                 </div>
 
@@ -2022,36 +440,48 @@
                   <label for="transfer-time" class="form-label">وقت التحويل</label>
                   <input id="transfer-time" class="form-control" type="time" />
                 </div>
-              </div>
 
-              <label class="file-upload-wrapper" for="receipt-upload">
-                <div class="file-upload-icon"><i class="ph ph-upload-simple"></i></div>
-                <div id="upload-text" class="file-upload-text" data-i18n="click_upload_receipt">اضغط لرفع وصل الدفع</div>
-                <div class="file-upload-hint" data-i18n="upload_hint">JPG أو PNG أو PDF (الحد الأقصى 5MB)</div>
-                <input id="receipt-upload" class="file-upload-input" type="file" accept=".jpg,.jpeg,.png,.pdf,.webp" />
-              </label>
+                <div class="form-group full-width">
+                  <label class="file-upload-wrapper" for="receipt-upload">
+                    <div class="file-upload-icon"><i class="ph ph-upload-simple"></i></div>
+                    <div id="upload-text" class="file-upload-text" data-i18n="clickuploadreceipt">
+                      اضغط لرفع إيصال الدفع
+                    </div>
+                    <div class="file-upload-hint" data-i18n="uploadhint">JPG, PNG, PDF, WEBP - 5MB</div>
+                    <input id="receipt-upload" class="file-upload-input" type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,.webp" />
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div id="cash-details" class="payment-details-box">
               <h3 style="margin-bottom:16px;">
                 <i class="ph ph-money"></i>
-                <span data-i18n="cash_payment_confirmation">تأكيد الدفع النقدي</span>
+                <span data-i18n="cashpaymentconfirmation">تأكيد الدفع النقدي</span>
               </h3>
 
-              <p class="hint-text" style="margin-bottom:16px;" data-i18n="cash_payment_instruction">
-                أكد من سيدفع عند تسجيل الوصول.
+              <p class="hint-text" style="margin-bottom:16px;" data-i18n="cashpaymentinstruction">
+                أكد من سيدفع عند الوصول.
               </p>
 
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="cash-payer-name" class="form-label" data-i18n="who_will_pay_checkin">من سيدفع عند تسجيل الوصول <span class="required-star">*</span></label>
-                  <input id="cash-payer-name" class="form-control" type="text" data-i18n-placeholder="cash_payer_placeholder" placeholder="الشخص المسؤول عن الدفع" />
+                  <label for="cash-payer-name" class="form-label">
+                    <span data-i18n="whowillpaycheckin">من سيدفع عند الوصول</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <input id="cash-payer-name" class="form-control" type="text"
+                    data-i18n-placeholder="cashpayerplaceholder" placeholder="اسم الشخص المسؤول عن الدفع" />
                 </div>
 
                 <div class="form-group">
-                  <label for="cash-currency" class="form-label" data-i18n="preferred_currency">العملة المفضلة <span class="required-star">*</span></label>
+                  <label for="cash-currency" class="form-label">
+                    <span data-i18n="preferredcurrency">العملة المفضلة</span>
+                    <span class="required-star">*</span>
+                  </label>
                   <select id="cash-currency" class="form-control">
-                    <option value="" data-i18n-option="select_currency">اختر العملة</option>
+                    <option value="" data-i18n-option="selectcurrency">اختر العملة</option>
                     <option value="DZD">DZD</option>
                     <option value="EUR">EUR</option>
                     <option value="USD">USD</option>
@@ -2059,8 +489,9 @@
                 </div>
 
                 <div class="form-group full-width">
-                  <label for="cash-payment-note" class="form-label">ملاحظة الدفع النقدي</label>
-                  <textarea id="cash-payment-note" class="form-control" placeholder="اختياري"></textarea>
+                  <label for="cash-payment-note" class="form-label">ملاحظة الدفع</label>
+                  <textarea id="cash-payment-note" class="form-control"
+                    placeholder="ملاحظة اختيارية حول الدفع"></textarea>
                 </div>
               </div>
             </div>
@@ -2070,11 +501,11 @@
             <div class="step-actions step-actions-between">
               <button id="btn-prev-2" class="ghost-btn" type="button">
                 <i class="ph ph-arrow-right"></i>
-                <span data-i18n="back_to_details">العودة إلى التفاصيل</span>
+                <span data-i18n="backtodetails">العودة للبيانات</span>
               </button>
 
               <button id="btn-next-2" class="primary-btn" type="button">
-                <span data-i18n="review_booking">مراجعة الحجز</span>
+                <span data-i18n="reviewbooking">مراجعة الحجز</span>
                 <i class="ph ph-arrow-left"></i>
               </button>
             </div>
@@ -2087,107 +518,108 @@
                 <i class="ph ph-check-circle"></i>
               </div>
               <div>
-                <h2 class="step-title" data-i18n="review_confirm">المراجعة والتأكيد</h2>
-                <p class="step-subtitle" data-i18n="review_confirm_subtitle">
+                <h2 class="step-title" data-i18n="reviewconfirm">المراجعة والتأكيد</h2>
+                <p class="step-subtitle" data-i18n="reviewconfirmsubtitle">
                   راجع بيانات الضيف والإقامة والدفع قبل التأكيد النهائي.
                 </p>
               </div>
             </div>
 
-            <div class="review-grid">
-              <div class="review-card">
-                <div class="review-card-header">
-                  <h3>
-                    <i class="ph ph-user"></i>
-                    <span data-i18n="guest_information">معلومات الضيف</span>
-                  </h3>
-                  <button id="btn-edit-guest" class="edit-btn" type="button">
-                    <i class="ph ph-pencil-simple"></i>
-                    <span data-i18n="edit">تعديل</span>
-                  </button>
-                </div>
-                <div class="review-card-body">
-                  <div class="review-data">
-                    <span class="rd-label">الاسم</span>
-                    <span id="rev-name" class="rd-value">—</span>
+            <div id="reviews-section">
+              <div class="review-grid">
+                <div class="review-card">
+                  <div class="review-card-header">
+                    <h3>
+                      <i class="ph ph-user"></i>
+                      <span data-i18n="guestinformation">معلومات الضيف</span>
+                    </h3>
+                    <button id="btn-edit-guest" class="edit-btn" type="button">
+                      <i class="ph ph-pencil-simple"></i>
+                      <span data-i18n="edit">تعديل</span>
+                    </button>
                   </div>
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="email">البريد الإلكتروني</span>
-                    <span id="rev-email" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="phone">الهاتف</span>
-                    <span id="rev-phone" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label">الجنسية / الجنس</span>
-                    <span id="rev-nationality-gender" class="rd-value">—</span>
-                  </div>
-                </div>
-              </div>
 
-              <div class="review-card">
-                <div class="review-card-header">
-                  <h3>
-                    <i class="ph ph-calendar-check"></i>
-                    <span>تفاصيل الإقامة</span>
-                  </h3>
-                  <button id="btn-edit-dates" class="edit-btn" type="button">
-                    <i class="ph ph-pencil-simple"></i>
-                    <span data-i18n="edit">تعديل</span>
-                  </button>
-                </div>
-                <div class="review-card-body">
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="checkin_checkout">الوصول / المغادرة</span>
-                    <span id="rev-dates" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="guests">الضيوف</span>
-                    <span id="rev-guests" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="purpose_arrival">الغرض / الوصول</span>
-                    <span id="rev-purpose-arrival" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label">المرافقون</span>
-                    <span id="rev-additional-guests" class="rd-value">—</span>
+                  <div class="review-card-body">
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="fullname">الاسم</span>
+                      <span id="rev-name" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="email">البريد الإلكتروني</span>
+                      <span id="rev-email" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="phone">الهاتف</span>
+                      <span id="rev-phone" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="countryregion">الدولة / الجنسية</span>
+                      <span id="rev-nationality-gender" class="rd-value"></span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="review-card full-width">
-                <div class="review-card-header">
-                  <h3>
-                    <i class="ph ph-files"></i>
-                    <span>الوثائق والفوترة والدفع</span>
-                  </h3>
-                  <button id="btn-edit-payment" class="edit-btn" type="button">
-                    <i class="ph ph-pencil-simple"></i>
-                    <span data-i18n="edit">تعديل</span>
-                  </button>
+                <div class="review-card">
+                  <div class="review-card-header">
+                    <h3>
+                      <i class="ph ph-calendar-check"></i>
+                      <span data-i18n="staydetails">تفاصيل الإقامة</span>
+                    </h3>
+                    <button id="btn-edit-dates" class="edit-btn" type="button">
+                      <i class="ph ph-pencil-simple"></i>
+                      <span data-i18n="edit">تعديل</span>
+                    </button>
+                  </div>
+
+                  <div class="review-card-body">
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="checkincheckout">الدخول / الخروج</span>
+                      <span id="rev-dates" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="guests">الضيوف</span>
+                      <span id="rev-guests" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="purposearrival">الغرض / الوصول</span>
+                      <span id="rev-purpose-arrival" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="specialrequests">طلبات خاصة</span>
+                      <span id="rev-room-preferences" class="rd-value"></span>
+                    </div>
+                  </div>
                 </div>
-                <div class="review-card-body">
-                  <div class="review-data">
-                    <span class="rd-label">الوثائق</span>
-                    <span id="rev-documents" class="rd-value">—</span>
+
+                <div class="review-card full-width">
+                  <div class="review-card-header">
+                    <h3>
+                      <i class="ph ph-files"></i>
+                      <span data-i18n="payment">الدفع</span>
+                    </h3>
+                    <button id="btn-edit-payment" class="edit-btn" type="button">
+                      <i class="ph ph-pencil-simple"></i>
+                      <span data-i18n="edit">تعديل</span>
+                    </button>
                   </div>
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="billing">الفوترة</span>
-                    <span id="rev-billings" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label">تفضيلات الغرفة</span>
-                    <span id="rev-room-preferences" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label" data-i18n="selected_payment_method">طريقة الدفع المختارة</span>
-                    <span id="rev-payment-method" class="rd-value">—</span>
-                  </div>
-                  <div class="review-data">
-                    <span class="rd-label">النقاط</span>
-                    <span id="rev-points" class="rd-value">0</span>
+
+                  <div class="review-card-body">
+                    <div class="review-data">
+                      <span class="rd-label" data-i18n="billing">الفوترة</span>
+                      <span id="rev-billings" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">الملفات / الإيصال</span>
+                      <span id="rev-documents" class="rd-value"></span>
+                    </div>
+                    <div class="review-data full-width">
+                      <span class="rd-label" data-i18n="selectedpaymentmethod">طريقة الدفع المختارة</span>
+                      <span id="rev-payment-method" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
+                      <span class="rd-label">النقاط</span>
+                      <span id="rev-points" class="rd-value">0</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2198,12 +630,12 @@
                 <i class="ph ph-gift"></i>
               </div>
               <div class="points-text">
-                <span class="points-title" data-i18n="earn_points_title">اكسب نقاط OreBooking!</span>
+                <span class="points-title" data-i18n="earnpointstitle">اكسب نقاط OreBooking!</span>
                 <p>
-                  <span data-i18n="earn_points_prefix">ستكسب</span>
+                  <span data-i18n="earnpointsprefix">ستكسب</span>
                   <strong id="review-points-inline">0</strong>
                   <span data-i18n="pts">نقطة</span>
-                  <span data-i18n="earn_points_suffix">بعد إتمام هذه الإقامة. يمكن استخدام النقاط لخصومات وترقيات مستقبلية.</span>
+                  <span data-i18n="earnpointssuffix">بعد إكمال هذه الإقامة.</span>
                 </p>
               </div>
             </div>
@@ -2212,8 +644,8 @@
               <label class="checkbox-container">
                 <input id="agree-policy" type="checkbox" />
                 <span class="checkmark"></span>
-                <span class="agree-text" data-i18n="policy_agreement">
-                  أؤكد أن معلومات الحجز المقدمة صحيحة وأنني أوافق على شروط الخدمة وسياسة الخصوصية وقواعد العقار وسياسة الإلغاء وإجراءات التحقق من الدفع.
+                <span class="agree-text" data-i18n="policyagreement">
+                  أؤكد أن معلومات الحجز صحيحة وأوافق على الشروط والسياسات.
                 </span>
               </label>
             </div>
@@ -2221,11 +653,11 @@
             <div class="step-actions step-actions-between">
               <button id="btn-prev-3" class="ghost-btn" type="button">
                 <i class="ph ph-arrow-right"></i>
-                <span data-i18n="back_to_payment">العودة إلى الدفع</span>
+                <span data-i18n="backtopayment">العودة للدفع</span>
               </button>
 
               <button id="btn-confirm-booking" class="primary-btn green-btn" type="button">
-                <span data-i18n="confirm_book">تأكيد الحجز</span>
+                <span data-i18n="confirmbook">تأكيد الحجز</span>
                 <i class="ph ph-check"></i>
               </button>
             </div>
@@ -2235,59 +667,61 @@
         <aside class="booking-summary-sidebar">
           <h3 class="sidebar-title">
             <i class="ph ph-receipt"></i>
-            <span data-i18n="booking_summary">ملخص الحجز</span>
+            <span data-i18n="bookingsummary">ملخص الحجز</span>
           </h3>
 
           <div class="prop-mini-card">
             <img id="prop-mini-img" class="prop-mini-img" src="images/placeholder.jpg" alt="Property" />
             <div class="prop-mini-details">
-              <h4 id="prop-mini-title" data-i18n="loading">جارٍ التحميل...</h4>
+              <h4 id="prop-mini-title" data-i18n="loading">جاري التحميل...</h4>
               <p id="prop-mini-loc">
                 <i class="ph ph-map-pin"></i>
-                <span>—</span>
+                <span></span>
               </p>
-              <div id="prop-mini-type" class="prop-type-badge">—</div>
+              <div id="prop-mini-type" class="prop-type-badge"></div>
             </div>
           </div>
 
-          <div class="summary-row">
-            <span data-i18n="checkin_date">تاريخ تسجيل الوصول</span>
-            <strong id="summary-checkin">—</strong>
-          </div>
+          <div class="summary-details">
+            <div class="summary-row">
+              <span data-i18n="checkindate">تاريخ الدخول</span>
+              <strong id="summary-checkin"></strong>
+            </div>
 
-          <div class="summary-row">
-            <span data-i18n="checkout_date">تاريخ تسجيل المغادرة</span>
-            <strong id="summary-checkout">—</strong>
-          </div>
+            <div class="summary-row">
+              <span data-i18n="checkoutdate">تاريخ الخروج</span>
+              <strong id="summary-checkout"></strong>
+            </div>
 
-          <div class="summary-row">
-            <span data-i18n="guests">الضيوف</span>
-            <strong id="summary-guests">1</strong>
-          </div>
+            <div class="summary-row">
+              <span data-i18n="guests">الضيوف</span>
+              <strong id="summary-guests">1</strong>
+            </div>
 
-          <div class="summary-row">
-            <span data-i18n="price_per_night">السعر لكل ليلة</span>
-            <strong id="sb-night-price">0 د.ج</strong>
-          </div>
+            <div class="summary-row">
+              <span data-i18n="pricepernight">السعر لليلة</span>
+              <strong id="sb-night-price">0</strong>
+            </div>
 
-          <div class="summary-row">
-            <span data-i18n="nights">الليالي</span>
-            <strong id="sb-nights-count">0</strong>
-          </div>
+            <div class="summary-row">
+              <span data-i18n="nights">الليالي</span>
+              <strong id="sb-nights-count">0</strong>
+            </div>
 
-          <div class="summary-row">
-            <span data-i18n="service_fee">رسوم الخدمة</span>
-            <strong id="sb-fee-amount">0 د.ج</strong>
-          </div>
+            <div class="summary-row">
+              <span data-i18n="servicefee">رسوم الخدمة</span>
+              <strong id="sb-fee-amount">0</strong>
+            </div>
 
-          <div class="summary-row">
-            <span data-i18n="addons">الإضافات</span>
-            <strong id="sb-addons-amount">0 د.ج</strong>
-          </div>
+            <div class="summary-row">
+              <span data-i18n="addons">إضافات</span>
+              <strong id="sb-addons-amount">0</strong>
+            </div>
 
-          <div class="summary-row total">
-            <span data-i18n="total">الإجمالي</span>
-            <strong id="sb-final-total">0 د.ج</strong>
+            <div class="summary-row total">
+              <span data-i18n="total">الإجمالي</span>
+              <strong id="sb-final-total">0</strong>
+            </div>
           </div>
         </aside>
       </div>
@@ -2310,93 +744,84 @@
           <div id="auth-message" class="auth-message"></div>
 
           <form id="login-form" class="auth-form active">
-            <h3 class="auth-title" data-i18n="welcome_back">مرحبًا بعودتك</h3>
-            <p class="auth-subtitle" data-i18n="login_subtitle">أدخل بياناتك للوصول إلى حسابك.</p>
+            <h3 class="auth-title" data-i18n="welcomeback">مرحبًا بعودتك</h3>
+            <p class="auth-subtitle" data-i18n="loginsubtitle">أدخل بياناتك للوصول إلى حسابك.</p>
 
-            <div class="form-group">
-              <label for="login-email" class="form-label" data-i18n="email_address">البريد الإلكتروني</label>
-              <input id="login-email" class="form-control" type="email" data-i18n-placeholder="email_placeholder" placeholder="name@example.com" />
+            <div class="input-group">
+              <label for="login-email" data-i18n="emailaddress">البريد الإلكتروني</label>
+              <input id="login-email" type="email" data-i18n-placeholder="emailplaceholder"
+                placeholder="name@example.com" />
             </div>
 
-            <div class="form-group" style="margin-top:14px;">
-              <label for="login-password" class="form-label" data-i18n="password">كلمة المرور</label>
-              <input id="login-password" class="form-control" type="password" />
-            </div>
-
-            <div class="auth-footer-link" style="text-align:end;">
-              <a href="#" id="go-to-forgot" class="auth-inline-link" data-i18n="forgot_password">نسيت كلمة المرور؟</a>
+            <div class="input-group">
+              <label for="login-password" data-i18n="password">كلمة المرور</label>
+              <input id="login-password" type="password" />
             </div>
 
             <button id="login-submit-btn" class="primary-btn" type="submit" style="width:100%;margin-top:18px;">
-              <span data-i18n="sign_in">تسجيل الدخول</span>
+              <span data-i18n="signin">تسجيل الدخول</span>
             </button>
 
-            <div class="divider">OR</div>
+            <div class="switch-form-text">
+              <span data-i18n="donthaveaccount">ليس لديك حساب؟</span>
+              <a href="#" id="go-to-register" data-i18n="signup">إنشاء حساب</a>
+            </div>
 
-            <button id="google-login-btn" class="google-btn" type="button">
-              <i class="ph ph-google-logo"></i>
-              <span>Google</span>
-            </button>
-
-            <div class="auth-footer-link">
-              <span data-i18n="dont_have_account">ليس لديك حساب</span>
-              <a href="#" id="go-to-register" class="auth-inline-link" data-i18n="sign_up">إنشاء حساب</a>
+            <div class="switch-form-text">
+              <a href="#" id="go-to-forgot" data-i18n="forgotpassword">نسيت كلمة المرور؟</a>
             </div>
           </form>
 
           <form id="register-form" class="auth-form">
-            <h3 class="auth-title" data-i18n="create_account">إنشاء حساب</h3>
-            <p class="auth-subtitle" data-i18n="register_subtitle">انضم إلى OreBooking لفتح مزايا إضافية.</p>
+            <h3 class="auth-title" data-i18n="createaccount">إنشاء حساب</h3>
+            <p class="auth-subtitle" data-i18n="registersubtitle">انضم إلى OreBooking للوصول إلى مزايا إضافية.</p>
 
-            <div class="form-group">
-              <label for="reg-name" class="form-label" data-i18n="full_name">الاسم الكامل</label>
-              <input id="reg-name" class="form-control" type="text" data-i18n-placeholder="full_name_placeholder_account" placeholder="اسمك الكامل" />
+            <div class="input-group">
+              <label for="reg-name" data-i18n="fullname">الاسم الكامل</label>
+              <input id="reg-name" type="text" data-i18n-placeholder="fullnameplaceholderaccount"
+                placeholder="اسمك الكامل" />
             </div>
 
-            <div class="form-group" style="margin-top:14px;">
-              <label for="reg-email" class="form-label" data-i18n="email_address">البريد الإلكتروني</label>
-              <input id="reg-email" class="form-control" type="email" data-i18n-placeholder="email_example" placeholder="john@example.com" />
+            <div class="input-group">
+              <label for="reg-email" data-i18n="emailaddress">البريد الإلكتروني</label>
+              <input id="reg-email" type="email" data-i18n-placeholder="emailexample"
+                placeholder="john@example.com" />
             </div>
 
-            <div class="form-group" style="margin-top:14px;">
-              <label for="reg-password" class="form-label" data-i18n="password">كلمة المرور</label>
-              <input id="reg-password" class="form-control" type="password" data-i18n-placeholder="create_password" placeholder="أنشئ كلمة مرور" />
+            <div class="input-group">
+              <label for="reg-password" data-i18n="password">كلمة المرور</label>
+              <input id="reg-password" type="password" data-i18n-placeholder="createpassword"
+                placeholder="أنشئ كلمة مرور" />
             </div>
 
             <button id="register-submit-btn" class="primary-btn" type="submit" style="width:100%;margin-top:18px;">
-              <span data-i18n="create_account_btn">إنشاء الحساب</span>
+              <span data-i18n="createaccountbtn">إنشاء الحساب</span>
             </button>
 
-            <div class="divider">OR</div>
-
-            <button id="google-register-btn" class="google-btn" type="button">
-              <i class="ph ph-google-logo"></i>
-              <span>Google</span>
-            </button>
-
-            <div class="auth-footer-link">
-              <span data-i18n="already_have_account">لديك حساب بالفعل</span>
-              <a href="#" id="go-to-login" class="auth-inline-link" data-i18n="sign_in">تسجيل الدخول</a>
+            <div class="switch-form-text">
+              <span data-i18n="alreadyhaveaccount">لديك حساب بالفعل؟</span>
+              <a href="#" id="go-to-login" data-i18n="signin">تسجيل الدخول</a>
             </div>
           </form>
 
           <form id="forgot-form" class="auth-form">
-            <h3 class="auth-title" data-i18n="reset_password">إعادة تعيين كلمة المرور</h3>
-            <p class="auth-subtitle" data-i18n="reset_password_subtitle">
+            <h3 class="auth-title" data-i18n="resetpassword">إعادة تعيين كلمة المرور</h3>
+            <p class="auth-subtitle" data-i18n="resetpasswordsubtitle">
               أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.
             </p>
 
-            <div class="form-group">
-              <label for="forgot-email" class="form-label" data-i18n="email_address">البريد الإلكتروني</label>
-              <input id="forgot-email" class="form-control" type="email" data-i18n-placeholder="email_placeholder" placeholder="name@example.com" />
+            <div class="input-group">
+              <label for="forgot-email" data-i18n="emailaddress">البريد الإلكتروني</label>
+              <input id="forgot-email" type="email" data-i18n-placeholder="emailplaceholder"
+                placeholder="name@example.com" />
             </div>
 
             <button class="primary-btn" type="submit" style="width:100%;margin-top:18px;">
-              <span data-i18n="send_reset_link">إرسال رابط التعيين</span>
+              <span data-i18n="sendresetlink">إرسال رابط إعادة التعيين</span>
             </button>
 
-            <div class="auth-footer-link">
-              <a href="#" id="back-to-login" class="auth-inline-link" data-i18n="back_to_login">العودة لتسجيل الدخول</a>
+            <div class="switch-form-text">
+              <a href="#" id="back-to-login" data-i18n="backtologin">العودة لتسجيل الدخول</a>
             </div>
           </form>
         </div>
@@ -2409,248 +834,248 @@
       ar: {
         home: "الرئيسية",
         pts: "نقطة",
-        guest_user: "مستخدم ضيف",
-        sign_in_to_continue: "سجّل الدخول للمتابعة",
-        my_bookings: "حجوزاتي",
-        my_favorites: "مفضلتي",
-        log_out: "تسجيل الخروج",
-        welcome_back: "مرحبًا بعودتك",
-        login_subtitle: "أدخل بياناتك للوصول إلى حسابك.",
-        email_address: "البريد الإلكتروني",
+        guestuser: "مستخدم ضيف",
+        signintocontinue: "سجل الدخول للمتابعة",
+        mybookings: "حجوزاتي",
+        myfavorites: "المفضلة",
+        logout: "تسجيل الخروج",
+        welcomeback: "مرحبًا بعودتك",
+        loginsubtitle: "أدخل بياناتك للوصول إلى حسابك.",
+        emailaddress: "البريد الإلكتروني",
         password: "كلمة المرور",
-        forgot_password: "نسيت كلمة المرور؟",
-        sign_in: "تسجيل الدخول",
-        dont_have_account: "ليس لديك حساب",
-        sign_up: "إنشاء حساب",
-        create_account: "إنشاء حساب",
-        register_subtitle: "انضم إلى OreBooking لفتح مزايا إضافية.",
-        full_name: "الاسم الكامل",
-        create_account_btn: "إنشاء الحساب",
-        already_have_account: "لديك حساب بالفعل",
-        reset_password: "إعادة تعيين كلمة المرور",
-        reset_password_subtitle: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
-        send_reset_link: "إرسال رابط التعيين",
-        back_to_login: "العودة لتسجيل الدخول",
-        complete_booking: "إتمام الحجز",
-        booking_hero_text: "أدخل بيانات الضيف والإقامة الأساسية لإكمال حجزك بسرعة ووضوح.",
-        complete_required_fields: "يرجى إكمال جميع الحقول المطلوبة قبل المتابعة.",
-        details: "التفاصيل",
+        forgotpassword: "نسيت كلمة المرور؟",
+        signin: "تسجيل الدخول",
+        donthaveaccount: "ليس لديك حساب؟",
+        signup: "إنشاء حساب",
+        createaccount: "إنشاء حساب",
+        registersubtitle: "انضم إلى OreBooking للوصول إلى مزايا إضافية.",
+        fullname: "الاسم الكامل",
+        createaccountbtn: "إنشاء الحساب",
+        alreadyhaveaccount: "لديك حساب بالفعل؟",
+        resetpassword: "إعادة تعيين كلمة المرور",
+        resetpasswordsubtitle: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
+        sendresetlink: "إرسال رابط إعادة التعيين",
+        backtologin: "العودة لتسجيل الدخول",
+        completebooking: "أكمل حجزك",
+        bookingherotext: "أدخل المعلومات الأساسية فقط لإتمام الحجز بسرعة ووضوح.",
+        completerequiredfields: "يرجى إكمال جميع الحقول المطلوبة قبل المتابعة.",
+        details: "البيانات",
         payment: "الدفع",
         review: "المراجعة",
-        guest_reservation_details: "تفاصيل الضيف والحجز",
-        guest_reservation_subtitle: "أدخل فقط المعلومات الأساسية اللازمة لإكمال الحجز.",
-        primary_guest_information: "معلومات الضيف الأساسية",
-        phone_number: "رقم الهاتف",
-        country_region: "الدولة / المنطقة",
-        stay_details: "تفاصيل الإقامة",
-        checkin_date: "تاريخ تسجيل الوصول",
-        checkout_date: "تاريخ تسجيل المغادرة",
+        guestreservationdetails: "بيانات الحجز والضيف",
+        guestreservationsubtitle: "أدخل فقط البيانات الأساسية المطلوبة لإتمام الحجز.",
+        primaryguestinformation: "معلومات الضيف الأساسية",
+        phonenumber: "رقم الهاتف",
+        countryregion: "الدولة / الجنسية",
+        staydetails: "تفاصيل الإقامة",
+        checkindate: "تاريخ الدخول",
+        checkoutdate: "تاريخ الخروج",
         adults: "البالغون",
         children: "الأطفال",
-        expected_arrival_time: "وقت الوصول المتوقع",
-        select_arrival_time: "اختر وقت الوصول",
-        after_20: "بعد 20:00",
-        after_midnight: "بعد منتصف الليل",
-        purpose_of_stay: "غرض الإقامة",
-        select_purpose: "اختر الغرض",
-        family_stay: "إقامة عائلية",
+        expectedarrivaltime: "وقت الوصول المتوقع",
+        selectarrivaltime: "اختر وقت الوصول",
+        after20: "بعد 20:00",
+        aftermidnight: "بعد منتصف الليل",
+        purposeofstay: "غرض الإقامة",
+        selectpurpose: "اختر الغرض",
+        familystay: "عائلية",
         business: "عمل",
         tourism: "سياحة",
         medical: "علاج",
         other: "أخرى",
-        special_requests: "طلبات خاصة",
-        special_requests_hint: "اجعل الطلبات مختصرة وأساسية.",
-        property_amenities: "مرافق العقار",
+        specialrequests: "طلبات خاصة",
+        specialrequestshint: "اجعل الطلبات قصيرة وواضحة.",
+        propertyamenities: "مرافق العقار",
         wifi: "واي فاي",
         parking: "موقف سيارات",
-        air_conditioning: "تكييف هواء",
+        airconditioning: "تكييف",
         kitchen: "مطبخ",
-        continue_to_payment: "المتابعة إلى الدفع",
-        payment_billing: "الدفع والفوترة",
-        payment_billing_subtitle: "اختر طريقة الدفع وأدخل فقط بيانات الدفع الأساسية.",
-        bank_transfer_ccp: "تحويل بنكي (CCP)",
-        bank_transfer_desc: "حوّل مبلغ الحجز ثم ارفع وصل الدفع.",
-        pay_at_property: "الدفع عند الوصول",
-        pay_at_property_desc: "ادفع نقدًا عند تسجيل الوصول حسب موافقة المضيف.",
-        billing_details: "بيانات الفوترة",
-        billing_name: "اسم الفاتورة",
-        billing_note: "ملاحظة الفوترة",
-        bank_transfer_details: "تفاصيل التحويل البنكي",
-        bank_transfer_instruction: "يرجى تحويل المبلغ الإجمالي إلى الحساب التالي ثم رفع الوصل وإدخال بيانات المُرسِل.",
-        account_name: "اسم الحساب",
+        continuetopayment: "متابعة إلى الدفع",
+        paymentbilling: "الدفع والفوترة",
+        paymentbillingsubtitle: "اختر طريقة الدفع وأدخل فقط التفاصيل الأساسية.",
+        banktransferccp: "تحويل بنكي / CCP",
+        banktransferdesc: "حول قيمة الحجز ثم ارفع وصل الدفع.",
+        payatproperty: "الدفع عند الوصول",
+        payatpropertydesc: "الدفع نقدًا عند تسجيل الدخول حسب موافقة المضيف.",
+        billingdetails: "بيانات الفوترة",
+        billingname: "اسم الفوترة",
+        billingnote: "ملاحظة الفوترة",
+        banktransferdetails: "تفاصيل التحويل البنكي",
+        banktransferinstruction: "يرجى تحويل المبلغ الكامل ثم رفع الإيصال وإدخال بيانات المرسل.",
+        accountname: "اسم الحساب",
         bank: "البنك",
-        sender_full_name: "اسم المرسل الكامل",
-        transferred_amount: "المبلغ المحوّل",
-        transfer_date: "تاريخ التحويل",
-        click_upload_receipt: "اضغط لرفع وصل الدفع",
-        upload_hint: "JPG أو PNG أو PDF (الحد الأقصى 5MB)",
-        cash_payment_confirmation: "تأكيد الدفع النقدي",
-        cash_payment_instruction: "أكد من سيدفع عند تسجيل الوصول.",
-        who_will_pay_checkin: "من سيدفع عند تسجيل الوصول",
-        preferred_currency: "العملة المفضلة",
-        select_currency: "اختر العملة",
-        back_to_details: "العودة إلى التفاصيل",
-        review_booking: "مراجعة الحجز",
-        review_confirm: "المراجعة والتأكيد",
-        review_confirm_subtitle: "راجع بيانات الضيف والإقامة والدفع قبل التأكيد النهائي.",
-        guest_information: "معلومات الضيف",
+        senderfullname: "اسم المرسل",
+        transferredamount: "المبلغ المحول",
+        transferdate: "تاريخ التحويل",
+        clickuploadreceipt: "اضغط لرفع إيصال الدفع",
+        uploadhint: "JPG, PNG, PDF, WEBP - 5MB",
+        cashpaymentconfirmation: "تأكيد الدفع النقدي",
+        cashpaymentinstruction: "أكد من سيدفع عند الوصول.",
+        whowillpaycheckin: "من سيدفع عند الوصول",
+        preferredcurrency: "العملة المفضلة",
+        selectcurrency: "اختر العملة",
+        backtodetails: "العودة للبيانات",
+        reviewbooking: "مراجعة الحجز",
+        reviewconfirm: "المراجعة والتأكيد",
+        reviewconfirmsubtitle: "راجع بيانات الضيف والإقامة والدفع قبل التأكيد النهائي.",
+        guestinformation: "معلومات الضيف",
         edit: "تعديل",
         email: "البريد الإلكتروني",
         phone: "الهاتف",
-        checkin_checkout: "الوصول / المغادرة",
+        checkincheckout: "الدخول / الخروج",
         guests: "الضيوف",
-        purpose_arrival: "الغرض / الوصول",
+        purposearrival: "الغرض / الوصول",
         billing: "الفوترة",
-        selected_payment_method: "طريقة الدفع المختارة",
-        earn_points_title: "اكسب نقاط OreBooking!",
-        earn_points_prefix: "ستكسب",
-        earn_points_suffix: "بعد إتمام هذه الإقامة. يمكن استخدام النقاط لخصومات وترقيات مستقبلية.",
-        policy_agreement: "أؤكد أن معلومات الحجز المقدمة صحيحة وأنني أوافق على شروط الخدمة وسياسة الخصوصية وقواعد العقار وسياسة الإلغاء وإجراءات التحقق من الدفع.",
-        back_to_payment: "العودة إلى الدفع",
-        confirm_book: "تأكيد الحجز",
-        booking_summary: "ملخص الحجز",
-        loading: "جارٍ التحميل...",
-        price_per_night: "السعر لكل ليلة",
+        selectedpaymentmethod: "طريقة الدفع المختارة",
+        earnpointstitle: "اكسب نقاط OreBooking!",
+        earnpointsprefix: "ستكسب",
+        earnpointssuffix: "بعد إكمال هذه الإقامة.",
+        policyagreement: "أؤكد أن معلومات الحجز صحيحة وأوافق على الشروط والسياسات.",
+        backtopayment: "العودة للدفع",
+        confirmbook: "تأكيد الحجز",
+        bookingsummary: "ملخص الحجز",
+        loading: "جاري التحميل...",
+        pricepernight: "السعر لليلة",
         nights: "الليالي",
-        service_fee: "رسوم الخدمة",
-        addons: "الإضافات",
+        servicefee: "رسوم الخدمة",
+        addons: "إضافات",
         total: "الإجمالي",
-        full_name_placeholder: "الاسم الكامل",
-        email_placeholder: "name@example.com",
-        phone_placeholder: "+213 ...",
-        country_region_placeholder: "الدولة أو المنطقة",
-        special_requests_placeholder: "ملاحظة اختيارية للمضيف مثل وقت الوصول أو طلب بسيط",
-        billing_name_placeholder: "اسم الفوترة الكامل",
-        billing_note_placeholder: "ملاحظة اختيارية للفوترة أو الدفع",
-        sender_name_placeholder: "الاسم المستخدم في التحويل",
-        transfer_amount_placeholder: "المبلغ المدفوع",
-        cash_payer_placeholder: "الشخص المسؤول عن الدفع",
-        email_example: "john@example.com",
-        full_name_placeholder_account: "اسمك الكامل",
-        create_password: "أنشئ كلمة مرور"
+        fullnameplaceholder: "الاسم الكامل",
+        emailplaceholder: "name@example.com",
+        phoneplaceholder: "+213 ...",
+        countryregionplaceholder: "الدولة أو الجنسية",
+        specialrequestsplaceholder: "ملاحظة اختيارية للمضيف",
+        billingnameplaceholder: "الاسم الكامل للفوترة",
+        billingnoteplaceholder: "ملاحظة اختيارية للفوترة أو الدفع",
+        sendernameplaceholder: "الاسم المستخدم في التحويل",
+        transferamountplaceholder: "المبلغ المدفوع",
+        cashpayerplaceholder: "اسم الشخص المسؤول عن الدفع",
+        emailexample: "john@example.com",
+        fullnameplaceholderaccount: "اسمك الكامل",
+        createpassword: "أنشئ كلمة مرور"
       },
       en: {
         home: "Home",
         pts: "Pts",
-        guest_user: "Guest User",
-        sign_in_to_continue: "Sign in to continue",
-        my_bookings: "My Bookings",
-        my_favorites: "My Favorites",
-        log_out: "Log Out",
-        welcome_back: "Welcome back",
-        login_subtitle: "Enter your details to access your account.",
-        email_address: "Email Address",
+        guestuser: "Guest User",
+        signintocontinue: "Sign in to continue",
+        mybookings: "My Bookings",
+        myfavorites: "My Favorites",
+        logout: "Log Out",
+        welcomeback: "Welcome back",
+        loginsubtitle: "Enter your details to access your account.",
+        emailaddress: "Email Address",
         password: "Password",
-        forgot_password: "Forgot password?",
-        sign_in: "Sign In",
-        dont_have_account: "Don't have an account",
-        sign_up: "Sign up",
-        create_account: "Create an account",
-        register_subtitle: "Join OreBooking to unlock premium features.",
-        full_name: "Full Name",
-        create_account_btn: "Create Account",
-        already_have_account: "Already have an account",
-        reset_password: "Reset Password",
-        reset_password_subtitle: "Enter your email and we'll send you a reset link.",
-        send_reset_link: "Send Reset Link",
-        back_to_login: "Back to login",
-        complete_booking: "Complete your booking",
-        booking_hero_text: "Fill in the essential guest and stay details to complete your reservation quickly and clearly.",
-        complete_required_fields: "Please complete all required information before continuing.",
+        forgotpassword: "Forgot password?",
+        signin: "Sign In",
+        donthaveaccount: "Don't have an account?",
+        signup: "Sign up",
+        createaccount: "Create an account",
+        registersubtitle: "Join OreBooking to unlock extra features.",
+        fullname: "Full Name",
+        createaccountbtn: "Create Account",
+        alreadyhaveaccount: "Already have an account?",
+        resetpassword: "Reset Password",
+        resetpasswordsubtitle: "Enter your email and we'll send you a reset link.",
+        sendresetlink: "Send Reset Link",
+        backtologin: "Back to login",
+        completebooking: "Complete your booking",
+        bookingherotext: "Fill in only the essential information to complete your booking quickly and clearly.",
+        completerequiredfields: "Please complete all required fields before continuing.",
         details: "Details",
         payment: "Payment",
         review: "Review",
-        guest_reservation_details: "Guest & Reservation Details",
-        guest_reservation_subtitle: "Enter only the essential information needed to complete the booking.",
-        primary_guest_information: "Primary guest information",
-        phone_number: "Phone Number",
-        country_region: "Country / Region",
-        stay_details: "Stay details",
-        checkin_date: "Check-in Date",
-        checkout_date: "Check-out Date",
+        guestreservationdetails: "Guest & Booking Details",
+        guestreservationsubtitle: "Enter only the essential information required to complete the booking.",
+        primaryguestinformation: "Primary guest information",
+        phonenumber: "Phone Number",
+        countryregion: "Country / Nationality",
+        staydetails: "Stay Details",
+        checkindate: "Check-in Date",
+        checkoutdate: "Check-out Date",
         adults: "Adults",
         children: "Children",
-        expected_arrival_time: "Expected Arrival Time",
-        select_arrival_time: "Select arrival time",
-        after_20: "After 20:00",
-        after_midnight: "After Midnight",
-        purpose_of_stay: "Purpose of Stay",
-        select_purpose: "Select purpose",
-        family_stay: "Family stay",
+        expectedarrivaltime: "Expected Arrival Time",
+        selectarrivaltime: "Select arrival time",
+        after20: "After 20:00",
+        aftermidnight: "After Midnight",
+        purposeofstay: "Purpose of Stay",
+        selectpurpose: "Select purpose",
+        familystay: "Family",
         business: "Business",
         tourism: "Tourism",
         medical: "Medical",
         other: "Other",
-        special_requests: "Special Requests",
-        special_requests_hint: "Keep requests short and essential.",
-        property_amenities: "Property amenities",
-        wifi: "Wi‑Fi",
+        specialrequests: "Special Requests",
+        specialrequestshint: "Keep requests short and clear.",
+        propertyamenities: "Property Amenities",
+        wifi: "WiFi",
         parking: "Parking",
-        air_conditioning: "Air conditioning",
+        airconditioning: "Air Conditioning",
         kitchen: "Kitchen",
-        continue_to_payment: "Continue to Payment",
-        payment_billing: "Payment & Billing",
-        payment_billing_subtitle: "Choose your payment method and enter only the essential payment details.",
-        bank_transfer_ccp: "Bank Transfer (CCP)",
-        bank_transfer_desc: "Transfer the booking amount, then upload your payment proof.",
-        pay_at_property: "Pay on Arrival",
-        pay_at_property_desc: "Pay in cash at check-in, subject to host approval.",
-        billing_details: "Billing details",
-        billing_name: "Billing Name",
-        billing_note: "Billing Note",
-        bank_transfer_details: "Bank transfer details",
-        bank_transfer_instruction: "Please transfer the full amount to the following account, then upload the receipt and fill in the sender details.",
-        account_name: "Account Name",
+        continuetopayment: "Continue to Payment",
+        paymentbilling: "Payment & Billing",
+        paymentbillingsubtitle: "Choose the payment method and provide only the essential payment details.",
+        banktransferccp: "Bank Transfer / CCP",
+        banktransferdesc: "Transfer the booking amount, then upload your payment receipt.",
+        payatproperty: "Pay on Arrival",
+        payatpropertydesc: "Pay in cash at check-in, subject to host approval.",
+        billingdetails: "Billing Details",
+        billingname: "Billing Name",
+        billingnote: "Billing Note",
+        banktransferdetails: "Bank Transfer Details",
+        banktransferinstruction: "Please transfer the full amount, then upload the receipt and enter sender details.",
+        accountname: "Account Name",
         bank: "Bank",
-        sender_full_name: "Sender Full Name",
-        transferred_amount: "Transferred Amount",
-        transfer_date: "Transfer Date",
-        click_upload_receipt: "Click to upload payment receipt",
-        upload_hint: "JPG, PNG, or PDF (max 5MB)",
-        cash_payment_confirmation: "Cash payment confirmation",
-        cash_payment_instruction: "Confirm who will pay at check-in.",
-        who_will_pay_checkin: "Who will pay at check-in",
-        preferred_currency: "Preferred currency",
-        select_currency: "Select currency",
-        back_to_details: "Back to Details",
-        review_booking: "Review Booking",
-        review_confirm: "Review & Confirm",
-        review_confirm_subtitle: "Review your guest, stay, and payment details before final confirmation.",
-        guest_information: "Guest Information",
+        senderfullname: "Sender Full Name",
+        transferredamount: "Transferred Amount",
+        transferdate: "Transfer Date",
+        clickuploadreceipt: "Click to upload payment receipt",
+        uploadhint: "JPG, PNG, PDF, WEBP - 5MB",
+        cashpaymentconfirmation: "Cash Payment Confirmation",
+        cashpaymentinstruction: "Confirm who will pay at check-in.",
+        whowillpaycheckin: "Who will pay at check-in",
+        preferredcurrency: "Preferred Currency",
+        selectcurrency: "Select currency",
+        backtodetails: "Back to Details",
+        reviewbooking: "Review Booking",
+        reviewconfirm: "Review & Confirm",
+        reviewconfirmsubtitle: "Review the guest, stay, and payment details before final confirmation.",
+        guestinformation: "Guest Information",
         edit: "Edit",
         email: "Email",
         phone: "Phone",
-        checkin_checkout: "Check-in / Check-out",
+        checkincheckout: "Check-in / Check-out",
         guests: "Guests",
-        purpose_arrival: "Purpose / Arrival",
+        purposearrival: "Purpose / Arrival",
         billing: "Billing",
-        selected_payment_method: "Selected Payment Method",
-        earn_points_title: "Earn OreBooking Points!",
-        earn_points_prefix: "You will earn",
-        earn_points_suffix: "after completing this stay. Points can be used for future discounts and upgrades.",
-        policy_agreement: "I confirm that the booking information provided is accurate and I agree to the terms of service, privacy policy, property rules, cancellation policy, and payment verification procedures.",
-        back_to_payment: "Back to Payment",
-        confirm_book: "Confirm Booking",
-        booking_summary: "Booking Summary",
+        selectedpaymentmethod: "Selected Payment Method",
+        earnpointstitle: "Earn OreBooking Points!",
+        earnpointsprefix: "You will earn",
+        earnpointssuffix: "after completing this stay.",
+        policyagreement: "I confirm that the booking information is accurate and I agree to the terms and policies.",
+        backtopayment: "Back to Payment",
+        confirmbook: "Confirm Booking",
+        bookingsummary: "Booking Summary",
         loading: "Loading...",
-        price_per_night: "Price per night",
+        pricepernight: "Price per night",
         nights: "Nights",
-        service_fee: "Service fee",
+        servicefee: "Service fee",
         addons: "Add-ons",
         total: "Total",
-        full_name_placeholder: "Full name",
-        email_placeholder: "name@example.com",
-        phone_placeholder: "+213 ...",
-        country_region_placeholder: "Country or region",
-        special_requests_placeholder: "Optional note to the host such as arrival time or a simple request",
-        billing_name_placeholder: "Full billing name",
-        billing_note_placeholder: "Optional billing or payment note",
-        sender_name_placeholder: "Name used for the transfer",
-        transfer_amount_placeholder: "Amount paid",
-        cash_payer_placeholder: "Person responsible for payment",
-        email_example: "john@example.com",
-        full_name_placeholder_account: "Your full name",
-        create_password: "Create a password"
+        fullnameplaceholder: "Full name",
+        emailplaceholder: "name@example.com",
+        phoneplaceholder: "+213 ...",
+        countryregionplaceholder: "Country or nationality",
+        specialrequestsplaceholder: "Optional note for the host",
+        billingnameplaceholder: "Full billing name",
+        billingnoteplaceholder: "Optional billing or payment note",
+        sendernameplaceholder: "Name used in transfer",
+        transferamountplaceholder: "Amount paid",
+        cashpayerplaceholder: "Person responsible for payment",
+        emailexample: "john@example.com",
+        fullnameplaceholderaccount: "Your full name",
+        createpassword: "Create a password"
       }
     };
   </script>
