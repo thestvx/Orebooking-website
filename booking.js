@@ -1,8 +1,6 @@
 // =========================================
 // booking.js — OreBooking v16.1
 // Simplified booking flow + auth + payment
-// Compatible with current simplified booking.html
-// Final date formatting fix
 // =========================================
 
 "use strict";
