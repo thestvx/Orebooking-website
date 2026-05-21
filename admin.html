@@ -2801,51 +2801,5 @@
   <script src="admin.js?v=2"></script>
   <script src="admin_bookings_addon.js"></script>
 
-  <!--
-    ================================================================
-    ملاحظات للمطور - DEVELOPER NOTES
-    ================================================================
-
-     إصلاح Firebase:
-    ─────────────────
-    تم نقل تهيئة Firebase إلى أعلى الصفحة (داخل <head>) قبل تحميل
-    أي سكريبت خارجي. وتم إنشاء window.getDB() كنقطة وصول موحدة.
-
-    في admin.js و admin_bookings_addon.js، استبدل:
-      firebase.firestore()
-      أو
-      db (إذا كانت متعرَّفة خارجياً)
-    بـ:
-      window.getDB()
-      أو
-      getDB()
-
-    مثال في admin_bookings_addon.js:
-    ─────────────────────────────────
-    // قبل التعديل:
-    const db = firebase.firestore();
-    db.collection("bookings").get()...
-
-    // بعد التعديل:
-    try {
-      const db = getDB();
-      db.collection("bookings").get()...
-    } catch (err) {
-      console.error(err.message);
-      return;
-    }
-
-    🔽 فلتر الحجوزات:
-    ─────────────────
-    بعد تحميل الحجوزات في admin_bookings_addon.js، أضف:
-      window.updateBookingFilterCounts(bookingsArray);
-    وتأكد أن كل .booking-card لها:
-      data-status="pending"  أو  "confirmed"  أو  "rejected"
-    وبعد رسم الكروت، استدعِ:
-      if (typeof window.__renderFilteredBookings === "function") {
-        window.__renderFilteredBookings();
-      }
-    ================================================================
-  -->
 </body>
 </html>
