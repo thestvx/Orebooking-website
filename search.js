@@ -1,11 +1,5 @@
 // =========================================
 //   Smart Search — search.js
-//   ✅ Fixes:
-//   - inputmode="none" + readonly لمنع كيبورد الجوال
-//   - حذف "الجزائر" من search-item-sub
-//   - دعم اللغتين (ar/en) في عرض النتائج
-//   - clearSearchBtn يستدعي resetToHome() من script.js بشكل مباشر
-//   - تكامل كامل مع state وtranslations
 // =========================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,10 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let allProperties      = [];
   let isPropertiesLoaded = false;
 
-  // ─────────────────────────────────────────
-  // ✅ FIX 1: منع كيبورد الجوال
-  //    inputmode="none" + readonly على الجوال
-  //    الكمبيوتر يحتفظ بالكتابة العادية
   // ─────────────────────────────────────────
   function applyMobileReadonly() {
     searchInput.setAttribute('inputmode', 'none');
@@ -111,8 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // ─────────────────────────────────────────
   searchInput.addEventListener('click', () => {
     if (window.innerWidth <= 768) {
-      // إذا كان initSmartSearch من script.js يديره، دعه يعمل
-      // وإلا افتح dropdown فارغاً لعرض الولايات
       if (typeof window.selectWilaya === 'function') return; // script.js يتولى
     }
   });
@@ -132,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ─────────────────────────────────────────
   // 3. عرض النتائج في القائمة المنسدلة
-  //    ✅ FIX 2: حذف "الجزائر" من sub
   // ─────────────────────────────────────────
   function renderDropdown(matches, query, lang) {
     const isAr = lang === 'ar';
@@ -345,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ─────────────────────────────────────────
   // 6. زر إلغاء البحث
-  //    ✅ يستدعي resetToHome() أو fallback
   // ─────────────────────────────────────────
   function handleClear() {
     // Try to trigger global reset if exists
