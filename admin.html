@@ -16,16 +16,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
-  <!-- Firebase SDKs - loaded synchronously before any scripts -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- Firebase Initialization - MUST happen before admin.js loads -->
   <script>
     (function () {
-      // ==========================================
-      // ضع هنا إعدادات Firebase الخاصة بمشروعك
-      // ==========================================
       var firebaseConfig = {
         apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
         authDomain: "orebooking-website.firebaseapp.com",
@@ -451,6 +446,11 @@
       gap: 6px;
     }
 
+    .header-copy h1 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
     .header-copy p {
       color: var(--text-muted);
       font-size: 0.92rem;
@@ -476,6 +476,8 @@
       display: grid;
       place-items: center;
       font-size: 1.45rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
       box-shadow: 0 10px 24px rgba(67,90,191,0.18);
     }
 
@@ -980,6 +982,7 @@
     .upload-preview-meta span {
       font-size: 0.8rem;
       color: var(--text-muted);
+      word-break: break-all;
     }
 
     .map-picker-wrapper {
@@ -1131,9 +1134,6 @@
       margin: 0;
     }
 
-    /* ============================================
-       BOOKINGS FILTER TABS - NEW
-    ============================================ */
     .bookings-filter-bar {
       display: flex;
       align-items: center;
@@ -1198,8 +1198,6 @@
     .filter-tab-btn.confirmed .filter-count-badge { background: var(--success-bg); color: var(--success-text); }
     .filter-tab-btn.rejected .filter-count-badge { background: var(--danger-bg); color: var(--danger-text); }
     .filter-tab-btn.active .filter-count-badge { transform: scale(1.05); }
-
-    /* ============================================ */
 
     #bookings-container .bookings-grid,
     #bookings-container > div.bookings-grid {
@@ -1378,7 +1376,6 @@
       opacity: 0.85;
     }
 
-    /* Firebase status indicator */
     .firebase-status-banner {
       display: none;
       align-items: center;
@@ -1492,6 +1489,151 @@
       margin-bottom: 18px;
     }
 
+    .chat-admin-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      min-height: 620px;
+    }
+
+    .chat-sidebar {
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background: rgba(255,255,255,.7);
+      padding: 14px;
+      overflow: auto;
+      max-height: 70vh;
+    }
+
+    .chat-main {
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background: rgba(255,255,255,.72);
+      display: flex;
+      flex-direction: column;
+      min-height: 620px;
+      overflow: hidden;
+    }
+
+    .chat-main-head {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(248,250,252,.8);
+    }
+
+    .chat-main-head h4 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+    }
+
+    .chat-main-head p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: .84rem;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-empty-state {
+      margin: auto 0;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 24px;
+      border: 1px dashed var(--border-color);
+      border-radius: 18px;
+      background: var(--surface-color);
+    }
+
+    .chat-empty-state i {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .chat-message {
+      max-width: 82%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      line-height: 1.7;
+      font-size: 0.93rem;
+      box-shadow: var(--shadow-sm);
+      word-break: break-word;
+    }
+
+    .chat-message.admin {
+      align-self: flex-start;
+      background: var(--surface-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-top-left-radius: 6px;
+    }
+
+    .chat-message.customer {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border-top-right-radius: 6px;
+    }
+
+    .chat-meta {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.75rem;
+      opacity: .8;
+    }
+
+    .chat-composer {
+      border-top: 1px solid var(--border-color);
+      background: var(--surface-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-composer textarea {
+      width: 100%;
+      min-height: 92px;
+      resize: vertical;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-main);
+      padding: 14px 16px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .chat-composer textarea:focus {
+      border-color: var(--primary);
+      box-shadow: var(--admin-ring);
+    }
+
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chat-actions small {
+      color: var(--text-muted);
+    }
+
     .dark body.admin-body,
     body.dark.admin-body {
       background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
@@ -1536,6 +1678,10 @@
     .dark .table-actions button,
     .dark .table-actions a,
     .dark .admin-mobile-toggle,
+    .dark .chat-sidebar,
+    .dark .chat-main,
+    .dark .chat-main-head,
+    .dark .chat-composer,
     body.dark .sidebar-top-note,
     body.dark .search-inline,
     body.dark .map-search-row input,
@@ -1545,7 +1691,11 @@
     body.dark .admin-table thead th,
     body.dark .table-actions button,
     body.dark .table-actions a,
-    body.dark .admin-mobile-toggle {
+    body.dark .admin-mobile-toggle,
+    body.dark .chat-sidebar,
+    body.dark .chat-main,
+    body.dark .chat-main-head,
+    body.dark .chat-composer {
       background: rgba(15,23,42,0.72);
       border-color: rgba(51,65,85,0.95);
     }
@@ -1559,6 +1709,7 @@
     .dark .coords-row input,
     .dark #admin-user,
     .dark #admin-pass,
+    .dark .chat-composer textarea,
     body.dark .modern-form-wrapper .input-group input,
     body.dark .modern-form-wrapper .input-group textarea,
     body.dark .modern-form-wrapper .input-group select,
@@ -1567,7 +1718,8 @@
     body.dark .admin-form .input-group select,
     body.dark .coords-row input,
     body.dark #admin-user,
-    body.dark #admin-pass {
+    body.dark #admin-pass,
+    body.dark .chat-composer textarea {
       background-color: rgba(15,23,42,0.88);
       border-color: rgba(51,65,85,0.95);
       color: var(--text-main);
@@ -1604,251 +1756,288 @@
         transform: translateX(100%);
         transition: transform 0.32s ease;
         z-index: 3000;
-        width: min(88vw, 320px);
-        height: 100vh;
       }
 
-      .admin-sidebar.open { transform: translateX(0); }
+      .admin-sidebar.open {
+        transform: translateX(0);
+      }
 
-      .admin-main { padding: 18px; }
-      .admin-mobile-topbar { display: flex; }
-    }
+      .admin-main {
+        padding: 16px;
+      }
 
-    @media (max-width: 900px) {
-      .form-grid,
-      .coords-row,
-      .quick-tips,
-      .booking-meta-grid,
-      .owner-form-grid {
+      .admin-mobile-topbar {
+        display: flex;
+      }
+
+      .admin-header {
+        padding: 18px;
+      }
+
+      .chat-admin-layout {
         grid-template-columns: 1fr;
       }
 
-      #bookings-container .bookings-grid,
-      #bookings-container > div.bookings-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
-      }
-
-      .bookings-filter-bar {
-        gap: 6px;
-      }
-
-      .filter-tab-btn {
-        padding: 9px 13px;
-        font-size: 0.82rem;
+      .chat-sidebar {
+        max-height: 280px;
       }
     }
 
     @media (max-width: 768px) {
+      .dashboard-strip,
+      .form-grid,
+      .owner-form-grid,
+      .coords-row,
+      .quick-tips,
+      .booking-meta-grid {
+        grid-template-columns: 1fr;
+      }
+
       .admin-header {
-        padding: 18px;
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
       }
 
-      .pane-head,
-      .pane-tools,
-      .admin-footer-actions,
-      .map-search-row {
-        flex-direction: column;
-        align-items: stretch;
+      .pane-head {
+        align-items: flex-start;
       }
 
-      .search-inline,
-      .ghost-action,
-      .map-search-row button,
-      .primary-btn {
+      .pane-tools {
         width: 100%;
       }
 
-      .modern-section,
-      .admin-card,
-      .modal-content.admin-card,
-      .admin-login-card {
-        padding: 20px;
-        border-radius: 22px;
+      .search-inline {
+        width: 100%;
+        min-width: 0;
       }
 
-      .dashboard-strip { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 600px) {
       #bookings-container .bookings-grid,
       #bookings-container > div.bookings-grid {
         grid-template-columns: 1fr !important;
       }
 
-      .admin-main { padding: 14px; }
+      .booking-actions-row,
+      .map-search-row,
+      .admin-footer-actions,
+      .chat-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
 
-      .admin-profile {
+      .table-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .table-actions button,
+      .table-actions a,
+      .primary-btn,
+      .ghost-action {
         width: 100%;
-        justify-content: space-between;
-      }
-
-      .bookings-filter-bar {
-        padding: 4px;
-      }
-
-      .filter-tab-btn {
-        padding: 8px 10px;
-        font-size: 0.78rem;
       }
     }
   </style>
-<base target="_blank">
 </head>
 <body class="admin-body">
+
   <div id="admin-login-screen" class="admin-login-screen">
     <div class="admin-login-card">
-      <div class="login-badge"><i class="ph-fill ph-shield-check"></i> بوابة الإدارة الآمنة</div>
-      <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:58px; margin:0 auto 24px; display:block;" />
+      <div style="text-align:center;">
+        <div class="login-badge">
+          <i class="ph ph-shield-check"></i>
+          <span>لوحة إدارة OreBooking</span>
+        </div>
+        <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" style="margin:0 auto 16px;" onerror="this.style.display='none'">
+        <h2 style="margin:0 0 8px;">تسجيل دخول الأدمن</h2>
+        <p style="margin:0;color:var(--text-muted);line-height:1.8;">
+          سجّل الدخول للوصول إلى إدارة العقارات والحجوزات والمحادثات.
+        </p>
+      </div>
 
-      <h2 class="font-bold" style="text-align:center; margin-bottom:8px; font-size:1.75rem;">تسجيل الدخول</h2>
-      <p style="text-align:center; color:var(--text-muted); margin-bottom:24px; font-size:0.92rem; line-height:1.8;">
-        لوحة تحكم الإدارة وأصحاب العقارات لإدارة العقارات والحجوزات وحسابات الملاك بشكل احترافي وآمن.
-      </p>
-
-      <form id="admin-login-form" novalidate>
+      <form id="admin-login-form" class="admin-form mt-4">
         <div class="input-group">
           <label for="admin-user">اسم المستخدم</label>
-          <input type="text" id="admin-user" required placeholder="أدخل اسم المستخدم" autocomplete="username" />
+          <input type="text" id="admin-user" placeholder="أدخل اسم المستخدم" autocomplete="username" />
         </div>
 
         <div class="input-group mt-3">
           <label for="admin-pass">كلمة المرور</label>
-          <input type="password" id="admin-pass" required placeholder="أدخل كلمة المرور" autocomplete="current-password" />
+          <input type="password" id="admin-pass" placeholder="أدخل كلمة المرور" autocomplete="current-password" />
         </div>
 
-        <button type="submit" class="primary-btn mt-4" id="admin-login-btn" style="height:52px;">
-          <i class="ph ph-sign-in" style="font-size:1.2rem;"></i> تسجيل الدخول
+        <button type="submit" class="primary-btn mt-4" style="width:100%;">
+          <i class="ph ph-sign-in"></i>
+          <span>دخول</span>
         </button>
       </form>
 
       <div class="login-help">
-        <strong style="display:block; margin-bottom:4px; color:var(--text-main);">بيانات الأدمن الرئيسية:</strong>
-        username: admin<br>
-        password: admin
+        <div><span class="font-bold">افتراضيًا:</span> admin / 123456</div>
+        <div class="mt-2">يمكنك تغيير بيانات الدخول من ملف <span class="text-primary">admin.js</span>.</div>
       </div>
     </div>
   </div>
 
-  <div class="admin-layout" id="admin-layout" style="display:none;">
-    <aside class="admin-sidebar" id="admin-sidebar">
+  <div id="admin-layout" class="admin-layout hidden">
+    <aside class="admin-sidebar">
       <div class="sidebar-logo">
-        <img src="logos/orebooking.png" alt="Logo" class="logo-img" style="height:42px;" />
+        <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" onerror="this.style.display='none'">
       </div>
 
       <div class="sidebar-top-note">
-        <strong>لوحة الإدارة الذكية</strong>
-        <span>إدارة أسرع للعقارات، مراجعة احترافية للحجوزات، وإنشاء حسابات لأصحاب العقارات من مكان واحد.</span>
+        <strong>لوحة التحكم الرئيسية</strong>
+        <span>إدارة العقارات، الحجوزات، حسابات الملاك، ورسائل الدعم من مكان واحد.</span>
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" type="button" data-tab-target="manage-props" onclick="switchTab('manage-props')">
-          <i class="ph ph-buildings"></i> إدارة العقارات
+        <button class="nav-item active" type="button" data-tab-target="dashboard">
+          <i class="ph ph-squares-four"></i>
+          <span>الرئيسية</span>
         </button>
 
-        <button class="nav-item" id="nav-add-property" type="button" data-tab-target="add-property" onclick="switchTab('add-property')">
-          <i class="ph ph-plus-square"></i> إضافة عقار جديد
+        <button class="nav-item" type="button" data-tab-target="properties">
+          <i class="ph ph-buildings"></i>
+          <span>العقارات</span>
         </button>
 
-        <button class="nav-item" id="nav-owner-accounts" type="button" data-tab-target="owner-accounts" onclick="switchTab('owner-accounts')">
-          <i class="ph ph-users-three"></i> حسابات الملاك
+        <button class="nav-item" type="button" data-tab-target="add-property">
+          <i class="ph ph-plus-circle"></i>
+          <span>إضافة عقار</span>
         </button>
 
-        <button class="nav-item" type="button" data-tab-target="bookings" onclick="switchTab('bookings')">
-          <i class="ph ph-calendar-check"></i> الحجوزات
+        <button class="nav-item" type="button" data-tab-target="bookings">
+          <i class="ph ph-calendar-check"></i>
+          <span>الحجوزات</span>
         </button>
 
-        <button type="button" id="admin-logout-btn" class="nav-item logout-item">
-          <i class="ph ph-sign-out"></i> تسجيل الخروج
+        <button class="nav-item" type="button" data-tab-target="owners">
+          <i class="ph ph-users-three"></i>
+          <span>حسابات الملاك</span>
+        </button>
+
+        <button class="nav-item" type="button" data-tab-target="chats">
+          <i class="ph ph-chat-centered-dots"></i>
+          <span>المحادثات</span>
+        </button>
+
+        <button id="admin-logout-btn" class="nav-item logout-item" type="button">
+          <i class="ph ph-sign-out"></i>
+          <span>تسجيل الخروج</span>
         </button>
       </nav>
     </aside>
 
     <main class="admin-main">
       <div class="admin-mobile-topbar">
-        <button type="button" class="admin-mobile-toggle" id="admin-mobile-toggle" aria-label="فتح القائمة">
+        <button id="admin-mobile-toggle" class="admin-mobile-toggle" type="button" aria-label="فتح القائمة">
           <i class="ph ph-list"></i>
         </button>
-        <img src="logos/orebooking.png" alt="Logo" style="height:30px; object-fit:contain;" />
+        <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" onerror="this.style.display='none'">
       </div>
 
-      <!-- Firebase Status Banner -->
-      <div id="firebase-status-banner" class="firebase-status-banner" style="display:none;"></div>
+      <div id="firebase-status-banner" class="firebase-status-banner"></div>
 
       <header class="admin-header">
         <div class="header-copy">
-          <h2 id="page-title" class="font-bold" style="font-size:1.45rem; margin:0;">إدارة العقارات</h2>
-          <p id="page-subtitle">واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح.</p>
+          <h1>لوحة تحكم OreBooking</h1>
+          <p>تحكم كامل في البيانات والمحتوى والحجوزات والتواصل مع العملاء.</p>
         </div>
 
         <div class="admin-profile">
-          <div style="text-align:left; line-height:1.25;">
-            <span class="font-bold" id="admin-profile-name" style="display:block; font-size:0.96rem;">مدير النظام</span>
-            <span style="font-size:0.76rem; color:var(--text-muted);" id="admin-profile-role">بصلاحيات كاملة</span>
+          <div class="avatar">
+            <i class="ph ph-user-circle-gear"></i>
           </div>
-          <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--accent)); color:white;">
-            <i class="ph-fill ph-user-circle"></i>
+          <div>
+            <div class="font-bold">مدير النظام</div>
+            <div style="color:var(--text-muted);font-size:.85rem;">إدارة مباشرة للمشروع</div>
           </div>
         </div>
       </header>
 
-      <section class="dashboard-strip" aria-label="إحصائيات سريعة">
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-house-line"></i></div>
-          <div class="stat-mini-meta">
-            <span>إجمالي العقارات</span>
-            <strong id="stat-total-properties">0</strong>
-          </div>
-        </div>
+      <section class="admin-content">
 
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-eye"></i></div>
-          <div class="stat-mini-meta">
-            <span>العقارات النشطة</span>
-            <strong id="stat-active-properties">0</strong>
-          </div>
-        </div>
-
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-users-three"></i></div>
-          <div class="stat-mini-meta">
-            <span>حسابات الملاك</span>
-            <strong id="stat-owner-accounts">0</strong>
-          </div>
-        </div>
-
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon"><i class="ph-fill ph-calendar-check"></i></div>
-          <div class="stat-mini-meta">
-            <span>إجمالي الحجوزات</span>
-            <strong id="stat-total-bookings">0</strong>
-          </div>
-        </div>
-      </section>
-
-      <div class="admin-content">
-        <div id="tab-manage-props" class="tab-pane active">
-          <div class="admin-card">
-            <div class="pane-head">
-              <h3><i class="ph-fill ph-buildings" style="color:var(--primary);"></i> العقارات المضافة</h3>
-
-              <div class="pane-tools">
-                <label class="search-inline">
-                  <i class="ph ph-magnifying-glass" style="color:var(--text-muted);"></i>
-                  <input type="text" id="property-search-input" placeholder="ابحث باسم العقار أو الموقع..." />
-                </label>
-
-                <button type="button" class="ghost-action" id="refresh-properties-btn">
-                  <i class="ph ph-arrows-clockwise"></i> تحديث القائمة
-                </button>
+        <div id="dashboard-pane" class="tab-pane active">
+          <div class="dashboard-strip">
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-buildings"></i></div>
+              <div class="stat-mini-meta">
+                <span>العقارات</span>
+                <strong id="dashboard-properties-count">0</strong>
               </div>
             </div>
 
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-calendar-check"></i></div>
+              <div class="stat-mini-meta">
+                <span>الحجوزات</span>
+                <strong id="dashboard-bookings-count">0</strong>
+              </div>
+            </div>
+
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-users-three"></i></div>
+              <div class="stat-mini-meta">
+                <span>حسابات الملاك</span>
+                <strong id="stat-owners-count">0</strong>
+              </div>
+            </div>
+
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-chat-centered-dots"></i></div>
+              <div class="stat-mini-meta">
+                <span>المحادثات</span>
+                <strong id="stat-chats-count">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card mt-4">
+            <div class="pane-head">
+              <h3><i class="ph ph-chart-bar"></i> ملخص سريع</h3>
+            </div>
+
             <div class="stats-chip-row">
-              <span class="stats-chip"><i class="ph ph-stack"></i> متابعة كل العقارات من مكان واحد</span>
-              <span class="stats-chip"><i class="ph ph-faders-horizontal"></i> تحكم سريع بالحالة والتعديل</span>
-              <span class="stats-chip"><i class="ph ph-lightning"></i> واجهة أخف وأوضح للإدارة اليومية</span>
+              <div class="stats-chip"><i class="ph ph-buildings"></i> إجمالي العقارات: <span id="mini-properties-count">0</span></div>
+              <div class="stats-chip"><i class="ph ph-calendar-check"></i> إجمالي الحجوزات: <span id="mini-bookings-count">0</span></div>
+              <div class="stats-chip"><i class="ph ph-hourglass-medium"></i> الحجوزات المعلقة: <span id="pending-bookings-count">0</span></div>
+              <div class="stats-chip"><i class="ph ph-check-circle"></i> الحجوزات المؤكدة: <span id="confirmed-bookings-count">0</span></div>
+              <div class="stats-chip"><i class="ph ph-x-circle"></i> الحجوزات المرفوضة: <span id="rejected-bookings-count">0</span></div>
+            </div>
+
+            <div class="quick-tips">
+              <div class="tip-card">
+                <i class="ph ph-house-plus"></i>
+                <strong>إضافة عقار جديد</strong>
+                <p>أدخل عنوانًا واضحًا وصورًا جيدة وحدد الموقع بدقة على الخريطة.</p>
+              </div>
+              <div class="tip-card">
+                <i class="ph ph-calendar-plus"></i>
+                <strong>مراجعة الحجوزات</strong>
+                <p>تابع الطلبات الجديدة بشكل مستمر وقم بتأكيدها أو رفضها بسرعة.</p>
+              </div>
+              <div class="tip-card">
+                <i class="ph ph-headset"></i>
+                <strong>الرد على الرسائل</strong>
+                <p>تابع المحادثات المفتوحة للرد على العملاء من نفس لوحة التحكم.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="properties-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-buildings"></i> إدارة العقارات</h3>
+              <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="properties-search" type="text" placeholder="ابحث باسم العقار أو الموقع أو المالك..." />
+                </div>
+                <button id="refresh-properties-btn" type="button" class="ghost-action">
+                  <i class="ph ph-arrows-clockwise"></i>
+                  <span>تحديث</span>
+                </button>
+              </div>
             </div>
 
             <div class="table-responsive">
@@ -1858,948 +2047,587 @@
                     <th>الصورة</th>
                     <th>العقار</th>
                     <th>الموقع</th>
+                    <th>النوع</th>
                     <th>السعر</th>
                     <th>الحالة</th>
-                    <th>إجراءات</th>
+                    <th>الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody id="properties-tbody"></tbody>
+                <tbody id="properties-tbody">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:26px;">جارٍ تحميل البيانات...</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <div id="tab-add-property" class="tab-pane">
+        <div id="add-property-pane" class="tab-pane">
           <form id="add-property-form" class="modern-form-wrapper">
-            <div class="modern-section">
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-text-aa"></i>
+                <i class="ph ph-text-aa"></i>
                 <div>
                   <h4>المعلومات الأساسية</h4>
-                  <div class="section-note">أدخل البيانات التعريفية الرئيسية للعقار بلغتين بشكل منظم وواضح.</div>
+                  <div class="section-note">هذه البيانات تظهر مباشرة في بطاقات العقارات وصفحة التفاصيل.</div>
                 </div>
               </div>
 
               <div class="form-grid">
                 <div class="input-group">
-                  <label for="prop-title-ar">اسم العقار (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-title-ar" placeholder="مثال: شاليه الأحلام" required />
+                  <label for="admin-title-ar">العنوان بالعربية</label>
+                  <input id="admin-title-ar" type="text" placeholder="مثال: شقة فاخرة في ورقلة" />
                 </div>
 
                 <div class="input-group">
-                  <label for="prop-title-en">اسم العقار (إنجليزي)</label>
-                  <input type="text" id="prop-title-en" placeholder="Example: Dream Chalet" />
+                  <label for="admin-title-en">العنوان بالإنجليزية</label>
+                  <input id="admin-title-en" type="text" placeholder="Luxury apartment in Ouargla" />
+                </div>
+
+                <div class="input-group">
+                  <label for="admin-location-ar">الموقع بالعربية</label>
+                  <input id="admin-location-ar" type="text" placeholder="ورقلة، الجزائر" />
+                </div>
+
+                <div class="input-group">
+                  <label for="admin-location-en">الموقع بالإنجليزية</label>
+                  <input id="admin-location-en" type="text" placeholder="Ouargla, Algeria" />
+                </div>
+
+                <div class="input-group">
+                  <label for="admin-type-ar">نوع العقار بالعربية</label>
+                  <input id="admin-type-ar" type="text" placeholder="شقة / فيلا / فندق" />
+                </div>
+
+                <div class="input-group">
+                  <label for="admin-type-en">نوع العقار بالإنجليزية</label>
+                  <input id="admin-type-en" type="text" placeholder="Apartment / Villa / Hotel" />
                 </div>
 
                 <div class="input-group" style="grid-column:1/-1;">
-                  <label for="prop-desc-ar">وصف العقار (عربي) <span class="text-danger">*</span></label>
-                  <textarea id="prop-desc-ar" rows="4" placeholder="اكتب وصفاً جذاباً ومقنعاً للعقار بالعربية..." required></textarea>
-                  <small>يفضل ذكر نوع الإقامة، المميزات، والأجواء المحيطة بالعقار.</small>
+                  <label for="admin-description-ar">الوصف بالعربية</label>
+                  <textarea id="admin-description-ar" placeholder="اكتب وصفًا واضحًا وجذابًا للعقار..."></textarea>
                 </div>
 
                 <div class="input-group" style="grid-column:1/-1;">
-                  <label for="prop-desc-en">وصف العقار (إنجليزي)</label>
-                  <textarea id="prop-desc-en" rows="4" placeholder="Write a polished and attractive English description..."></textarea>
+                  <label for="admin-description-en">الوصف بالإنجليزية</label>
+                  <textarea id="admin-description-en" placeholder="Write a clear property description..."></textarea>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="modern-section">
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-money"></i>
+                <i class="ph ph-user-circle"></i>
                 <div>
-                  <h4>التسعير والصور ونوع العقار</h4>
-                  <div class="section-note">حدد نوع العقار، سعر الليلة، ثم أرفق صورة رئيسية احترافية واضحة.</div>
+                  <h4>بيانات المالك</h4>
+                  <div class="section-note">يمكن ربط العقار بمالك أو إضافة بياناته يدويًا.</div>
                 </div>
               </div>
 
-              <div class="form-grid" style="align-items:start;">
+              <div class="form-grid">
                 <div class="input-group">
-                  <label for="prop-type">نوع العقار <span class="text-danger">*</span></label>
-                  <select id="prop-type" required style="font-size:1.03rem; font-weight:800; color:var(--primary); min-height:52px;">
-                    <option value="apartment">شقة (Apartment)</option>
-                    <option value="villa">فيلا (Villa)</option>
-                    <option value="resort">منتجع (Resort)</option>
-                    <option value="pool">مسبح (Pool)</option>
-                  </select>
+                  <label for="admin-owner-name">اسم المالك</label>
+                  <input id="admin-owner-name" type="text" placeholder="الاسم الكامل" />
                 </div>
 
                 <div class="input-group">
-                  <label for="prop-price">السعر لليلة الواحدة (DZD) <span class="text-danger">*</span></label>
-                  <input type="number" id="prop-price" placeholder="مثال: 15000" style="font-size:1.1rem; font-weight:800; color:var(--primary); min-height:52px;" required />
+                  <label for="admin-owner-email">بريد المالك</label>
+                  <input id="admin-owner-email" type="email" placeholder="owner@example.com" />
                 </div>
 
-                <div class="input-group" style="grid-column:1/-1; margin-top:4px;">
-                  <label for="prop-image">الصورة الرئيسية للعقار <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <label for="admin-owner-phone">هاتف المالك</label>
+                  <input id="admin-owner-phone" type="text" placeholder="+213..." />
+                </div>
 
-                  <div class="upload-zone">
-                    <i class="ph ph-cloud-arrow-up"></i>
-                    <span class="upload-zone-text">اضغط هنا أو اسحب الصورة</span>
-                    <span class="upload-zone-sub">PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
-                    <input type="file" id="prop-image" accept="image/*" required />
-                  </div>
+                <div class="input-group">
+                  <label for="admin-price">السعر لليلة</label>
+                  <input id="admin-price" type="number" min="0" placeholder="12000" />
+                </div>
 
-                  <div class="upload-preview" id="upload-preview-box">
-                    <img id="upload-preview-img" alt="Preview" />
-                    <div class="upload-preview-meta">
-                      <strong id="upload-preview-name">معاينة الصورة</strong>
-                      <span id="upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
-                    </div>
-                  </div>
+                <div class="input-group">
+                  <label for="admin-guests">عدد الضيوف</label>
+                  <input id="admin-guests" type="number" min="1" placeholder="4" />
+                </div>
 
-                  <small id="upload-status" class="text-primary mt-2" style="display:block; text-align:center; font-weight:700;"></small>
+                <div class="input-group">
+                  <label for="admin-bedrooms">عدد الغرف</label>
+                  <input id="admin-bedrooms" type="number" min="0" placeholder="2" />
+                </div>
+
+                <div class="input-group">
+                  <label for="admin-bathrooms">عدد الحمامات</label>
+                  <input id="admin-bathrooms" type="number" min="0" placeholder="1" />
+                </div>
+
+                <div class="input-group">
+                  <label for="admin-amenities">المزايا</label>
+                  <input id="admin-amenities" type="text" placeholder="wifi, parking, pool, ac" />
+                  <small>افصل بين المزايا بفاصلة.</small>
+                </div>
+
+                <div class="input-group" style="grid-column:1/-1;">
+                  <label for="admin-extras">إضافات أخرى</label>
+                  <input id="admin-extras" type="text" placeholder="self check-in, breakfast, workspace" />
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="modern-section">
+            <section class="modern-section">
               <div class="modern-section-header">
-                <i class="ph-fill ph-map-pin-line"></i>
+                <i class="ph ph-image"></i>
                 <div>
-                  <h4>الموقع الجغرافي للخريطة</h4>
-                  <div class="section-note">حدد العنوان النصي بدقة ثم اختر الإحداثيات مباشرة من الخريطة أو عبر البحث الذكي.</div>
+                  <h4>الصور والمعرض</h4>
+                  <div class="section-note">يمكنك استخدام رابط صورة مباشر أو أكثر من رابط للمعرض.</div>
                 </div>
               </div>
 
-              <div class="form-grid" style="margin-bottom:12px;">
+              <label class="upload-zone" for="admin-image-file">
+                <input id="admin-image-file" type="file" accept="image/*" />
+                <i class="ph ph-upload-simple"></i>
+                <div class="upload-zone-text">اختر صورة من جهازك</div>
+                <div class="upload-zone-sub">هذا فقط للمعاينة داخل اللوحة، واحفظ الرابط النهائي في الحقول أدناه.</div>
+              </label>
+
+              <div id="admin-upload-preview" class="upload-preview">
+                <img id="admin-upload-preview-img" alt="preview" />
+                <div class="upload-preview-meta">
+                  <strong id="admin-upload-preview-name"></strong>
+                  <span id="admin-upload-preview-meta"></span>
+                </div>
+              </div>
+
+              <div class="form-grid mt-3">
                 <div class="input-group">
-                  <label for="prop-loc-ar">العنوان النصي (عربي) <span class="text-danger">*</span></label>
-                  <input type="text" id="prop-loc-ar" placeholder="مثال: حي الرياض، الجزائر العاصمة" required />
+                  <label for="admin-image-url">رابط الصورة الرئيسية</label>
+                  <input id="admin-image-url" type="url" placeholder="https://..." />
                 </div>
 
                 <div class="input-group">
-                  <label for="prop-loc-en">العنوان النصي (إنجليزي)</label>
-                  <input type="text" id="prop-loc-en" placeholder="Example: Riad District, Algiers" />
+                  <label for="admin-gallery">روابط صور المعرض</label>
+                  <input id="admin-gallery" type="text" placeholder="https://... , https://... , https://..." />
+                </div>
+              </div>
+            </section>
+
+            <section class="modern-section">
+              <div class="modern-section-header">
+                <i class="ph ph-map-pin-line"></i>
+                <div>
+                  <h4>تحديد الموقع</h4>
+                  <div class="section-note">ابحث باسم المكان أو اضغط مباشرة على الخريطة لتعبئة الإحداثيات.</div>
                 </div>
               </div>
 
               <div class="map-picker-wrapper">
                 <div class="map-search-row">
-                  <input type="text" id="map-search-input" placeholder="ابحث عن مدينة أو منطقة لتقريب الخريطة..." />
-                  <button type="button" id="map-search-btn">
-                    <i class="ph ph-magnifying-glass"></i> بحث ذكي
+                  <input id="admin-map-search" type="text" placeholder="ابحث عن ولاية، حي، أو عنوان..." />
+                  <button id="admin-map-search-btn" type="button">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <span>بحث</span>
                   </button>
                 </div>
 
-                <p class="map-picker-hint">
-                  <i class="ph-fill ph-info"></i>
-                  اسحب الخريطة وانقر بدقة لتحديد الإحداثيات الدقيقة للعقار، ثم تأكد من القيم الظاهرة في الحقول التالية.
-                </p>
+                <div class="map-picker-hint">
+                  <i class="ph ph-cursor-click"></i>
+                  <span>اضغط على الخريطة لاختيار الموقع بدقة.</span>
+                </div>
+
+                <div id="admin-map-picked-badge" class="map-picked-badge">
+                  <i class="ph ph-check-circle"></i>
+                  <span>تم تحديد موقع العقار بنجاح.</span>
+                </div>
 
                 <div id="admin-map-picker"></div>
 
-                <div class="map-picked-badge" id="map-picked-badge">
-                  <i class="ph-fill ph-check-circle"></i> تم التقاط الإحداثيات بنجاح
-                </div>
-
                 <div class="coords-row">
                   <div class="input-group">
-                    <label for="prop-lat">خط العرض (Latitude)</label>
-                    <input type="text" id="prop-lat" placeholder="سيتم تعبئته تلقائياً" readonly />
+                    <label for="admin-lat">Latitude</label>
+                    <input id="admin-lat" type="text" placeholder="28.000000" />
                   </div>
 
                   <div class="input-group">
-                    <label for="prop-lng">خط الطول (Longitude)</label>
-                    <input type="text" id="prop-lng" placeholder="سيتم تعبئته تلقائياً" readonly />
+                    <label for="admin-lng">Longitude</label>
+                    <input id="admin-lng" type="text" placeholder="2.800000" />
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div class="modern-section">
-              <div class="modern-section-header">
-                <i class="ph-fill ph-lightbulb"></i>
-                <div>
-                  <h4>نصائح قبل النشر</h4>
-                  <div class="section-note">هذه التوصيات تساعد في إظهار العقار بشكل أقوى أمام الزوار ورفع جودة العرض.</div>
-                </div>
-              </div>
-
-              <div class="quick-tips">
-                <div class="tip-card">
-                  <i class="ph ph-image"></i>
-                  <strong>اختر صورة جذابة</strong>
-                  <p>استخدم صورة مضيئة وواضحة بزاوية واسعة تعكس أفضل ما في العقار.</p>
-                </div>
-
-                <div class="tip-card">
-                  <i class="ph ph-text-align-right"></i>
-                  <strong>اكتب وصفاً مقنعاً</strong>
-                  <p>اذكر المميزات الحقيقية، عدد الغرف، القرب من الخدمات، ونوع التجربة التي يقدمها المكان.</p>
-                </div>
-
-                <div class="tip-card">
-                  <i class="ph ph-map-trifold"></i>
-                  <strong>ثبت الموقع بدقة</strong>
-                  <p>تحديد الإحداثيات بدقة يقلل الاستفسارات ويرفع الثقة عند المستخدم قبل الحجز.</p>
-                </div>
-              </div>
-            </div>
+            </section>
 
             <div class="admin-footer-actions">
-              <button type="submit" class="primary-btn" id="submit-prop-btn" style="width:auto; padding:16px 40px; font-size:1.05rem; display:inline-flex; gap:10px; align-items:center;">
-                <i class="ph-fill ph-plus-circle"></i> نشر العقار على المنصة
+              <button type="submit" class="primary-btn">
+                <i class="ph ph-floppy-disk"></i>
+                <span>حفظ العقار</span>
               </button>
 
-              <button type="button" class="ghost-action" id="reset-property-form-btn">
-                <i class="ph ph-eraser"></i> تفريغ الحقول
+              <button type="button" class="ghost-action" data-tab-target="properties">
+                <i class="ph ph-list-bullets"></i>
+                <span>عرض العقارات</span>
               </button>
             </div>
           </form>
         </div>
 
-        <div id="tab-owner-accounts" class="tab-pane">
+        <div id="bookings-pane" class="tab-pane">
           <div class="admin-card">
             <div class="pane-head">
-              <h3><i class="ph-fill ph-users-three" style="color:var(--primary);"></i> حسابات ملاك العقارات</h3>
-
+              <h3><i class="ph ph-calendar-check"></i> إدارة الحجوزات</h3>
               <div class="pane-tools">
-                <button type="button" class="ghost-action" id="refresh-owner-accounts-btn">
-                  <i class="ph ph-arrows-clockwise"></i> تحديث الحسابات
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="bookings-search" type="text" placeholder="ابحث بالاسم أو المرجع أو العقار..." />
+                </div>
+                <button id="refresh-bookings-btn" type="button" class="ghost-action">
+                  <i class="ph ph-arrows-clockwise"></i>
+                  <span>تحديث</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="bookings-filter-bar">
+              <button type="button" class="filter-tab-btn all active" data-filter="all">
+                <i class="ph ph-list"></i>
+                <span>الكل</span>
+                <span id="booking-count-all" class="filter-count-badge">0</span>
+              </button>
+
+              <button type="button" class="filter-tab-btn pending" data-filter="pending">
+                <i class="ph ph-hourglass-medium"></i>
+                <span>قيد الانتظار</span>
+                <span id="booking-count-pending" class="filter-count-badge">0</span>
+              </button>
+
+              <button type="button" class="filter-tab-btn confirmed" data-filter="confirmed">
+                <i class="ph ph-check-circle"></i>
+                <span>مؤكدة</span>
+                <span id="booking-count-confirmed" class="filter-count-badge">0</span>
+              </button>
+
+              <button type="button" class="filter-tab-btn rejected" data-filter="rejected">
+                <i class="ph ph-x-circle"></i>
+                <span>مرفوضة</span>
+                <span id="booking-count-rejected" class="filter-count-badge">0</span>
+              </button>
+            </div>
+
+            <div id="bookings-container">
+              <div class="empty-state">
+                <i class="ph ph-spinner-gap ph-spin"></i>
+                <div>جارٍ تحميل الحجوزات...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="owners-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-users-three"></i> حسابات الملاك</h3>
+              <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="owners-search" type="text" placeholder="ابحث باسم المالك أو البريد..." />
+                </div>
+                <button id="refresh-owners-btn" type="button" class="ghost-action">
+                  <i class="ph ph-arrows-clockwise"></i>
+                  <span>تحديث</span>
                 </button>
               </div>
             </div>
 
             <div class="owner-note">
-              من هنا يستطيع الأدمن الرئيسي إنشاء حسابات خاصة بأصحاب العقارات، وتسليم كل مالك اسم مستخدم وكلمة مرور للدخول إلى لوحة التحكم الخاصة بعقاره فقط.
+              هذا النموذج يُستخدم لإضافة أو تعديل بيانات حسابات الملاك داخل Firestore. إذا كان عندك نظام Auth مستقل للملاك فسيبقى هذا النموذج لإدارة البيانات التعريفية فقط.
             </div>
 
             <form id="owner-account-form" class="admin-form">
               <div class="owner-form-grid">
                 <div class="input-group">
-                  <label for="owner-full-name">اسم صاحب العقار <span class="text-danger">*</span></label>
-                  <input type="text" id="owner-full-name" placeholder="مثال: محمد علي" required />
+                  <label for="owner-name">اسم المالك</label>
+                  <input id="owner-name" type="text" placeholder="الاسم الكامل" />
                 </div>
 
                 <div class="input-group">
-                  <label for="owner-property-id">العقار المرتبط بالحساب <span class="text-danger">*</span></label>
-                  <select id="owner-property-id" required>
-                    <option value="">اختر العقار</option>
-                  </select>
+                  <label for="owner-email">البريد الإلكتروني</label>
+                  <input id="owner-email" type="email" placeholder="owner@example.com" />
                 </div>
 
                 <div class="input-group">
-                  <label for="owner-username">اسم المستخدم <span class="text-danger">*</span></label>
-                  <input type="text" id="owner-username" placeholder="مثال: owner_palm_01" required />
+                  <label for="owner-phone">رقم الهاتف</label>
+                  <input id="owner-phone" type="text" placeholder="+213..." />
                 </div>
 
                 <div class="input-group">
-                  <label for="owner-password">كلمة المرور <span class="text-danger">*</span></label>
-                  <input type="text" id="owner-password" placeholder="مثال: 123456" required />
+                  <label for="owner-username">اسم المستخدم</label>
+                  <input id="owner-username" type="text" placeholder="owner_user" />
+                </div>
+
+                <div class="input-group" style="grid-column:1/-1;">
+                  <label for="owner-password">كلمة المرور</label>
+                  <input id="owner-password" type="text" placeholder="كلمة مرور مؤقتة أو مرجعية" />
                 </div>
               </div>
 
               <div class="admin-footer-actions">
-                <button type="submit" class="primary-btn" id="create-owner-account-btn">
-                  <i class="ph ph-user-plus"></i> إنشاء حساب المالك
+                <button type="submit" class="primary-btn">
+                  <i class="ph ph-user-plus"></i>
+                  <span>حفظ الحساب</span>
                 </button>
               </div>
             </form>
 
-            <div class="table-responsive" style="margin-top:24px;">
+            <div class="table-responsive mt-4">
               <table class="admin-table">
                 <thead>
                   <tr>
-                    <th>اسم المالك</th>
+                    <th>الاسم</th>
+                    <th>البريد</th>
+                    <th>الهاتف</th>
                     <th>اسم المستخدم</th>
-                    <th>كلمة المرور</th>
-                    <th>العقار</th>
                     <th>الحالة</th>
-                    <th>إجراءات</th>
+                    <th>الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody id="owner-accounts-tbody"></tbody>
+                <tbody id="owner-accounts-tbody">
+                  <tr>
+                    <td colspan="6" style="text-align:center;padding:26px;">جارٍ تحميل حسابات الملاك...</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <div id="tab-bookings" class="tab-pane">
-          <div class="admin-card" style="background:transparent; border:none; box-shadow:none; padding:0;">
+        <div id="chats-pane" class="tab-pane">
+          <div class="admin-card">
             <div class="pane-head">
-              <h3><i class="ph-fill ph-calendar-check" style="color:var(--primary);"></i> طلبات الحجوزات</h3>
-
+              <h3><i class="ph ph-chat-centered-dots"></i> الرسائل والدعم</h3>
               <div class="pane-tools">
-                <button type="button" class="ghost-action" id="refresh-bookings-btn">
-                  <i class="ph ph-arrows-clockwise"></i> تحديث الحجوزات
+                <button id="refresh-chats-btn" type="button" class="ghost-action">
+                  <i class="ph ph-arrows-clockwise"></i>
+                  <span>تحديث</span>
                 </button>
               </div>
             </div>
 
-            <!-- =============================================
-                 فلتر الحجوزات - NEW
-            ============================================= -->
-            <div class="bookings-filter-bar" id="bookings-filter-bar" role="tablist" aria-label="فلتر الحجوزات">
-              <button
-                type="button"
-                class="filter-tab-btn active all"
-                data-filter="all"
-                role="tab"
-                aria-selected="true"
-                onclick="filterBookings('all')"
-              >
-                <i class="ph ph-list-bullets"></i>
-                الكل
-                <span class="filter-count-badge" id="filter-count-all">0</span>
-              </button>
+            <div class="chat-admin-layout">
+              <div class="chat-sidebar">
+                <div id="admin-chat-list">
+                  <div class="empty-state" style="padding:24px;">
+                    <i class="ph ph-chat-centered-text"></i>
+                    <div>لا توجد محادثات حالياً.</div>
+                  </div>
+                </div>
+              </div>
 
-              <button
-                type="button"
-                class="filter-tab-btn pending"
-                data-filter="pending"
-                role="tab"
-                aria-selected="false"
-                onclick="filterBookings('pending')"
-              >
-                <i class="ph ph-clock"></i>
-                قيد الانتظار
-                <span class="filter-count-badge" id="filter-count-pending">0</span>
-              </button>
+              <div class="chat-main">
+                <div class="chat-main-head">
+                  <div>
+                    <h4 id="admin-chat-title">اختر محادثة</h4>
+                    <p id="admin-chat-subtitle">سيظهر هنا اسم العميل أو بريده الإلكتروني.</p>
+                  </div>
+                  <div class="pill-soft" style="background:rgba(67,90,191,.08);color:var(--primary);">
+                    <i class="ph ph-headset"></i>
+                    <span>دعم مباشر</span>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                class="filter-tab-btn confirmed"
-                data-filter="confirmed"
-                role="tab"
-                aria-selected="false"
-                onclick="filterBookings('confirmed')"
-              >
-                <i class="ph ph-check-circle"></i>
-                مقبولة
-                <span class="filter-count-badge" id="filter-count-confirmed">0</span>
-              </button>
+                <div id="admin-chat-messages" class="chat-messages">
+                  <div class="chat-empty-state">
+                    <i class="ph ph-chat-circle-dots"></i>
+                    <div>اختر محادثة من القائمة لعرض الرسائل.</div>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                class="filter-tab-btn rejected"
-                data-filter="rejected"
-                role="tab"
-                aria-selected="false"
-                onclick="filterBookings('rejected')"
-              >
-                <i class="ph ph-x-circle"></i>
-                مرفوضة
-                <span class="filter-count-badge" id="filter-count-rejected">0</span>
-              </button>
-            </div>
-            <!-- ============================================= -->
-
-            <div id="bookings-container">
-              <div class="empty-state">
-                <i class="ph ph-circle-notch ph-spin"></i>
-                جارٍ تحميل بيانات الحجوزات...
+                <div class="chat-composer">
+                  <textarea id="admin-chat-input" placeholder="اكتب ردّك هنا..."></textarea>
+                  <div class="chat-actions">
+                    <small>سيتم إرسال الرسالة داخل المحادثة الحالية مباشرة.</small>
+                    <button id="admin-chat-send-btn" type="button" class="primary-btn">
+                      <i class="ph ph-paper-plane-tilt"></i>
+                      <span>إرسال</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+      </section>
     </main>
   </div>
 
-  <div class="modal-overlay" id="edit-modal">
+  <div id="edit-modal" class="modal-overlay">
     <div class="modal-content admin-card">
-      <button class="close-modal-btn" id="close-edit-modal-btn" type="button" aria-label="إغلاق">
+      <button type="button" class="close-modal-btn" data-close-modal aria-label="إغلاق">
         <i class="ph ph-x"></i>
       </button>
 
       <div class="modal-topbar">
-        <h3><i class="ph-fill ph-pencil-simple-line"></i> تعديل العقار</h3>
+        <h3><i class="ph ph-pencil-simple"></i> تعديل بيانات العقار</h3>
       </div>
 
       <form id="edit-property-form" class="admin-form">
-        <input type="hidden" id="edit-prop-id" />
-
         <div class="form-grid">
           <div class="input-group">
-            <label for="edit-title-ar">الاسم (عربي)</label>
-            <input type="text" id="edit-title-ar" required />
+            <label for="edit-title-ar">العنوان بالعربية</label>
+            <input id="edit-title-ar" type="text" />
           </div>
 
           <div class="input-group">
-            <label for="edit-title-en">الاسم (إنجليزي)</label>
-            <input type="text" id="edit-title-en" />
+            <label for="edit-title-en">العنوان بالإنجليزية</label>
+            <input id="edit-title-en" type="text" />
           </div>
 
           <div class="input-group">
-            <label for="edit-price">السعر (DZD)</label>
-            <input type="number" id="edit-price" required />
+            <label for="edit-location-ar">الموقع بالعربية</label>
+            <input id="edit-location-ar" type="text" />
           </div>
 
           <div class="input-group">
-            <label for="edit-type">نوع العقار</label>
-            <select id="edit-type" required>
-              <option value="apartment">شقة (Apartment)</option>
-              <option value="villa">فيلا (Villa)</option>
-              <option value="resort">منتجع (Resort)</option>
-              <option value="pool">مسبح (Pool)</option>
-            </select>
+            <label for="edit-location-en">الموقع بالإنجليزية</label>
+            <input id="edit-location-en" type="text" />
           </div>
 
           <div class="input-group">
-            <label for="edit-loc-ar">العنوان (عربي)</label>
-            <input type="text" id="edit-loc-ar" />
+            <label for="edit-type-ar">نوع العقار بالعربية</label>
+            <input id="edit-type-ar" type="text" />
           </div>
 
           <div class="input-group">
-            <label for="edit-loc-en">العنوان (إنجليزي)</label>
-            <input type="text" id="edit-loc-en" />
+            <label for="edit-type-en">نوع العقار بالإنجليزية</label>
+            <input id="edit-type-en" type="text" />
           </div>
 
           <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-desc-ar">الوصف (عربي)</label>
-            <textarea id="edit-desc-ar" rows="4" required></textarea>
+            <label for="edit-description-ar">الوصف بالعربية</label>
+            <textarea id="edit-description-ar"></textarea>
           </div>
 
           <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-desc-en">الوصف (إنجليزي)</label>
-            <textarea id="edit-desc-en" rows="4"></textarea>
+            <label for="edit-description-en">الوصف بالإنجليزية</label>
+            <textarea id="edit-description-en"></textarea>
+          </div>
+
+          <div class="input-group">
+            <label for="edit-owner-name">اسم المالك</label>
+            <input id="edit-owner-name" type="text" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-owner-email">بريد المالك</label>
+            <input id="edit-owner-email" type="email" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-owner-phone">هاتف المالك</label>
+            <input id="edit-owner-phone" type="text" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-price">السعر</label>
+            <input id="edit-price" type="number" min="0" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-guests">عدد الضيوف</label>
+            <input id="edit-guests" type="number" min="1" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-bedrooms">عدد الغرف</label>
+            <input id="edit-bedrooms" type="number" min="0" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-bathrooms">عدد الحمامات</label>
+            <input id="edit-bathrooms" type="number" min="0" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-amenities">المزايا</label>
+            <input id="edit-amenities" type="text" />
           </div>
 
           <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-image">تغيير الصورة الرئيسية</label>
-            <div class="upload-zone" style="padding:24px 16px;">
-              <i class="ph ph-image-square"></i>
-              <span class="upload-zone-text" id="edit-upload-zone-text">اختر صورة جديدة إن أردت استبدال الحالية</span>
-              <span class="upload-zone-sub">اختياري — PNG, JPG, JPEG — الحد الأقصى 5 ميجابايت</span>
-              <input type="file" id="edit-image" accept="image/*" />
+            <label for="edit-extras">إضافات</label>
+            <input id="edit-extras" type="text" />
+          </div>
+        </div>
+
+        <label class="upload-zone mt-4" for="edit-image-file">
+          <input id="edit-image-file" type="file" accept="image/*" />
+          <i class="ph ph-upload-simple"></i>
+          <div class="upload-zone-text">تحديث المعاينة</div>
+          <div class="upload-zone-sub">يمكنك اختيار صورة جديدة للمعاينة أو تغيير الرابط أدناه.</div>
+        </label>
+
+        <div id="edit-upload-preview" class="upload-preview">
+          <img id="edit-upload-preview-img" alt="preview" />
+          <div class="upload-preview-meta">
+            <strong id="edit-upload-preview-name"></strong>
+            <span id="edit-upload-preview-meta"></span>
+          </div>
+        </div>
+
+        <div class="form-grid mt-3">
+          <div class="input-group">
+            <label for="edit-image-url">رابط الصورة الرئيسية</label>
+            <input id="edit-image-url" type="url" />
+          </div>
+
+          <div class="input-group">
+            <label for="edit-gallery">روابط صور المعرض</label>
+            <input id="edit-gallery" type="text" />
+          </div>
+        </div>
+
+        <div class="map-picker-wrapper mt-4">
+          <div class="map-search-row">
+            <input id="edit-map-search" type="text" placeholder="ابحث عن موقع..." />
+            <button id="edit-map-search-btn" type="button">
+              <i class="ph ph-magnifying-glass"></i>
+              <span>بحث</span>
+            </button>
+          </div>
+
+          <div id="edit-map-picked-badge" class="map-picked-badge">
+            <i class="ph ph-check-circle"></i>
+            <span>تم تحديث الإحداثيات.</span>
+          </div>
+
+          <div id="edit-map-picker"></div>
+
+          <div class="coords-row">
+            <div class="input-group">
+              <label for="edit-lat">Latitude</label>
+              <input id="edit-lat" type="text" />
             </div>
 
-            <div class="upload-preview" id="edit-upload-preview-box">
-              <img id="edit-upload-preview-img" alt="Preview" />
-              <div class="upload-preview-meta">
-                <strong id="edit-upload-preview-name">معاينة الصورة الجديدة</strong>
-                <span id="edit-upload-preview-size">سيظهر اسم وحجم الملف هنا</span>
-              </div>
+            <div class="input-group">
+              <label for="edit-lng">Longitude</label>
+              <input id="edit-lng" type="text" />
             </div>
           </div>
         </div>
 
-        <div class="input-group" style="margin-top:20px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <i class="ph-fill ph-map-pin" style="color:var(--primary); font-size:1.1rem;"></i>
-            تعديل موقع العقار
-          </label>
+        <div class="admin-footer-actions mt-4">
+          <button type="submit" class="primary-btn">
+            <i class="ph ph-floppy-disk"></i>
+            <span>حفظ التعديلات</span>
+          </button>
 
-          <div class="map-picker-wrapper">
-            <div id="edit-map-picker"></div>
-
-            <div class="map-picked-badge" id="edit-map-picked-badge">
-              <i class="ph-fill ph-check-circle"></i> تم تحديد الموقع
-            </div>
-
-            <div class="coords-row">
-              <div class="input-group">
-                <label for="edit-lat">خط العرض</label>
-                <input type="text" id="edit-lat" readonly />
-              </div>
-
-              <div class="input-group">
-                <label for="edit-lng">خط الطول</label>
-                <input type="text" id="edit-lng" readonly />
-              </div>
-            </div>
-          </div>
+          <button type="button" class="ghost-action" data-close-modal>
+            <i class="ph ph-x"></i>
+            <span>إغلاق</span>
+          </button>
         </div>
-
-        <button type="submit" class="primary-btn mt-4" id="submit-edit-btn" style="height:52px; display:flex; align-items:center; justify-content:center; gap:8px;">
-          حفظ التعديلات <i class="ph ph-floppy-disk"></i>
-        </button>
       </form>
     </div>
   </div>
 
-  <script>
-    (function () {
-      // ==========================================
-      // Firebase Helper - unified access point
-      // ==========================================
-      window.getDB = function () {
-        if (window.__db) return window.__db;
-        if (window.__firebaseReady === false) {
-          throw new Error("Firebase غير متاح — يرجى التحقق من إعدادات المشروع في admin.html");
-        }
-        // Fallback: try accessing via firebase global
-        if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) {
-          window.__db = firebase.firestore();
-          return window.__db;
-        }
-        throw new Error("Firebase غير متاح داخل الصفحة حالياً.");
-      };
-
-      // ==========================================
-      // Show Firebase status banner
-      // ==========================================
-      function showFirebaseBanner() {
-        const banner = document.getElementById("firebase-status-banner");
-        if (!banner) return;
-
-        if (window.__firebaseReady === false) {
-          banner.className = "firebase-status-banner error";
-          banner.innerHTML = `
-            <i class="ph-fill ph-warning-circle" style="font-size:1.3rem;flex-shrink:0;"></i>
-            <span>
-              <strong>تحذير: Firebase غير متصل.</strong>
-              لن تعمل عمليات الحجوزات والعقارات حتى يتم إعداد Firebase بشكل صحيح.
-              يرجى تحديث إعدادات firebaseConfig في ملف admin.html.
-            </span>
-          `;
-          banner.style.display = "flex";
-        } else if (window.__firebaseReady === true) {
-          // Don't show success banner unless needed
-          banner.style.display = "none";
-        }
-      }
-
-      // ==========================================
-      // Bookings Filter Logic - NEW
-      // ==========================================
-      window.__allBookingsData = [];
-      window.__currentBookingFilter = "all";
-
-      window.filterBookings = function (filter) {
-        window.__currentBookingFilter = filter;
-
-        // Update active tab button
-        document.querySelectorAll(".filter-tab-btn").forEach(btn => {
-          const isActive = btn.dataset.filter === filter;
-          btn.classList.toggle("active", isActive);
-          btn.setAttribute("aria-selected", isActive ? "true" : "false");
-        });
-
-        renderFilteredBookings();
-      };
-
-      window.updateBookingFilterCounts = function (bookings) {
-        window.__allBookingsData = bookings || [];
-
-        const counts = { all: 0, pending: 0, confirmed: 0, rejected: 0 };
-        bookings.forEach(b => {
-          counts.all++;
-          const status = (b.status || "pending").toLowerCase();
-          if (counts[status] !== undefined) counts[status]++;
-          else counts.pending++;
-        });
-
-        const ids = ["all", "pending", "confirmed", "rejected"];
-        ids.forEach(id => {
-          const el = document.getElementById("filter-count-" + id);
-          if (el) el.textContent = counts[id];
-        });
-      };
-
-      function renderFilteredBookings() {
-        const filter = window.__currentBookingFilter;
-        const container = document.getElementById("bookings-container");
-        if (!container) return;
-
-        // Find the bookings grid inside the container
-        const grid = container.querySelector(".bookings-grid");
-
-        if (!grid) {
-          // If no grid yet, let admin_bookings_addon handle first render
-          return;
-        }
-
-        const cards = grid.querySelectorAll(".booking-card");
-        let visibleCount = 0;
-
-        cards.forEach(card => {
-          const status = (card.dataset.status || "pending").toLowerCase();
-          const show = filter === "all" || status === filter;
-          card.style.display = show ? "" : "none";
-          if (show) visibleCount++;
-        });
-
-        // Show/hide empty state within grid
-        let emptyMsg = grid.querySelector(".bookings-filter-empty");
-        if (visibleCount === 0) {
-          if (!emptyMsg) {
-            emptyMsg = document.createElement("div");
-            emptyMsg.className = "empty-state bookings-filter-empty";
-            emptyMsg.style.gridColumn = "1 / -1";
-
-            const filterLabels = {
-              pending: "قيد الانتظار",
-              confirmed: "المقبولة",
-              rejected: "المرفوضة",
-              all: "الكل"
-            };
-
-            const filterIcons = {
-              pending: "ph-clock",
-              confirmed: "ph-check-circle",
-              rejected: "ph-x-circle",
-              all: "ph-calendar-x"
-            };
-
-            emptyMsg.innerHTML = `
-              <i class="ph ${filterIcons[filter] || "ph-calendar-x"}" style="font-size:2.8rem; color:var(--primary); margin-bottom:12px; display:block; opacity:0.75;"></i>
-              <strong style="display:block; margin-bottom:8px; color:var(--text-main);">
-                لا توجد حجوزات ${filter !== "all" ? filterLabels[filter] : ""}
-              </strong>
-              <span style="font-size:0.88rem;">لم يتم العثور على حجوزات في هذه الفئة.</span>
-            `;
-            grid.appendChild(emptyMsg);
-          }
-        } else {
-          emptyMsg?.remove();
-        }
-      }
-
-      // Override renderFilteredBookings so it's called after bookings load
-      window.__renderFilteredBookings = renderFilteredBookings;
-
-      // ==========================================
-      // Theme
-      // ==========================================
-      function setThemeFromStorage() {
-        const theme = localStorage.getItem("ore_theme") || "light";
-        document.body.classList.toggle("dark", theme === "dark");
-        document.documentElement.classList.toggle("dark", theme === "dark");
-      }
-
-      // ==========================================
-      // Page Meta
-      // ==========================================
-      function updatePageMetaFromNav(tab) {
-        const title = document.getElementById("page-title");
-        const subtitle = document.getElementById("page-subtitle");
-        const profileName = document.getElementById("admin-profile-name");
-        const profileRole = document.getElementById("admin-profile-role");
-
-        const map = {
-          "manage-props": {
-            title: "إدارة العقارات",
-            subtitle: "واجهة حديثة لمتابعة العقارات، تحديث البيانات، ومراجعة الطلبات الواردة بسرعة ووضوح."
-          },
-          "add-property": {
-            title: "إضافة عقار جديد",
-            subtitle: "أدخل كل تفاصيل العقار بشكل منظم ثم انشره ليظهر ضمن المنصة بسرعة."
-          },
-          "owner-accounts": {
-            title: "حسابات ملاك العقارات",
-            subtitle: "أنشئ حسابات خاصة لأصحاب العقارات وحدد من يمكنه الدخول إلى لوحة التحكم الخاصة بعقاره."
-          },
-          "bookings": {
-            title: "إدارة الحجوزات",
-            subtitle: "مراجعة طلبات الحجز، اعتمادها أو رفضها، ومتابعة الحالة الحالية بسهولة."
-          }
-        };
-
-        const current = map[tab] || map["manage-props"];
-        if (title) title.textContent = current.title;
-        if (subtitle) subtitle.textContent = current.subtitle;
-
-        const isOwnerMode = !!localStorage.getItem("ownerPropId");
-        const ownerName = localStorage.getItem("ownerPropName") || "صاحب العقار";
-        const ownerUsername = localStorage.getItem("ownerUsername") || "";
-
-        if (profileName && profileRole) {
-          if (isOwnerMode) {
-            profileName.textContent = ownerName;
-            profileRole.textContent = ownerUsername ? `حساب مالك • ${ownerUsername}` : "حساب مالك";
-          } else {
-            profileName.textContent = "مدير النظام";
-            profileRole.textContent = "بصلاحيات كاملة";
-          }
-        }
-      }
-
-      // ==========================================
-      // Sidebar UI
-      // ==========================================
-      function bindSidebarUi() {
-        const mobileToggle = document.getElementById("admin-mobile-toggle");
-        const sidebar = document.getElementById("admin-sidebar");
-
-        mobileToggle?.addEventListener("click", () => {
-          sidebar?.classList.toggle("open");
-        });
-
-        document.addEventListener("click", e => {
-          if (window.innerWidth > 1100) return;
-          if (!sidebar || !mobileToggle) return;
-          if (sidebar.contains(e.target) || mobileToggle.contains(e.target)) return;
-          sidebar.classList.remove("open");
-        });
-
-        document.querySelectorAll("[data-tab-target]").forEach(btn => {
-          btn.addEventListener("click", () => {
-            updatePageMetaFromNav(btn.dataset.tabTarget);
-            sidebar?.classList.remove("open");
-          });
-        });
-      }
-
-      // ==========================================
-      // Upload Preview
-      // ==========================================
-      function bindUploadPreview(inputId, previewBoxId, imgId, nameId, sizeId, textSelector, statusId) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-
-        input.addEventListener("change", function () {
-          const file = this.files?.[0] || null;
-          const previewBox = document.getElementById(previewBoxId);
-          const img = document.getElementById(imgId);
-          const name = document.getElementById(nameId);
-          const size = document.getElementById(sizeId);
-          const status = statusId ? document.getElementById(statusId) : null;
-          const text = textSelector ? document.querySelector(textSelector) : null;
-
-          if (!file) {
-            previewBox?.classList.remove("visible");
-            if (img) img.removeAttribute("src");
-            if (name) name.textContent = "معاينة الصورة";
-            if (size) size.textContent = "سيظهر اسم وحجم الملف هنا";
-            if (status) status.textContent = "";
-            if (text) text.textContent = inputId === "edit-image" ? "اختر صورة جديدة إن أردت استبدال الحالية" : "اضغط هنا أو اسحب الصورة";
-            return;
-          }
-
-          if (file.size > 5 * 1024 * 1024) {
-            alert("حجم الصورة يتجاوز 5 ميجابايت، يرجى اختيار صورة أصغر.");
-            input.value = "";
-            previewBox?.classList.remove("visible");
-            if (img) img.removeAttribute("src");
-            return;
-          }
-
-          if (text) text.textContent = "✅ " + file.name;
-          if (name) name.textContent = file.name;
-          if (size) size.textContent = `الحجم: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
-          if (status) status.textContent = "تم اختيار ملف الصورة بنجاح";
-
-          if (file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.onload = e => {
-              if (img) img.src = e.target.result;
-              previewBox?.classList.add("visible");
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-
-      // ==========================================
-      // Reset Add Property Form
-      // ==========================================
-      function resetAddPropertyUi() {
-        document.getElementById("reset-property-form-btn")?.addEventListener("click", () => {
-          document.getElementById("add-property-form")?.reset();
-          document.getElementById("map-picked-badge")?.classList.remove("visible");
-          document.getElementById("prop-lat").value = "";
-          document.getElementById("prop-lng").value = "";
-          document.getElementById("upload-status").textContent = "";
-          document.getElementById("upload-preview-box")?.classList.remove("visible");
-          document.getElementById("upload-preview-img")?.removeAttribute("src");
-          document.getElementById("upload-preview-name").textContent = "معاينة الصورة";
-          document.getElementById("upload-preview-size").textContent = "سيظهر اسم وحجم الملف هنا";
-          const text = document.querySelector(".upload-zone-text");
-          if (text) text.textContent = "اضغط هنا أو اسحب الصورة";
-          if (typeof window._resetAddMap === "function") window._resetAddMap();
-        });
-      }
-
-      // ==========================================
-      // Map - Add Property
-      // ==========================================
-      function initAddMap() {
-        const mapEl = document.getElementById("admin-map-picker");
-        if (!mapEl || typeof L === "undefined") return;
-
-        if (window.__adminAddMap) {
-          setTimeout(() => window.__adminAddMap.invalidateSize(), 100);
-          return;
-        }
-
-        const defaultLatLng = [33.3561, 6.8632];
-        const map = L.map("admin-map-picker", { zoomControl: true }).setView(defaultLatLng, 6);
-        window.__adminAddMap = map;
-        window.__adminAddMarker = null;
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: "&copy; OpenStreetMap"
-        }).addTo(map);
-
-        map.on("click", function (e) {
-          const lat = e.latlng.lat.toFixed(6);
-          const lng = e.latlng.lng.toFixed(6);
-
-          document.getElementById("prop-lat").value = lat;
-          document.getElementById("prop-lng").value = lng;
-          document.getElementById("map-picked-badge")?.classList.add("visible");
-
-          if (window.__adminAddMarker) {
-            window.__adminAddMarker.setLatLng(e.latlng);
-          } else {
-            window.__adminAddMarker = L.marker(e.latlng).addTo(map);
-          }
-        });
-
-        setTimeout(() => map.invalidateSize(), 120);
-      }
-
-      // ==========================================
-      // Map Search
-      // ==========================================
-      async function searchMapLocation() {
-        const input = document.getElementById("map-search-input");
-        const query = (input?.value || "").trim();
-        if (!query || !window.__adminAddMap) return;
-
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-          const data = await res.json();
-          if (!Array.isArray(data) || !data.length) {
-            alert("لم يتم العثور على الموقع المطلوب.");
-            return;
-          }
-
-          const first = data[0];
-          const lat = parseFloat(first.lat);
-          const lng = parseFloat(first.lon);
-          const target = [lat, lng];
-
-          window.__adminAddMap.setView(target, 13);
-          document.getElementById("prop-lat").value = lat.toFixed(6);
-          document.getElementById("prop-lng").value = lng.toFixed(6);
-          document.getElementById("map-picked-badge")?.classList.add("visible");
-
-          if (window.__adminAddMarker) {
-            window.__adminAddMarker.setLatLng(target);
-          } else {
-            window.__adminAddMarker = L.marker(target).addTo(window.__adminAddMap);
-          }
-        } catch (_) {
-          alert("تعذر تنفيذ البحث على الخريطة حالياً.");
-        }
-      }
-
-      // ==========================================
-      // Map - Edit Modal
-      // ==========================================
-      function initEditMap(lat = null, lng = null) {
-        const mapEl = document.getElementById("edit-map-picker");
-        if (!mapEl || typeof L === "undefined") return;
-
-        const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
-        const center = hasCoords ? [lat, lng] : [33.3561, 6.8632];
-
-        if (!window.__adminEditMap) {
-          window.__adminEditMap = L.map("edit-map-picker", { zoomControl: true }).setView(center, hasCoords ? 14 : 6);
-
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: "&copy; OpenStreetMap"
-          }).addTo(window.__adminEditMap);
-
-          window.__adminEditMap.on("click", function (e) {
-            const pickedLat = e.latlng.lat.toFixed(6);
-            const pickedLng = e.latlng.lng.toFixed(6);
-
-            document.getElementById("edit-lat").value = pickedLat;
-            document.getElementById("edit-lng").value = pickedLng;
-            document.getElementById("edit-map-picked-badge")?.classList.add("visible");
-
-            if (window.__adminEditMarker) {
-              window.__adminEditMarker.setLatLng(e.latlng);
-            } else {
-              window.__adminEditMarker = L.marker(e.latlng).addTo(window.__adminEditMap);
-            }
-          });
-        } else {
-          window.__adminEditMap.setView(center, hasCoords ? 14 : 6);
-        }
-
-        if (hasCoords) {
-          document.getElementById("edit-lat").value = Number(lat).toFixed(6);
-          document.getElementById("edit-lng").value = Number(lng).toFixed(6);
-          document.getElementById("edit-map-picked-badge")?.classList.add("visible");
-
-          if (window.__adminEditMarker) {
-            window.__adminEditMarker.setLatLng(center);
-          } else {
-            window.__adminEditMarker = L.marker(center).addTo(window.__adminEditMap);
-          }
-        } else {
-          document.getElementById("edit-map-picked-badge")?.classList.remove("visible");
-        }
-
-        setTimeout(() => window.__adminEditMap.invalidateSize(), 160);
-      }
-
-      // ==========================================
-      // Edit Modal
-      // ==========================================
-      function bindEditModalUi() {
-        document.getElementById("close-edit-modal-btn")?.addEventListener("click", () => {
-          if (typeof window.closeEditModal === "function") window.closeEditModal();
-          else document.getElementById("edit-modal")?.classList.remove("active");
-        });
-
-        document.getElementById("edit-modal")?.addEventListener("click", e => {
-          if (e.target.id === "edit-modal") {
-            if (typeof window.closeEditModal === "function") window.closeEditModal();
-            else document.getElementById("edit-modal")?.classList.remove("active");
-          }
-        });
-
-        document.addEventListener("keydown", e => {
-          if (e.key === "Escape") {
-            document.getElementById("admin-sidebar")?.classList.remove("open");
-          }
-        });
-      }
-
-      // ==========================================
-      // Expose globals
-      // ==========================================
-      window.searchMapLocation = searchMapLocation;
-      window.initEditMapFromAdmin = function (lat, lng) {
-        initEditMap(lat, lng);
-      };
-      window._resetAddMap = function () {
-        if (window.__adminAddMap) {
-          window.__adminAddMap.setView([33.3561, 6.8632], 6);
-        }
-        if (window.__adminAddMarker && window.__adminAddMap) {
-          window.__adminAddMap.removeLayer(window.__adminAddMarker);
-          window.__adminAddMarker = null;
-        }
-        document.getElementById("map-picked-badge")?.classList.remove("visible");
-      };
-
-      // ==========================================
-      // DOMContentLoaded
-      // ==========================================
-      document.addEventListener("DOMContentLoaded", function () {
-        setThemeFromStorage();
-        showFirebaseBanner();
-        bindSidebarUi();
-        bindEditModalUi();
-        bindUploadPreview("prop-image", "upload-preview-box", "upload-preview-img", "upload-preview-name", "upload-preview-size", ".upload-zone-text", "upload-status");
-        bindUploadPreview("edit-image", "edit-upload-preview-box", "edit-upload-preview-img", "edit-upload-preview-name", "edit-upload-preview-size", "#edit-upload-zone-text", null);
-        resetAddPropertyUi();
-        initAddMap();
-
-        document.getElementById("map-search-btn")?.addEventListener("click", searchMapLocation);
-        document.getElementById("map-search-input")?.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            searchMapLocation();
-          }
-        });
-
-        updatePageMetaFromNav("manage-props");
-      });
-    })();
-  </script>
-
-  <!-- admin.js و admin_bookings_addon.js يُحمَّلان بعد تهيئة Firebase -->
-  <script src="admin.js?v=2"></script>
-  <script src="admin_bookings_addon.js"></script>
-
+  <script src="admin.js?v=3.0" defer></script>
 </body>
 </html>
