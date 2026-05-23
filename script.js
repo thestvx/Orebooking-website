@@ -18,18 +18,32 @@ const firebaseConfig = {
   measurementId: "G-5GKMRMVHC3"
 };
 
+const FRONT_APP_NAME = "frontendApp";
+
+let frontApp = null;
 let db = null;
 let auth = null;
 let firestoreFieldValue = null;
 
 try {
   if (typeof firebase !== "undefined") {
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const existingFrontApp =
+      firebase.apps?.find?.((app) => app.name === FRONT_APP_NAME) || null;
+
+    frontApp = existingFrontApp || firebase.initializeApp(firebaseConfig, FRONT_APP_NAME);
+
     if (typeof firebase.firestore === "function") {
-      db = firebase.firestore();
+      db = frontApp.firestore();
       firestoreFieldValue = firebase.firestore.FieldValue || null;
     }
-    if (typeof firebase.auth === "function") auth = firebase.auth();
+
+    if (typeof firebase.auth === "function") {
+      auth = frontApp.auth();
+    }
+
+    window.__frontApp = frontApp;
+    window.__frontAuth = auth;
+    window.__frontDb = db;
   }
 } catch (e) {
   console.error("Firebase init:", e);
@@ -455,6 +469,17 @@ function getServerTimestamp() {
   return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date();
 }
 
+async function setFrontendAuthPersistenceLocal() {
+  if (!auth || typeof auth.setPersistence !== "function") return;
+  try {
+    if (typeof firebase !== "undefined" && firebase.auth?.Auth?.Persistence?.LOCAL) {
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    }
+  } catch (err) {
+    console.warn("set frontend LOCAL persistence failed:", err);
+  }
+}
+
 function formatChatTime(value) {
   try {
     if (!value) return "";
@@ -552,6 +577,43 @@ function stopChatSubscription() {
     } catch {}
   }
   state.currentChatUnsub = null;
+}
+
+function closeProfileDropdown() {
+  if (els.profileDropdown) {
+    els.profileDropdown.classList.remove("active");
+  }
+}
+
+function renderChatMessages() {
+  if (!els.chatMessages) return;
+
+  if (!state.chatMessages.length) {
+    if (els.chatEmptyState) els.chatEmptyState.style.display = "";
+    els.chatMessages.innerHTML = "";
+    return;
+  }
+
+  if (els.chatEmptyState) els.chatEmptyState.style.display = "none";
+
+  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
+    const item = normalizeMessage(msg);
+    const mine = item.role !== "admin";
+    return `
+      <div class="chat-message ${mine ? "mine" : "admin"}">
+        <div class="chat-bubble">
+          <p>${escapeHtml(item.text)}</p>
+          <span>${escapeHtml(item.time || "")}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+}
+
+async function ensureSupportChat() {
+  return null;
 }
 
 function resetFrontendUserState() {
@@ -712,11 +774,18 @@ async function updateAuthUI(user) {
   }
 
   if (isBackofficeRole(role)) {
+    try {
+      await auth.signOut();
+    } catch (err) {
+      console.warn("forced frontend signOut for backoffice user:", err);
+    }
+
     applyGuestAuthUI();
     resetFrontendUserState();
     closeProfileDropdown();
 
     if (els.loginEmail) els.loginEmail.value = user.email || "";
+    showAuthMessage(t("adminFrontendBlocked"));
     return;
   }
 
@@ -810,7 +879,7 @@ function clearAuthMessage() {
 // ──────────────────────────────────────────
 // Auth Actions
 // ──────────────────────────────────────────
-function handleLogin(e) {
+async function handleLogin(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
@@ -829,35 +898,34 @@ function handleLogin(e) {
     btn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i>';
   }
 
-  auth.signInWithEmailAndPassword(email, pass)
-    .then(async (cred) => {
-      const user = cred?.user;
-      const profile = user && db ? await getUserProfile(user.uid) : null;
-      const role = normalizeRole(profile?.role);
+  try {
+    await setFrontendAuthPersistenceLocal();
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    const user = cred?.user;
+    const profile = user && db ? await getUserProfile(user.uid) : null;
+    const role = normalizeRole(profile?.role);
 
-      if (isBackofficeRole(role)) {
-        await auth.signOut();
-        showAuthMessage(t("adminFrontendBlocked"));
-        applyGuestAuthUI();
-        resetFrontendUserState();
-        return;
-      }
+    if (isBackofficeRole(role)) {
+      await auth.signOut();
+      showAuthMessage(t("adminFrontendBlocked"));
+      applyGuestAuthUI();
+      resetFrontendUserState();
+      return;
+    }
 
-      hideAuthModal();
-      showToast(t("signedInDone"), "success");
-    })
-    .catch((err) => {
-      showAuthMessage(getAuthError(err));
-    })
-    .finally(() => {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<span>${t("signIn")}</span>`;
-      }
-    });
+    hideAuthModal();
+    showToast(t("signedInDone"), "success");
+  } catch (err) {
+    showAuthMessage(getAuthError(err));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>${t("signIn")}</span>`;
+    }
+  }
 }
 
-function handleRegister(e) {
+async function handleRegister(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
@@ -886,31 +954,32 @@ function handleRegister(e) {
     btn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i>';
   }
 
-  auth.createUserWithEmailAndPassword(email, pass)
-    .then((cred) => {
-      return cred.user.updateProfile({ displayName: name }).then(() => {
-        if (db) {
-          return db.collection("users").doc(cred.user.uid).set({
-            name,
-            email,
-            role: "user",
-            points: 0,
-            createdAt: new Date()
-          }, { merge: true });
-        }
-      });
-    })
-    .then(() => {
-      hideAuthModal();
-      showToast(t("accountCreated"), "success");
-    })
-    .catch((err) => showAuthMessage(getAuthError(err)))
-    .finally(() => {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<span>${t("register")}</span>`;
-      }
-    });
+  try {
+    await setFrontendAuthPersistenceLocal();
+
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+
+    if (db) {
+      await db.collection("users").doc(cred.user.uid).set({
+        name,
+        email,
+        role: "user",
+        points: 0,
+        createdAt: getServerTimestamp()
+      }, { merge: true });
+    }
+
+    hideAuthModal();
+    showToast(t("accountCreated"), "success");
+  } catch (err) {
+    showAuthMessage(getAuthError(err));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>${t("register")}</span>`;
+    }
+  }
 }
 
 function handleForgot(e) {
@@ -1251,738 +1320,24 @@ function buildSuggestions(q) {
   els.searchDropdown.innerHTML = results.map((p) => `
     <button class="search-suggestion-item" type="button" data-title="${escapeHtml(getTitle(p))}">
       <div class="search-suggestion-main">${escapeHtml(getTitle(p))}</div>
-      <div class="search-suggestion-sub"><i class="ph ph-map-pin"></i> ${escapeHtml(getLocation(p))}</div>
+      <div class="search-suggestion-sub">${escapeHtml(getLocation(p))}</div>
     </button>
   `).join("");
 
   els.searchDropdown.classList.add("active");
 
   els.searchDropdown.querySelectorAll(".search-suggestion-item").forEach((btn) => {
-    btn.addEventListener("click", () => selectSuggestion(btn.dataset.title));
+    btn.addEventListener("click", () => {
+      if (els.searchInput) els.searchInput.value = btn.dataset.title || "";
+      state.searchQuery = btn.dataset.title || "";
+      closeSuggestions();
+      applyFilters();
+    });
   });
 }
 
 function closeSuggestions() {
-  if (els.searchDropdown) els.searchDropdown.classList.remove("active");
+  if (!els.searchDropdown) return;
+  els.searchDropdown.classList.remove("active");
+  els.searchDropdown.innerHTML = "";
 }
-
-function selectSuggestion(title) {
-  if (els.searchInput) els.searchInput.value = title;
-  state.searchQuery = title;
-  closeSuggestions();
-  applyFilters();
-  toggleClearBtn();
-}
-
-function toggleClearBtn() {
-  if (els.clearSearchBtn) {
-    els.clearSearchBtn.style.display = state.searchQuery ? "inline-flex" : "none";
-  }
-}
-
-// ──────────────────────────────────────────
-// Bookings Modal
-// ──────────────────────────────────────────
-async function openBookingsModal() {
-  closeProfileDropdown();
-
-  if (!state.currentUser) {
-    showAuthModal("login");
-    return;
-  }
-
-  if (!els.bookingsModal) return;
-
-  els.bookingsModal.classList.add("active");
-  els.body.classList.add("modal-open");
-
-  if (els.bookingsList) {
-    els.bookingsList.innerHTML = `
-      <div style="text-align:center;padding:40px;color:var(--text-muted)">
-        <i class="ph ph-spinner-gap ph-spin" style="font-size:2rem"></i>
-      </div>
-    `;
-  }
-
-  if (!db) {
-    renderBookings([]);
-    return;
-  }
-
-  try {
-    const snap = await db.collection("bookings")
-      .where("userId", "==", state.currentUser.uid)
-      .orderBy("createdAt", "desc")
-      .limit(20)
-      .get();
-
-    const bookings = [];
-    snap.forEach((doc) => bookings.push({ id: doc.id, ...doc.data() }));
-    renderBookings(bookings);
-  } catch {
-    try {
-      const snap2 = await db.collection("bookings")
-        .where("userId", "==", state.currentUser.uid)
-        .get();
-
-      const bookings = [];
-      snap2.forEach((doc) => bookings.push({ id: doc.id, ...doc.data() }));
-      renderBookings(bookings);
-    } catch {
-      renderBookings([]);
-    }
-  }
-}
-
-function renderBookings(bookings) {
-  if (!els.bookingsList) return;
-
-  if (!bookings.length) {
-    els.bookingsList.innerHTML = `
-      <div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
-        <i class="ph ph-suitcase-rolling" style="font-size:2.5rem;display:block;margin-bottom:14px;color:var(--primary)"></i>
-        <p style="font-weight:800;margin-bottom:8px;">${t("noBookings")}</p>
-        <p>${t("noBookingsDesc")}</p>
-      </div>
-    `;
-    return;
-  }
-
-  els.bookingsList.innerHTML = bookings.map((b) => {
-    const status = cleanText(b.status || "pending").toLowerCase();
-    const propTitle =
-      state.lang === "ar"
-        ? (b.propertyTitleAr || b.propertyTitle || b.titleAr || b.propertyTitleEn || "عقار")
-        : (b.propertyTitleEn || b.propertyTitle || b.titleEn || b.propertyTitleAr || "Property");
-
-    const checkIn = b.checkIn || b.arrivalDate || "—";
-    const checkOut = b.checkOut || b.departureDate || "—";
-    const ref = b.reference || b.bookingReference || b.id?.substring(0, 8) || b.id || "—";
-
-    return `
-      <div class="booking-entry">
-        <div class="booking-entry-head">
-          <div>
-            <h4 class="booking-entry-title">${escapeHtml(propTitle)}</h4>
-            <div class="booking-entry-meta">
-              <span><i class="ph ph-calendar"></i> ${escapeHtml(String(checkIn))} → ${escapeHtml(String(checkOut))}</span>
-              <span><i class="ph ph-tag"></i> ${escapeHtml(String(ref))}</span>
-            </div>
-          </div>
-          <span class="booking-status-badge status-${escapeHtml(status)}">${escapeHtml(t(`status_${status}`))}</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function closeBookingsModal() {
-  if (els.bookingsModal) {
-    els.bookingsModal.classList.remove("active");
-    els.body.classList.remove("modal-open");
-  }
-}
-
-// ──────────────────────────────────────────
-// Chat
-// ──────────────────────────────────────────
-async function ensureSupportChat(forceRefresh = false) {
-  if (!state.currentUser || !db) return;
-
-  const uid = cleanText(state.currentUser.uid);
-  if (!uid) return;
-
-  if (!forceRefresh && state.chatInitializedForUser === uid && state.currentChatId) {
-    subscribeToCurrentChat(state.currentChatId);
-    return;
-  }
-
-  setChatStatus("syncing", t("chatPreparing"));
-
-  try {
-    let existingChatId = state.currentChatId || safeGet("ore_current_chat_id", "");
-
-    if (!existingChatId) {
-      try {
-        const snap = await db.collection("chats").where("userId", "==", uid).limit(1).get();
-        if (!snap.empty) existingChatId = snap.docs[0].id;
-      } catch {}
-    }
-
-    if (!existingChatId) {
-      const payload = {
-        userId: uid,
-        userEmail: getCurrentUserEmail(),
-        userName: getCurrentUserName(),
-        propertyId: "",
-        bookingId: "",
-        createdAt: getServerTimestamp(),
-        updatedAt: getServerTimestamp(),
-        lastMessage: "",
-        lastMessageAt: getServerTimestamp()
-      };
-      const ref = await db.collection("chats").add(payload);
-      existingChatId = ref.id;
-    }
-
-    state.currentChatId = existingChatId;
-    safeSet("ore_current_chat_id", existingChatId);
-    state.chatInitializedForUser = uid;
-    updateChatHiddenFields(existingChatId);
-    subscribeToCurrentChat(existingChatId);
-  } catch (err) {
-    console.error("ensureSupportChat error:", err);
-    setChatStatus("error", t("chatError"));
-  }
-}
-
-function subscribeToCurrentChat(chatId) {
-  if (!db || !chatId || !state.currentUser) return;
-
-  stopChatSubscription();
-  setChatStatus("syncing", t("chatSyncing"));
-
-  try {
-    state.currentChatUnsub = db
-      .collection("chats")
-      .doc(chatId)
-      .collection("messages")
-      .orderBy("createdAt", "asc")
-      .onSnapshot(
-        (snap) => {
-          const items = [];
-          snap.forEach((doc) => items.push(normalizeMessage({ id: doc.id, ...doc.data() })));
-          state.chatMessages = items;
-
-          if (!state.chatOpen) {
-            const unread = items.filter((m) => m.role === "admin").length;
-            state.chatUnread = unread;
-          } else {
-            state.chatUnread = 0;
-          }
-
-          setUnreadBadge();
-          renderChatMessages();
-          setChatStatus("connected", t("supportReady"));
-        },
-        async () => {
-          try {
-            const snap2 = await db.collection("messages").where("chatId", "==", chatId).get();
-            const items = [];
-            snap2.forEach((doc) => items.push(normalizeMessage({ id: doc.id, ...doc.data() })));
-            items.sort((a, b) => {
-              const at = new Date(a.createdAt || a.timestamp || 0).getTime();
-              const bt = new Date(b.createdAt || b.timestamp || 0).getTime();
-              return at - bt;
-            });
-            state.chatMessages = items;
-            renderChatMessages();
-            setChatStatus("connected", t("supportReady"));
-          } catch (err) {
-            console.error("chat fallback load error:", err);
-            setChatStatus("error", t("chatError"));
-          }
-        }
-      );
-  } catch (err) {
-    console.error("subscribeToCurrentChat error:", err);
-    setChatStatus("error", t("chatError"));
-  }
-}
-
-function openChat() {
-  if (!state.currentUser) {
-    showAuthModal("login");
-    return;
-  }
-
-  state.chatOpen = true;
-  state.chatUnread = 0;
-  setUnreadBadge();
-
-  if (els.chatModal) els.chatModal.classList.add("active");
-  els.body.classList.add("modal-open");
-
-  renderChatMessages();
-  setTimeout(() => {
-    if (els.chatMessages) els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-  }, 80);
-
-  ensureSupportChat(false);
-}
-
-function closeChat() {
-  state.chatOpen = false;
-  if (els.chatModal) els.chatModal.classList.remove("active");
-  els.body.classList.remove("modal-open");
-}
-
-function renderChatMessages() {
-  if (!els.chatMessages) return;
-
-  if (!state.chatMessages.length) {
-    els.chatMessages.innerHTML = `
-      <div class="chat-empty-state">
-        <i class="ph ph-chat-dots" style="font-size:2rem;display:block;margin-bottom:10px;color:var(--primary)"></i>
-        <p style="font-weight:700">${t("chatWelcome")}</p>
-      </div>
-    `;
-    return;
-  }
-
-  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
-    const role = msg.role || "customer";
-    const text = cleanText(msg.text || msg.message);
-    const time = cleanText(msg.time || formatChatTime(msg.createdAt || msg.timestamp));
-    return `
-      <div class="chat-message ${escapeHtml(role)}">
-        <div class="chat-message-text">${escapeHtml(text)}</div>
-        ${time ? `<span class="chat-meta">${escapeHtml(time)}</span>` : ""}
-      </div>
-    `;
-  }).join("");
-
-  setTimeout(() => {
-    if (els.chatMessages) els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-  }, 60);
-}
-
-function sendChatMessage() {
-  if (!state.currentUser) {
-    showAuthModal("login");
-    return;
-  }
-
-  const text = els.chatInput?.value?.trim();
-  if (!text) return;
-
-  const localMsg = normalizeMessage({
-    text,
-    role: "customer",
-    createdAt: new Date()
-  });
-
-  state.chatMessages.push(localMsg);
-  if (els.chatInput) els.chatInput.value = "";
-  renderChatMessages();
-
-  if (!db || !state.currentChatId) {
-    ensureSupportChat(true);
-    return;
-  }
-
-  const payload = {
-    text,
-    message: text,
-    role: "customer",
-    senderRole: "customer",
-    userId: cleanText(state.currentUser?.uid),
-    userEmail: getCurrentUserEmail(),
-    userName: getCurrentUserName(),
-    chatId: state.currentChatId,
-    createdAt: getServerTimestamp()
-  };
-
-  db.collection("chats").doc(state.currentChatId).collection("messages").add(payload)
-    .then(() => {
-      return db.collection("chats").doc(state.currentChatId).set({
-        userId: cleanText(state.currentUser?.uid),
-        userEmail: getCurrentUserEmail(),
-        userName: getCurrentUserName(),
-        updatedAt: getServerTimestamp(),
-        lastMessage: text,
-        lastMessageAt: getServerTimestamp()
-      }, { merge: true });
-    })
-    .catch(async (err) => {
-      console.warn("nested chat message failed, trying root messages:", err);
-      try {
-        await db.collection("messages").add({
-          ...payload,
-          propertyId: cleanText(els.chatPropertyId?.value || "")
-        });
-        await db.collection("chats").doc(state.currentChatId).set({
-          userId: cleanText(state.currentUser?.uid),
-          userEmail: getCurrentUserEmail(),
-          userName: getCurrentUserName(),
-          updatedAt: getServerTimestamp(),
-          lastMessage: text,
-          lastMessageAt: getServerTimestamp()
-        }, { merge: true });
-      } catch (rootErr) {
-        console.error("sendChatMessage error:", rootErr);
-        setChatStatus("error", t("chatError"));
-      }
-    });
-}
-
-// ──────────────────────────────────────────
-// Profile Dropdown
-// ──────────────────────────────────────────
-function toggleProfileDropdown() {
-  if (!els.profileDropdown) return;
-
-  const isOpen = els.profileDropdown.classList.contains("active");
-  closeAllDropdowns();
-
-  if (!isOpen) {
-    if (state.currentUser) els.profileDropdown.classList.add("active");
-    else showAuthModal("login");
-  }
-}
-
-function closeProfileDropdown() {
-  if (els.profileDropdown) els.profileDropdown.classList.remove("active");
-}
-
-function closeAllDropdowns() {
-  closeProfileDropdown();
-  closeSuggestions();
-}
-
-// ──────────────────────────────────────────
-// Scroll Top
-// ──────────────────────────────────────────
-function handleScroll() {
-  if (!els.scrollTopBtn) return;
-  if (window.scrollY > 400) els.scrollTopBtn.classList.add("visible");
-  else els.scrollTopBtn.classList.remove("visible");
-}
-
-// ──────────────────────────────────────────
-// Bottom Nav
-// ──────────────────────────────────────────
-function setupBottomNav() {
-  $$(".bottom-nav-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      $$(".bottom-nav-item").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const target = btn.dataset.target;
-      if (target === "profile") {
-        if (state.currentUser) toggleProfileDropdown();
-        else showAuthModal("login");
-      } else if (target === "favorites") {
-        if (!state.currentUser) {
-          showAuthModal("login");
-          return;
-        }
-        state.filteredProperties = state.allProperties.filter((p) => isFav(p.id));
-        renderListings();
-        document.querySelector(".categories")?.scrollIntoView({ behavior: "smooth" });
-      } else if (target === "stays") {
-        state.activeCategory = "all";
-        applyFilters();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else if (target === "chat") {
-        openChat();
-      }
-    });
-  });
-}
-
-// ──────────────────────────────────────────
-// Password Strength
-// ──────────────────────────────────────────
-function calcPasswordStrength(pass) {
-  if (!pass) return 0;
-  let score = 0;
-  if (pass.length >= 8) score++;
-  if (/[A-Z]/.test(pass)) score++;
-  if (/[0-9]/.test(pass)) score++;
-  if (/[^A-Za-z0-9]/.test(pass)) score++;
-  return score;
-}
-
-function updateStrengthUI(score) {
-  const bars = $$(".str-bar");
-  const label = $("strength-label");
-  const colors = ["#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
-  const labels = state.lang === "ar"
-    ? ["ضعيفة", "مقبولة", "جيدة", "قوية"]
-    : ["Weak", "Fair", "Good", "Strong"];
-
-  bars.forEach((bar, i) => {
-    bar.style.background = i < score ? colors[Math.max(0, score - 1)] : "";
-  });
-
-  if (label) {
-    label.textContent = score > 0 ? labels[score - 1] : "";
-  }
-}
-
-// ──────────────────────────────────────────
-// Scroll Reveal
-// ──────────────────────────────────────────
-function setupScrollReveal() {
-  if (!("IntersectionObserver" in window)) {
-    $$(".ore-reveal").forEach((el) => el.classList.add("ore-reveal-in"));
-    return;
-  }
-
-  const obs = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      if (e.isIntersecting) {
-        e.target.classList.add("ore-reveal-in");
-        obs.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.06 });
-
-  $$(".ore-reveal").forEach((el) => obs.observe(el));
-}
-
-// ──────────────────────────────────────────
-// Event Listeners
-// ──────────────────────────────────────────
-function setupEventListeners() {
-  const langBtn = els.langBtn || $("lang-btn") || $("lang-toggle");
-  if (langBtn) {
-    langBtn.addEventListener("click", () => {
-      state.lang = state.lang === "ar" ? "en" : "ar";
-      safeSet("ore_lang", state.lang);
-      safeSet("orelang", state.lang);
-      applyLang();
-    });
-  }
-
-  const themeBtn = els.themeBtn || $("theme-btn") || $("theme-toggle");
-  if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
-      state.theme = state.theme === "dark" ? "light" : "dark";
-      safeSet("ore_theme", state.theme);
-      safeSet("oretheme", state.theme);
-      applyTheme();
-    });
-  }
-
-  const profileMenu = els.profileMenu || $("profile-menu") || $("open-auth-btn");
-  if (profileMenu) profileMenu.addEventListener("click", toggleProfileDropdown);
-
-  const navAuthBtn = els.navAuthBtn || $("nav-auth-btn") || $("open-auth-btn");
-  if (navAuthBtn && navAuthBtn !== profileMenu) {
-    navAuthBtn.addEventListener("click", () => {
-      if (state.currentUser) toggleProfileDropdown();
-      else showAuthModal("login");
-    });
-  }
-
-  const closeAuth = $("close-auth-modal") || $("close-auth-btn");
-  if (closeAuth) closeAuth.addEventListener("click", hideAuthModal);
-
-  if (els.authModal) {
-    els.authModal.addEventListener("click", (e) => {
-      if (e.target === els.authModal) hideAuthModal();
-    });
-  }
-
-  if (els.loginForm) els.loginForm.addEventListener("submit", handleLogin);
-  if (els.registerForm) els.registerForm.addEventListener("submit", handleRegister);
-  if (els.forgotForm) els.forgotForm.addEventListener("submit", handleForgot);
-
-  $("login-submit-btn")?.addEventListener("click", handleLogin);
-  $("register-submit-btn")?.addEventListener("click", handleRegister);
-  $("forgot-submit-btn")?.addEventListener("click", handleForgot);
-
-  $$("[data-show-form]").forEach((btn) => {
-    btn.addEventListener("click", () => showAuthForm(btn.dataset.showForm));
-  });
-
-  $("go-to-register")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthForm("register");
-  });
-
-  $("go-to-login")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthForm("login");
-  });
-
-  $("go-to-forgot")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthForm("forgot");
-  });
-
-  $("back-to-login")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthForm("login");
-  });
-
-  if (els.logoutBtn) {
-    els.logoutBtn.addEventListener("click", () => {
-      auth?.signOut()
-        .then(() => {
-          closeProfileDropdown();
-          showToast(t("signedOut"), "info");
-        })
-        .catch((err) => console.warn("signOut error:", err));
-    });
-  }
-
-  if (els.myBookingsBtn) els.myBookingsBtn.addEventListener("click", openBookingsModal);
-  $("bookings-close-btn")?.addEventListener("click", closeBookingsModal);
-
-  if (els.bookingsModal) {
-    els.bookingsModal.addEventListener("click", (e) => {
-      if (e.target === els.bookingsModal) closeBookingsModal();
-    });
-  }
-
-  if (els.searchInput) {
-    els.searchInput.addEventListener("input", (e) => {
-      state.searchQuery = e.target.value;
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => buildSuggestions(state.searchQuery), 220);
-      toggleClearBtn();
-    });
-
-    els.searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        closeSuggestions();
-        applyFilters();
-      }
-      if (e.key === "Escape") closeSuggestions();
-    });
-
-    els.searchInput.addEventListener("focus", () => {
-      if (state.searchQuery) buildSuggestions(state.searchQuery);
-    });
-  }
-
-  if (els.searchBtn) {
-    els.searchBtn.addEventListener("click", () => {
-      closeSuggestions();
-      applyFilters();
-    });
-  }
-
-  if (els.clearSearchBtn) {
-    els.clearSearchBtn.addEventListener("click", () => {
-      state.searchQuery = "";
-      if (els.searchInput) els.searchInput.value = "";
-      toggleClearBtn();
-      closeSuggestions();
-      applyFilters();
-    });
-  }
-
-  if (els.sortSelect) {
-    els.sortSelect.addEventListener("change", (e) => {
-      state.sortBy = e.target.value;
-      applyFilters();
-    });
-  }
-
-  $$(".category-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      $$(".category-item").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      state.activeCategory = btn.dataset.category || "all";
-      applyFilters();
-    });
-  });
-
-  if (els.checkInInput) els.checkInInput.addEventListener("change", applyFilters);
-  if (els.checkOutInput) els.checkOutInput.addEventListener("change", applyFilters);
-  if (els.guestsInput) els.guestsInput.addEventListener("input", applyFilters);
-
-  if (els.chatOpenBtn) els.chatOpenBtn.addEventListener("click", openChat);
-  $("chat-close-btn")?.addEventListener("click", closeChat);
-
-  if (els.chatModal) {
-    els.chatModal.addEventListener("click", (e) => {
-      if (e.target === els.chatModal) closeChat();
-    });
-  }
-
-  if (els.chatSendForm) {
-    els.chatSendForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      sendChatMessage();
-    });
-  } else if (els.chatSendBtn) {
-    els.chatSendBtn.addEventListener("click", sendChatMessage);
-  }
-
-  if (els.chatInput) {
-    els.chatInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-      }
-    });
-  }
-
-  if (els.scrollTopBtn) {
-    els.scrollTopBtn.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  }
-
-  window.addEventListener("scroll", handleScroll, { passive: true });
-
-  document.addEventListener("click", (e) => {
-    if (els.profileDropdown && els.profileDropdown.classList.contains("active")) {
-      const container = $("profile-container") || els.profileMenu?.parentElement;
-      if (container && !container.contains(e.target)) closeProfileDropdown();
-    }
-
-    if (els.searchDropdown && els.searchDropdown.classList.contains("active")) {
-      const bar = document.querySelector(".search-bar");
-      if (bar && !bar.contains(e.target)) closeSuggestions();
-    }
-  });
-
-  $$(".toggle-pass-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const input = btn.closest(".pass-wrapper")?.querySelector("input");
-      if (!input) return;
-      input.type = input.type === "password" ? "text" : "password";
-      const icon = btn.querySelector("i");
-      if (icon) icon.className = input.type === "password" ? "ph ph-eye" : "ph ph-eye-slash";
-    });
-  });
-
-  if (els.regPassword) {
-    els.regPassword.addEventListener("input", (e) => {
-      const strength = calcPasswordStrength(e.target.value);
-      updateStrengthUI(strength);
-    });
-  }
-
-  setupBottomNav();
-}
-
-// ──────────────────────────────────────────
-// Init
-// ──────────────────────────────────────────
-function init() {
-  applyTheme();
-  applyLang();
-  setupEventListeners();
-  setupScrollReveal();
-
-  if (auth) {
-    auth.onAuthStateChanged((user) => {
-      updateAuthUI(user).catch((err) => {
-        console.error("updateAuthUI error:", err);
-        applyGuestAuthUI();
-        resetFrontendUserState();
-      });
-    });
-  } else {
-    applyGuestAuthUI();
-    resetFrontendUserState();
-  }
-
-  loadProperties();
-  handleScroll();
-}
-
-document.addEventListener("DOMContentLoaded", init);
-
-// Expose globals if needed
-window.goToProperty = goToProperty;
-window.toggleFav = toggleFav;
-window.selectSuggestion = selectSuggestion;
-window.openChat = openChat;
