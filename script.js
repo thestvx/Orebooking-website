@@ -417,8 +417,17 @@ const els = {
   navAuthBtn: firstById("nav-auth-btn", "auth-cta", "open-auth-btn"),
   navSignInText: firstById("nav-sign-in-text"),
 
-  siteLogo: firstById("site-logo"),
-  authLogo: firstById("auth-logo")
+  siteLogo: firstById("main-logo", "site-logo"),
+  authLogo: firstById("modal-logo", "auth-logo"),
+
+  closeAuthBtn: firstById("close-auth-btn"),
+  closeBookingsBtn: firstById("close-bookings-btn"),
+  chatCloseBtn: firstById("chat-close-btn"),
+
+  goToRegister: firstById("go-to-register"),
+  goToLogin: firstById("go-to-login"),
+  goToForgot: firstById("go-to-forgot"),
+  backToLogin: firstById("back-to-login")
 };
 
 // ──────────────────────────────────────────
@@ -706,10 +715,16 @@ function applyLang() {
 
   if (els.sortSelect) {
     const opts = els.sortSelect.options;
-    if (opts[0]) opts[0].text = t("sortDefault");
-    if (opts[1]) opts[1].text = t("sortPriceLow");
-    if (opts[2]) opts[2].text = t("sortPriceHigh");
-    if (opts[3]) opts[3].text = t("sortRating");
+    const order = {
+      featured: t("sortDefault"),
+      rating: t("sortRating"),
+      pricelow: t("sortPriceLow"),
+      pricehigh: t("sortPriceHigh")
+    };
+    Array.from(opts).forEach((opt) => {
+      const key = cleanText(opt.value).toLowerCase();
+      if (order[key]) opt.text = order[key];
+    });
   }
 
   if (els.checkInInput) {
@@ -852,6 +867,8 @@ async function updateAuthUI(user) {
   if (!user) {
     applyGuestAuthUI();
     resetFrontendUserState();
+    state.bookings = [];
+    renderBookings();
     renderFavorites();
     return;
   }
@@ -913,6 +930,7 @@ async function updateAuthUI(user) {
     state.chatUnread = 0;
     setUnreadBadge();
     ensureSupportChat(false).catch((err) => console.warn("ensureSupportChat after auth:", err));
+    loadBookings().catch((err) => console.warn("loadBookings after auth:", err));
   }
 
   renderFavorites();
@@ -1275,10 +1293,14 @@ function toggleFav(id, e) {
 
   persistFavorites();
 
-  document.querySelectorAll(`.favorite-btn[data-id="${CSS.escape(id)}"]`).forEach((btn) => {
+  const escaped = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+    ? CSS.escape(id)
+    : String(id).replace(/"/g, '\\"');
+
+  document.querySelectorAll(`.favorite-btn[data-id="${escaped}"]`).forEach((btn) => {
     btn.classList.toggle("active", isFav(id));
     const icon = btn.querySelector("i");
-    if (icon) icon.className = isFav(id) ? "ph ph-heart-fill" : "ph ph-heart";
+    if (icon) icon.className = isFav(id) ? "ph ph-heart-straight-fill" : "ph ph-heart-straight";
   });
 
   renderFavorites();
@@ -1295,55 +1317,126 @@ function renderListings() {
     return;
   }
 
-  els.listingsGrid.innerHTML = list.map((p) => {
-    const id = cleanText(p.id);
-    const title = getTitle(p);
-    const location = getLocation(p);
-    const type = getType(p);
-    const image = getImage(p);
+  els.listingsGrid.innerHTML = list.map((p, i) => {
     const price = getPrice(p);
-    const rating = toNumber(p.rating || p.stars || 4.8, 4.8);
-    const detailsUrl = propertyDetailsUrl(p);
-    const favorite = isFav(id);
+    const title = getTitle(p) || "Property";
+    const loc = getLocation(p) || "";
+    const img = getImage(p);
+    const rating = Number(p.rating || 4.8).toFixed(1);
+    const fav = isFav(p.id);
+    const currency = state.lang === "ar" ? " دج" : " DZD";
+    const delay = Math.min(i * 60, 400);
+    const type = getType(p) || "";
+    const guests = p.guests || p.maxGuests || "";
+    const propertyUrl = `property.html?id=${encodeURIComponent(p.id)}`;
+    const bookingUrl = `booking.html?id=${encodeURIComponent(p.id)}`;
 
     return `
-      <article class="listing-card" data-id="${escapeHtml(id)}">
-        <div class="listing-card-image-wrap">
-          <img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" class="listing-card-image" onerror="this.src='images/placeholder.jpg'">
-          <button type="button" class="favorite-btn ${favorite ? "active" : ""}" data-id="${escapeHtml(id)}" aria-label="favorite">
-            <i class="ph ${favorite ? "ph-heart-fill" : "ph-heart"}"></i>
+      <article
+        class="property-card ore-reveal"
+        style="--ore-delay:${delay}ms"
+        tabindex="0"
+        data-id="${escapeHtml(p.id)}"
+        onclick="goToProperty('${encodeURIComponent(p.id)}')"
+      >
+        <div class="property-card-media">
+          <img
+            src="${escapeHtml(img)}"
+            alt="${escapeHtml(title)}"
+            loading="lazy"
+            onerror="this.src='images/placeholder.jpg'"
+          >
+
+          <button
+            class="favorite-btn ${fav ? "active" : ""}"
+            data-id="${escapeHtml(p.id)}"
+            onclick="toggleFav('${String(p.id).replace(/'/g, "\\'")}', event)"
+            aria-label="Favorite"
+            type="button"
+          >
+            <i class="ph ${fav ? "ph-heart-straight-fill" : "ph-heart-straight"}"></i>
           </button>
-          <span class="listing-badge">${escapeHtml(t("newBadge"))}</span>
+
+          ${(p.isNew || p.badge) ? `
+            <span class="property-urgency">
+              <i class="ph ph-fire"></i>
+              ${escapeHtml(state.lang === "ar" ? "جديد" : "New")}
+            </span>
+          ` : ""}
         </div>
 
-        <div class="listing-card-content">
-          <div class="listing-meta-top">
-            <span class="listing-type">${escapeHtml(type)}</span>
-            <span class="listing-rating"><i class="ph ph-star-fill"></i> ${escapeHtml(String(rating))}</span>
+        <div class="property-card-body">
+          <div class="property-card-top">
+            <h3 class="property-card-title">${escapeHtml(title)}</h3>
+            <span class="property-card-rating">
+              <i class="ph ph-star-fill"></i>
+              ${escapeHtml(rating)}
+            </span>
           </div>
 
-          <h3 class="listing-title">${escapeHtml(title)}</h3>
-          <p class="listing-location"><i class="ph ph-map-pin"></i> ${escapeHtml(location)}</p>
+          ${loc ? `
+            <p class="property-card-location">
+              <i class="ph ph-map-pin"></i>
+              ${escapeHtml(loc)}
+            </p>
+          ` : ""}
 
-          <div class="listing-footer">
-            <div class="listing-price">
-              <strong>${escapeHtml(String(price))}</strong>
-              <span>/ ${escapeHtml(t("night"))}</span>
-            </div>
+          <p class="property-card-meta">
+            ${type ? `<span><i class="ph ph-building-apartment"></i> ${escapeHtml(type)}</span>` : ""}
+            ${guests ? `<span><i class="ph ph-users"></i> ${escapeHtml(String(guests))}</span>` : ""}
+          </p>
 
-            <div class="listing-actions">
-              <a href="${escapeHtml(detailsUrl)}" class="btn btn-light">${escapeHtml(t("viewDetails"))}</a>
-              <a href="${escapeHtml(detailsUrl)}" class="btn btn-primary">${escapeHtml(t("bookNow"))}</a>
-            </div>
+          <p class="property-card-price">
+            ${price ? Number(price).toLocaleString() + currency : ""}
+            <span>/ ${escapeHtml(t("night"))}</span>
+          </p>
+
+          <div class="property-card-actions">
+            <a
+              href="${propertyUrl}"
+              class="secondary-btn"
+              onclick="event.stopPropagation()"
+            >
+              <i class="ph ph-eye"></i>
+              ${escapeHtml(t("viewDetails"))}
+            </a>
+
+            <a
+              href="${bookingUrl}"
+              class="primary"
+              onclick="event.stopPropagation()"
+            >
+              <i class="ph ph-calendar-check"></i>
+              ${escapeHtml(t("bookNow"))}
+            </a>
           </div>
         </div>
       </article>
     `;
   }).join("");
+
+  requestAnimationFrame(() => {
+    $$(".ore-reveal").forEach((el) => {
+      setTimeout(() => el.classList.add("ore-reveal-in"), parseInt(el.style.getPropertyValue("--ore-delay")) || 0);
+    });
+  });
+
+  if ("IntersectionObserver" in window) {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("ore-reveal-in");
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+
+    $$(".ore-reveal").forEach((el) => obs.observe(el));
+  }
 }
 
 // ──────────────────────────────────────────
-// Favorites Modal
+// Favorites
 // ──────────────────────────────────────────
 function renderFavorites() {
   if (!els.favoritesList) return;
@@ -1351,16 +1444,16 @@ function renderFavorites() {
   if (!state.currentUser) {
     els.favoritesList.innerHTML = `
       <div class="listings-empty-state">
-        <i class="ph ph-lock"></i>
-        <p>${escapeHtml(t("loginRequired"))}</p>
+        <i class="ph ph-user-circle"></i>
+        <p style="font-weight:800">${escapeHtml(t("loginRequired"))}</p>
       </div>
     `;
     return;
   }
 
-  const items = state.allProperties.filter((p) => state.favorites.includes(p.id));
+  const favorites = state.allProperties.filter((p) => state.favorites.includes(p.id));
 
-  if (!items.length) {
+  if (!favorites.length) {
     els.favoritesList.innerHTML = `
       <div class="listings-empty-state">
         <i class="ph ph-heart-straight-break"></i>
@@ -1371,15 +1464,23 @@ function renderFavorites() {
     return;
   }
 
-  els.favoritesList.innerHTML = items.map((p) => `
-    <div class="favorite-item-card">
-      <img src="${escapeHtml(getImage(p))}" alt="${escapeHtml(getTitle(p))}" onerror="this.src='images/placeholder.jpg'">
-      <div class="favorite-item-content">
-        <h4>${escapeHtml(getTitle(p))}</h4>
-        <p>${escapeHtml(getLocation(p))}</p>
-        <div class="favorite-item-actions">
-          <a href="${escapeHtml(propertyDetailsUrl(p))}" class="btn btn-light">${escapeHtml(t("viewDetails"))}</a>
-          <button type="button" class="btn btn-danger remove-favorite-btn" data-id="${escapeHtml(p.id)}">${escapeHtml(t("remove"))}</button>
+  els.favoritesList.innerHTML = favorites.map((p) => `
+    <div class="booking-entry">
+      <div class="booking-entry-head">
+        <div>
+          <h4 class="booking-entry-title">${escapeHtml(getTitle(p))}</h4>
+          <div class="booking-entry-meta">
+            <span><i class="ph ph-map-pin"></i> ${escapeHtml(getLocation(p))}</span>
+            <span><i class="ph ph-currency-circle-dollar"></i> ${escapeHtml(String(getPrice(p)))} ${state.lang === "ar" ? "دج" : "DZD"}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a class="secondary-btn" href="${escapeHtml(propertyDetailsUrl(p))}">
+            <i class="ph ph-eye"></i> ${escapeHtml(t("viewDetails"))}
+          </a>
+          <button class="secondary-btn" type="button" onclick="toggleFav('${String(p.id).replace(/'/g, "\\'")}', event)">
+            <i class="ph ph-trash"></i> ${escapeHtml(t("remove"))}
+          </button>
         </div>
       </div>
     </div>
@@ -1397,22 +1498,20 @@ async function loadBookings() {
   }
 
   try {
-    const items = [];
-    let snap = null;
-
+    let items = [];
     try {
-      snap = await db.collection("bookings").where("userId", "==", state.currentUser.uid).get();
+      const snap = await db.collection("bookings").where("userId", "==", state.currentUser.uid).get();
       snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
     } catch (err) {
-      console.warn("loadBookings by uid failed:", err);
+      console.warn("bookings by userId error:", err);
     }
 
     if (!items.length && state.currentUser.email) {
       try {
-        snap = await db.collection("bookings").where("guestEmail", "==", state.currentUser.email).get();
+        const snap = await db.collection("bookings").where("guestEmail", "==", state.currentUser.email).get();
         snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
       } catch (err) {
-        console.warn("loadBookings by email failed:", err);
+        console.warn("bookings by guestEmail error:", err);
       }
     }
 
@@ -1432,7 +1531,7 @@ function renderBookings() {
     els.bookingsList.innerHTML = `
       <div class="listings-empty-state">
         <i class="ph ph-user-circle"></i>
-        <p>${escapeHtml(t("loginRequired"))}</p>
+        <p style="font-weight:800">${escapeHtml(t("loginRequired"))}</p>
       </div>
     `;
     return;
@@ -1441,7 +1540,7 @@ function renderBookings() {
   if (!state.bookings.length) {
     els.bookingsList.innerHTML = `
       <div class="listings-empty-state">
-        <i class="ph ph-calendar-blank"></i>
+        <i class="ph ph-suitcase-rolling"></i>
         <p style="font-weight:800">${escapeHtml(t("noBookings"))}</p>
         <p>${escapeHtml(t("noBookingsDesc"))}</p>
       </div>
@@ -1451,28 +1550,27 @@ function renderBookings() {
 
   els.bookingsList.innerHTML = state.bookings.map((b) => {
     const status = cleanText(b.status || "pending").toLowerCase();
-    const propertyTitle = cleanText(
-      b.propertyTitleAr ||
-      b.propertyTitle ||
-      b.propertyName ||
-      b.property?.titleAr ||
-      b.property?.title ||
-      "Property"
+    const propTitle = cleanText(
+      state.lang === "ar"
+        ? (b.propertyTitleAr || b.propertyTitle || b.titleAr || b.titleEn || "Property")
+        : (b.propertyTitleEn || b.propertyTitle || b.titleEn || b.titleAr || "Property")
     );
-
-    const checkIn = cleanText(b.checkIn || b.arrivalDate || b.stay?.checkIn || "—");
-    const checkOut = cleanText(b.checkOut || b.departureDate || b.stay?.checkOut || "—");
-    const total = toNumber(b.total || b.totalAmount || b.amount || b.price || b.pricing?.total || 0, 0);
+    const checkIn = cleanText(b.checkIn || b.arrivalDate || "—");
+    const checkOut = cleanText(b.checkOut || b.departureDate || "—");
+    const ref = cleanText(b.reference || b.bookingReference || b.id?.substring(0, 8) || "");
 
     return `
-      <div class="booking-card-mini">
-        <div class="booking-card-mini-top">
-          <strong>${escapeHtml(propertyTitle)}</strong>
-          <span class="booking-status booking-status-${escapeHtml(status)}">${escapeHtml(t("status_" + status) || status)}</span>
+      <div class="booking-entry">
+        <div class="booking-entry-head">
+          <div>
+            <h4 class="booking-entry-title">${escapeHtml(propTitle)}</h4>
+            <div class="booking-entry-meta">
+              <span><i class="ph ph-calendar-check"></i> ${escapeHtml(checkIn)} → ${escapeHtml(checkOut)}</span>
+              ${ref ? `<span><i class="ph ph-tag"></i> ${escapeHtml(ref)}</span>` : ""}
+            </div>
+          </div>
+          <span class="booking-status-badge ${escapeHtml(status)}">${escapeHtml(t("status_" + status) || status)}</span>
         </div>
-        <p><strong>${escapeHtml(t("checkIn"))}:</strong> ${escapeHtml(checkIn)}</p>
-        <p><strong>${escapeHtml(t("checkOut"))}:</strong> ${escapeHtml(checkOut)}</p>
-        <p><strong>Total:</strong> ${escapeHtml(String(total))}</p>
       </div>
     `;
   }).join("");
@@ -1486,36 +1584,33 @@ function renderChatMessages() {
 
   if (!state.chatMessages.length) {
     els.chatMessages.innerHTML = `
-      <div class="chat-message system">
-        <div class="chat-bubble">
-          ${escapeHtml(t("chatWelcome"))}
-        </div>
+      <div class="chat-empty-state">
+        <i class="ph ph-chat-circle-dots"></i>
+        <div id="chat-empty-title">${escapeHtml(t("noMessages"))}</div>
+        <p id="chat-empty-subtitle">${escapeHtml(t("startConversation"))}</p>
       </div>
     `;
-    if (els.chatEmptyState) els.chatEmptyState.style.display = "";
     return;
   }
 
-  if (els.chatEmptyState) els.chatEmptyState.style.display = "none";
-
-  els.chatMessages.innerHTML = state.chatMessages.map((raw) => {
-    const msg = normalizeMessage(raw);
-    const mine = msg.role !== "admin";
-
+  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
+    const item = normalizeMessage(msg);
+    const roleClass = item.role === "admin" ? "admin" : "customer";
     return `
-      <div class="chat-message ${mine ? "user" : "admin"}">
-        <div class="chat-bubble">
-          <div class="chat-text">${escapeHtml(msg.text)}</div>
-          <div class="chat-time">${escapeHtml(msg.time)}</div>
-        </div>
+      <div class="chat-message ${roleClass}">
+        <div>${escapeHtml(item.text)}</div>
+        ${item.time ? `<span class="chat-meta">${escapeHtml(item.time)}</span>` : ""}
       </div>
     `;
   }).join("");
 
-  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  setTimeout(() => {
+    if (els.chatMessages) {
+      els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+    }
+  }, 50);
 }
 
-// FIXED ONLY: ensureSupportChat
 async function ensureSupportChat(openAfterEnsure = false) {
   try {
     if (!db || !auth) {
@@ -1554,7 +1649,6 @@ async function ensureSupportChat(openAfterEnsure = false) {
 
     const userEmail = cleanText(user.email || profile?.email || "");
     const userName = cleanText(profile?.name || user.displayName || user.email || "Guest");
-
     let chatId = cleanText(state.currentChatId || safeGet("ore_current_chat_id", ""));
 
     setChatStatus("syncing", t("chatPreparing"));
@@ -1573,12 +1667,7 @@ async function ensureSupportChat(openAfterEnsure = false) {
       let existingChat = null;
 
       try {
-        const byUserId = await db
-          .collection("chats")
-          .where("userId", "==", user.uid)
-          .limit(1)
-          .get();
-
+        const byUserId = await db.collection("chats").where("userId", "==", user.uid).limit(1).get();
         if (!byUserId.empty) {
           const doc = byUserId.docs[0];
           existingChat = { id: doc.id, ...doc.data() };
@@ -1589,12 +1678,7 @@ async function ensureSupportChat(openAfterEnsure = false) {
 
       if (!existingChat && userEmail) {
         try {
-          const byEmail = await db
-            .collection("chats")
-            .where("userEmail", "==", userEmail)
-            .limit(1)
-            .get();
-
+          const byEmail = await db.collection("chats").where("userEmail", "==", userEmail).limit(1).get();
           if (!byEmail.empty) {
             const doc = byEmail.docs[0];
             existingChat = { id: doc.id, ...doc.data() };
@@ -1607,28 +1691,22 @@ async function ensureSupportChat(openAfterEnsure = false) {
       if (existingChat?.id) {
         chatId = existingChat.id;
       } else {
-        const payload = {
+        const ref = await db.collection("chats").add({
           userId: user.uid,
           userEmail,
           userName,
-          participants: [user.uid, userEmail].filter(Boolean),
-          participantIds: [user.uid, userEmail].filter(Boolean),
           createdAt: getServerTimestamp(),
           updatedAt: getServerTimestamp(),
           lastMessage: "",
           lastText: "",
           lastMessageAt: getServerTimestamp(),
           source: "frontend_support"
-        };
-
-        const ref = await db.collection("chats").add(payload);
+        });
         chatId = ref.id;
       }
     }
 
-    if (!chatId) {
-      throw new Error("CHAT_ID_MISSING");
-    }
+    if (!chatId) throw new Error("CHAT_ID_MISSING");
 
     state.currentChatId = chatId;
     safeSet("ore_current_chat_id", chatId);
@@ -1649,7 +1727,7 @@ async function ensureSupportChat(openAfterEnsure = false) {
           state.chatMessages = items.map(normalizeMessage);
 
           if (!state.chatOpen) {
-            state.chatUnread = state.chatMessages.filter((m) => m.role === "admin").length;
+            state.chatUnread = state.chatMessages.filter((m) => normalizeMessage(m).role === "admin").length;
           } else {
             state.chatUnread = 0;
           }
@@ -1669,6 +1747,7 @@ async function ensureSupportChat(openAfterEnsure = false) {
       state.chatOpen = true;
       state.chatUnread = 0;
       setUnreadBadge();
+      renderChatMessages();
     }
 
     return chatId;
@@ -1679,7 +1758,6 @@ async function ensureSupportChat(openAfterEnsure = false) {
   }
 }
 
-// FIXED ONLY: handleSendChatMessage
 async function handleSendChatMessage(e) {
   if (e) e.preventDefault();
 
@@ -1715,6 +1793,7 @@ async function handleSendChatMessage(e) {
       senderRole: "customer",
       senderName: getCurrentUserName(user),
       senderId: user.uid,
+      userId: user.uid,
       createdAt: getServerTimestamp()
     };
 
@@ -1743,48 +1822,67 @@ async function handleSendChatMessage(e) {
   }
 }
 
+function openChatModal() {
+  state.chatOpen = true;
+  state.chatUnread = 0;
+  setUnreadBadge();
+  openModal(els.chatModal);
+  renderChatMessages();
+}
+
+function closeChatModal() {
+  state.chatOpen = false;
+  closeModal(els.chatModal);
+}
+
 // ──────────────────────────────────────────
-// Init / Events
+// Search + Navigation Helpers
 // ──────────────────────────────────────────
-function bindStaticEvents() {
+function goToProperty(id) {
+  window.location.href = `property.html?id=${encodeURIComponent(id)}`;
+}
+
+function closeSearchDropdown() {
+  if (els.searchDropdown) els.searchDropdown.classList.remove("active");
+}
+
+function buildSearchSuggestions(query) {
+  if (!els.searchDropdown) return;
+  const q = cleanText(query).toLowerCase();
+
+  if (!q || q.length < 2) {
+    closeSearchDropdown();
+    return;
+  }
+
+  const matches = state.allProperties.filter((p) => {
+    const title = getTitle(p).toLowerCase();
+    const loc = getLocation(p).toLowerCase();
+    return title.includes(q) || loc.includes(q);
+  }).slice(0, 6);
+
+  if (!matches.length) {
+    els.searchDropdown.innerHTML = `<p class="search-empty">${escapeHtml(t("noResults"))}</p>`;
+    els.searchDropdown.classList.add("active");
+    return;
+  }
+
+  els.searchDropdown.innerHTML = matches.map((p) => `
+    <button class="search-suggestion-item" type="button" data-value="${escapeHtml(getTitle(p))}">
+      <div class="search-suggestion-main">${escapeHtml(getTitle(p))}</div>
+      <div class="search-suggestion-sub"><i class="ph ph-map-pin"></i> ${escapeHtml(getLocation(p))}</div>
+    </button>
+  `).join("");
+
+  els.searchDropdown.classList.add("active");
+}
+
+// ──────────────────────────────────────────
+// Events
+// ──────────────────────────────────────────
+function bindEvents() {
   els.langBtn?.addEventListener("click", toggleLang);
   els.themeBtn?.addEventListener("click", toggleTheme);
-
-  els.searchBtn?.addEventListener("click", () => {
-    state.searchQuery = cleanText(els.searchInput?.value);
-    applyFilters();
-  });
-
-  els.clearSearchBtn?.addEventListener("click", () => {
-    state.searchQuery = "";
-    if (els.searchInput) els.searchInput.value = "";
-    applyFilters();
-  });
-
-  els.searchInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      state.searchQuery = cleanText(els.searchInput?.value);
-      applyFilters();
-    }
-  });
-
-  els.sortSelect?.addEventListener("change", () => {
-    state.sortBy = cleanText(els.sortSelect.value || "featured");
-    applyFilters();
-  });
-
-  els.checkInInput?.addEventListener("change", applyFilters);
-  els.checkOutInput?.addEventListener("change", applyFilters);
-  els.guestsInput?.addEventListener("change", applyFilters);
-
-  $$(".category-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      $$(".category-item").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      state.activeCategory = btn.dataset.category || "all";
-      applyFilters();
-    });
-  });
 
   els.profileMenu?.addEventListener("click", (e) => {
     e.preventDefault();
@@ -1795,47 +1893,40 @@ function bindStaticEvents() {
     toggleProfileDropdown();
   });
 
-  document.addEventListener("click", (e) => {
-    if (els.profileContainer && !els.profileContainer.contains(e.target)) {
-      closeProfileDropdown();
-    }
-
-    const favBtn = e.target.closest(".favorite-btn");
-    if (favBtn) {
-      toggleFav(favBtn.dataset.id, e);
-    }
-
-    const removeFavBtn = e.target.closest(".remove-favorite-btn");
-    if (removeFavBtn) {
-      toggleFav(removeFavBtn.dataset.id, e);
-    }
-
-    if (e.target.matches(".modal-overlay, .bookings-modal, .chat-modal")) {
-      closeModal(e.target);
-    }
-
-    const closeBtn = e.target.closest("[data-close-modal], .modal-close, .close-modal");
-    if (closeBtn) {
-      const modal = closeBtn.closest(".modal-overlay, .bookings-modal, .chat-modal");
-      closeModal(modal);
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal(els.authModal);
-      closeModal(els.bookingsModal);
-      closeModal(els.favoritesModal);
-      closeModal(els.chatModal);
-      closeProfileDropdown();
-    }
-  });
-
   els.navAuthBtn?.addEventListener("click", (e) => {
+    if (els.navAuthBtn === els.profileMenu) return;
     if (state.currentUser) return;
     e.preventDefault();
     showAuthModal("login");
   });
+
+  els.closeAuthBtn?.addEventListener("click", hideAuthModal);
+  els.closeBookingsBtn?.addEventListener("click", () => closeModal(els.bookingsModal));
+  els.chatCloseBtn?.addEventListener("click", closeChatModal);
+
+  els.goToRegister?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("register");
+  });
+
+  els.goToLogin?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("login");
+  });
+
+  els.goToForgot?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("forgot");
+  });
+
+  els.backToLogin?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("login");
+  });
+
+  els.loginForm?.addEventListener("submit", handleLogin);
+  els.registerForm?.addEventListener("submit", handleRegister);
+  els.forgotForm?.addEventListener("submit", handleForgot);
 
   els.logoutBtn?.addEventListener("click", handleLogout);
 
@@ -1870,57 +1961,136 @@ function bindStaticEvents() {
     await ensureSupportChat(true);
   });
 
-  els.loginForm?.addEventListener("submit", handleLogin);
-  els.registerForm?.addEventListener("submit", handleRegister);
-  els.forgotForm?.addEventListener("submit", handleForgot);
+  els.chatSendForm?.addEventListener("submit", handleSendChatMessage);
+  els.chatSendBtn?.addEventListener("click", handleSendChatMessage);
 
-  if (els.chatSendForm) {
-    els.chatSendForm.addEventListener("submit", handleSendChatMessage);
-  }
+  els.searchBtn?.addEventListener("click", () => {
+    state.searchQuery = cleanText(els.searchInput?.value);
+    closeSearchDropdown();
+    applyFilters();
+  });
 
-  if (els.chatSendBtn) {
-    els.chatSendBtn.addEventListener("click", handleSendChatMessage);
-  }
+  els.searchInput?.addEventListener("input", (e) => {
+    state.searchQuery = cleanText(e.target.value);
+    buildSearchSuggestions(state.searchQuery);
+    if (els.clearSearchBtn) {
+      els.clearSearchBtn.style.display = state.searchQuery ? "inline-flex" : "none";
+    }
+  });
+
+  els.searchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      state.searchQuery = cleanText(els.searchInput?.value);
+      closeSearchDropdown();
+      applyFilters();
+    } else if (e.key === "Escape") {
+      closeSearchDropdown();
+    }
+  });
+
+  els.searchDropdown?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".search-suggestion-item");
+    if (!btn) return;
+    const value = cleanText(btn.dataset.value);
+    if (els.searchInput) els.searchInput.value = value;
+    state.searchQuery = value;
+    closeSearchDropdown();
+    applyFilters();
+  });
+
+  els.clearSearchBtn?.addEventListener("click", () => {
+    state.searchQuery = "";
+    if (els.searchInput) els.searchInput.value = "";
+    if (els.clearSearchBtn) els.clearSearchBtn.style.display = "none";
+    closeSearchDropdown();
+    applyFilters();
+  });
+
+  els.sortSelect?.addEventListener("change", () => {
+    state.sortBy = cleanText(els.sortSelect.value || "featured");
+    applyFilters();
+  });
+
+  els.checkInInput?.addEventListener("change", applyFilters);
+  els.checkOutInput?.addEventListener("change", applyFilters);
+  els.guestsInput?.addEventListener("input", applyFilters);
+
+  $$(".category-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $$(".category-item").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.activeCategory = btn.dataset.category || "all";
+      applyFilters();
+    });
+  });
 
   window.addEventListener("scroll", () => {
     if (!els.scrollTopBtn) return;
-    els.scrollTopBtn.classList.toggle("visible", window.scrollY > 400);
-  });
+    els.scrollTopBtn.classList.toggle("visible", window.scrollY > 280);
+  }, { passive: true });
 
   els.scrollTopBtn?.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-}
 
-function initFirebaseAuthWatcher() {
-  if (!auth) {
-    applyGuestAuthUI();
-    return;
-  }
+  document.addEventListener("click", (e) => {
+    const target = e.target;
 
-  auth.onAuthStateChanged(async (user) => {
-    await updateAuthUI(user);
-    if (user) {
-      await loadBookings();
-    } else {
-      state.bookings = [];
-      renderBookings();
+    if (els.profileContainer && !els.profileContainer.contains(target)) {
+      closeProfileDropdown();
+    }
+
+    if (els.searchDropdown && !els.searchDropdown.contains(target) && target !== els.searchInput) {
+      closeSearchDropdown();
+    }
+
+    if (target === els.authModal) hideAuthModal();
+    if (target === els.bookingsModal) closeModal(els.bookingsModal);
+    if (target === els.favoritesModal) closeModal(els.favoritesModal);
+    if (target === els.chatModal) closeChatModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      hideAuthModal();
+      closeModal(els.bookingsModal);
+      closeModal(els.favoritesModal);
+      closeChatModal();
+      closeProfileDropdown();
+      closeSearchDropdown();
     }
   });
 }
 
-function initializeAppUI() {
+// ──────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────
+function init() {
   applyTheme();
   applyLang();
-  bindStaticEvents();
-  initFirebaseAuthWatcher();
-  loadProperties();
-
+  bindEvents();
   renderListings();
   renderFavorites();
   renderBookings();
   renderChatMessages();
   setUnreadBadge();
+
+  if (auth) {
+    auth.onAuthStateChanged(async (user) => {
+      await updateAuthUI(user);
+      if (user) {
+        await loadBookings();
+      }
+    });
+  } else {
+    applyGuestAuthUI();
+  }
+
+  loadProperties().catch((err) => console.warn("loadProperties init error:", err));
 }
 
-document.addEventListener("DOMContentLoaded", initializeAppUI);
+window.goToProperty = goToProperty;
+window.toggleFav = toggleFav;
+
+document.addEventListener("DOMContentLoaded", init);
