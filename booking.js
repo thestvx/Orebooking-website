@@ -1,9 +1,10 @@
 // =========================================
-// booking.js — OreBooking v16.4
+// booking.js — OreBooking v16.5
 // Simplified booking flow + auth + payment
 // Fixed stale dates + success popup
 // Fixed desktop/mobile date typing
-// Added bed type support + completed booking flow logic
+// Added bed type support + theme logo swap
+// Fixed profile dropdown / favorites / my bookings behavior
 // =========================================
 
 "use strict";
@@ -308,10 +309,7 @@ function handleDateTypingInput(el) {
 function enhanceDateInput(el, options = {}) {
   if (!el || el.dataset.dateEnhanced === "true") return;
 
-  const {
-    allowPast = false,
-    onCommit = null
-  } = options;
+  const { allowPast = false, onCommit = null } = options;
 
   el.dataset.dateEnhanced = "true";
   el.setAttribute("type", "text");
@@ -518,6 +516,9 @@ const els = {
   langToggle: getById("lang-toggle"),
   themeToggle: getById("theme-toggle"),
 
+  navLogoImg: qs(".navbar .logo img"),
+  authLogoImg: qs(".auth-header img"),
+
   openAuthBtn: getById("open-auth-btn"),
   closeAuthBtn: getById("close-auth-btn"),
   authModal: getById("auth-modal"),
@@ -615,9 +616,7 @@ const els = {
     getById("btn-edit-dates")
   ].filter(Boolean),
 
-  editStep2Btns: [
-    getById("btn-edit-payment")
-  ].filter(Boolean)
+  editStep2Btns: [getById("btn-edit-payment")].filter(Boolean)
 };
 
 // ──────────────────────────────────────────
@@ -856,7 +855,7 @@ function clearAllInvalidStates() {
     if (!el) return;
     markInvalid(el, false);
   });
-  markInvalid(els.agreePolicy, false);
+  if (els.agreePolicy) markInvalid(els.agreePolicy, false);
 }
 
 function scrollToFirstInvalid() {
@@ -878,6 +877,25 @@ function updateDirection() {
   els.html.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
 }
 
+function updateThemeLogos() {
+  const isDark = bookingState.theme === "dark";
+  const lightLogo = "logos/orebooking.png";
+  const darkLogo = "logos/orebooking2.png";
+  const logoPath = isDark ? darkLogo : lightLogo;
+
+  if (els.navLogoImg) {
+    els.navLogoImg.src = logoPath;
+    els.navLogoImg.setAttribute("src", logoPath);
+    els.navLogoImg.setAttribute("alt", "OreBooking");
+  }
+
+  if (els.authLogoImg) {
+    els.authLogoImg.src = logoPath;
+    els.authLogoImg.setAttribute("src", logoPath);
+    els.authLogoImg.setAttribute("alt", "OreBooking");
+  }
+}
+
 function applyTheme() {
   const isDark = bookingState.theme === "dark";
   els.body?.classList.toggle("dark", isDark);
@@ -887,6 +905,8 @@ function applyTheme() {
   if (icon) {
     icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
   }
+
+  updateThemeLogos();
 }
 
 function updateLangButton() {
@@ -1023,6 +1043,7 @@ function switchAuthForm(form) {
 function openAuthModal(form = "login") {
   switchAuthForm(form);
   clearAuthMessage();
+  toggleProfileDropdown(false);
   els.authModal?.classList.add("active");
   document.body.classList.add("modal-open");
 }
@@ -1033,13 +1054,26 @@ function closeAuthModal() {
 }
 
 function toggleProfileDropdown(force = null) {
-  if (!els.profileDropdown) return;
+  if (!els.profileDropdown || !els.openAuthBtn) return;
+
   const active = typeof force === "boolean"
     ? force
     : !els.profileDropdown.classList.contains("active");
 
   els.profileDropdown.classList.toggle("active", active);
-  els.openAuthBtn?.setAttribute("aria-expanded", active ? "true" : "false");
+  els.openAuthBtn.setAttribute("aria-expanded", active ? "true" : "false");
+}
+
+function handleProfileButtonClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (currentUser) {
+    toggleProfileDropdown();
+  } else {
+    toggleProfileDropdown(false);
+    openAuthModal("login");
+  }
 }
 
 function updateAuthUI(user) {
@@ -1061,6 +1095,20 @@ function updateAuthUI(user) {
   if (icon) {
     icon.className = user ? "ph ph-user-circle-check" : "ph ph-user";
   }
+
+  if (els.myBookingsBtn) {
+    els.myBookingsBtn.style.display = user ? "flex" : "none";
+  }
+
+  if (els.myFavoritesBtn) {
+    els.myFavoritesBtn.style.display = user ? "flex" : "none";
+  }
+
+  if (els.logoutBtn) {
+    els.logoutBtn.style.display = user ? "flex" : "none";
+  }
+
+  toggleProfileDropdown(false);
 }
 
 function getAuthErrorMessage(error, context = "login") {
@@ -1306,17 +1354,6 @@ function getPaymentMethodLabel(value) {
   }
 }
 
-function getPaymentIconClass(value) {
-  switch (value) {
-    case "cash":
-      return "ph-money";
-    case "card":
-      return "ph-credit-card";
-    default:
-      return "ph-bank";
-  }
-}
-
 function hydrateStayContext() {
   const rawCheckIn = getQueryOrStorage(
     ["checkIn", "checkin", "arrival"],
@@ -1372,11 +1409,8 @@ function updateDateConstraints() {
     bookingFields.departureDate.dataset.minDate = checkIn;
   }
 
-  if (checkIn && checkOut) {
-    const nights = getDiffNights(checkIn, checkOut);
-    if (nights < 1) {
-      bookingFields.departureDate.value = "";
-    }
+  if (checkIn && checkOut && getDiffNights(checkIn, checkOut) < 1) {
+    bookingFields.departureDate.value = "";
   }
 }
 
@@ -1389,15 +1423,10 @@ function updateBookingStateFromInputs() {
 
   bookingState.guestCount = adults + children;
   bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
-
   bookingState.paymentValue = getSelectedPaymentValue();
   bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
   bookingState.rewardPoints = Math.max(0, bookingState.nights * 10);
-
-  bookingState.stayDetails.bedType = getFieldSelectedText(
-    "bedType",
-    t("Not selected", "غير محدد")
-  );
+  bookingState.stayDetails.bedType = getFieldSelectedText("bedType", t("Not selected", "غير محدد"));
 
   persistStayContext();
 }
@@ -1420,8 +1449,7 @@ function updatePaymentCardsUI() {
 }
 
 function getSpecialRequestsDisplay() {
-  const value = getFieldValue("specialRequests");
-  return value || getFallbackText();
+  return getFieldValue("specialRequests") || getFallbackText();
 }
 
 function getBedTypeDisplay() {
@@ -1435,7 +1463,6 @@ function getBedTypeDisplay() {
 function getBillingDisplay() {
   const name = getFieldValue("billingName");
   const note = getFieldValue("billingNote");
-
   if (!name && !note) return getFallbackText();
   if (name && note) return `${name} — ${note}`;
   return name || note;
@@ -1445,15 +1472,12 @@ function getDocumentsDisplay() {
   if (bookingState.paymentValue === "cash") {
     return t("No receipt required", "لا يلزم إيصال");
   }
-
   if (bookingState.paymentProofUploading) {
     return t("Uploading receipt...", "جارٍ رفع الإيصال...");
   }
-
   if (bookingState.paymentProofName) {
     return bookingState.paymentProofName;
   }
-
   return t("No file uploaded", "لم يتم رفع ملف");
 }
 
@@ -1493,12 +1517,10 @@ function updateSummary() {
   setText(els.summaryTotal, formatCurrency(total));
   setText(els.summaryBedType, getBedTypeDisplay());
 
-  if (els.paymentReference) {
-    if (!bookingState.bookingReference) {
-      bookingState.bookingReference = generateReference("ORE");
-    }
-    setText(els.paymentReference, bookingState.bookingReference);
+  if (!bookingState.bookingReference) {
+    bookingState.bookingReference = generateReference("ORE");
   }
+  setText(els.paymentReference, bookingState.bookingReference);
 
   if (els.userPoints) {
     setText(els.userPoints, String(bookingState.rewardPoints || 0));
@@ -1520,7 +1542,6 @@ function updateReview() {
   setText(els.reviewPurposeArrival, getPurposeArrivalDisplay());
   setText(els.reviewSpecialRequests, getSpecialRequestsDisplay());
   setText(els.reviewBedType, getBedTypeDisplay());
-
   setText(els.reviewPaymentMethod, bookingState.paymentMethod || getFallbackText());
   setText(els.reviewDocuments, getDocumentsDisplay());
   setText(els.reviewBillings, getBillingDisplay());
@@ -1754,10 +1775,7 @@ async function uploadPaymentProof(file) {
     if (!storage || !auth?.currentUser) {
       bookingState.paymentProofUrl = "";
       bookingState.paymentProofName = file.name;
-      return {
-        url: "",
-        name: file.name
-      };
+      return { url: "", name: file.name };
     }
 
     const ref = storage.ref().child(`booking-receipts/${auth.currentUser.uid}/${Date.now()}-${file.name}`);
@@ -1767,10 +1785,7 @@ async function uploadPaymentProof(file) {
     bookingState.paymentProofUrl = url;
     bookingState.paymentProofName = file.name;
 
-    return {
-      url,
-      name: file.name
-    };
+    return { url, name: file.name };
   } catch (error) {
     console.error("Upload error:", error);
     showToast(t("Failed to upload receipt.", "تعذر رفع الإيصال."), "error");
@@ -2039,23 +2054,27 @@ function bindNavbarEvents() {
     saveDraft();
   });
 
-  els.openAuthBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (currentUser) {
-      toggleProfileDropdown();
-    } else {
-      openAuthModal("login");
+  els.openAuthBtn?.addEventListener("click", handleProfileButtonClick);
+
+  els.closeAuthBtn?.addEventListener("click", () => {
+    closeAuthModal();
+  });
+
+  els.authModal?.addEventListener("click", (e) => {
+    if (e.target === els.authModal) {
+      closeAuthModal();
     }
   });
 
-  els.closeAuthBtn?.addEventListener("click", closeAuthModal);
-
-  els.authModal?.addEventListener("click", (e) => {
-    if (e.target === els.authModal) closeAuthModal();
+  els.profileDropdown?.addEventListener("click", (e) => {
+    e.stopPropagation();
   });
 
   document.addEventListener("click", (e) => {
-    if (!els.profileContainer?.contains(e.target)) {
+    const clickedInsideProfile =
+      els.profileContainer && els.profileContainer.contains(e.target);
+
+    if (!clickedInsideProfile) {
       toggleProfileDropdown(false);
     }
   });
@@ -2067,13 +2086,18 @@ function bindNavbarEvents() {
     }
   });
 
-  els.logoutBtn?.addEventListener("click", logoutUser);
+  els.logoutBtn?.addEventListener("click", async () => {
+    toggleProfileDropdown(false);
+    await logoutUser();
+  });
 
   els.myBookingsBtn?.addEventListener("click", () => {
+    toggleProfileDropdown(false);
     window.location.href = "bookings.html";
   });
 
   els.myFavoritesBtn?.addEventListener("click", () => {
+    toggleProfileDropdown(false);
     window.location.href = "favorites.html";
   });
 
