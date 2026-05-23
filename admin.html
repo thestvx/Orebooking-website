@@ -237,11 +237,9 @@
       animation: fadeIn 0.45s ease;
     }
 
-    .login-badge {
-      display: none;
-    }
-
-    .login-help {
+    .login-badge,
+    .login-help,
+    .admin-email-hint {
       display: none;
     }
 
@@ -984,8 +982,297 @@
       background-color: #fff;
     }
 
-    .admin-email-hint {
+    .bookings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .booking-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+      display: grid;
+      gap: 16px;
+    }
+
+    .booking-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .booking-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .booking-title strong {
+      font-size: 1rem;
+    }
+
+    .booking-title span {
+      color: var(--text-muted);
+      font-size: .82rem;
+    }
+
+    .booking-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .booking-meta-item {
+      background: rgba(248,250,252,0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .booking-meta-item label {
+      font-size: .78rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .booking-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .booking-actions-row button {
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-main);
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .booking-actions-row .btn-approve {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border-color: var(--success-border);
+    }
+
+    .booking-actions-row .btn-reject {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    .booking-actions-row .btn-open-chat {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+      border-color: rgba(67,90,191,0.15);
+    }
+
+    .messages-layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 18px;
+      min-height: 580px;
+    }
+
+    .chat-sidebar {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 580px;
+    }
+
+    .chat-main {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 580px;
+      overflow: hidden;
+    }
+
+    .chat-main-head {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: grid;
+      gap: 6px;
+    }
+
+    .chat-main-head h4 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .chat-main-head p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: .86rem;
+    }
+
+    .chat-messages {
+      padding: 18px;
+      overflow-y: auto;
+      background: linear-gradient(180deg, rgba(248,250,252,.8), rgba(255,255,255,.95));
+    }
+
+    .chat-send-box {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.96);
+    }
+
+    .chat-send-form {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .chat-send-form textarea {
+      flex: 1;
+      min-height: 52px;
+      max-height: 140px;
+      resize: vertical;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 14px 16px;
+      font-family: inherit;
+      background: rgba(248,250,252,.9);
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .chat-send-form textarea:focus {
+      border-color: var(--primary);
+      box-shadow: var(--admin-ring);
+      background: #fff;
+    }
+
+    .owner-form-card {
+      margin-bottom: 20px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.55);
       display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 5000;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(100%, 960px);
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: var(--admin-surface-strong);
+      border-radius: 28px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 28px 80px rgba(15,23,42,.18);
+      padding: 24px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .modal-head h3 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .upload-preview {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      background: rgba(248,250,252,.9);
+    }
+
+    .upload-preview.visible {
+      display: flex;
+    }
+
+    .upload-preview img {
+      width: 84px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+    }
+
+    .map-picked-badge {
+      display: none;
+      margin-top: 8px;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+      font-size: .8rem;
+      font-weight: 800;
+    }
+
+    .map-picked-badge.visible {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .map-box {
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .map-box .leaflet-map {
+      width: 100%;
+      height: 280px;
     }
 
     @keyframes fadeIn {
@@ -995,6 +1282,8 @@
 
     @media (max-width: 1100px) {
       .dashboard-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bookings-grid { grid-template-columns: 1fr; }
+      .messages-layout { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 920px) {
@@ -1015,8 +1304,11 @@
       .admin-main { padding: 16px; }
       .admin-login-card { padding: 24px; }
       .dashboard-strip { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
+      .form-grid,
+      .booking-meta-grid { grid-template-columns: 1fr; }
       .logo-img { max-width: 180px; height: 54px; }
+      .chat-send-form { flex-direction: column; }
+      .chat-send-form .primary-btn { width: 100%; }
     }
   </style>
 </head>
@@ -1035,7 +1327,7 @@
 
       <div id="firebase-status-banner" class="firebase-status-banner"></div>
 
-      <form id="admin-login-form" class="admin-form" novalidate>
+      <form id="admin-login-form" class="admin-form" data-admin-login-form novalidate>
         <div class="input-group">
           <label for="admin-login-email">البريد أو اسم المستخدم</label>
           <input
@@ -1091,27 +1383,27 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" data-tab="dashboard-pane" type="button">
+        <button class="nav-item active" data-tab-target="dashboard" type="button">
           <i class="ph ph-squares-four"></i>
           <span>الرئيسية</span>
         </button>
 
-        <button class="nav-item" data-tab="properties-pane" type="button">
+        <button class="nav-item" data-tab-target="properties" type="button">
           <i class="ph ph-buildings"></i>
           <span>العقارات</span>
         </button>
 
-        <button class="nav-item" data-tab="bookings-pane" type="button">
+        <button class="nav-item" data-tab-target="bookings" type="button">
           <i class="ph ph-calendar-check"></i>
           <span>الحجوزات</span>
         </button>
 
-        <button class="nav-item admin-only" data-tab="owners-pane" type="button">
+        <button class="nav-item admin-only" data-tab-target="owners" type="button">
           <i class="ph ph-users-three"></i>
           <span>المُلّاك</span>
         </button>
 
-        <button class="nav-item" data-tab="messages-pane" type="button">
+        <button class="nav-item" data-tab-target="messages" type="button">
           <i class="ph ph-chat-circle-dots"></i>
           <span>الرسائل</span>
         </button>
@@ -1256,51 +1548,86 @@
             <div class="bookings-filter-bar">
               <button class="filter-tab-btn active all" type="button" data-booking-filter="all">
                 الكل
-                <span class="filter-count-badge" id="bookings-count-all">0</span>
+                <span class="filter-count-badge" id="booking-count-all">0</span>
               </button>
               <button class="filter-tab-btn pending" type="button" data-booking-filter="pending">
                 قيد الانتظار
-                <span class="filter-count-badge" id="bookings-count-pending">0</span>
+                <span class="filter-count-badge" id="booking-count-pending">0</span>
               </button>
               <button class="filter-tab-btn confirmed" type="button" data-booking-filter="confirmed">
                 مؤكدة
-                <span class="filter-count-badge" id="bookings-count-confirmed">0</span>
+                <span class="filter-count-badge" id="booking-count-confirmed">0</span>
               </button>
               <button class="filter-tab-btn rejected" type="button" data-booking-filter="rejected">
                 مرفوضة
-                <span class="filter-count-badge" id="bookings-count-rejected">0</span>
+                <span class="filter-count-badge" id="booking-count-rejected">0</span>
               </button>
             </div>
 
-            <div class="table-responsive">
-              <table class="admin-table">
-                <thead>
-                  <tr>
-                    <th>المرجع</th>
-                    <th>الضيف</th>
-                    <th>العقار</th>
-                    <th>الإقامة</th>
-                    <th>الإجمالي</th>
-                    <th>رقم الغرفة</th>
-                    <th>الحالة</th>
-                    <th>رد الإدارة</th>
-                    <th>الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody id="bookings-tbody">
-                  <tr>
-                    <td colspan="9" style="text-align:center;padding:28px;">جارٍ تحميل الحجوزات...</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div id="bookings-container">
+              <div class="empty-state">
+                <i class="ph ph-spinner-gap ph-spin"></i>
+                <div>جارٍ تحميل الحجوزات...</div>
+              </div>
             </div>
           </div>
         </div>
 
         <div id="owners-pane" class="tab-pane">
+          <div class="admin-card owner-form-card admin-only">
+            <div class="pane-head">
+              <h3><i class="ph ph-user-plus"></i>إدارة حساب المالك</h3>
+            </div>
+
+            <form id="owner-account-form" class="form-grid" novalidate>
+              <div class="input-group">
+                <label for="owner-name">الاسم</label>
+                <input id="owner-name" type="text" placeholder="اسم المالك" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-full-name">الاسم الكامل</label>
+                <input id="owner-full-name" type="text" placeholder="الاسم الكامل" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-email">البريد الإلكتروني</label>
+                <input id="owner-email" type="email" placeholder="owner@email.com" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-phone">رقم الهاتف</label>
+                <input id="owner-phone" type="text" placeholder="+213..." dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-username">اسم المستخدم</label>
+                <input id="owner-username" type="text" placeholder="username" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-password">كلمة المرور</label>
+                <input id="owner-password" type="text" placeholder="Password" dir="ltr" />
+              </div>
+
+              <div class="full-span">
+                <button type="submit" class="primary-btn">
+                  <i class="ph ph-floppy-disk"></i>
+                  <span>حفظ البيانات</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
           <div class="admin-card">
             <div class="pane-head">
               <h3><i class="ph ph-users-three"></i>حسابات المُلّاك</h3>
+              <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="owners-search" type="search" placeholder="بحث عن مالك..." />
+                </div>
+              </div>
             </div>
 
             <div class="table-responsive">
@@ -1309,13 +1636,15 @@
                   <tr>
                     <th>الاسم</th>
                     <th>البريد الإلكتروني</th>
-                    <th>الدور</th>
-                    <th>تاريخ الإضافة</th>
+                    <th>الهاتف</th>
+                    <th>اسم المستخدم</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody id="owners-tbody">
                   <tr>
-                    <td colspan="4" style="text-align:center;padding:28px;">جارٍ تحميل حسابات المُلّاك...</td>
+                    <td colspan="6" style="text-align:center;padding:28px;">جارٍ تحميل حسابات المُلّاك...</td>
                   </tr>
                 </tbody>
               </table>
@@ -1327,15 +1656,212 @@
           <div class="admin-card">
             <div class="pane-head">
               <h3><i class="ph ph-chat-circle-dots"></i>الرسائل</h3>
+              <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="chats-search" type="search" placeholder="بحث في المحادثات..." />
+                </div>
+              </div>
             </div>
 
-            <div style="padding:24px;text-align:center;color:var(--text-muted);">
-              لا توجد رسائل حالياً.
+            <div class="messages-layout">
+              <aside class="chat-sidebar">
+                <div id="admin-chat-list">
+                  <div class="empty-state">
+                    <i class="ph ph-chat-centered-dots"></i>
+                    <div>لا توجد محادثات حالياً.</div>
+                  </div>
+                </div>
+              </aside>
+
+              <section class="chat-main">
+                <div class="chat-main-head">
+                  <h4 id="admin-chat-title">اختر محادثة</h4>
+                  <p id="admin-chat-subtitle">سيتم عرض تفاصيل الرسائل هنا.</p>
+                </div>
+
+                <div id="admin-chat-messages" class="chat-messages">
+                  <div class="empty-state">
+                    <i class="ph ph-chat-circle"></i>
+                    <div>اختر محادثة لعرض الرسائل.</div>
+                  </div>
+                </div>
+
+                <div class="chat-send-box">
+                  <form id="admin-chat-send-form" class="chat-send-form">
+                    <textarea placeholder="اكتب رسالتك هنا..."></textarea>
+                    <button type="submit" class="primary-btn">
+                      <i class="ph ph-paper-plane-tilt"></i>
+                      <span>إرسال</span>
+                    </button>
+                  </form>
+                </div>
+              </section>
             </div>
           </div>
         </div>
       </section>
     </main>
+  </div>
+
+  <div id="edit-property-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3><i class="ph ph-pencil-simple"></i>تعديل العقار</h3>
+        <button type="button" class="modal-close" data-close-modal>
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <form id="edit-property-form" class="form-grid" novalidate>
+        <div class="input-group">
+          <label for="edit-title-ar">العنوان بالعربية</label>
+          <input id="edit-title-ar" type="text" placeholder="عنوان العقار" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-title-en">العنوان بالإنجليزية</label>
+          <input id="edit-title-en" type="text" placeholder="Property title" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-location-ar">الموقع بالعربية</label>
+          <input id="edit-location-ar" type="text" placeholder="الموقع" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-location-en">الموقع بالإنجليزية</label>
+          <input id="edit-location-en" type="text" placeholder="Location" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-type-ar">النوع بالعربية</label>
+          <input id="edit-type-ar" type="text" placeholder="شقة / فندق / إقامة..." />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-type-en">النوع بالإنجليزية</label>
+          <input id="edit-type-en" type="text" placeholder="Type" dir="ltr" />
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-description-ar">الوصف بالعربية</label>
+          <textarea id="edit-description-ar" placeholder="وصف العقار"></textarea>
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-description-en">الوصف بالإنجليزية</label>
+          <textarea id="edit-description-en" placeholder="Property description" dir="ltr"></textarea>
+        </div>
+
+        <div class="input-group">
+          <label for="edit-owner-name">اسم المالك</label>
+          <input id="edit-owner-name" type="text" placeholder="اسم المالك" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-owner-email">بريد المالك</label>
+          <input id="edit-owner-email" type="email" placeholder="owner@email.com" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-owner-phone">هاتف المالك</label>
+          <input id="edit-owner-phone" type="text" placeholder="+213..." dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-price">السعر</label>
+          <input id="edit-price" type="number" placeholder="0" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-guests">عدد الضيوف</label>
+          <input id="edit-guests" type="number" placeholder="1" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-bedrooms">عدد الغرف</label>
+          <input id="edit-bedrooms" type="number" placeholder="0" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-bathrooms">عدد الحمامات</label>
+          <input id="edit-bathrooms" type="number" placeholder="0" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-image-url">الصورة الرئيسية</label>
+          <input id="edit-image-url" type="url" placeholder="https://..." dir="ltr" />
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-gallery">معرض الصور</label>
+          <input id="edit-gallery" type="text" placeholder="ضع الروابط مفصولة بفاصلة ," dir="ltr" />
+        </div>
+
+        <div class="full-span">
+          <div id="edit-upload-preview" class="upload-preview">
+            <img id="edit-upload-preview-img" alt="preview" />
+            <div>
+              <div id="edit-upload-preview-name" class="font-bold"></div>
+              <div id="edit-upload-preview-meta" style="color:var(--text-muted);font-size:.82rem;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-amenities">المزايا</label>
+          <input id="edit-amenities" type="text" placeholder="wifi, ac, pool..." dir="ltr" />
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-extras">الإضافات</label>
+          <input id="edit-extras" type="text" placeholder="parking, breakfast..." dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-map-search">البحث عن موقع</label>
+          <div style="display:flex;gap:10px;">
+            <input id="edit-map-search" type="text" placeholder="ابحث عن المدينة أو الموقع" />
+            <button type="button" id="edit-map-search-btn" class="ghost-action">
+              <i class="ph ph-magnifying-glass"></i>
+              <span>بحث</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="edit-lat">Latitude</label>
+          <input id="edit-lat" type="text" placeholder="0.000000" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-lng">Longitude</label>
+          <input id="edit-lng" type="text" placeholder="0.000000" dir="ltr" />
+        </div>
+
+        <div class="full-span">
+          <div class="map-box">
+            <div id="edit-map-picker" class="leaflet-map"></div>
+          </div>
+          <div id="edit-map-picked-badge" class="map-picked-badge">
+            <i class="ph ph-map-pin"></i>
+            <span>تم تحديد الموقع</span>
+          </div>
+        </div>
+
+        <div class="full-span" style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button type="submit" class="primary-btn">
+            <i class="ph ph-floppy-disk"></i>
+            <span>حفظ التعديلات</span>
+          </button>
+          <button type="button" class="ghost-action" data-close-modal>
+            <i class="ph ph-x"></i>
+            <span>إلغاء</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -1354,18 +1880,30 @@
         if (backdrop) backdrop.classList.remove("show");
       }
 
-      if (toggleBtn) toggleBtn.addEventListener("click", openSidebar);
-      if (backdrop) backdrop.addEventListener("click", closeSidebar);
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", function () {
+          openSidebar();
+        });
+      }
+
+      if (backdrop) {
+        backdrop.addEventListener("click", function () {
+          closeSidebar();
+        });
+      }
 
       document.addEventListener("click", function (e) {
-        var btn = e.target.closest(".sidebar-nav .nav-item[data-tab]");
+        var btn = e.target.closest("[data-tab-target]");
         if (btn && window.innerWidth <= 920) {
           closeSidebar();
         }
       });
+
+      window.__openAdminSidebar = openSidebar;
+      window.__closeAdminSidebar = closeSidebar;
     })();
   </script>
 
-  <script src="admin.js"></script>
+  <script src="admin.js?v=20260523-3"></script>
 </body>
 </html>
