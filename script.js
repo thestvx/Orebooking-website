@@ -1,6 +1,6 @@
 // =========================================
-// script.js — OreBooking Index Page v3.1
-// Full Firebase + Auth + Chat + Listings
+// script.js — OreBooking Index Page v4.0
+// Full Firebase + Auth + Real-time Chat + Listings
 // Compatible with current index.html IDs
 // =========================================
 "use strict";
@@ -20,11 +20,15 @@ const firebaseConfig = {
 
 let db = null;
 let auth = null;
+let firestoreFieldValue = null;
 
 try {
   if (typeof firebase !== "undefined") {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    if (typeof firebase.firestore === "function") db = firebase.firestore();
+    if (typeof firebase.firestore === "function") {
+      db = firebase.firestore();
+      firestoreFieldValue = firebase.firestore.FieldValue || null;
+    }
     if (typeof firebase.auth === "function") auth = firebase.auth();
   }
 } catch (e) {
@@ -45,6 +49,12 @@ function safeGet(key, fallback = null) {
 function safeSet(key, val) {
   try {
     localStorage.setItem(key, val);
+  } catch {}
+}
+
+function safeRemove(key) {
+  try {
+    localStorage.removeItem(key);
   } catch {}
 }
 
@@ -77,12 +87,15 @@ const state = {
   filteredProperties: [],
   activeCategory: "all",
   searchQuery: "",
-  sortBy: "default",
+  sortBy: "featured",
   favorites: safeJsonGet("ore_favorites", []),
-  chatMessages: safeJsonGet("ore_chat_messages", []),
+  chatMessages: [],
   chatUnread: 0,
   chatOpen: false,
-  authTab: "login"
+  authTab: "login",
+  currentChatId: safeGet("ore_current_chat_id", ""),
+  currentChatUnsub: null,
+  chatInitializedForUser: ""
 };
 
 // ──────────────────────────────────────────
@@ -140,10 +153,11 @@ const i18n = {
     status_pending: "Pending",
     status_confirmed: "Confirmed",
     status_cancelled: "Cancelled",
+    status_rejected: "Rejected",
     clearSearch: "Clear Search",
     favAdded: "Added to favorites!",
     favRemoved: "Removed from favorites.",
-    loginRequired: "Please sign in to save favorites.",
+    loginRequired: "Please sign in to continue.",
     checkIn: "Check-in",
     checkOut: "Check-out",
     guests: "Guest",
@@ -162,12 +176,20 @@ const i18n = {
     signedInDone: "Signed in!",
     sendMessage: "Send message",
     noMessages: "No messages yet.",
-    startConversation: "Start the conversation and mention this property to contact support.",
-    chatWorksNow: "This chat works now and can also be connected to Firestore later.",
+    startConversation: "Start the conversation to contact support and receive replies here directly.",
+    chatWorksNow: "Messages in this chat are synced with support through Firebase.",
     searchHint: "Search by city, wilaya, or property name",
     checkInLabel: "Check-in",
     checkOutLabel: "Check-out",
-    guestsLabel: "Guests"
+    guestsLabel: "Guests",
+    chatPreparing: "Preparing secure connection...",
+    chatConnected: "Connected to support.",
+    chatSyncing: "Syncing messages...",
+    chatError: "Connection issue. Trying again...",
+    supportReady: "Support is ready to receive your messages.",
+    fillAllFields: "Please fill all fields",
+    passwordShort: "Password too short",
+    firebaseMissing: "Firebase not available"
   },
   ar: {
     heroTitle: "اكتشف إقامتك المثالية",
@@ -220,10 +242,11 @@ const i18n = {
     status_pending: "قيد الانتظار",
     status_confirmed: "مؤكد",
     status_cancelled: "ملغى",
+    status_rejected: "مرفوض",
     clearSearch: "مسح البحث",
     favAdded: "تمت الإضافة إلى المفضلة!",
     favRemoved: "تمت الإزالة من المفضلة.",
-    loginRequired: "يرجى تسجيل الدخول لحفظ المفضلة.",
+    loginRequired: "يرجى تسجيل الدخول للمتابعة.",
     checkIn: "الدخول",
     checkOut: "الخروج",
     guests: "ضيف",
@@ -242,12 +265,20 @@ const i18n = {
     signedInDone: "تم تسجيل الدخول!",
     sendMessage: "إرسال رسالة",
     noMessages: "لا توجد رسائل بعد.",
-    startConversation: "ابدأ المحادثة واذكر هذا العقار للتواصل مع الدعم.",
-    chatWorksNow: "هذه المحادثة تعمل الآن ويمكن ربطها بـ Firestore لاحقاً.",
+    startConversation: "ابدأ المحادثة للتواصل مع الدعم وستظهر الردود هنا مباشرة.",
+    chatWorksNow: "رسائل هذه المحادثة متزامنة مع الدعم عبر Firebase.",
     searchHint: "ابحث بالمدينة أو الولاية أو اسم العقار",
     checkInLabel: "تاريخ الدخول",
     checkOutLabel: "تاريخ الخروج",
-    guestsLabel: "عدد الضيوف"
+    guestsLabel: "عدد الضيوف",
+    chatPreparing: "جارٍ تجهيز الاتصال الآمن...",
+    chatConnected: "تم الاتصال بالدعم.",
+    chatSyncing: "جارٍ مزامنة الرسائل...",
+    chatError: "هناك مشكلة في الاتصال، تتم إعادة المحاولة...",
+    supportReady: "الدعم جاهز لاستقبال رسائلك.",
+    fillAllFields: "يرجى ملء جميع الحقول",
+    passwordShort: "كلمة المرور قصيرة جداً",
+    firebaseMissing: "Firebase غير متاح"
   }
 };
 
@@ -306,7 +337,7 @@ const els = {
 
   searchInput: firstById("search-input", "destination-input"),
   searchBtn: firstById("search-btn"),
-  searchDropdown: firstById("search-dropdown", "search-dropdow", "search-dropdown"),
+  searchDropdown: firstById("search-dropdown"),
   clearSearchBtn: firstById("clear-search-btn"),
 
   checkInInput: firstById("search-checkin"),
@@ -340,8 +371,23 @@ const els = {
   chatMessages: firstById("chat-messages"),
   chatInput: firstById("chat-input", "chat-textarea"),
   chatSendBtn: firstById("chat-send-btn"),
+  chatSendForm: firstById("chat-send-form"),
   chatOpenBtn: firstById("chat-open-btn"),
   chatUnreadBadge: firstById("chat-unread-badge"),
+  chatTitle: firstById("chat-title"),
+  chatSubtitle: firstById("chat-subtitle"),
+  chatEmptyState: firstById("chat-empty-state"),
+  chatEmptyTitle: firstById("chat-empty-title"),
+  chatEmptySubtitle: firstById("chat-empty-subtitle"),
+  chatConnectionStatus: firstById("chat-connection-status"),
+  chatConnectionText: firstById("chat-connection-text"),
+  chatNote: firstById("chat-note"),
+  chatCurrentId: firstById("chat-current-id"),
+  chatCurrentBookingId: firstById("chat-current-booking-id"),
+  chatCurrentUserId: firstById("chat-current-user-id"),
+  chatCurrentUserEmail: firstById("chat-current-user-email"),
+  chatCurrentUserName: firstById("chat-current-user-name"),
+  chatPropertyId: firstById("chat-property-id"),
 
   scrollTopBtn: firstById("scroll-top-btn"),
   toastContainer: firstById("toast-container"),
@@ -351,7 +397,7 @@ const els = {
 };
 
 // ──────────────────────────────────────────
-// Toast
+// Utilities
 // ──────────────────────────────────────────
 function showToast(msg, type = "info") {
   let host = $("toast-container");
@@ -387,6 +433,97 @@ function showToast(msg, type = "info") {
   }, 3000);
 }
 
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = String(str ?? "");
+  return d.innerHTML;
+}
+
+function cleanText(v) {
+  return String(v ?? "").trim();
+}
+
+function toNumber(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function getServerTimestamp() {
+  return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date();
+}
+
+function formatChatTime(value) {
+  try {
+    if (!value) return "";
+    if (typeof value?.toDate === "function") {
+      return value.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    if (typeof value === "object" && typeof value.seconds === "number") {
+      return new Date(value.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function normalizeMessage(msg = {}) {
+  const roleRaw = cleanText(msg.senderRole || msg.role || msg.sender || "customer").toLowerCase();
+  const role = ["admin", "owner", "host", "support"].includes(roleRaw) ? "admin" : "customer";
+  return {
+    ...msg,
+    role,
+    text: cleanText(msg.text || msg.message || msg.body || msg.content || ""),
+    time: formatChatTime(msg.createdAt || msg.timestamp || msg.sentAt || msg.time)
+  };
+}
+
+function setChatStatus(mode = "syncing", text = "") {
+  if (!els.chatConnectionStatus) return;
+  els.chatConnectionStatus.classList.remove("connected", "syncing", "error");
+  els.chatConnectionStatus.classList.add(mode);
+  if (els.chatConnectionText) {
+    els.chatConnectionText.textContent =
+      text ||
+      (mode === "connected" ? t("chatConnected") :
+      mode === "error" ? t("chatError") :
+      t("chatSyncing"));
+  }
+}
+
+function setUnreadBadge() {
+  if (!els.chatUnreadBadge) return;
+  const count = state.chatUnread || 0;
+  els.chatUnreadBadge.textContent = String(count);
+  els.chatUnreadBadge.style.display = count > 0 ? "inline-flex" : "none";
+}
+
+function getCurrentUserName(user = state.currentUser) {
+  return cleanText(user?.displayName || user?.name || user?.email || "Guest");
+}
+
+function getCurrentUserEmail(user = state.currentUser) {
+  return cleanText(user?.email || "");
+}
+
+function updateChatHiddenFields(chatId = state.currentChatId) {
+  if (els.chatCurrentId) els.chatCurrentId.value = chatId || "";
+  if (els.chatCurrentUserId) els.chatCurrentUserId.value = cleanText(state.currentUser?.uid || "");
+  if (els.chatCurrentUserEmail) els.chatCurrentUserEmail.value = getCurrentUserEmail();
+  if (els.chatCurrentUserName) els.chatCurrentUserName.value = getCurrentUserName();
+}
+
+function stopChatSubscription() {
+  if (typeof state.currentChatUnsub === "function") {
+    try {
+      state.currentChatUnsub();
+    } catch {}
+  }
+  state.currentChatUnsub = null;
+}
+
 // ──────────────────────────────────────────
 // Lang & Theme
 // ──────────────────────────────────────────
@@ -397,7 +534,7 @@ function applyLang() {
 
   const langLabel = els.langBtnText || els.langBtn?.querySelector("span");
   if (langLabel) {
-    langLabel.textContent = state.lang === "ar" ? "EN" : "AR";
+    langLabel.textContent = state.lang === "ar" ? "English" : "العربية";
   }
 
   if (els.heroTitle) els.heroTitle.textContent = t("heroTitle");
@@ -405,6 +542,10 @@ function applyLang() {
   if (els.searchInput) els.searchInput.placeholder = t("searchPlaceholder");
   if (els.sectionTitle) els.sectionTitle.textContent = t("sectionTitle");
   if (els.sectionDesc) els.sectionDesc.textContent = t("sectionDesc");
+  if (els.chatInput) els.chatInput.placeholder = t("chatPlaceholder");
+  if (els.chatEmptyTitle) els.chatEmptyTitle.textContent = t("noMessages");
+  if (els.chatEmptySubtitle) els.chatEmptySubtitle.textContent = t("startConversation");
+  if (els.chatNote) els.chatNote.textContent = t("chatWorksNow");
 
   if (els.rewardsBadge) {
     const span = els.rewardsBadge.querySelector("span");
@@ -454,7 +595,12 @@ function applyLang() {
     if (t(key) !== key) el.textContent = t(key);
   });
 
+  if (state.currentChatId) {
+    setChatStatus(state.currentChatUnsub ? "connected" : "syncing");
+  }
+
   renderListings();
+  renderChatMessages();
 }
 
 function applyTheme() {
@@ -476,7 +622,8 @@ function applyTheme() {
 // Auth UI
 // ──────────────────────────────────────────
 function updateAuthUI(user) {
-  state.currentUser = user;
+  const prevUid = state.currentUser?.uid || "";
+  state.currentUser = user || null;
   const isLoggedIn = !!user;
   const navAuthBtn = els.navAuthBtn || $("nav-auth-btn") || $("open-auth-btn") || $("auth-cta");
   const signInText = els.navSignInText || navAuthBtn?.querySelector("span");
@@ -516,6 +663,27 @@ function updateAuthUI(user) {
 
   if (isLoggedIn && els.loginEmail && user.email) {
     els.loginEmail.value = user.email;
+  }
+
+  updateChatHiddenFields();
+
+  if (!isLoggedIn) {
+    state.chatMessages = [];
+    state.chatUnread = 0;
+    state.currentChatId = "";
+    safeRemove("ore_current_chat_id");
+    stopChatSubscription();
+    setUnreadBadge();
+    setChatStatus("syncing", t("chatPreparing"));
+    renderChatMessages();
+    return;
+  }
+
+  if (prevUid !== user.uid) {
+    state.chatMessages = [];
+    state.chatUnread = 0;
+    setUnreadBadge();
+    ensureSupportChat(false).catch((err) => console.warn("ensureSupportChat after auth:", err));
   }
 }
 
@@ -562,13 +730,13 @@ function clearAuthMessage() {
 // ──────────────────────────────────────────
 function handleLogin(e) {
   if (e) e.preventDefault();
-  if (!auth) return showToast("Firebase not available", "error");
+  if (!auth) return showToast(t("firebaseMissing"), "error");
 
   const email = els.loginEmail?.value?.trim();
   const pass = els.loginPassword?.value;
 
   if (!email || !pass) {
-    return showAuthMessage(state.lang === "ar" ? "يرجى ملء جميع الحقول" : "Please fill all fields");
+    return showAuthMessage(t("fillAllFields"));
   }
 
   clearAuthMessage();
@@ -597,23 +765,23 @@ function handleLogin(e) {
 
 function handleRegister(e) {
   if (e) e.preventDefault();
-  if (!auth) return showToast("Firebase not available", "error");
+  if (!auth) return showToast(t("firebaseMissing"), "error");
 
   const name = els.regName?.value?.trim();
   const email = els.regEmail?.value?.trim();
   const pass = els.regPassword?.value;
   const confirm = els.regConfirm?.value;
 
-  if (!name || !email || !pass || !confirm) {
-    return showAuthMessage(state.lang === "ar" ? "يرجى ملء جميع الحقول" : "Please fill all fields");
+  if (!name || !email || !pass) {
+    return showAuthMessage(t("fillAllFields"));
   }
 
-  if (pass !== confirm) {
+  if (els.regConfirm && pass !== confirm) {
     return showAuthMessage(state.lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords don't match");
   }
 
   if (pass.length < 6) {
-    return showAuthMessage(state.lang === "ar" ? "كلمة المرور قصيرة جداً" : "Password too short");
+    return showAuthMessage(t("passwordShort"));
   }
 
   clearAuthMessage();
@@ -633,7 +801,7 @@ function handleRegister(e) {
             email,
             points: 0,
             createdAt: new Date()
-          });
+          }, { merge: true });
         }
       });
     })
@@ -652,7 +820,7 @@ function handleRegister(e) {
 
 function handleForgot(e) {
   if (e) e.preventDefault();
-  if (!auth) return showToast("Firebase not available", "error");
+  if (!auth) return showToast(t("firebaseMissing"), "error");
 
   const email = els.forgotEmail?.value?.trim();
   if (!email) {
@@ -783,9 +951,9 @@ function applyFilters() {
     list = list.filter((p) => Number(p.guests || p.maxGuests || 0) >= guestCount || !Number(p.guests || p.maxGuests || 0));
   }
 
-  if (state.sortBy === "price-low" || state.sortBy === "pricelow") {
+  if (state.sortBy === "price_low" || state.sortBy === "price-low" || state.sortBy === "pricelow") {
     list.sort((a, b) => getPrice(a) - getPrice(b));
-  } else if (state.sortBy === "price-high" || state.sortBy === "pricehigh") {
+  } else if (state.sortBy === "price_high" || state.sortBy === "price-high" || state.sortBy === "pricehigh") {
     list.sort((a, b) => getPrice(b) - getPrice(a));
   } else if (state.sortBy === "rating") {
     list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
@@ -956,12 +1124,6 @@ function renderListings() {
   }
 }
 
-function escapeHtml(str) {
-  const d = document.createElement("div");
-  d.textContent = String(str ?? "");
-  return d.innerHTML;
-}
-
 function goToProperty(id) {
   window.location.href = `property.html?id=${encodeURIComponent(id)}`;
 }
@@ -1092,7 +1254,13 @@ function renderBookings(bookings) {
   }
 
   els.bookingsList.innerHTML = bookings.map((b) => {
-    const status = b.status || "pending";
+    const rawStatus = cleanText(b.status || "pending").toLowerCase();
+    const status =
+      rawStatus === "approved" ? "confirmed" :
+      rawStatus === "accepted" ? "confirmed" :
+      rawStatus === "rejected" ? "rejected" :
+      rawStatus === "canceled" ? "cancelled" :
+      rawStatus;
     const propTitle = state.lang === "ar"
       ? (b.propertyTitleAr || b.propertyTitle || b.titleAr || b.propertyTitleEn || "عقار")
       : (b.propertyTitleEn || b.propertyTitle || b.titleEn || b.title || "Property");
@@ -1127,37 +1295,212 @@ function closeBookingsModal() {
 // ──────────────────────────────────────────
 // Chat
 // ──────────────────────────────────────────
-function openChat() {
+async function findExistingSupportChat(user) {
+  if (!db || !user) return null;
+
+  try {
+    const byUser = await db.collection("chats").where("userId", "==", user.uid).limit(1).get();
+    if (!byUser.empty) {
+      const doc = byUser.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+  } catch (error) {
+    console.warn("findExistingSupportChat byUser:", error);
+  }
+
+  try {
+    if (user.email) {
+      const byEmail = await db.collection("chats").where("userEmail", "==", user.email).limit(1).get();
+      if (!byEmail.empty) {
+        const doc = byEmail.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+    }
+  } catch (error) {
+    console.warn("findExistingSupportChat byEmail:", error);
+  }
+
+  return null;
+}
+
+async function createSupportChat(user) {
+  if (!db || !user) return null;
+
+  const payload = {
+    bookingId: "",
+    propertyId: cleanText(els.chatPropertyId?.value || "global"),
+    propertyTitle: "Support Chat",
+    userId: user.uid,
+    userName: getCurrentUserName(user),
+    userEmail: getCurrentUserEmail(user),
+    participants: [user.uid, "admin"].filter(Boolean),
+    participantIds: [user.uid, "admin"].filter(Boolean),
+    lastMessage: "",
+    lastText: "",
+    lastMessageAt: getServerTimestamp(),
+    updatedAt: getServerTimestamp(),
+    createdAt: getServerTimestamp()
+  };
+
+  const ref = await db.collection("chats").add(payload);
+  return { id: ref.id, ...payload };
+}
+
+async function ensureSupportChat(subscribeAfter = true) {
+  if (!state.currentUser || !db) return null;
+
+  setChatStatus("syncing", t("chatPreparing"));
+
+  if (state.currentChatId && state.chatInitializedForUser === state.currentUser.uid) {
+    updateChatHiddenFields(state.currentChatId);
+    if (subscribeAfter) subscribeToCurrentChat(state.currentChatId);
+    return state.currentChatId;
+  }
+
+  let chat = null;
+
+  if (state.currentChatId) {
+    try {
+      const doc = await db.collection("chats").doc(state.currentChatId).get();
+      if (doc.exists) {
+        const data = doc.data() || {};
+        if (
+          cleanText(data.userId) === state.currentUser.uid ||
+          cleanText(data.userEmail).toLowerCase() === getCurrentUserEmail().toLowerCase()
+        ) {
+          chat = { id: doc.id, ...data };
+        }
+      }
+    } catch (error) {
+      console.warn("ensureSupportChat existing doc check:", error);
+    }
+  }
+
+  if (!chat) {
+    chat = await findExistingSupportChat(state.currentUser);
+  }
+
+  if (!chat) {
+    chat = await createSupportChat(state.currentUser);
+  }
+
+  if (!chat?.id) return null;
+
+  state.currentChatId = chat.id;
+  state.chatInitializedForUser = state.currentUser.uid;
+  safeSet("ore_current_chat_id", chat.id);
+  updateChatHiddenFields(chat.id);
+
+  await db.collection("chats").doc(chat.id).set({
+    userId: state.currentUser.uid,
+    userName: getCurrentUserName(state.currentUser),
+    userEmail: getCurrentUserEmail(state.currentUser),
+    participants: [state.currentUser.uid, "admin"].filter(Boolean),
+    participantIds: [state.currentUser.uid, "admin"].filter(Boolean),
+    updatedAt: getServerTimestamp()
+  }, { merge: true });
+
+  if (subscribeAfter) subscribeToCurrentChat(chat.id);
+  return chat.id;
+}
+
+function subscribeToCurrentChat(chatId) {
+  if (!db || !chatId) return;
+
+  stopChatSubscription();
+  updateChatHiddenFields(chatId);
+  setChatStatus("syncing", t("chatSyncing"));
+
+  try {
+    state.currentChatUnsub = db
+      .collection("chats")
+      .doc(chatId)
+      .collection("messages")
+      .orderBy("createdAt", "asc")
+      .onSnapshot(
+        async (snap) => {
+          const messages = [];
+          snap.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
+
+          if (!messages.length) {
+            try {
+              const fallback = await db.collection("messages").where("chatId", "==", chatId).get();
+              fallback.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
+              messages.sort((a, b) => {
+                const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
+                const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
+                return at - bt;
+              });
+            } catch (err) {
+              console.warn("fallback root messages failed:", err);
+            }
+          }
+
+          const prevLen = state.chatMessages.length;
+          state.chatMessages = messages.map(normalizeMessage);
+
+          if (!state.chatOpen && state.chatMessages.length > prevLen) {
+            const newIncoming = state.chatMessages.slice(prevLen).filter((msg) => msg.role === "admin").length;
+            if (newIncoming > 0) {
+              state.chatUnread += newIncoming;
+            }
+          }
+
+          setUnreadBadge();
+          setChatStatus("connected", t("chatConnected"));
+          renderChatMessages();
+        },
+        async (error) => {
+          console.error("chat subscription error:", error);
+          setChatStatus("error", t("chatError"));
+
+          try {
+            const fallback = await db.collection("messages").where("chatId", "==", chatId).get();
+            const messages = [];
+            fallback.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
+            messages.sort((a, b) => {
+              const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
+              const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
+              return at - bt;
+            });
+            state.chatMessages = messages.map(normalizeMessage);
+            renderChatMessages();
+          } catch (err) {
+            console.warn("chat fallback load failed:", err);
+          }
+        }
+      );
+  } catch (error) {
+    console.error("subscribeToCurrentChat fatal:", error);
+    setChatStatus("error", t("chatError"));
+  }
+}
+
+async function openChat() {
+  if (!state.currentUser) {
+    showAuthModal("login");
+    return;
+  }
+
   state.chatOpen = true;
   state.chatUnread = 0;
+  setUnreadBadge();
 
   if (els.chatModal) els.chatModal.classList.add("active");
-  if (els.chatUnreadBadge) els.chatUnreadBadge.textContent = "0";
   els.body.classList.add("modal-open");
 
   renderChatMessages();
 
+  try {
+    await ensureSupportChat(true);
+  } catch (error) {
+    console.error("openChat ensureSupportChat:", error);
+    setChatStatus("error", t("chatError"));
+  }
+
   setTimeout(() => {
     if (els.chatMessages) els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
   }, 80);
-
-  if (db && state.currentUser) {
-    db.collection("chats")
-      .doc(state.currentUser.uid)
-      .collection("messages")
-      .orderBy("timestamp")
-      .limit(50)
-      .get()
-      .then((snap) => {
-        const msgs = [];
-        snap.forEach((doc) => msgs.push(doc.data()));
-        if (msgs.length) {
-          state.chatMessages = msgs;
-          renderChatMessages();
-        }
-      })
-      .catch(() => {});
-  }
 }
 
 function closeChat() {
@@ -1171,18 +1514,19 @@ function renderChatMessages() {
 
   if (!state.chatMessages.length) {
     els.chatMessages.innerHTML = `
-      <div class="chat-empty-state">
+      <div class="chat-empty-state" id="chat-empty-state">
         <i class="ph ph-chat-dots" style="font-size:2rem;display:block;margin-bottom:10px;color:var(--primary)"></i>
-        <p style="font-weight:700">${t("chatWelcome")}</p>
+        <p style="font-weight:700">${t("noMessages")}</p>
+        <p>${t("startConversation")}</p>
       </div>
     `;
     return;
   }
 
   els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
-    const role = msg.role || msg.sender || "customer";
-    const text = msg.text || msg.message || "";
-    const time = msg.time || msg.timestamp?.toDate?.()?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) || "";
+    const role = msg.role || "customer";
+    const text = msg.text || "";
+    const time = msg.time || "";
 
     return `
       <div class="chat-message ${escapeHtml(role)}">
@@ -1197,52 +1541,75 @@ function renderChatMessages() {
   }, 60);
 }
 
-function sendChatMessage() {
-  const text = els.chatInput?.value?.trim();
-  if (!text) return;
+async function sendChatMessage(e) {
+  if (e) e.preventDefault();
 
-  const msg = {
-    text,
-    role: "customer",
-    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    timestamp: new Date()
-  };
-
-  state.chatMessages.push(msg);
-  safeJsonSet("ore_chat_messages", state.chatMessages);
-
-  els.chatInput.value = "";
-  renderChatMessages();
-
-  if (db && state.currentUser) {
-    db.collection("chats")
-      .doc(state.currentUser.uid)
-      .collection("messages")
-      .add({
-        ...msg,
-        userId: state.currentUser.uid
-      })
-      .catch(() => {});
+  if (!state.currentUser) {
+    showAuthModal("login");
+    return;
   }
 
-  setTimeout(() => {
-    const autoReply = {
-      text: state.lang === "ar"
-        ? "شكراً لتواصلك! استلمنا رسالتك وسيتم الرد عليك قريباً."
-        : "Thanks for reaching out! Our team will reply shortly.",
-      role: "admin",
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const text = els.chatInput?.value?.trim();
+  if (!text) return;
+  if (!db) return showToast(t("firebaseMissing"), "error");
+
+  const btn = els.chatSendBtn;
+  if (btn) {
+    btn.disabled = true;
+    btn.dataset.originalHtml = btn.dataset.originalHtml || btn.innerHTML;
+    btn.innerHTML = `<i class="ph ph-spinner-gap ph-spin"></i><span>${escapeHtml(t("sendMessage"))}</span>`;
+  }
+
+  try {
+    const chatId = await ensureSupportChat(true);
+    if (!chatId) {
+      showToast(t("chatError"), "error");
+      return;
+    }
+
+    const payload = {
+      text,
+      message: text,
+      senderRole: "customer",
+      senderName: getCurrentUserName(state.currentUser),
+      userId: state.currentUser.uid,
+      userEmail: getCurrentUserEmail(state.currentUser),
+      createdAt: getServerTimestamp()
     };
 
-    state.chatMessages.push(autoReply);
-    safeJsonSet("ore_chat_messages", state.chatMessages);
-    renderChatMessages();
+    const chatRef = db.collection("chats").doc(chatId);
 
-    if (!state.chatOpen) {
-      state.chatUnread++;
-      if (els.chatUnreadBadge) els.chatUnreadBadge.textContent = String(state.chatUnread);
+    try {
+      await chatRef.collection("messages").add(payload);
+    } catch {
+      await db.collection("messages").add({
+        ...payload,
+        chatId
+      });
     }
-  }, 1200);
+
+    await chatRef.set({
+      userId: state.currentUser.uid,
+      userName: getCurrentUserName(state.currentUser),
+      userEmail: getCurrentUserEmail(state.currentUser),
+      lastMessage: text,
+      lastText: text,
+      lastMessageAt: getServerTimestamp(),
+      updatedAt: getServerTimestamp()
+    }, { merge: true });
+
+    if (els.chatInput) els.chatInput.value = "";
+    setChatStatus("connected", t("supportReady"));
+  } catch (error) {
+    console.error("sendChatMessage error:", error);
+    showToast(t("chatError"), "error");
+    setChatStatus("error", t("chatError"));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+    }
+  }
 }
 
 // ──────────────────────────────────────────
@@ -1394,10 +1761,14 @@ function setupEventListeners() {
   if (navAuthBtn && navAuthBtn !== profileMenu) {
     navAuthBtn.addEventListener("click", (e) => {
       const href = navAuthBtn.getAttribute("href");
+      if (!state.currentUser) {
+        e.preventDefault();
+        showAuthModal("login");
+        return;
+      }
       if (!href || href === "#" || href.includes("auth.html") === false) {
         e.preventDefault();
-        if (state.currentUser) toggleProfileDropdown();
-        else showAuthModal("login");
+        toggleProfileDropdown();
       }
     });
   }
@@ -1418,16 +1789,6 @@ function setupEventListeners() {
   $("login-submit-btn")?.addEventListener("click", handleLogin);
   $("register-submit-btn")?.addEventListener("click", handleRegister);
   $("forgot-submit-btn")?.addEventListener("click", handleForgot);
-
-  $("[data-show-form='register']")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthForm("register");
-  });
-
-  $("[data-show-form='login']")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthForm("login");
-  });
 
   $("go-to-register")?.addEventListener("click", (e) => {
     e.preventDefault();
@@ -1563,14 +1924,18 @@ function setupEventListeners() {
     });
   }
 
-  if (els.chatSendBtn) els.chatSendBtn.addEventListener("click", sendChatMessage);
+  if (els.chatSendForm) {
+    els.chatSendForm.addEventListener("submit", sendChatMessage);
+  } else if (els.chatSendBtn) {
+    els.chatSendBtn.addEventListener("click", sendChatMessage);
+  }
 
   if (els.chatInput) {
     els.chatInput.placeholder = t("chatPlaceholder");
     els.chatInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendChatMessage();
+        sendChatMessage(e);
       }
     });
   }
@@ -1625,6 +1990,8 @@ function init() {
   setupEventListeners();
   setupScrollReveal();
   handleScroll();
+  setUnreadBadge();
+  setChatStatus("syncing", t("chatPreparing"));
 
   if (auth) {
     auth.onAuthStateChanged((user) => {
