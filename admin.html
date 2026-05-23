@@ -1,1369 +1,1844 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
-
+<html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OreBooking Admin Panel</title>
-    <meta name="theme-color" content="#435abf" />
-    <meta name="format-detection" content="telephone=no" />
-
-    <link rel="icon" type="image/png" href="logos/orebooking.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
-    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-    <style>
-        :root {
-            --primary: #435abf;
-            --primary-hover: #34459c;
-            --accent: #657be0;
-            --bg-color: #f8fafc;
-            --surface-color: #ffffff;
-            --surface-alt: #f1f5f9;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --success: #10b981;
-            --error: #ef4444;
-            --warning: #f59e0b;
-            --info: #0ea5e9;
-            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
-            --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-            --radius-full: 9999px;
-            --transition: all 0.28s ease;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background:
-                radial-gradient(circle at top, rgba(67, 90, 191, 0.08), transparent 30%),
-                var(--bg-color);
-            color: var(--text-main);
-            min-height: 100vh;
-        }
-
-        html[dir="rtl"] body {
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        img {
-            display: block;
-            max-width: 100%;
-        }
-
-        button,
-        input,
-        select,
-        textarea {
-            font: inherit;
-        }
-
-        a {
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .page-shell {
-            min-height: 100vh;
-        }
-
-        .login-screen {
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-        }
-
-        .login-card {
-            width: min(460px, 100%);
-            background: rgba(255, 255, 255, 0.94);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(226, 232, 240, 0.95);
-            border-radius: 32px;
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-        }
-
-        .login-card-top {
-            padding: 34px 30px 22px;
-            text-align: center;
-            border-bottom: 1px solid var(--border-color);
-            background:
-                linear-gradient(180deg, rgba(67, 90, 191, 0.06), rgba(67, 90, 191, 0.02));
-        }
-
-        .admin-logo-wrap {
-            width: 132px;
-            height: 132px;
-            margin: 0 auto 18px;
-            border-radius: 30px;
-            background: #fff;
-            border: 1px solid var(--border-color);
-            display: grid;
-            place-items: center;
-            box-shadow: var(--shadow-sm);
-            padding: 16px;
-        }
-
-        .admin-logo-wrap img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .login-title {
-            font-size: 1.7rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-            color: var(--text-main);
-        }
-
-        .login-subtitle {
-            color: var(--text-muted);
-            line-height: 1.7;
-            font-size: 0.96rem;
-        }
-
-        .login-card-body {
-            padding: 28px 30px 30px;
-        }
-
-        .message-box {
-            display: none;
-            margin-bottom: 16px;
-            padding: 13px 14px;
-            border-radius: 14px;
-            font-weight: 700;
-            font-size: 0.93rem;
-        }
-
-        .message-box.error {
-            display: block;
-            background: rgba(239, 68, 68, 0.08);
-            color: #b91c1c;
-            border: 1px solid rgba(239, 68, 68, 0.18);
-        }
-
-        .message-box.success {
-            display: block;
-            background: rgba(16, 185, 129, 0.08);
-            color: #047857;
-            border: 1px solid rgba(16, 185, 129, 0.18);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 0.92rem;
-            font-weight: 800;
-            color: var(--text-main);
-        }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-            width: 100%;
-            border: 1px solid var(--border-color);
-            background: var(--surface-alt);
-            color: var(--text-main);
-            border-radius: 14px;
-            padding: 14px 16px;
-            outline: none;
-            transition: var(--transition);
-        }
-
-        .form-textarea {
-            min-height: 110px;
-            resize: vertical;
-        }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(67, 90, 191, 0.12);
-        }
-
-        .password-wrap {
-            position: relative;
-        }
-
-        .toggle-password-btn {
-            position: absolute;
-            top: 50%;
-            inset-inline-end: 10px;
-            transform: translateY(-50%);
-            width: 38px;
-            height: 38px;
-            border: none;
-            border-radius: 10px;
-            background: transparent;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-
-        .primary-btn,
-        .secondary-btn,
-        .danger-btn,
-        .chip-btn {
-            border: none;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .primary-btn {
-            width: 100%;
-            min-height: 52px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            color: #fff;
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            box-shadow: 0 8px 18px rgba(67, 90, 191, 0.28);
-        }
-
-        .primary-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .secondary-btn,
-        .danger-btn,
-        .chip-btn {
-            min-height: 42px;
-            padding: 0 14px;
-            border-radius: 12px;
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .secondary-btn {
-            background: var(--surface-alt);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-        }
-
-        .danger-btn {
-            background: rgba(239, 68, 68, 0.08);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #b91c1c;
-        }
-
-        .chip-btn {
-            background: rgba(67, 90, 191, 0.08);
-            border: 1px solid rgba(67, 90, 191, 0.16);
-            color: var(--primary);
-        }
-
-        .admin-app {
-            display: none;
-            min-height: 100vh;
-        }
-
-        .admin-app.active {
-            display: grid;
-            grid-template-columns: 290px minmax(0, 1fr);
-        }
-
-        .sidebar {
-            background: #0f172a;
-            color: #f8fafc;
-            padding: 22px 18px;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            border-inline-end: 1px solid rgba(148, 163, 184, 0.12);
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 10px 10px 20px;
-            margin-bottom: 14px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .sidebar-brand-logo {
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
-            background: #fff;
-            display: grid;
-            place-items: center;
-            padding: 8px;
-            flex-shrink: 0;
-        }
-
-        .sidebar-brand-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .sidebar-brand-text strong {
-            display: block;
-            font-size: 1rem;
-            font-weight: 800;
-            margin-bottom: 4px;
-        }
-
-        .sidebar-brand-text span {
-            color: #94a3b8;
-            font-size: 0.88rem;
-        }
-
-        .nav-list {
-            display: grid;
-            gap: 8px;
-        }
-
-        .nav-btn {
-            width: 100%;
-            border: 1px solid transparent;
-            background: transparent;
-            color: #e2e8f0;
-            padding: 13px 14px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-            text-align: start;
-            font-weight: 700;
-            transition: var(--transition);
-        }
-
-        .nav-btn:hover,
-        .nav-btn.active {
-            background: rgba(67, 90, 191, 0.16);
-            border-color: rgba(99, 102, 241, 0.2);
-            color: #fff;
-        }
-
-        .sidebar-footer {
-            position: absolute;
-            inset-inline: 18px;
-            bottom: 18px;
-            display: grid;
-            gap: 12px;
-        }
-
-        .sidebar-user {
-            background: rgba(148, 163, 184, 0.08);
-            border: 1px solid rgba(148, 163, 184, 0.12);
-            border-radius: 16px;
-            padding: 14px;
-        }
-
-        .sidebar-user strong {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 0.94rem;
-        }
-
-        .sidebar-user span {
-            color: #94a3b8;
-            font-size: 0.84rem;
-            word-break: break-word;
-        }
-
-        .main-content {
-            padding: 24px;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 18px;
-            margin-bottom: 24px;
-        }
-
-        .topbar h1 {
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-        }
-
-        .topbar p {
-            color: var(--text-muted);
-            margin-top: 6px;
-        }
-
-        .topbar-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .section-panel {
-            display: none;
-        }
-
-        .section-panel.active {
-            display: block;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 22px;
-            padding: 20px;
-            box-shadow: var(--shadow-md);
-        }
-
-        .stat-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 14px;
-        }
-
-        .stat-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            font-size: 1.25rem;
-            color: var(--primary);
-            background: rgba(67, 90, 191, 0.1);
-        }
-
-        .stat-label {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            font-weight: 700;
-        }
-
-        .stat-value {
-            font-size: 1.9rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-            gap: 18px;
-        }
-
-        .panel-card {
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            box-shadow: var(--shadow-md);
-            overflow: hidden;
-        }
-
-        .panel-head {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .panel-head h2 {
-            font-size: 1.08rem;
-            font-weight: 800;
-        }
-
-        .panel-body {
-            padding: 18px 20px 20px;
-        }
-
-        .owner-list,
-        .bookings-list,
-        .properties-list,
-        .messages-list {
-            display: grid;
-            gap: 14px;
-        }
-
-        .owner-card,
-        .booking-card,
-        .property-card,
-        .message-card {
-            border: 1px solid var(--border-color);
-            border-radius: 18px;
-            background: var(--surface-alt);
-            padding: 16px;
-        }
-
-        .owner-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            flex-wrap: wrap;
-        }
-
-        .owner-meta strong,
-        .booking-main strong,
-        .property-main strong,
-        .message-card strong {
-            display: block;
-            font-size: 1rem;
-            font-weight: 800;
-            margin-bottom: 5px;
-        }
-
-        .owner-meta span,
-        .booking-main span,
-        .property-main span,
-        .message-card span,
-        .muted-line {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            line-height: 1.7;
-        }
-
-        .booking-card {
-            background: #fff;
-        }
-
-        .booking-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 14px;
-        }
-
-        .booking-main {
-            flex: 1;
-            min-width: 240px;
-        }
-
-        .booking-badges {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: flex-start;
-        }
-
-        .status-badge,
-        .room-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            min-height: 36px;
-            padding: 0 12px;
-            border-radius: 999px;
-            font-size: 0.84rem;
-            font-weight: 800;
-        }
-
-        .status-pending {
-            background: rgba(245, 158, 11, 0.12);
-            color: #b45309;
-        }
-
-        .status-confirmed {
-            background: rgba(16, 185, 129, 0.12);
-            color: #047857;
-        }
-
-        .status-cancelled,
-        .status-rejected {
-            background: rgba(239, 68, 68, 0.12);
-            color: #b91c1c;
-        }
-
-        .room-badge {
-            background: rgba(14, 165, 233, 0.1);
-            color: #0369a1;
-        }
-
-        .booking-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 14px;
-        }
-
-        .property-card {
-            display: flex;
-            gap: 14px;
-            align-items: center;
-            flex-wrap: wrap;
-            background: #fff;
-        }
-
-        .property-thumb {
-            width: 112px;
-            height: 88px;
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            flex-shrink: 0;
-            background: #e2e8f0;
-        }
-
-        .property-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .property-main {
-            flex: 1;
-            min-width: 220px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 32px 20px;
-            border: 1px dashed var(--border-color);
-            border-radius: 18px;
-            color: var(--text-muted);
-            background: var(--surface-alt);
-        }
-
-        .two-col-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        @media (max-width: 1180px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .content-grid,
-            .two-col-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 980px) {
-            .admin-app.active {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                position: static;
-                height: auto;
-                border-inline-end: none;
-                border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-            }
-
-            .sidebar-footer {
-                position: static;
-                inset: auto;
-                margin-top: 18px;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .login-card-top,
-            .login-card-body,
-            .main-content {
-                padding-left: 18px;
-                padding-right: 18px;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .topbar {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div class="page-shell">
-        <section id="login-screen" class="login-screen">
-            <div class="login-card">
-                <div class="login-card-top">
-                    <div class="admin-logo-wrap">
-                        <img id="login-logo" src="logos/orebooking.png" alt="OreBooking Logo" />
-                    </div>
-                    <h1 class="login-title">OreBooking Admin</h1>
-                    <p class="login-subtitle">Sign in to manage bookings, properties, owners, and support messages.</p>
-                </div>
-
-                <div class="login-card-body">
-                    <div id="login-message" class="message-box"></div>
-
-                    <form id="admin-login-form">
-                        <div class="form-group">
-                            <label class="form-label" for="admin-email">Email</label>
-                            <input class="form-input" id="admin-email" type="email" autocomplete="email" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="admin-password">Password</label>
-                            <div class="password-wrap">
-                                <input class="form-input" id="admin-password" type="password" autocomplete="current-password" required />
-                                <button type="button" class="toggle-password-btn" id="toggle-password-btn" aria-label="Toggle password">
-                                    <i class="ph ph-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="primary-btn">
-                            <i class="ph ph-sign-in"></i>
-                            <span>Login to Dashboard</span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <section id="admin-app" class="admin-app">
-            <aside class="sidebar">
-                <div class="sidebar-brand">
-                    <div class="sidebar-brand-logo">
-                        <img src="logos/orebooking.png" alt="OreBooking" />
-                    </div>
-                    <div class="sidebar-brand-text">
-                        <strong>OreBooking Admin</strong>
-                        <span>Management Panel</span>
-                    </div>
-                </div>
-
-                <div class="nav-list">
-                    <button class="nav-btn active" data-section="dashboard">
-                        <i class="ph ph-squares-four"></i>
-                        <span>Dashboard</span>
-                    </button>
-                    <button class="nav-btn" data-section="bookings">
-                        <i class="ph ph-calendar-check"></i>
-                        <span>Bookings</span>
-                    </button>
-                    <button class="nav-btn" data-section="properties">
-                        <i class="ph ph-buildings"></i>
-                        <span>Properties</span>
-                    </button>
-                    <button class="nav-btn" data-section="owners">
-                        <i class="ph ph-users-three"></i>
-                        <span>Owners</span>
-                    </button>
-                    <button class="nav-btn" data-section="messages">
-                        <i class="ph ph-chat-centered-text"></i>
-                        <span>Messages</span>
-                    </button>
-                </div>
-
-                <div class="sidebar-footer">
-                    <div class="sidebar-user">
-                        <strong id="admin-user-name">Admin</strong>
-                        <span id="admin-user-email">admin@orebooking.com</span>
-                    </div>
-                    <button id="logout-btn" class="danger-btn">
-                        <i class="ph ph-sign-out"></i>
-                        <span>Logout</span>
-                    </button>
-                </div>
-            </aside>
-
-            <main class="main-content">
-                <div class="topbar">
-                    <div>
-                        <h1 id="section-title">Dashboard</h1>
-                        <p id="section-subtitle">Overview of bookings, properties, owners, and recent activity.</p>
-                    </div>
-                    <div class="topbar-actions">
-                        <button class="chip-btn" id="refresh-btn">
-                            <i class="ph ph-arrow-clockwise"></i>
-                            <span>Refresh</span>
-                        </button>
-                    </div>
-                </div>
-
-                <section class="section-panel active" id="section-dashboard">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-head">
-                                <div class="stat-label">Total Bookings</div>
-                                <div class="stat-icon"><i class="ph ph-calendar-check"></i></div>
-                            </div>
-                            <div class="stat-value" id="stat-bookings">0</div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-head">
-                                <div class="stat-label">Pending Bookings</div>
-                                <div class="stat-icon"><i class="ph ph-hourglass-medium"></i></div>
-                            </div>
-                            <div class="stat-value" id="stat-pending">0</div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-head">
-                                <div class="stat-label">Properties</div>
-                                <div class="stat-icon"><i class="ph ph-house-line"></i></div>
-                            </div>
-                            <div class="stat-value" id="stat-properties">0</div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-head">
-                                <div class="stat-label">Owners</div>
-                                <div class="stat-icon"><i class="ph ph-users"></i></div>
-                            </div>
-                            <div class="stat-value" id="stat-owners">3</div>
-                        </div>
-                    </div>
-
-                    <div class="content-grid">
-                        <div class="panel-card">
-                            <div class="panel-head">
-                                <h2>Recent Bookings</h2>
-                            </div>
-                            <div class="panel-body">
-                                <div id="recent-bookings-list" class="bookings-list"></div>
-                            </div>
-                        </div>
-
-                        <div class="panel-card">
-                            <div class="panel-head">
-                                <h2>Property Owners</h2>
-                            </div>
-                            <div class="panel-body">
-                                <div id="owners-list-dashboard" class="owner-list"></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="section-panel" id="section-bookings">
-                    <div class="panel-card">
-                        <div class="panel-head">
-                            <h2>Manage Bookings</h2>
-                        </div>
-                        <div class="panel-body">
-                            <div id="all-bookings-list" class="bookings-list"></div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="section-panel" id="section-properties">
-                    <div class="panel-card">
-                        <div class="panel-head">
-                            <h2>Properties</h2>
-                        </div>
-                        <div class="panel-body">
-                            <div id="properties-list" class="properties-list"></div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="section-panel" id="section-owners">
-                    <div class="two-col-grid">
-                        <div class="panel-card">
-                            <div class="panel-head">
-                                <h2>Property Owners</h2>
-                            </div>
-                            <div class="panel-body">
-                                <div id="owners-list-full" class="owner-list"></div>
-                            </div>
-                        </div>
-
-                        <div class="panel-card">
-                            <div class="panel-head">
-                                <h2>Owner Notes</h2>
-                            </div>
-                            <div class="panel-body">
-                                <div class="owner-card">
-                                    <div class="owner-meta">
-                                        <strong>PALM GARDEN</strong>
-                                        <span>Property owner account is ready for reservations and booking updates.</span>
-                                    </div>
-                                </div>
-                                <div class="owner-card" style="margin-top:14px;">
-                                    <div class="owner-meta">
-                                        <strong>Tedjani Hotel</strong>
-                                        <span>Property owner account is ready for reservation approval and room assignment.</span>
-                                    </div>
-                                </div>
-                                <div class="owner-card" style="margin-top:14px;">
-                                    <div class="owner-meta">
-                                        <strong>Gazel D’or</strong>
-                                        <span>Property owner account is ready for reservation confirmation and guest replies.</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="section-panel" id="section-messages">
-                    <div class="panel-card">
-                        <div class="panel-head">
-                            <h2>Support Messages</h2>
-                        </div>
-                        <div class="panel-body">
-                            <div id="messages-list" class="messages-list"></div>
-                        </div>
-                    </div>
-                </section>
-            </main>
-        </section>
-    </div>
-
-    <script>
-        (() => {
-            const firebaseConfig = {
-                apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
-                authDomain: "orebooking-website.firebaseapp.com",
-                projectId: "orebooking-website",
-                storageBucket: "orebooking-website.firebasestorage.app",
-                messagingSenderId: "1012887567747",
-                appId: "1:1012887567747:web:153b57b60cb143d88acab6"
-            };
-
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            const auth = firebase.auth();
-            const db = firebase.firestore();
-
-            const $ = (id) => document.getElementById(id);
-
-            const OWNER_LIST = [
-                { name: "PALM GARDEN", email: "palmgarden@orebooking.com" },
-                { name: "Tedjani Hotel", email: "tedjanihotel@orebooking.com" },
-                { name: "Gazel D’or", email: "gazeldor@orebooking.com" }
-            ];
-
-            const sectionMeta = {
-                dashboard: {
-                    title: "Dashboard",
-                    subtitle: "Overview of bookings, properties, owners, and recent activity."
-                },
-                bookings: {
-                    title: "Bookings",
-                    subtitle: "Approve, reject, and monitor all reservation requests."
-                },
-                properties: {
-                    title: "Properties",
-                    subtitle: "Review property listings and linked owner information."
-                },
-                owners: {
-                    title: "Owners",
-                    subtitle: "Manage property owner accounts and contacts."
-                },
-                messages: {
-                    title: "Messages",
-                    subtitle: "Track support conversations and customer communication."
-                }
-            };
-
-            let currentAdmin = null;
-            let bookingsData = [];
-            let propertiesData = [];
-            let messagesData = [];
-
-            function showLoginMessage(message, type = "error") {
-                const box = $("login-message");
-                box.className = `message-box ${type}`;
-                box.textContent = message;
-            }
-
-            function clearLoginMessage() {
-                const box = $("login-message");
-                box.className = "message-box";
-                box.textContent = "";
-            }
-
-            function setAuthView(isLoggedIn) {
-                $("login-screen").classList.toggle("hidden", isLoggedIn);
-                $("admin-app").classList.toggle("active", isLoggedIn);
-            }
-
-            function togglePassword() {
-                const input = $("admin-password");
-                const icon = $("toggle-password-btn").querySelector("i");
-                const isPassword = input.type === "password";
-                input.type = isPassword ? "text" : "password";
-                icon.className = isPassword ? "ph ph-eye-slash" : "ph ph-eye";
-            }
-
-            function switchSection(sectionName) {
-                document.querySelectorAll(".nav-btn").forEach(btn => {
-                    btn.classList.toggle("active", btn.dataset.section === sectionName);
-                });
-
-                document.querySelectorAll(".section-panel").forEach(section => {
-                    section.classList.toggle("active", section.id === `section-${sectionName}`);
-                });
-
-                $("section-title").textContent = sectionMeta[sectionName].title;
-                $("section-subtitle").textContent = sectionMeta[sectionName].subtitle;
-            }
-
-            function getStatusClass(status) {
-                const s = String(status || "pending").toLowerCase();
-                if (s === "confirmed") return "status-confirmed";
-                if (s === "cancelled" || s === "rejected") return "status-rejected";
-                return "status-pending";
-            }
-
-            function getStatusLabel(status) {
-                const s = String(status || "pending").toLowerCase();
-                if (s === "confirmed") return "Confirmed";
-                if (s === "cancelled") return "Cancelled";
-                if (s === "rejected") return "Rejected";
-                return "Pending";
-            }
-
-            function escapeHtml(text) {
-                const div = document.createElement("div");
-                div.textContent = String(text ?? "");
-                return div.innerHTML;
-            }
-
-            function getPropertyImage(property) {
-                if (!property) return "images/placeholder.jpg";
-                if (Array.isArray(property.images) && property.images.length) return property.images[0];
-                if (property.imageUrl) return property.imageUrl;
-                if (property.mainImage) return property.mainImage;
-                return "images/placeholder.jpg";
-            }
-
-            function getPropertyTitle(property) {
-                if (!property) return "Untitled Property";
-                return property.title || property.titleEn || property.titleAr || "Untitled Property";
-            }
-
-            function getOwnerNameByProperty(property) {
-                if (!property) return "PALM GARDEN";
-                return property.ownerName || property.hostName || property.owner || "PALM GARDEN";
-            }
-
-            function getTwoDigitRoomNumber() {
-                return String(Math.floor(Math.random() * 90) + 10);
-            }
-
-            async function loginAdmin(event) {
-                event.preventDefault();
-                clearLoginMessage();
-
-                const email = $("admin-email").value.trim();
-                const password = $("admin-password").value;
-
-                if (!email || !password) {
-                    showLoginMessage("Please enter email and password.");
-                    return;
-                }
-
-                try {
-                    await auth.signInWithEmailAndPassword(email, password);
-                } catch (error) {
-                    showLoginMessage(error.message || "Login failed.");
-                }
-            }
-
-            async function logoutAdmin() {
-                await auth.signOut();
-            }
-
-            function renderOwners() {
-                const html = OWNER_LIST.map(owner => `
-                    <div class="owner-card">
-                        <div class="owner-meta">
-                            <strong>${escapeHtml(owner.name)}</strong>
-                            <span>${escapeHtml(owner.email)}</span>
-                        </div>
-                        <button class="chip-btn" type="button">
-                            <i class="ph ph-envelope-simple"></i>
-                            <span>${escapeHtml(owner.email)}</span>
-                        </button>
-                    </div>
-                `).join("");
-
-                $("owners-list-dashboard").innerHTML = html;
-                $("owners-list-full").innerHTML = html;
-            }
-
-            function renderStats() {
-                $("stat-bookings").textContent = String(bookingsData.length);
-                $("stat-pending").textContent = String(bookingsData.filter(b => String(b.status || "pending").toLowerCase() === "pending").length);
-                $("stat-properties").textContent = String(propertiesData.length);
-                $("stat-owners").textContent = String(OWNER_LIST.length);
-            }
-
-            function renderProperties() {
-                const wrap = $("properties-list");
-
-                if (!propertiesData.length) {
-                    wrap.innerHTML = `<div class="empty-state">No properties found.</div>`;
-                    return;
-                }
-
-                wrap.innerHTML = propertiesData.map(property => `
-                    <div class="property-card">
-                        <div class="property-thumb">
-                            <img src="${escapeHtml(getPropertyImage(property))}" alt="${escapeHtml(getPropertyTitle(property))}" onerror="this.src='images/placeholder.jpg'">
-                        </div>
-                        <div class="property-main">
-                            <strong>${escapeHtml(getPropertyTitle(property))}</strong>
-                            <span>${escapeHtml(property.location || property.locationEn || property.locationAr || "No location")}</span><br>
-                            <span>Owner: ${escapeHtml(getOwnerNameByProperty(property))}</span>
-                        </div>
-                    </div>
-                `).join("");
-            }
-
-            function renderMessages() {
-                const wrap = $("messages-list");
-
-                if (!messagesData.length) {
-                    wrap.innerHTML = `<div class="empty-state">No messages found.</div>`;
-                    return;
-                }
-
-                wrap.innerHTML = messagesData.map(msg => `
-                    <div class="message-card">
-                        <strong>${escapeHtml(msg.subject || msg.userName || "Support Message")}</strong>
-                        <span>${escapeHtml(msg.email || msg.userEmail || "No email")}</span><br>
-                        <span>${escapeHtml(msg.message || msg.text || "No message content")}</span>
-                    </div>
-                `).join("");
-            }
-
-            function bookingCardTemplate(booking, compact = false) {
-                const status = String(booking.status || "pending").toLowerCase();
-                const roomNumber = booking.roomNumber ? String(booking.roomNumber).padStart(2, "0") : null;
-
-                return `
-                    <div class="booking-card">
-                        <div class="booking-top">
-                            <div class="booking-main">
-                                <strong>${escapeHtml(booking.propertyTitle || "Property Booking")}</strong>
-                                <span>Guest: ${escapeHtml(booking.userEmail || booking.email || "No email")}</span><br>
-                                <span>Dates: ${escapeHtml(booking.checkIn || "-")} → ${escapeHtml(booking.checkOut || "-")}</span><br>
-                                <span>Guests: ${escapeHtml(String(booking.guests || 1))}</span>
-                            </div>
-                            <div class="booking-badges">
-                                <span class="status-badge ${getStatusClass(status)}">
-                                    <i class="ph ph-circle"></i>
-                                    <span>${escapeHtml(getStatusLabel(status))}</span>
-                                </span>
-                                ${roomNumber ? `
-                                    <span class="room-badge">
-                                        <i class="ph ph-door"></i>
-                                        <span>Room ${escapeHtml(roomNumber)}</span>
-                                    </span>
-                                ` : ""}
-                            </div>
-                        </div>
-                        ${compact ? "" : `
-                            <div class="booking-actions">
-                                <button class="secondary-btn approve-booking-btn" data-id="${escapeHtml(booking.id)}">
-                                    <i class="ph ph-check"></i>
-                                    <span>Approve</span>
-                                </button>
-                                <button class="danger-btn reject-booking-btn" data-id="${escapeHtml(booking.id)}">
-                                    <i class="ph ph-x"></i>
-                                    <span>Reject</span>
-                                </button>
-                            </div>
-                        `}
-                    </div>
-                `;
-            }
-
-            function renderBookings() {
-                const recentWrap = $("recent-bookings-list");
-                const allWrap = $("all-bookings-list");
-
-                if (!bookingsData.length) {
-                    const empty = `<div class="empty-state">No bookings found.</div>`;
-                    recentWrap.innerHTML = empty;
-                    allWrap.innerHTML = empty;
-                    return;
-                }
-
-                recentWrap.innerHTML = bookingsData.slice(0, 5).map(booking => bookingCardTemplate(booking, true)).join("");
-                allWrap.innerHTML = bookingsData.map(booking => bookingCardTemplate(booking, false)).join("");
-
-                allWrap.querySelectorAll(".approve-booking-btn").forEach(btn => {
-                    btn.addEventListener("click", () => approveBooking(btn.dataset.id));
-                });
-
-                allWrap.querySelectorAll(".reject-booking-btn").forEach(btn => {
-                    btn.addEventListener("click", () => rejectBooking(btn.dataset.id));
-                });
-            }
-
-            async function loadProperties() {
-                try {
-                    const snap = await db.collection("properties").get();
-                    propertiesData = [];
-                    snap.forEach(doc => propertiesData.push({ id: doc.id, ...doc.data() }));
-                } catch (error) {
-                    propertiesData = [];
-                }
-            }
-
-            async function loadBookings() {
-                try {
-                    const snap = await db.collection("bookings").orderBy("createdAt", "desc").get();
-                    bookingsData = [];
-                    snap.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
-                } catch (error) {
-                    try {
-                        const snap = await db.collection("bookings").get();
-                        bookingsData = [];
-                        snap.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
-                    } catch {
-                        bookingsData = [];
-                    }
-                }
-            }
-
-            async function loadMessages() {
-                const collectionsToTry = ["supportMessages", "messages", "chats"];
-                messagesData = [];
-
-                for (const name of collectionsToTry) {
-                    try {
-                        const snap = await db.collection(name).get();
-                        if (!snap.empty) {
-                            snap.forEach(doc => messagesData.push({ id: doc.id, ...doc.data() }));
-                            break;
-                        }
-                    } catch {}
-                }
-            }
-
-            async function approveBooking(bookingId) {
-                const booking = bookingsData.find(item => item.id === bookingId);
-                if (!booking) return;
-
-                const roomNumber = getTwoDigitRoomNumber();
-                const autoReply = `Your booking has been accepted. Room number: ${roomNumber}`;
-
-                const updateData = {
-                    status: "confirmed",
-                    roomNumber,
-                    approvalReply: autoReply,
-                    ownerReply: autoReply,
-                    approvedAt: new Date(),
-                    updatedAt: new Date()
-                };
-
-                await db.collection("bookings").doc(bookingId).set(updateData, { merge: true });
-
-                if (booking.userId) {
-                    await db.collection("notifications").add({
-                        userId: booking.userId,
-                        bookingId,
-                        title: "Booking Confirmed",
-                        message: autoReply,
-                        type: "booking_confirmed",
-                        createdAt: new Date(),
-                        read: false
-                    });
-                }
-
-                await loadAllData();
-            }
-
-            async function rejectBooking(bookingId) {
-                await db.collection("bookings").doc(bookingId).set({
-                    status: "rejected",
-                    updatedAt: new Date(),
-                    ownerReply: "Your booking request was not approved."
-                }, { merge: true });
-
-                await loadAllData();
-            }
-
-            async function loadAllData() {
-                await Promise.all([
-                    loadBookings(),
-                    loadProperties(),
-                    loadMessages()
-                ]);
-                renderStats();
-                renderOwners();
-                renderBookings();
-                renderProperties();
-                renderMessages();
-            }
-
-            function bindEvents() {
-                $("admin-login-form").addEventListener("submit", loginAdmin);
-                $("toggle-password-btn").addEventListener("click", togglePassword);
-                $("logout-btn").addEventListener("click", logoutAdmin);
-                $("refresh-btn").addEventListener("click", loadAllData);
-
-                document.querySelectorAll(".nav-btn").forEach(btn => {
-                    btn.addEventListener("click", () => switchSection(btn.dataset.section));
-                });
-            }
-
-            auth.onAuthStateChanged(async (user) => {
-                if (!user) {
-                    currentAdmin = null;
-                    setAuthView(false);
-                    return;
-                }
-
-                currentAdmin = user;
-                $("admin-user-name").textContent = user.displayName || "Admin";
-                $("admin-user-email").textContent = user.email || "admin@orebooking.com";
-                setAuthView(true);
-                await loadAllData();
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="لوحة تحكم OreBooking لإدارة العقارات والحجوزات وحسابات الملاك." />
+  <meta name="theme-color" content="#435abf" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>لوحة التحكم - OreBooking</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    (function () {
+      var firebaseConfig = {
+        apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+        authDomain: "orebooking-website.firebaseapp.com",
+        projectId: "orebooking-website",
+        storageBucket: "orebooking-website.firebasestorage.app",
+        messagingSenderId: "1012887567747",
+        appId: "1:1012887567747:web:153b57b60cb143d88acab6"
+      };
+
+      try {
+        if (typeof firebase === "undefined") {
+          throw new Error("Firebase SDK not loaded");
+        }
+
+        var adminApp = null;
+
+        if (firebase.apps && firebase.apps.length) {
+          adminApp = firebase.apps.find(function (app) {
+            return app.name === "adminApp";
+          }) || firebase.initializeApp(firebaseConfig, "adminApp");
+        } else {
+          adminApp = firebase.initializeApp(firebaseConfig, "adminApp");
+        }
+
+        var auth = adminApp.auth();
+        var db = adminApp.firestore();
+
+        window.__adminApp = adminApp;
+        window.__auth = auth;
+        window.__db = db;
+        window.__firebaseReady = true;
+        window.__firebaseError = null;
+        window.__adminEmailDomain = "@orebooking.com";
+
+        if (
+          typeof auth.setPersistence === "function" &&
+          firebase.auth &&
+          firebase.auth.Auth &&
+          firebase.auth.Auth.Persistence &&
+          firebase.auth.Auth.Persistence.SESSION
+        ) {
+          auth
+            .setPersistence(firebase.auth.Auth.Persistence.SESSION)
+            .then(function () {
+              console.log("[OreBooking Admin] Firebase initialized with SESSION persistence ✅");
+            })
+            .catch(function (err) {
+              console.warn("[OreBooking Admin] Failed to set SESSION persistence:", err);
             });
+        }
+      } catch (err) {
+        console.error("[OreBooking Admin] Firebase initialization failed:", err);
+        window.__firebaseReady = false;
+        window.__firebaseError = err && err.message ? err.message : "Unknown Firebase error";
+      }
+    })();
+  </script>
 
-            bindEvents();
-            renderOwners();
-        })();
-    </script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("ore_theme") || "light";
+        if (savedTheme === "dark") {
+          document.documentElement.classList.add("preload-dark");
+          document.documentElement.classList.add("dark");
+        }
+      } catch {}
+    })();
+  </script>
+
+  <style>
+    :root {
+      --primary: #435abf;
+      --primary-hover: #34459c;
+      --accent: #657be0;
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --surface-soft: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --info: #0ea5e9;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.05);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.08);
+      --shadow-card: 0 12px 32px rgba(15,23,42,.06);
+      --shadow-hover: 0 18px 36px rgba(67,90,191,.14);
+      --radius-sm: .75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.5rem;
+      --radius-2xl: 2rem;
+      --radius-full: 9999px;
+      --transition: all .3s cubic-bezier(.16,1,.3,1);
+
+      --admin-bg: linear-gradient(180deg, #f8fbff 0%, #f6f8fc 100%);
+      --admin-surface: rgba(255,255,255,0.92);
+      --admin-surface-strong: #ffffff;
+      --admin-border: rgba(148, 163, 184, 0.18);
+      --admin-ring: 0 0 0 4px rgba(67,90,191,0.12);
+      --admin-shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
+      --admin-shadow-hover: 0 24px 60px rgba(67,90,191,0.12);
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+      --success-text: #059669;
+      --danger-bg: #fef2f2;
+      --danger-border: #fecdd3;
+      --danger-text: #e11d48;
+      --warning-bg: #fff7ed;
+      --warning-border: #fdba74;
+      --warning-text: #ea580c;
+    }
+
+    .preload-dark body,
+    .dark body,
+    body.dark {
+      --bg-color: #0f172a;
+      --surface-color: #1e293b;
+      --surface-soft: #17212f;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.2);
+      --shadow-soft: 0 10px 40px -10px rgba(0,0,0,.4);
+      --shadow-card: 0 14px 40px rgba(0,0,0,.28);
+      --shadow-hover: 0 20px 40px rgba(67,90,191,.22);
+      --admin-bg: linear-gradient(180deg, #081120 0%, #0f172a 100%);
+      --admin-surface: rgba(15,23,42,0.82);
+      --admin-surface-strong: #0f172a;
+      --admin-border: rgba(51,65,85,.9);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "Tajawal", "Outfit", sans-serif;
+      color: var(--text-main);
+      background: var(--admin-bg);
+      transition: background-color .3s ease, color .3s ease;
+      overflow-x: hidden;
+    }
+
+    body.admin-body {
+      min-height: 100vh;
+      background: var(--admin-bg);
+      background-attachment: fixed;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.admin-body::before,
+    body.admin-body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      width: 380px;
+      height: 380px;
+      border-radius: 999px;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
+    body.admin-body::before {
+      top: -100px;
+      right: -90px;
+      background: rgba(101, 123, 224, 0.20);
+    }
+
+    body.admin-body::after {
+      bottom: -120px;
+      left: -90px;
+      background: rgba(67, 90, 191, 0.12);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    .hidden { display: none !important; }
+
+    .admin-login-screen,
+    .admin-layout {
+      position: relative;
+      z-index: 1;
+    }
+
+    .admin-login-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .admin-login-card {
+      width: min(100%, 460px);
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: 0 30px 70px rgba(15,23,42,0.10);
+      animation: fadeIn 0.45s ease;
+    }
+
+    .login-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.82rem;
+      margin: 0 auto 18px;
+    }
+
+    .login-help {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.83rem;
+      line-height: 1.7;
+    }
+
+    .font-bold { font-weight: 800; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 16px; }
+    .mt-4 { margin-top: 24px; }
+    .text-danger { color: var(--error); }
+    .text-primary { color: var(--primary); }
+
+    .logo-img {
+      height: 46px;
+      width: auto;
+      max-width: 170px;
+      object-fit: contain;
+    }
+
+    .primary-btn {
+      min-height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      border: none;
+      font-family: inherit;
+      font-size: .96rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 22px;
+      box-shadow: 0 12px 26px rgba(67,90,191,0.18);
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 32px rgba(67,90,191,0.24);
+    }
+
+    .primary-btn:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .ghost-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.72);
+      color: var(--text-main);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .ghost-action:hover {
+      border-color: rgba(67,90,191,0.20);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
+    }
+
+    .input-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .input-group label {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .input-group input,
+    .input-group textarea,
+    .input-group select {
+      width: 100%;
+      min-height: 50px;
+      padding: 14px 16px;
+      border: 1px solid rgba(203,213,225,0.95);
+      border-radius: 16px;
+      background: rgba(248,250,252,0.92);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .input-group textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .input-group input:focus,
+    .input-group textarea:focus,
+    .input-group select:focus {
+      border-color: var(--primary);
+      box-shadow: var(--admin-ring);
+      background: #fff;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .form-grid .full-span {
+      grid-column: 1 / -1;
+    }
+
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+      align-items: stretch;
+    }
+
+    .admin-sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.80);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-inline-end: 1px solid rgba(226,232,240,0.9);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      box-shadow: 10px 0 40px rgba(15,23,42,0.03);
+      z-index: 3001;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 10px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-top-note {
+      background: linear-gradient(135deg, rgba(67,90,191,0.09), rgba(101,123,224,0.06));
+      border: 1px solid rgba(67,90,191,0.10);
+      border-radius: 18px;
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-top-note strong {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    .sidebar-top-note span {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .sidebar-nav .nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: start;
+      min-height: 52px;
+      text-decoration: none;
+    }
+
+    .sidebar-nav .nav-item i {
+      width: 20px;
+      height: 20px;
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+
+    .sidebar-nav .nav-item:hover {
+      background: rgba(67,90,191,0.06);
+      border-color: rgba(67,90,191,0.10);
+      transform: translateX(-2px);
+    }
+
+    .sidebar-nav .nav-item.active {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      box-shadow: 0 18px 30px rgba(67,90,191,0.18);
+    }
+
+    .sidebar-nav .nav-item.active i { color: #fff; }
+
+    .sidebar-nav .nav-item.logout-item {
+      margin-top: auto;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    .sidebar-nav .nav-item.logout-item i {
+      color: var(--danger-text);
+    }
+
+    .sidebar-nav .nav-item.logout-item:hover {
+      background: #ffe4e6;
+      transform: none;
+    }
+
+    .admin-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .admin-mobile-topbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .admin-mobile-toggle {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.85);
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+      color: var(--text-main);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.45);
+      z-index: 2999;
+      display: none;
+    }
+
+    .sidebar-backdrop.show {
+      display: block;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px 24px;
+      border: 1px solid rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 24px;
+      box-shadow: var(--admin-shadow);
+    }
+
+    .header-copy {
+      display: grid;
+      gap: 6px;
+    }
+
+    .header-copy h1 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    .header-copy p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      margin: 0;
+      line-height: 1.7;
+    }
+
+    .admin-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(67,90,191,0.05);
+      border: 1px solid rgba(67,90,191,0.08);
+      border-radius: 18px;
+      padding: 10px 12px;
+      flex-shrink: 0;
+    }
+
+    .admin-profile .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.45rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(67,90,191,0.18);
+    }
+
+    .admin-content {
+      display: grid;
+      gap: 22px;
+    }
+
+    .dashboard-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .stat-mini-card {
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--admin-shadow);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: var(--transition);
+    }
+
+    .stat-mini-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--admin-shadow-hover);
+    }
+
+    .stat-mini-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.45rem;
+      color: var(--primary);
+      background: rgba(67,90,191,0.08);
+      flex-shrink: 0;
+    }
+
+    .stat-mini-meta {
+      display: grid;
+      gap: 3px;
+    }
+
+    .stat-mini-meta span {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .stat-mini-meta strong {
+      color: var(--text-main);
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .admin-card,
+    .modern-section {
+      background: var(--admin-surface);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--admin-shadow);
+      transition: var(--transition);
+    }
+
+    .admin-card:hover,
+    .modern-section:hover {
+      box-shadow: var(--admin-shadow-hover);
+    }
+
+    .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+    .tab-pane.active { display: block; }
+
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .pane-head h3 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+    }
+
+    .pane-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-inline {
+      min-width: 240px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 0 12px;
+      min-height: 48px;
+    }
+
+    .search-inline input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-family: inherit;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      min-height: 46px;
+    }
+
+    .stats-chip-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .stats-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(67,90,191,0.06);
+      border: 1px solid rgba(67,90,191,0.10);
+      color: var(--text-main);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--admin-surface-strong);
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    .admin-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 16px 14px;
+      text-align: start;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    .admin-table tbody td {
+      padding: 16px 14px;
+      border-bottom: 1px solid rgba(226,232,240,0.85);
+      vertical-align: middle;
+      color: var(--text-main);
+      font-size: 0.92rem;
+    }
+
+    .admin-table tbody tr:hover {
+      background: rgba(67,90,191,0.035);
+    }
+
+    .prop-thumb {
+      width: 74px;
+      height: 58px;
+      border-radius: 14px;
+      object-fit: cover;
+      border: 1px solid var(--border-color);
+      background: #f1f5f9;
+      display: block;
+    }
+
+    .prop-name-cell {
+      display: grid;
+      gap: 4px;
+    }
+
+    .prop-name-cell strong {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    .prop-name-cell span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .price-pill,
+    .status-badge,
+    .pill-soft {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .price-pill {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+    }
+
+    .status-badge.pending {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      border: 1px solid var(--warning-border);
+    }
+
+    .status-badge.confirmed,
+    .status-badge.visible {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+    }
+
+    .status-badge.rejected,
+    .status-badge.hidden {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .table-actions button,
+    .table-actions a {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .table-actions button:hover,
+    .table-actions a:hover {
+      border-color: rgba(67,90,191,0.22);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
+    }
+
+    .bookings-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      padding: 6px;
+      background: rgba(248,250,252,0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+    }
+
+    .filter-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .filter-tab-btn:hover {
+      background: rgba(67,90,191,0.06);
+      color: var(--primary);
+    }
+
+    .filter-tab-btn.active {
+      background: #fff;
+      color: var(--text-main);
+      border-color: var(--border-color);
+      box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+    }
+
+    .filter-tab-btn.active.all { color: var(--primary); }
+    .filter-tab-btn.active.pending { color: var(--warning-text); }
+    .filter-tab-btn.active.confirmed { color: var(--success-text); }
+    .filter-tab-btn.active.rejected { color: var(--danger-text); }
+
+    .filter-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      transition: var(--transition);
+    }
+
+    .filter-tab-btn .filter-count-badge { background: rgba(67,90,191,0.08); color: var(--primary); }
+    .filter-tab-btn.pending .filter-count-badge { background: var(--warning-bg); color: var(--warning-text); }
+    .filter-tab-btn.confirmed .filter-count-badge { background: var(--success-bg); color: var(--success-text); }
+    .filter-tab-btn.rejected .filter-count-badge { background: var(--danger-bg); color: var(--danger-text); }
+
+    #bookings-container .bookings-grid,
+    #bookings-container > div.bookings-grid {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
+      gap: 20px !important;
+      width: 100% !important;
+      align-items: start !important;
+    }
+
+    .booking-card {
+      background: var(--admin-surface);
+      border: 1px solid rgba(255,255,255,0.65);
+      border-radius: 22px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--admin-shadow);
+      transition: var(--transition);
+      width: 100%;
+      box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .booking-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--primary), var(--accent));
+      opacity: 0.9;
+    }
+
+    .booking-card[data-status="confirmed"]::before {
+      background: linear-gradient(180deg, #10b981, #34d399);
+    }
+
+    .booking-card[data-status="rejected"]::before {
+      background: linear-gradient(180deg, #ef4444, #f87171);
+    }
+
+    .booking-card[data-status="pending"]::before {
+      background: linear-gradient(180deg, #f59e0b, #fbbf24);
+    }
+
+    .booking-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .booking-title {
+      display: grid;
+      gap: 5px;
+    }
+
+    .booking-title strong {
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    .booking-title span {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .booking-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .booking-meta-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(248,250,252,0.82);
+      border: 1px solid var(--border-color);
+      display: grid;
+      gap: 4px;
+    }
+
+    .booking-meta-item label {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .booking-meta-item strong,
+    .booking-meta-item span {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .booking-actions-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 2px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .btn-approve,
+    .btn-reject,
+    .btn-open-chat {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 12px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+
+    .btn-approve {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid #10b981;
+    }
+
+    .btn-reject {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid #ef4444;
+    }
+
+    .btn-open-chat {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+      border: 1px solid rgba(67,90,191,0.24);
+    }
+
+    .btn-approve:disabled,
+    .btn-reject:disabled,
+    .btn-open-chat:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 54px 24px;
+      background: rgba(255,255,255,0.76);
+      border: 1px dashed rgba(148,163,184,0.45);
+      border-radius: 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-state i {
+      font-size: 2.8rem;
+      color: var(--primary);
+      margin-bottom: 12px;
+      display: block;
+      opacity: 0.85;
+    }
+
+    .firebase-status-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .firebase-status-banner.error {
+      display: flex;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger-text);
+    }
+
+    .firebase-status-banner.success {
+      display: flex;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 4000;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal-content.admin-card {
+      width: 100%;
+      max-width: 820px !important;
+      padding: 26px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-main);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-size: 1.15rem;
+    }
+
+    .modal-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-topbar h3 {
+      margin: 0;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-footer-actions {
+      display: flex;
+      justify-content: flex-start;
+      gap: 12px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chat-admin-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      min-height: 620px;
+    }
+
+    .chat-sidebar {
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background: rgba(255,255,255,.7);
+      padding: 14px;
+      overflow: auto;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-main {
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background: rgba(255,255,255,.72);
+      display: flex;
+      flex-direction: column;
+      min-height: 620px;
+      overflow: hidden;
+    }
+
+    .chat-main-head {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(248,250,252,.8);
+    }
+
+    .chat-main-head h4 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+    }
+
+    .chat-main-head p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: .84rem;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-empty-state {
+      margin: auto 0;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 24px;
+      border: 1px dashed var(--border-color);
+      border-radius: 18px;
+      background: var(--surface-color);
+    }
+
+    .chat-empty-state i {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .chat-composer {
+      border-top: 1px solid var(--border-color);
+      background: var(--surface-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-composer textarea {
+      width: 100%;
+      min-height: 92px;
+      resize: vertical;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-main);
+      padding: 14px 16px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chat-actions small {
+      color: var(--text-muted);
+    }
+
+    .admin-login-input {
+      width: 100%;
+      min-height: 50px;
+      padding: 14px 16px;
+      border: 1px solid rgba(203,213,225,0.95);
+      border-radius: 18px;
+      background-color: rgba(248,250,252,0.92);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: var(--transition);
+      direction: ltr;
+    }
+
+    .admin-login-input:focus {
+      border-color: var(--primary);
+      box-shadow: var(--admin-ring);
+      background-color: #fff;
+    }
+
+    .admin-email-hint {
+      margin-top: 7px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .reject-reason-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .reject-reason-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: rgba(248,250,252,0.75);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .reject-reason-option:hover {
+      border-color: rgba(67,90,191,0.22);
+      background: rgba(67,90,191,0.05);
+    }
+
+    .reject-reason-option input {
+      margin-top: 3px;
+      accent-color: var(--primary);
+    }
+
+    .reject-reason-option span {
+      color: var(--text-main);
+      font-weight: 700;
+      line-height: 1.7;
+    }
+
+    .reject-reason-note {
+      margin-top: 14px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .reject-reason-error {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger-text);
+      font-size: 0.83rem;
+      font-weight: 700;
+    }
+
+    .reject-reason-error.show {
+      display: block;
+    }
+
+    .map-box {
+      width: 100%;
+      min-height: 280px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .map-picked-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chat-admin-layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 920px) {
+      .admin-sidebar {
+        position: fixed;
+        top: 0;
+        right: -320px;
+        height: 100vh;
+        transition: right .3s ease;
+      }
+
+      .admin-sidebar.show { right: 0; }
+      .admin-mobile-topbar { display: flex; }
+      .admin-header { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 768px) {
+      .admin-main { padding: 16px; }
+      .admin-login-card { padding: 24px; }
+      .dashboard-strip { grid-template-columns: 1fr; }
+      .booking-meta-grid { grid-template-columns: 1fr; }
+      .booking-actions-row { flex-direction: column; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="admin-body">
+
+  <div id="admin-login-screen" class="admin-login-screen">
+    <div class="admin-login-card">
+      <div class="login-badge">
+        <i class="ph ph-shield-check"></i>
+        <span>OreBooking Admin Access</span>
+      </div>
+
+      <div style="display:flex;justify-content:center;margin-bottom:18px;">
+        <img
+          src="./logos/logo.png"
+          alt="OreBooking"
+          class="logo-img"
+          onerror="this.onerror=null;if(this.getAttribute('data-fallback-step')!=='1'){this.setAttribute('data-fallback-step','1');this.src='logos/logo.png';return;}if(this.getAttribute('data-fallback-step')!=='2'){this.setAttribute('data-fallback-step','2');this.src='./images/logo.png';return;}this.style.display='none';"
+        />
+      </div>
+
+      <div id="firebase-status-banner" class="firebase-status-banner"></div>
+
+      <form id="admin-login-form" class="admin-form" novalidate>
+        <div class="input-group">
+          <label for="admin-login-email">البريد أو اسم المستخدم</label>
+          <input
+            id="admin-login-email"
+            name="username"
+            class="admin-login-input"
+            type="text"
+            placeholder="example@domain.com أو اسم المستخدم"
+            autocomplete="username"
+            dir="ltr"
+            inputmode="email"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <div class="admin-email-hint">
+            يمكنك تسجيل الدخول بالبريد الكامل أو باسم المستخدم، ولن يتم فرض ‎@orebooking.com‎ عليك تلقائيًا داخل الواجهة.
+          </div>
+        </div>
+
+        <div class="input-group mt-3">
+          <label for="admin-login-password">كلمة المرور</label>
+          <input
+            id="admin-login-password"
+            name="password"
+            class="admin-login-input"
+            type="password"
+            placeholder="أدخل كلمة المرور"
+            autocomplete="current-password"
+          />
+        </div>
+
+        <button id="admin-login-btn" type="submit" class="primary-btn mt-4" style="width:100%;">
+          <i class="ph ph-sign-in"></i>
+          <span>تسجيل الدخول</span>
+        </button>
+
+        <div class="login-help">
+          يمكنك استخدام لوحة الأدمن بشكل منفصل عن تسجيل دخول الزبون في الموقع الرئيسي من نفس المتصفح.
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+  <div id="admin-layout" class="admin-layout hidden">
+    <aside id="admin-sidebar" class="admin-sidebar">
+      <div class="sidebar-logo">
+        <img
+          src="./logos/logo.png"
+          alt="OreBooking"
+          class="logo-img"
+          onerror="this.onerror=null;if(this.getAttribute('data-fallback-step')!=='1'){this.setAttribute('data-fallback-step','1');this.src='logos/logo.png';return;}if(this.getAttribute('data-fallback-step')!=='2'){this.setAttribute('data-fallback-step','2');this.src='./images/logo.png';return;}this.style.display='none';"
+        />
+      </div>
+
+      <div class="sidebar-top-note">
+        <strong id="sidebar-user-role">لوحة الإدارة</strong>
+        <span id="sidebar-user-note">إدارة العقارات والحجوزات وحسابات الملاك من مكان واحد.</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="dashboard-pane" type="button">
+          <i class="ph ph-squares-four"></i>
+          <span>الرئيسية</span>
+        </button>
+
+        <button class="nav-item" data-tab="properties-pane" type="button">
+          <i class="ph ph-buildings"></i>
+          <span>العقارات</span>
+        </button>
+
+        <button class="nav-item" data-tab="bookings-pane" type="button">
+          <i class="ph ph-calendar-check"></i>
+          <span>الحجوزات</span>
+        </button>
+
+        <button class="nav-item admin-only" data-tab="owners-pane" type="button">
+          <i class="ph ph-users-three"></i>
+          <span>المُلّاك</span>
+        </button>
+
+        <button class="nav-item" data-tab="messages-pane" type="button">
+          <i class="ph ph-chat-circle-dots"></i>
+          <span>الرسائل</span>
+        </button>
+
+        <button class="nav-item logout-item" id="admin-logout-btn" type="button">
+          <i class="ph ph-sign-out"></i>
+          <span>تسجيل الخروج</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <div class="admin-mobile-topbar">
+        <button id="admin-mobile-toggle" class="admin-mobile-toggle" type="button" aria-label="فتح القائمة">
+          <i class="ph ph-list"></i>
+        </button>
+        <img
+          src="./logos/logo.png"
+          alt="OreBooking"
+          class="logo-img"
+          onerror="this.onerror=null;if(this.getAttribute('data-fallback-step')!=='1'){this.setAttribute('data-fallback-step','1');this.src='logos/logo.png';return;}if(this.getAttribute('data-fallback-step')!=='2'){this.setAttribute('data-fallback-step','2');this.src='./images/logo.png';return;}this.style.display='none';"
+        />
+      </div>
+
+      <header class="admin-header">
+        <div class="header-copy">
+          <h1>لوحة تحكم OreBooking</h1>
+          <p>إدارة العقارات والحجوزات والرسائل من واجهة واحدة.</p>
+        </div>
+
+        <div class="admin-profile">
+          <div class="avatar">
+            <i class="ph ph-user"></i>
+          </div>
+          <div>
+            <div id="admin-profile-name" class="font-bold">الحساب الحالي</div>
+            <div id="admin-profile-role" class="text-primary">لوحة الإدارة</div>
+            <div id="admin-profile-email" class="admin-email-hint">—</div>
+          </div>
+        </div>
+      </header>
+
+      <section class="admin-content">
+        <div id="dashboard-pane" class="tab-pane active">
+          <div class="dashboard-strip">
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-buildings"></i></div>
+              <div class="stat-mini-meta">
+                <span>العقارات</span>
+                <strong id="dashboard-properties-count">0</strong>
+              </div>
+            </div>
+
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-calendar-check"></i></div>
+              <div class="stat-mini-meta">
+                <span>الحجوزات</span>
+                <strong id="dashboard-bookings-count">0</strong>
+              </div>
+            </div>
+
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-users-three"></i></div>
+              <div class="stat-mini-meta">
+                <span>المُلّاك</span>
+                <strong id="stat-owners-count">0</strong>
+              </div>
+            </div>
+
+            <div class="stat-mini-card">
+              <div class="stat-mini-icon"><i class="ph ph-chat-circle-dots"></i></div>
+              <div class="stat-mini-meta">
+                <span>الرسائل</span>
+                <strong id="stat-chats-count">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card mt-4">
+            <div class="pane-head">
+              <h3><i class="ph ph-chart-bar"></i>إحصائيات سريعة</h3>
+            </div>
+
+            <div class="stats-chip-row">
+              <div class="stats-chip"><i class="ph ph-eye"></i><span id="visible-properties-count">0 عقار ظاهر</span></div>
+              <div class="stats-chip"><i class="ph ph-eye-slash"></i><span id="hidden-properties-count">0 عقار مخفي</span></div>
+              <div class="stats-chip"><i class="ph ph-hourglass-medium"></i><span id="pending-bookings-count">0</span> قيد الانتظار</div>
+              <div class="stats-chip"><i class="ph ph-check-circle"></i><span id="confirmed-bookings-count">0</span> مؤكدة</div>
+              <div class="stats-chip"><i class="ph ph-x-circle"></i><span id="rejected-bookings-count">0</span> مرفوضة</div>
+              <div class="stats-chip"><i class="ph ph-users"></i><span id="dashboard-users-count">0</span> مستخدم</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="properties-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-buildings"></i>إدارة العقارات</h3>
+              <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="properties-search" type="search" placeholder="بحث عن عقار..." />
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>الصورة</th>
+                    <th>العقار</th>
+                    <th>الموقع</th>
+                    <th>النوع</th>
+                    <th>السعر</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="properties-tbody">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:28px;">جارٍ تحميل العقارات...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="bookings-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-calendar-check"></i>إدارة الحجوزات</h3>
+              <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="bookings-search" type="search" placeholder="بحث في الحجوزات..." />
+                </div>
+              </div>
+            </div>
+
+            <div class="bookings-filter-bar">
+              <button class="filter-tab-btn active all" type="button" data-booking-filter="all">
+                الكل
+                <span class="filter-count-badge" id="bookings-count-all">0</span>
+              </button>
+              <button class="filter-tab-btn pending" type="button" data-booking-filter="pending">
+                قيد الانتظار
+                <span class="filter-count-badge" id="bookings-count-pending">0</span>
+              </button>
+              <button class="filter-tab-btn confirmed" type="button" data-booking-filter="confirmed">
+                مؤكدة
+                <span class="filter-count-badge" id="bookings-count-confirmed">0</span>
+              </button>
+              <button class="filter-tab-btn rejected" type="button" data-booking-filter="rejected">
+                مرفوضة
+                <span class="filter-count-badge" id="bookings-count-rejected">0</span>
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>المرجع</th>
+                    <th>الضيف</th>
+                    <th>العقار</th>
+                    <th>الإقامة</th>
+                    <th>الإجمالي</th>
+                    <th>رقم الغرفة</th>
+                    <th>الحالة</th>
+                    <th>رد الإدارة</th>
+                    <th>الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="bookings-tbody">
+                  <tr>
+                    <td colspan="9" style="text-align:center;padding:28px;">جارٍ تحميل الحجوزات...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="owners-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-users-three"></i>حسابات المُلّاك</h3>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>الاسم</th>
+                    <th>البريد الإلكتروني</th>
+                    <th>الدور</th>
+                    <th>تاريخ الإضافة</th>
+                  </tr>
+                </thead>
+                <tbody id="owners-tbody">
+                  <tr>
+                    <td colspan="4" style="text-align:center;padding:28px;">جارٍ تحميل حسابات المُلّاك...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="messages-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-chat-circle-dots"></i>الرسائل</h3>
+            </div>
+
+            <div class="chat-admin-layout">
+              <aside class="chat-sidebar" id="chat-threads-list">
+                <div class="empty-state">لا توجد محادثات حالياً.</div>
+              </aside>
+
+              <section class="chat-main">
+                <div class="chat-main-head">
+                  <div>
+                    <h4>المحادثة الحالية</h4>
+                    <p>اختر محادثة من القائمة الجانبية.</p>
+                  </div>
+                </div>
+
+                <div class="chat-messages" id="chat-messages-body">
+                  <div class="chat-empty-state">
+                    <i class="ph ph-chat-circle-dots"></i>
+                    اختر محادثة لعرض الرسائل.
+                  </div>
+                </div>
+
+                <div class="chat-composer">
+                  <textarea id="admin-chat-message" placeholder="اكتب ردك هنا..." disabled></textarea>
+                  <div class="chat-actions">
+                    <small>سيتم تفعيل الإرسال عند ربط نظام الرد في admin.js.</small>
+                    <button type="button" class="primary-btn" disabled>
+                      <i class="ph ph-paper-plane-tilt"></i>
+                      <span>إرسال</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var sidebar = document.getElementById("admin-sidebar");
+      var backdrop = document.getElementById("sidebar-backdrop");
+      var toggleBtn = document.getElementById("admin-mobile-toggle");
+
+      function openSidebar() {
+        if (sidebar) sidebar.classList.add("show");
+        if (backdrop) backdrop.classList.add("show");
+      }
+
+      function closeSidebar() {
+        if (sidebar) sidebar.classList.remove("show");
+        if (backdrop) backdrop.classList.remove("show");
+      }
+
+      if (toggleBtn) toggleBtn.addEventListener("click", openSidebar);
+      if (backdrop) backdrop.addEventListener("click", closeSidebar);
+
+      document.addEventListener("click", function (e) {
+        var btn = e.target.closest(".sidebar-nav .nav-item[data-tab]");
+        if (btn && window.innerWidth <= 920) {
+          closeSidebar();
+        }
+      });
+    })();
+  </script>
+
+  <script src="admin.js"></script>
 </body>
-
 </html>
