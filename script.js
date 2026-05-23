@@ -1,5 +1,5 @@
 // =========================================
-// script.js — OreBooking Index Page v5.0
+// script.js — OreBooking Index Page v4.0
 // Full Firebase + Auth + Real-time Chat + Listings
 // Compatible with current index.html IDs
 // =========================================
@@ -18,53 +18,21 @@ const firebaseConfig = {
   measurementId: "G-5GKMRMVHC3"
 };
 
-const FRONTEND_APP_NAME = "frontendApp";
-
-let firebaseApp = null;
 let db = null;
 let auth = null;
 let firestoreFieldValue = null;
-let firebaseReady = false;
 
 try {
   if (typeof firebase !== "undefined") {
-    if (firebase.apps && firebase.apps.length) {
-      firebaseApp =
-        firebase.apps.find((app) => app.name === FRONTEND_APP_NAME) ||
-        firebase.initializeApp(firebaseConfig, FRONTEND_APP_NAME);
-    } else {
-      firebaseApp = firebase.initializeApp(firebaseConfig, FRONTEND_APP_NAME);
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    if (typeof firebase.firestore === "function") {
+      db = firebase.firestore();
+      firestoreFieldValue = firebase.firestore.FieldValue || null;
     }
-
-    if (typeof firebaseApp.firestore === "function") {
-      db = firebaseApp.firestore();
-      firestoreFieldValue = firebase.firestore?.FieldValue || null;
-    }
-
-    if (typeof firebaseApp.auth === "function") {
-      auth = firebaseApp.auth();
-    }
-
-    firebaseReady = !!db && !!auth;
-
-    window.__frontApp = firebaseApp;
-    window.__frontDb = db;
-    window.__frontAuth = auth;
-
-    if (
-      auth &&
-      typeof auth.setPersistence === "function" &&
-      typeof firebase !== "undefined" &&
-      firebase.auth?.Auth?.Persistence?.LOCAL
-    ) {
-      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e) => {
-        console.warn("Frontend auth persistence:", e);
-      });
-    }
+    if (typeof firebase.auth === "function") auth = firebase.auth();
   }
 } catch (e) {
   console.error("Firebase init:", e);
-  firebaseReady = false;
 }
 
 // ──────────────────────────────────────────
@@ -114,7 +82,6 @@ const state = {
     return l === "ar" ? "ar" : "en";
   })(),
   theme: safeGet("ore_theme") || safeGet("oretheme") || "light",
-  authReady: false,
   currentUser: null,
   currentUserProfile: null,
   allProperties: [],
@@ -129,9 +96,7 @@ const state = {
   authTab: "login",
   currentChatId: safeGet("ore_current_chat_id", ""),
   currentChatUnsub: null,
-  chatsListUnsub: null,
-  chatInitializedForUser: "",
-  supportChatDoc: null
+  chatInitializedForUser: ""
 };
 
 // ──────────────────────────────────────────
@@ -226,10 +191,7 @@ const i18n = {
     fillAllFields: "Please fill all fields",
     passwordShort: "Password too short",
     firebaseMissing: "Firebase not available",
-    adminFrontendBlocked: "This account is for the admin panel only.",
-    passwordsMismatch: "Passwords don't match",
-    enterEmail: "Enter your email",
-    bookingsLoading: "Loading bookings..."
+    adminFrontendBlocked: "This account is for the admin panel only."
   },
   ar: {
     heroTitle: "اكتشف إقامتك المثالية",
@@ -319,15 +281,12 @@ const i18n = {
     fillAllFields: "يرجى ملء جميع الحقول",
     passwordShort: "كلمة المرور قصيرة جداً",
     firebaseMissing: "Firebase غير متاح",
-    adminFrontendBlocked: "هذا الحساب مخصص للوحة الإدارة فقط.",
-    passwordsMismatch: "كلمتا المرور غير متطابقتين",
-    enterEmail: "أدخل بريدك الإلكتروني",
-    bookingsLoading: "جارٍ تحميل الحجوزات..."
+    adminFrontendBlocked: "هذا الحساب مخصص للوحة الإدارة فقط."
   }
 };
 
 function t(key) {
-  return (i18n[state.lang] && i18n[state.lang][key]) || i18n.en[key] || key;
+  return (i18n[state.lang] && i18n[state.lang][key]) || (i18n.en[key]) || key;
 }
 
 // ──────────────────────────────────────────
@@ -487,10 +446,6 @@ function cleanText(v) {
   return String(v ?? "").trim();
 }
 
-function normalizeEmail(v) {
-  return cleanText(v).toLowerCase();
-}
-
 function toNumber(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -514,21 +469,6 @@ function formatChatTime(value) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return "";
-  }
-}
-
-function formatDate(value) {
-  try {
-    if (!value) return "—";
-    if (typeof value?.toDate === "function") return value.toDate().toLocaleDateString();
-    if (typeof value === "object" && typeof value.seconds === "number") {
-      return new Date(value.seconds * 1000).toLocaleDateString();
-    }
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleDateString();
-  } catch {
-    return "—";
   }
 }
 
@@ -571,9 +511,9 @@ function setChatStatus(mode = "syncing", text = "") {
   if (els.chatConnectionText) {
     els.chatConnectionText.textContent =
       text ||
-      (mode === "connected" ? t("chatConnected")
-        : mode === "error" ? t("chatError")
-        : t("chatSyncing"));
+      (mode === "connected" ? t("chatConnected") :
+      mode === "error" ? t("chatError") :
+      t("chatSyncing"));
   }
 }
 
@@ -590,7 +530,7 @@ function getCurrentUserName(user = state.currentUser) {
     user?.name ||
     state.currentUserProfile?.name ||
     user?.email ||
-    t("guestUser")
+    "Guest"
   );
 }
 
@@ -614,35 +554,18 @@ function stopChatSubscription() {
   state.currentChatUnsub = null;
 }
 
-function stopChatsListSubscription() {
-  if (typeof state.chatsListUnsub === "function") {
-    try {
-      state.chatsListUnsub();
-    } catch {}
-  }
-  state.chatsListUnsub = null;
-}
-
 function resetFrontendUserState() {
   state.currentUser = null;
   state.currentUserProfile = null;
   state.chatMessages = [];
   state.chatUnread = 0;
   state.currentChatId = "";
-  state.supportChatDoc = null;
   safeRemove("ore_current_chat_id");
   stopChatSubscription();
-  stopChatsListSubscription();
   setUnreadBadge();
   setChatStatus("syncing", t("chatPreparing"));
   renderChatMessages();
   updateChatHiddenFields("");
-}
-
-function closeProfileDropdown() {
-  if (els.profileDropdown) {
-    els.profileDropdown.classList.remove("active");
-  }
 }
 
 function applyGuestAuthUI() {
@@ -691,8 +614,6 @@ function applyLang() {
   if (els.sectionTitle) els.sectionTitle.textContent = t("sectionTitle");
   if (els.sectionDesc) els.sectionDesc.textContent = t("sectionDesc");
   if (els.chatInput) els.chatInput.placeholder = t("chatPlaceholder");
-  if (els.chatTitle) els.chatTitle.textContent = t("chatTitle");
-  if (els.chatSubtitle) els.chatSubtitle.textContent = t("chatSubtitle");
   if (els.chatEmptyTitle) els.chatEmptyTitle.textContent = t("noMessages");
   if (els.chatEmptySubtitle) els.chatEmptySubtitle.textContent = t("startConversation");
   if (els.chatNote) els.chatNote.textContent = t("chatWorksNow");
@@ -791,12 +712,11 @@ async function updateAuthUI(user) {
   }
 
   if (isBackofficeRole(role)) {
-    try { await auth.signOut(); } catch {}
     applyGuestAuthUI();
     resetFrontendUserState();
     closeProfileDropdown();
+
     if (els.loginEmail) els.loginEmail.value = user.email || "";
-    showToast(t("adminFrontendBlocked"), "warning");
     return;
   }
 
@@ -845,7 +765,7 @@ async function updateAuthUI(user) {
     state.chatMessages = [];
     state.chatUnread = 0;
     setUnreadBadge();
-    await ensureSupportChat(false);
+    ensureSupportChat(false).catch((err) => console.warn("ensureSupportChat after auth:", err));
   }
 }
 
@@ -894,7 +814,7 @@ function handleLogin(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const email = normalizeEmail(els.loginEmail?.value);
+  const email = els.loginEmail?.value?.trim();
   const pass = els.loginPassword?.value;
 
   if (!email || !pass) {
@@ -941,8 +861,8 @@ function handleRegister(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const name = cleanText(els.regName?.value);
-  const email = normalizeEmail(els.regEmail?.value);
+  const name = els.regName?.value?.trim();
+  const email = els.regEmail?.value?.trim();
   const pass = els.regPassword?.value;
   const confirm = els.regConfirm?.value;
 
@@ -951,7 +871,7 @@ function handleRegister(e) {
   }
 
   if (els.regConfirm && pass !== confirm) {
-    return showAuthMessage(t("passwordsMismatch"));
+    return showAuthMessage(state.lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords don't match");
   }
 
   if (pass.length < 6) {
@@ -975,7 +895,7 @@ function handleRegister(e) {
             email,
             role: "user",
             points: 0,
-            createdAt: getServerTimestamp()
+            createdAt: new Date()
           }, { merge: true });
         }
       });
@@ -997,9 +917,9 @@ function handleForgot(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const email = normalizeEmail(els.forgotEmail?.value);
+  const email = els.forgotEmail?.value?.trim();
   if (!email) {
-    return showAuthMessage(t("enterEmail"));
+    return showAuthMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني" : "Enter your email");
   }
 
   clearAuthMessage();
@@ -1063,32 +983,13 @@ async function loadProperties() {
   showLoadingState();
 
   try {
-    let snap = null;
+    const snap = await db.collection("properties").where("isActive", "!=", false).get();
     state.allProperties = [];
-
-    try {
-      snap = await db.collection("properties").where("isActive", "!=", false).get();
-    } catch (err) {
-      console.warn("Properties active query fallback:", err);
-    }
-
-    if (snap) {
-      snap.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
-    }
+    snap.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
 
     if (!state.allProperties.length) {
       const snap2 = await db.collection("properties").get();
-      snap2.forEach((doc) => {
-        const data = { id: doc.id, ...doc.data() };
-        if (data.isActive !== false && data.visible !== false) {
-          state.allProperties.push(data);
-        }
-      });
-    }
-
-    if (!state.allProperties.length) {
-      const snap3 = await db.collection("properties").get();
-      snap3.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
+      snap2.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
     }
 
     applyFilters();
@@ -1108,8 +1009,6 @@ function normalizeCategory(cat = "") {
 
 function applyFilters() {
   let list = [...state.allProperties];
-
-  list = list.filter((p) => p.isActive !== false && p.visible !== false);
 
   if (state.activeCategory !== "all") {
     list = list.filter((p) => {
@@ -1243,7 +1142,7 @@ function renderListings() {
       <article class="property-card ore-reveal" style="--ore-delay:${delay}ms;" tabindex="0" data-id="${escapeHtml(p.id)}">
         <div class="property-card-media">
           <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-          <button class="favorite-btn ${fav ? "active" : ""}" data-id="${escapeHtml(p.id)}" aria-label="Favorite" type="button">
+          <button class="favorite-btn ${fav ? "active" : ""}" data-id="${escapeHtml(p.id)}" aria-label="Favorite">
             <i class="ph ${fav ? "ph-heart-straight ph-fill" : "ph-heart-straight"}"></i>
           </button>
           ${(p.isNew || p.badge) ? `
@@ -1329,13 +1228,6 @@ function goToProperty(id) {
 // ──────────────────────────────────────────
 let searchTimeout = null;
 
-function closeSuggestions() {
-  if (els.searchDropdown) {
-    els.searchDropdown.classList.remove("active");
-    els.searchDropdown.innerHTML = "";
-  }
-}
-
 function buildSuggestions(q) {
   if (!q || q.length < 2) {
     closeSuggestions();
@@ -1357,479 +1249,496 @@ function buildSuggestions(q) {
   }
 
   els.searchDropdown.innerHTML = results.map((p) => `
-    <button class="search-suggestion-item" type="button" data-id="${escapeHtml(p.id)}">
+    <button class="search-suggestion-item" type="button" data-title="${escapeHtml(getTitle(p))}">
       <div class="search-suggestion-main">${escapeHtml(getTitle(p))}</div>
-      <div class="search-suggestion-sub">${escapeHtml(getLocation(p))}</div>
+      <div class="search-suggestion-sub"><i class="ph ph-map-pin"></i> ${escapeHtml(getLocation(p))}</div>
     </button>
   `).join("");
 
   els.searchDropdown.classList.add("active");
 
   els.searchDropdown.querySelectorAll(".search-suggestion-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const property = state.allProperties.find((p) => p.id === btn.dataset.id);
-      if (!property) return;
-      if (els.searchInput) els.searchInput.value = getTitle(property);
-      state.searchQuery = getTitle(property);
-      applyFilters();
-      closeSuggestions();
-    });
+    btn.addEventListener("click", () => selectSuggestion(btn.dataset.title));
   });
 }
 
-// ──────────────────────────────────────────
-// Bookings
-// ──────────────────────────────────────────
-function getBookingStatusLabel(status) {
-  const s = cleanText(status).toLowerCase();
-  if (s === "confirmed" || s === "approved") return t("status_confirmed");
-  if (s === "cancelled" || s === "canceled") return t("status_cancelled");
-  if (s === "rejected") return t("status_rejected");
-  return t("status_pending");
+function closeSuggestions() {
+  if (els.searchDropdown) els.searchDropdown.classList.remove("active");
 }
 
-async function loadMyBookings() {
-  if (!db || !state.currentUser || !els.bookingsList) return;
+function selectSuggestion(title) {
+  if (els.searchInput) els.searchInput.value = title;
+  state.searchQuery = title;
+  closeSuggestions();
+  applyFilters();
+  toggleClearBtn();
+}
 
-  els.bookingsList.innerHTML = `
-    <div class="empty-bookings">
-      <i class="ph ph-spinner-gap ph-spin"></i>
-      <p>${t("bookingsLoading")}</p>
-    </div>
-  `;
+function toggleClearBtn() {
+  if (els.clearSearchBtn) {
+    els.clearSearchBtn.style.display = state.searchQuery ? "inline-flex" : "none";
+  }
+}
 
-  try {
-    let items = [];
-    const uid = cleanText(state.currentUser.uid);
-    const email = normalizeEmail(getCurrentUserEmail());
+// ──────────────────────────────────────────
+// Bookings Modal
+// ──────────────────────────────────────────
+async function openBookingsModal() {
+  closeProfileDropdown();
 
-    try {
-      const snap = await db.collection("bookings").where("userId", "==", uid).get();
-      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-    } catch (err) {
-      console.warn("bookings by uid failed:", err);
-    }
+  if (!state.currentUser) {
+    showAuthModal("login");
+    return;
+  }
 
-    if (!items.length && email) {
-      try {
-        const snap2 = await db.collection("bookings").where("guestEmail", "==", email).get();
-        snap2.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-      } catch (err) {
-        console.warn("bookings by guestEmail failed:", err);
-      }
-    }
+  if (!els.bookingsModal) return;
 
-    const unique = new Map();
-    items.forEach((item) => unique.set(item.id, item));
-    const bookings = Array.from(unique.values());
+  els.bookingsModal.classList.add("active");
+  els.body.classList.add("modal-open");
 
-    if (!bookings.length) {
-      els.bookingsList.innerHTML = `
-        <div class="empty-bookings">
-          <i class="ph ph-calendar-blank"></i>
-          <p>${t("noBookings")}</p>
-          <small>${t("noBookingsDesc")}</small>
-        </div>
-      `;
-      return;
-    }
-
-    els.bookingsList.innerHTML = bookings.map((booking) => {
-      const title = cleanText(
-        booking.propertyTitle ||
-        booking.propertyName ||
-        booking.property?.title ||
-        booking.property?.titleAr ||
-        booking.property?.titleEn ||
-        "Property"
-      );
-
-      const amount = toNumber(booking.total || booking.totalAmount || booking.amount || booking.price, 0);
-      const status = getBookingStatusLabel(booking.status);
-      const checkIn = cleanText(booking.checkIn || booking.arrivalDate || booking.stay?.checkIn || "—");
-      const checkOut = cleanText(booking.checkOut || booking.departureDate || booking.stay?.checkOut || "—");
-
-      return `
-        <article class="booking-item-card">
-          <div class="booking-item-head">
-            <strong>${escapeHtml(title)}</strong>
-            <span class="booking-status">${escapeHtml(status)}</span>
-          </div>
-          <div class="booking-item-meta">
-            <span>${escapeHtml(t("checkIn"))}: ${escapeHtml(checkIn)}</span>
-            <span>${escapeHtml(t("checkOut"))}: ${escapeHtml(checkOut)}</span>
-            <span>${escapeHtml(amount ? amount.toLocaleString() : "0")} ${state.lang === "ar" ? "د.ج" : "DZD"}</span>
-            <span>${escapeHtml(formatDate(booking.createdAt || booking.timestamp))}</span>
-          </div>
-        </article>
-      `;
-    }).join("");
-  } catch (err) {
-    console.error("loadMyBookings:", err);
+  if (els.bookingsList) {
     els.bookingsList.innerHTML = `
-      <div class="empty-bookings">
-        <i class="ph ph-warning-circle"></i>
-        <p>${escapeHtml(t("noBookingsDesc"))}</p>
+      <div style="text-align:center;padding:40px;color:var(--text-muted)">
+        <i class="ph ph-spinner-gap ph-spin" style="font-size:2rem"></i>
       </div>
     `;
+  }
+
+  if (!db) {
+    renderBookings([]);
+    return;
+  }
+
+  try {
+    const snap = await db.collection("bookings")
+      .where("userId", "==", state.currentUser.uid)
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
+
+    const bookings = [];
+    snap.forEach((doc) => bookings.push({ id: doc.id, ...doc.data() }));
+    renderBookings(bookings);
+  } catch {
+    try {
+      const snap2 = await db.collection("bookings")
+        .where("userId", "==", state.currentUser.uid)
+        .get();
+
+      const bookings = [];
+      snap2.forEach((doc) => bookings.push({ id: doc.id, ...doc.data() }));
+      renderBookings(bookings);
+    } catch {
+      renderBookings([]);
+    }
+  }
+}
+
+function renderBookings(bookings) {
+  if (!els.bookingsList) return;
+
+  if (!bookings.length) {
+    els.bookingsList.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+        <i class="ph ph-suitcase-rolling" style="font-size:2.5rem;display:block;margin-bottom:14px;color:var(--primary)"></i>
+        <p style="font-weight:800;margin-bottom:8px;">${t("noBookings")}</p>
+        <p>${t("noBookingsDesc")}</p>
+      </div>
+    `;
+    return;
+  }
+
+  els.bookingsList.innerHTML = bookings.map((b) => {
+    const status = cleanText(b.status || "pending").toLowerCase();
+    const propTitle =
+      state.lang === "ar"
+        ? (b.propertyTitleAr || b.propertyTitle || b.titleAr || b.propertyTitleEn || "عقار")
+        : (b.propertyTitleEn || b.propertyTitle || b.titleEn || b.propertyTitleAr || "Property");
+
+    const checkIn = b.checkIn || b.arrivalDate || "—";
+    const checkOut = b.checkOut || b.departureDate || "—";
+    const ref = b.reference || b.bookingReference || b.id?.substring(0, 8) || b.id || "—";
+
+    return `
+      <div class="booking-entry">
+        <div class="booking-entry-head">
+          <div>
+            <h4 class="booking-entry-title">${escapeHtml(propTitle)}</h4>
+            <div class="booking-entry-meta">
+              <span><i class="ph ph-calendar"></i> ${escapeHtml(String(checkIn))} → ${escapeHtml(String(checkOut))}</span>
+              <span><i class="ph ph-tag"></i> ${escapeHtml(String(ref))}</span>
+            </div>
+          </div>
+          <span class="booking-status-badge status-${escapeHtml(status)}">${escapeHtml(t(`status_${status}`))}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function closeBookingsModal() {
+  if (els.bookingsModal) {
+    els.bookingsModal.classList.remove("active");
+    els.body.classList.remove("modal-open");
   }
 }
 
 // ──────────────────────────────────────────
 // Chat
 // ──────────────────────────────────────────
-function renderChatMessages() {
-  if (!els.chatMessages) return;
+async function ensureSupportChat(forceRefresh = false) {
+  if (!state.currentUser || !db) return;
 
-  if (!state.chatMessages.length) {
-    if (els.chatEmptyState) els.chatEmptyState.style.display = "";
-    els.chatMessages.innerHTML = "";
+  const uid = cleanText(state.currentUser.uid);
+  if (!uid) return;
+
+  if (!forceRefresh && state.chatInitializedForUser === uid && state.currentChatId) {
+    subscribeToCurrentChat(state.currentChatId);
     return;
-  }
-
-  if (els.chatEmptyState) els.chatEmptyState.style.display = "none";
-
-  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
-    const item = normalizeMessage(msg);
-    return `
-      <div class="chat-message ${item.role === "admin" ? "admin" : "user"}">
-        <div class="chat-message-bubble">
-          <p>${escapeHtml(item.text)}</p>
-          <span>${escapeHtml(item.time)}</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-}
-
-async function findOrCreateSupportChat() {
-  if (!db || !state.currentUser) return null;
-
-  const uid = cleanText(state.currentUser.uid);
-  const email = getCurrentUserEmail();
-  const name = getCurrentUserName();
-
-  try {
-    const byUserId = await db.collection("chats").where("userId", "==", uid).limit(1).get();
-    if (!byUserId.empty) {
-      const doc = byUserId.docs[0];
-      return { id: doc.id, ...doc.data() };
-    }
-  } catch (err) {
-    console.warn("find chat by userId:", err);
-  }
-
-  if (email) {
-    try {
-      const byEmail = await db.collection("chats").where("userEmail", "==", email).limit(1).get();
-      if (!byEmail.empty) {
-        const doc = byEmail.docs[0];
-        return { id: doc.id, ...doc.data() };
-      }
-    } catch (err) {
-      console.warn("find chat by email:", err);
-    }
-  }
-
-  const payload = {
-    userId: uid,
-    userEmail: email,
-    userName: name,
-    participantIds: [uid].filter(Boolean),
-    participants: [uid].filter(Boolean),
-    ownerId: "",
-    bookingId: "",
-    propertyId: "",
-    lastMessage: "",
-    status: "open",
-    createdAt: getServerTimestamp(),
-    updatedAt: getServerTimestamp()
-  };
-
-  const ref = await db.collection("chats").add(payload);
-  return { id: ref.id, ...payload };
-}
-
-function subscribeToCurrentChat(chatId) {
-  if (!db || !chatId) return;
-  stopChatSubscription();
-
-  setChatStatus("syncing");
-
-  state.currentChatUnsub = db
-    .collection("chats")
-    .doc(chatId)
-    .collection("messages")
-    .orderBy("createdAt", "asc")
-    .onSnapshot((snap) => {
-      const items = [];
-      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-      state.chatMessages = items;
-      renderChatMessages();
-      setChatStatus("connected");
-      if (state.chatOpen) {
-        state.chatUnread = 0;
-        setUnreadBadge();
-      }
-    }, (err) => {
-      console.error("chat messages snapshot:", err);
-      setChatStatus("error");
-    });
-}
-
-function subscribeToChatThreadList() {
-  if (!db || !state.currentUser) return;
-  stopChatsListSubscription();
-
-  const uid = cleanText(state.currentUser.uid);
-
-  state.chatsListUnsub = db.collection("chats")
-    .where("userId", "==", uid)
-    .onSnapshot((snap) => {
-      let unread = 0;
-      snap.forEach((doc) => {
-        const data = doc.data() || {};
-        unread += toNumber(data.unreadForUser, 0);
-      });
-
-      state.chatUnread = state.chatOpen ? 0 : unread;
-      setUnreadBadge();
-    }, (err) => {
-      console.warn("chat list snapshot:", err);
-    });
-}
-
-async function ensureSupportChat(openAfter = false) {
-  if (!db || !state.currentUser) {
-    state.chatMessages = [];
-    renderChatMessages();
-    return null;
-  }
-
-  if (state.chatInitializedForUser === state.currentUser.uid && state.currentChatId) {
-    if (openAfter) openChatModal();
-    return state.currentChatId;
   }
 
   setChatStatus("syncing", t("chatPreparing"));
 
   try {
-    const chat = await findOrCreateSupportChat();
-    if (!chat?.id) throw new Error("CHAT_NOT_READY");
+    let existingChatId = state.currentChatId || safeGet("ore_current_chat_id", "");
 
-    state.currentChatId = chat.id;
-    state.supportChatDoc = chat;
-    state.chatInitializedForUser = state.currentUser.uid;
-    safeSet("ore_current_chat_id", chat.id);
-    updateChatHiddenFields(chat.id);
-    subscribeToCurrentChat(chat.id);
-    subscribeToChatThreadList();
+    if (!existingChatId) {
+      try {
+        const snap = await db.collection("chats").where("userId", "==", uid).limit(1).get();
+        if (!snap.empty) existingChatId = snap.docs[0].id;
+      } catch {}
+    }
 
-    if (openAfter) openChatModal();
+    if (!existingChatId) {
+      const payload = {
+        userId: uid,
+        userEmail: getCurrentUserEmail(),
+        userName: getCurrentUserName(),
+        propertyId: "",
+        bookingId: "",
+        createdAt: getServerTimestamp(),
+        updatedAt: getServerTimestamp(),
+        lastMessage: "",
+        lastMessageAt: getServerTimestamp()
+      };
+      const ref = await db.collection("chats").add(payload);
+      existingChatId = ref.id;
+    }
 
-    return chat.id;
+    state.currentChatId = existingChatId;
+    safeSet("ore_current_chat_id", existingChatId);
+    state.chatInitializedForUser = uid;
+    updateChatHiddenFields(existingChatId);
+    subscribeToCurrentChat(existingChatId);
   } catch (err) {
-    console.error("ensureSupportChat:", err);
-    setChatStatus("error");
-    return null;
+    console.error("ensureSupportChat error:", err);
+    setChatStatus("error", t("chatError"));
   }
 }
 
-async function sendCurrentChatMessage(e) {
-  if (e) e.preventDefault();
+function subscribeToCurrentChat(chatId) {
+  if (!db || !chatId || !state.currentUser) return;
 
+  stopChatSubscription();
+  setChatStatus("syncing", t("chatSyncing"));
+
+  try {
+    state.currentChatUnsub = db
+      .collection("chats")
+      .doc(chatId)
+      .collection("messages")
+      .orderBy("createdAt", "asc")
+      .onSnapshot(
+        (snap) => {
+          const items = [];
+          snap.forEach((doc) => items.push(normalizeMessage({ id: doc.id, ...doc.data() })));
+          state.chatMessages = items;
+
+          if (!state.chatOpen) {
+            const unread = items.filter((m) => m.role === "admin").length;
+            state.chatUnread = unread;
+          } else {
+            state.chatUnread = 0;
+          }
+
+          setUnreadBadge();
+          renderChatMessages();
+          setChatStatus("connected", t("supportReady"));
+        },
+        async () => {
+          try {
+            const snap2 = await db.collection("messages").where("chatId", "==", chatId).get();
+            const items = [];
+            snap2.forEach((doc) => items.push(normalizeMessage({ id: doc.id, ...doc.data() })));
+            items.sort((a, b) => {
+              const at = new Date(a.createdAt || a.timestamp || 0).getTime();
+              const bt = new Date(b.createdAt || b.timestamp || 0).getTime();
+              return at - bt;
+            });
+            state.chatMessages = items;
+            renderChatMessages();
+            setChatStatus("connected", t("supportReady"));
+          } catch (err) {
+            console.error("chat fallback load error:", err);
+            setChatStatus("error", t("chatError"));
+          }
+        }
+      );
+  } catch (err) {
+    console.error("subscribeToCurrentChat error:", err);
+    setChatStatus("error", t("chatError"));
+  }
+}
+
+function openChat() {
   if (!state.currentUser) {
-    showToast(t("loginRequired"), "warning");
     showAuthModal("login");
     return;
   }
 
-  if (!db || !state.currentChatId) {
-    const chatId = await ensureSupportChat(false);
-    if (!chatId) {
-      showToast(t("chatError"), "error");
-      return;
-    }
-  }
-
-  const text = cleanText(els.chatInput?.value);
-  if (!text) return;
-
-  const btn = els.chatSendBtn;
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i>';
-  }
-
-  try {
-    const payload = {
-      text,
-      message: text,
-      senderId: cleanText(state.currentUser?.uid),
-      senderName: getCurrentUserName(),
-      senderRole: "customer",
-      createdAt: getServerTimestamp()
-    };
-
-    await db.collection("chats").doc(state.currentChatId).collection("messages").add(payload);
-    await db.collection("chats").doc(state.currentChatId).set({
-      userId: cleanText(state.currentUser?.uid),
-      userEmail: getCurrentUserEmail(),
-      userName: getCurrentUserName(),
-      lastMessage: text,
-      updatedAt: getServerTimestamp()
-    }, { merge: true });
-
-    if (els.chatInput) els.chatInput.value = "";
-    setChatStatus("connected", t("supportReady"));
-  } catch (err) {
-    console.error("sendCurrentChatMessage:", err);
-    showToast(t("chatError"), "error");
-    setChatStatus("error");
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<span>${t("sendMsg")}</span>`;
-    }
-  }
-}
-
-function openChatModal() {
-  if (!els.chatModal) return;
-  els.chatModal.classList.add("active");
-  els.body.classList.add("modal-open");
   state.chatOpen = true;
   state.chatUnread = 0;
   setUnreadBadge();
+
+  if (els.chatModal) els.chatModal.classList.add("active");
+  els.body.classList.add("modal-open");
+
   renderChatMessages();
+  setTimeout(() => {
+    if (els.chatMessages) els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  }, 80);
+
+  ensureSupportChat(false);
 }
 
-function closeChatModal() {
-  if (!els.chatModal) return;
-  els.chatModal.classList.remove("active");
-  els.body.classList.remove("modal-open");
+function closeChat() {
   state.chatOpen = false;
+  if (els.chatModal) els.chatModal.classList.remove("active");
+  els.body.classList.remove("modal-open");
 }
 
-// ──────────────────────────────────────────
-// Events
-// ──────────────────────────────────────────
-function bindAuthEvents() {
-  if (els.loginForm) els.loginForm.addEventListener("submit", handleLogin);
-  if (els.registerForm) els.registerForm.addEventListener("submit", handleRegister);
-  if (els.forgotForm) els.forgotForm.addEventListener("submit", handleForgot);
+function renderChatMessages() {
+  if (!els.chatMessages) return;
 
-  $$("[data-auth-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const tab = btn.dataset.authTab;
-      if (tab) showAuthForm(tab);
-    });
-  });
-
-  $$("[data-open-auth]").forEach((btn) => {
-    btn.addEventListener("click", () => showAuthModal("login"));
-  });
-
-  $$("[data-close-auth], .auth-modal-close").forEach((btn) => {
-    btn.addEventListener("click", hideAuthModal);
-  });
-
-  if (els.authModal) {
-    els.authModal.addEventListener("click", (e) => {
-      if (e.target === els.authModal) hideAuthModal();
-    });
+  if (!state.chatMessages.length) {
+    els.chatMessages.innerHTML = `
+      <div class="chat-empty-state">
+        <i class="ph ph-chat-dots" style="font-size:2rem;display:block;margin-bottom:10px;color:var(--primary)"></i>
+        <p style="font-weight:700">${t("chatWelcome")}</p>
+      </div>
+    `;
+    return;
   }
 
-  if (els.navAuthBtn) {
-    els.navAuthBtn.addEventListener("click", () => {
-      if (state.currentUser) {
-        if (els.profileDropdown) els.profileDropdown.classList.toggle("active");
-      } else {
-        showAuthModal("login");
-      }
-    });
+  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
+    const role = msg.role || "customer";
+    const text = cleanText(msg.text || msg.message);
+    const time = cleanText(msg.time || formatChatTime(msg.createdAt || msg.timestamp));
+    return `
+      <div class="chat-message ${escapeHtml(role)}">
+        <div class="chat-message-text">${escapeHtml(text)}</div>
+        ${time ? `<span class="chat-meta">${escapeHtml(time)}</span>` : ""}
+      </div>
+    `;
+  }).join("");
+
+  setTimeout(() => {
+    if (els.chatMessages) els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  }, 60);
+}
+
+function sendChatMessage() {
+  if (!state.currentUser) {
+    showAuthModal("login");
+    return;
   }
 
-  if (els.logoutBtn) {
-    els.logoutBtn.addEventListener("click", async () => {
+  const text = els.chatInput?.value?.trim();
+  if (!text) return;
+
+  const localMsg = normalizeMessage({
+    text,
+    role: "customer",
+    createdAt: new Date()
+  });
+
+  state.chatMessages.push(localMsg);
+  if (els.chatInput) els.chatInput.value = "";
+  renderChatMessages();
+
+  if (!db || !state.currentChatId) {
+    ensureSupportChat(true);
+    return;
+  }
+
+  const payload = {
+    text,
+    message: text,
+    role: "customer",
+    senderRole: "customer",
+    userId: cleanText(state.currentUser?.uid),
+    userEmail: getCurrentUserEmail(),
+    userName: getCurrentUserName(),
+    chatId: state.currentChatId,
+    createdAt: getServerTimestamp()
+  };
+
+  db.collection("chats").doc(state.currentChatId).collection("messages").add(payload)
+    .then(() => {
+      return db.collection("chats").doc(state.currentChatId).set({
+        userId: cleanText(state.currentUser?.uid),
+        userEmail: getCurrentUserEmail(),
+        userName: getCurrentUserName(),
+        updatedAt: getServerTimestamp(),
+        lastMessage: text,
+        lastMessageAt: getServerTimestamp()
+      }, { merge: true });
+    })
+    .catch(async (err) => {
+      console.warn("nested chat message failed, trying root messages:", err);
       try {
-        if (auth) await auth.signOut();
-        closeProfileDropdown();
-        showToast(t("signedOut"), "info");
-      } catch (err) {
-        console.warn("signOut:", err);
+        await db.collection("messages").add({
+          ...payload,
+          propertyId: cleanText(els.chatPropertyId?.value || "")
+        });
+        await db.collection("chats").doc(state.currentChatId).set({
+          userId: cleanText(state.currentUser?.uid),
+          userEmail: getCurrentUserEmail(),
+          userName: getCurrentUserName(),
+          updatedAt: getServerTimestamp(),
+          lastMessage: text,
+          lastMessageAt: getServerTimestamp()
+        }, { merge: true });
+      } catch (rootErr) {
+        console.error("sendChatMessage error:", rootErr);
+        setChatStatus("error", t("chatError"));
       }
     });
-  }
-
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest("#profile-menu") && !e.target.closest("#profile-dropdown")) {
-      closeProfileDropdown();
-    }
-  });
 }
 
-function bindSearchEvents() {
-  if (els.searchInput) {
-    els.searchInput.addEventListener("input", () => {
-      state.searchQuery = cleanText(els.searchInput.value);
+// ──────────────────────────────────────────
+// Profile Dropdown
+// ──────────────────────────────────────────
+function toggleProfileDropdown() {
+  if (!els.profileDropdown) return;
 
-      if (searchTimeout) clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => buildSuggestions(state.searchQuery), 150);
+  const isOpen = els.profileDropdown.classList.contains("active");
+  closeAllDropdowns();
 
-      applyFilters();
-    });
+  if (!isOpen) {
+    if (state.currentUser) els.profileDropdown.classList.add("active");
+    else showAuthModal("login");
   }
+}
 
-  if (els.searchBtn) {
-    els.searchBtn.addEventListener("click", () => {
-      state.searchQuery = cleanText(els.searchInput?.value);
-      applyFilters();
-      closeSuggestions();
-    });
-  }
+function closeProfileDropdown() {
+  if (els.profileDropdown) els.profileDropdown.classList.remove("active");
+}
 
-  if (els.clearSearchBtn) {
-    els.clearSearchBtn.addEventListener("click", () => {
-      state.searchQuery = "";
-      if (els.searchInput) els.searchInput.value = "";
-      closeSuggestions();
-      applyFilters();
-    });
-  }
+function closeAllDropdowns() {
+  closeProfileDropdown();
+  closeSuggestions();
+}
 
-  if (els.sortSelect) {
-    els.sortSelect.addEventListener("change", () => {
-      state.sortBy = cleanText(els.sortSelect.value || "featured");
-      applyFilters();
-    });
-  }
+// ──────────────────────────────────────────
+// Scroll Top
+// ──────────────────────────────────────────
+function handleScroll() {
+  if (!els.scrollTopBtn) return;
+  if (window.scrollY > 400) els.scrollTopBtn.classList.add("visible");
+  else els.scrollTopBtn.classList.remove("visible");
+}
 
-  [els.checkInInput, els.checkOutInput, els.guestsInput].forEach((el) => {
-    if (el) el.addEventListener("change", applyFilters);
-  });
-
-  $$(".category-item").forEach((btn) => {
+// ──────────────────────────────────────────
+// Bottom Nav
+// ──────────────────────────────────────────
+function setupBottomNav() {
+  $$(".bottom-nav-item").forEach((btn) => {
     btn.addEventListener("click", () => {
-      $$(".category-item").forEach((b) => b.classList.remove("active"));
+      $$(".bottom-nav-item").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      state.activeCategory = normalizeCategory(btn.dataset.category || "all") || "all";
-      applyFilters();
-    });
-  });
 
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest("#search-input") && !e.target.closest("#search-dropdown")) {
-      closeSuggestions();
-    }
+      const target = btn.dataset.target;
+      if (target === "profile") {
+        if (state.currentUser) toggleProfileDropdown();
+        else showAuthModal("login");
+      } else if (target === "favorites") {
+        if (!state.currentUser) {
+          showAuthModal("login");
+          return;
+        }
+        state.filteredProperties = state.allProperties.filter((p) => isFav(p.id));
+        renderListings();
+        document.querySelector(".categories")?.scrollIntoView({ behavior: "smooth" });
+      } else if (target === "stays") {
+        state.activeCategory = "all";
+        applyFilters();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (target === "chat") {
+        openChat();
+      }
+    });
   });
 }
 
-function bindMiscEvents() {
-  if (els.langBtn) {
-    els.langBtn.addEventListener("click", () => {
+// ──────────────────────────────────────────
+// Password Strength
+// ──────────────────────────────────────────
+function calcPasswordStrength(pass) {
+  if (!pass) return 0;
+  let score = 0;
+  if (pass.length >= 8) score++;
+  if (/[A-Z]/.test(pass)) score++;
+  if (/[0-9]/.test(pass)) score++;
+  if (/[^A-Za-z0-9]/.test(pass)) score++;
+  return score;
+}
+
+function updateStrengthUI(score) {
+  const bars = $$(".str-bar");
+  const label = $("strength-label");
+  const colors = ["#ef4444", "#f59e0b", "#3b82f6", "#10b981"];
+  const labels = state.lang === "ar"
+    ? ["ضعيفة", "مقبولة", "جيدة", "قوية"]
+    : ["Weak", "Fair", "Good", "Strong"];
+
+  bars.forEach((bar, i) => {
+    bar.style.background = i < score ? colors[Math.max(0, score - 1)] : "";
+  });
+
+  if (label) {
+    label.textContent = score > 0 ? labels[score - 1] : "";
+  }
+}
+
+// ──────────────────────────────────────────
+// Scroll Reveal
+// ──────────────────────────────────────────
+function setupScrollReveal() {
+  if (!("IntersectionObserver" in window)) {
+    $$(".ore-reveal").forEach((el) => el.classList.add("ore-reveal-in"));
+    return;
+  }
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add("ore-reveal-in");
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.06 });
+
+  $$(".ore-reveal").forEach((el) => obs.observe(el));
+}
+
+// ──────────────────────────────────────────
+// Event Listeners
+// ──────────────────────────────────────────
+function setupEventListeners() {
+  const langBtn = els.langBtn || $("lang-btn") || $("lang-toggle");
+  if (langBtn) {
+    langBtn.addEventListener("click", () => {
       state.lang = state.lang === "ar" ? "en" : "ar";
       safeSet("ore_lang", state.lang);
       safeSet("orelang", state.lang);
@@ -1837,8 +1746,9 @@ function bindMiscEvents() {
     });
   }
 
-  if (els.themeBtn) {
-    els.themeBtn.addEventListener("click", () => {
+  const themeBtn = els.themeBtn || $("theme-btn") || $("theme-toggle");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", () => {
       state.theme = state.theme === "dark" ? "light" : "dark";
       safeSet("ore_theme", state.theme);
       safeSet("oretheme", state.theme);
@@ -1846,139 +1756,233 @@ function bindMiscEvents() {
     });
   }
 
-  if (els.openChatBtn) {
-    els.openChatBtn.addEventListener("click", async () => {
-      if (!state.currentUser) {
-        showAuthModal("login");
-        return;
-      }
-      await ensureSupportChat(true);
+  const profileMenu = els.profileMenu || $("profile-menu") || $("open-auth-btn");
+  if (profileMenu) profileMenu.addEventListener("click", toggleProfileDropdown);
+
+  const navAuthBtn = els.navAuthBtn || $("nav-auth-btn") || $("open-auth-btn");
+  if (navAuthBtn && navAuthBtn !== profileMenu) {
+    navAuthBtn.addEventListener("click", () => {
+      if (state.currentUser) toggleProfileDropdown();
+      else showAuthModal("login");
     });
   }
 
-  if (els.chatOpenBtn) {
-    els.chatOpenBtn.addEventListener("click", async () => {
-      if (!state.currentUser) {
-        showAuthModal("login");
-        return;
+  const closeAuth = $("close-auth-modal") || $("close-auth-btn");
+  if (closeAuth) closeAuth.addEventListener("click", hideAuthModal);
+
+  if (els.authModal) {
+    els.authModal.addEventListener("click", (e) => {
+      if (e.target === els.authModal) hideAuthModal();
+    });
+  }
+
+  if (els.loginForm) els.loginForm.addEventListener("submit", handleLogin);
+  if (els.registerForm) els.registerForm.addEventListener("submit", handleRegister);
+  if (els.forgotForm) els.forgotForm.addEventListener("submit", handleForgot);
+
+  $("login-submit-btn")?.addEventListener("click", handleLogin);
+  $("register-submit-btn")?.addEventListener("click", handleRegister);
+  $("forgot-submit-btn")?.addEventListener("click", handleForgot);
+
+  $$("[data-show-form]").forEach((btn) => {
+    btn.addEventListener("click", () => showAuthForm(btn.dataset.showForm));
+  });
+
+  $("go-to-register")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("register");
+  });
+
+  $("go-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("login");
+  });
+
+  $("go-to-forgot")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("forgot");
+  });
+
+  $("back-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthForm("login");
+  });
+
+  if (els.logoutBtn) {
+    els.logoutBtn.addEventListener("click", () => {
+      auth?.signOut()
+        .then(() => {
+          closeProfileDropdown();
+          showToast(t("signedOut"), "info");
+        })
+        .catch((err) => console.warn("signOut error:", err));
+    });
+  }
+
+  if (els.myBookingsBtn) els.myBookingsBtn.addEventListener("click", openBookingsModal);
+  $("bookings-close-btn")?.addEventListener("click", closeBookingsModal);
+
+  if (els.bookingsModal) {
+    els.bookingsModal.addEventListener("click", (e) => {
+      if (e.target === els.bookingsModal) closeBookingsModal();
+    });
+  }
+
+  if (els.searchInput) {
+    els.searchInput.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value;
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => buildSuggestions(state.searchQuery), 220);
+      toggleClearBtn();
+    });
+
+    els.searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        closeSuggestions();
+        applyFilters();
       }
-      await ensureSupportChat(true);
+      if (e.key === "Escape") closeSuggestions();
+    });
+
+    els.searchInput.addEventListener("focus", () => {
+      if (state.searchQuery) buildSuggestions(state.searchQuery);
+    });
+  }
+
+  if (els.searchBtn) {
+    els.searchBtn.addEventListener("click", () => {
+      closeSuggestions();
+      applyFilters();
+    });
+  }
+
+  if (els.clearSearchBtn) {
+    els.clearSearchBtn.addEventListener("click", () => {
+      state.searchQuery = "";
+      if (els.searchInput) els.searchInput.value = "";
+      toggleClearBtn();
+      closeSuggestions();
+      applyFilters();
+    });
+  }
+
+  if (els.sortSelect) {
+    els.sortSelect.addEventListener("change", (e) => {
+      state.sortBy = e.target.value;
+      applyFilters();
+    });
+  }
+
+  $$(".category-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $$(".category-item").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.activeCategory = btn.dataset.category || "all";
+      applyFilters();
+    });
+  });
+
+  if (els.checkInInput) els.checkInInput.addEventListener("change", applyFilters);
+  if (els.checkOutInput) els.checkOutInput.addEventListener("change", applyFilters);
+  if (els.guestsInput) els.guestsInput.addEventListener("input", applyFilters);
+
+  if (els.chatOpenBtn) els.chatOpenBtn.addEventListener("click", openChat);
+  $("chat-close-btn")?.addEventListener("click", closeChat);
+
+  if (els.chatModal) {
+    els.chatModal.addEventListener("click", (e) => {
+      if (e.target === els.chatModal) closeChat();
     });
   }
 
   if (els.chatSendForm) {
-    els.chatSendForm.addEventListener("submit", sendCurrentChatMessage);
+    els.chatSendForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      sendChatMessage();
+    });
   } else if (els.chatSendBtn) {
-    els.chatSendBtn.addEventListener("click", sendCurrentChatMessage);
+    els.chatSendBtn.addEventListener("click", sendChatMessage);
   }
 
   if (els.chatInput) {
     els.chatInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendCurrentChatMessage();
-      }
-    });
-  }
-
-  $$("[data-close-chat], .chat-close-btn").forEach((btn) => {
-    btn.addEventListener("click", closeChatModal);
-  });
-
-  if (els.chatModal) {
-    els.chatModal.addEventListener("click", (e) => {
-      if (e.target === els.chatModal) closeChatModal();
-    });
-  }
-
-  if (els.myBookingsBtn) {
-    els.myBookingsBtn.addEventListener("click", async () => {
-      if (!state.currentUser) {
-        showAuthModal("login");
-        return;
-      }
-      if (els.bookingsModal) {
-        els.bookingsModal.classList.add("active");
-        els.body.classList.add("modal-open");
-      }
-      await loadMyBookings();
-    });
-  }
-
-  if (els.myFavoritesBtn) {
-    els.myFavoritesBtn.addEventListener("click", () => {
-      if (!state.currentUser) {
-        showAuthModal("login");
-        return;
-      }
-      const favOnly = state.allProperties.filter((p) => state.favorites.includes(p.id));
-      state.filteredProperties = favOnly.filter((p) => p.isActive !== false && p.visible !== false);
-      renderListings();
-      window.scrollTo({ top: els.listingsGrid?.offsetTop || 0, behavior: "smooth" });
-    });
-  }
-
-  $$("[data-close-bookings], .bookings-close-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (els.bookingsModal) {
-        els.bookingsModal.classList.remove("active");
-        els.body.classList.remove("modal-open");
-      }
-    });
-  });
-
-  if (els.bookingsModal) {
-    els.bookingsModal.addEventListener("click", (e) => {
-      if (e.target === els.bookingsModal) {
-        els.bookingsModal.classList.remove("active");
-        els.body.classList.remove("modal-open");
+        sendChatMessage();
       }
     });
   }
 
   if (els.scrollTopBtn) {
-    window.addEventListener("scroll", () => {
-      els.scrollTopBtn.classList.toggle("show", window.scrollY > 350);
-    });
     els.scrollTopBtn.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   }
-}
 
-// ──────────────────────────────────────────
-// Auth Observer
-// ──────────────────────────────────────────
-function setupAuthObserver() {
-  if (!auth || typeof auth.onAuthStateChanged !== "function") {
-    state.authReady = true;
-    applyGuestAuthUI();
-    return;
+  window.addEventListener("scroll", handleScroll, { passive: true });
+
+  document.addEventListener("click", (e) => {
+    if (els.profileDropdown && els.profileDropdown.classList.contains("active")) {
+      const container = $("profile-container") || els.profileMenu?.parentElement;
+      if (container && !container.contains(e.target)) closeProfileDropdown();
+    }
+
+    if (els.searchDropdown && els.searchDropdown.classList.contains("active")) {
+      const bar = document.querySelector(".search-bar");
+      if (bar && !bar.contains(e.target)) closeSuggestions();
+    }
+  });
+
+  $$(".toggle-pass-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const input = btn.closest(".pass-wrapper")?.querySelector("input");
+      if (!input) return;
+      input.type = input.type === "password" ? "text" : "password";
+      const icon = btn.querySelector("i");
+      if (icon) icon.className = input.type === "password" ? "ph ph-eye" : "ph ph-eye-slash";
+    });
+  });
+
+  if (els.regPassword) {
+    els.regPassword.addEventListener("input", (e) => {
+      const strength = calcPasswordStrength(e.target.value);
+      updateStrengthUI(strength);
+    });
   }
 
-  auth.onAuthStateChanged(async (user) => {
-    state.authReady = true;
-    await updateAuthUI(user);
-  });
+  setupBottomNav();
 }
 
 // ──────────────────────────────────────────
-// Boot
+// Init
 // ──────────────────────────────────────────
-async function boot() {
+function init() {
   applyTheme();
   applyLang();
-  bindAuthEvents();
-  bindSearchEvents();
-  bindMiscEvents();
-  setupAuthObserver();
-  setUnreadBadge();
-  setChatStatus("syncing", t("chatPreparing"));
-  await loadProperties();
+  setupEventListeners();
+  setupScrollReveal();
+
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      updateAuthUI(user).catch((err) => {
+        console.error("updateAuthUI error:", err);
+        applyGuestAuthUI();
+        resetFrontendUserState();
+      });
+    });
+  } else {
+    applyGuestAuthUI();
+    resetFrontendUserState();
+  }
+
+  loadProperties();
+  handleScroll();
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot);
-} else {
-  boot();
-}
+document.addEventListener("DOMContentLoaded", init);
+
+// Expose globals if needed
+window.goToProperty = goToProperty;
+window.toggleFav = toggleFav;
+window.selectSuggestion = selectSuggestion;
+window.openChat = openChat;
