@@ -1700,9 +1700,6 @@
                     fillAllFields: "Please fill all fields",
                     passwordShort: "Password too short",
                     passwordsDontMatch: "Passwords don't match",
-                    resetLinkSent: "Reset link sent!",
-                    accountCreated: "Account created!",
-                    signedIn: "Signed in!",
                     signedOut: "Signed out.",
                     loginRequired: "Please sign in to continue.",
                     noFavorites: "No favorites yet.",
@@ -1712,7 +1709,6 @@
                     noBookings: "No bookings yet.",
                     noBookingsDesc: "Your confirmed bookings will appear here.",
                     bookingProperty: "Property",
-                    bookingStatus: "Status",
                     bookingDates: "Dates",
                     bookingGuests: "Guests",
                     pending: "Pending",
@@ -1771,9 +1767,6 @@
                     fillAllFields: "يرجى ملء جميع الحقول",
                     passwordShort: "كلمة المرور قصيرة جدًا",
                     passwordsDontMatch: "كلمتا المرور غير متطابقتين",
-                    resetLinkSent: "تم إرسال رابط الاستعادة!",
-                    accountCreated: "تم إنشاء الحساب!",
-                    signedIn: "تم تسجيل الدخول!",
                     signedOut: "تم تسجيل الخروج.",
                     loginRequired: "يرجى تسجيل الدخول للمتابعة.",
                     noFavorites: "لا توجد مفضلة بعد.",
@@ -1783,7 +1776,6 @@
                     noBookings: "لا توجد حجوزات حتى الآن.",
                     noBookingsDesc: "ستظهر هنا حجوزاتك المؤكدة.",
                     bookingProperty: "العقار",
-                    bookingStatus: "الحالة",
                     bookingDates: "التواريخ",
                     bookingGuests: "الضيوف",
                     pending: "قيد الانتظار",
@@ -1799,10 +1791,6 @@
 
             function t(key) {
                 return i18n[state.lang]?.[key] || i18n.en[key] || key;
-            }
-
-            function cleanText(v) {
-                return String(v ?? "").trim();
             }
 
             function escapeHtml(str) {
@@ -1898,6 +1886,7 @@
                 updateFavoriteButton();
                 renderFavorites();
                 renderBookings();
+
                 if (!state.property) {
                     $("property-title").textContent = t("loadingProperty");
                     $("property-description").textContent = t("loadingDescription");
@@ -2085,12 +2074,15 @@
                 const lng = Number(property.longitude || property.lng || 0);
 
                 if (!lat || !lng || typeof L === "undefined") {
-                    $("property-map").outerHTML = `
-                        <div class="map-no-location">
-                            <i class="ph ph-map-pin"></i>
-                            <span>${escapeHtml(t("locationUnavailable"))}</span>
-                        </div>
-                    `;
+                    const mapEl = $("property-map");
+                    if (mapEl) {
+                        mapEl.outerHTML = `
+                            <div class="map-no-location">
+                                <i class="ph ph-map-pin"></i>
+                                <span>${escapeHtml(t("locationUnavailable"))}</span>
+                            </div>
+                        `;
+                    }
                     return;
                 }
 
@@ -2468,33 +2460,9 @@
                     .catch((err) => showAuthMessage(getAuthError(err)));
             }
 
-            async function handleBookNow() {
-                if (!state.currentUser) {
-                    openModal($("auth-modal"));
-                    return;
-                }
-
-                if (!db || !state.property) return;
-
-                const bookingData = {
-                    userId: state.currentUser.uid,
-                    userEmail: state.currentUser.email || "",
-                    propertyId: state.property.id,
-                    propertyTitle: getPropertyTitle(state.property),
-                    guests: state.property.guests || state.property.maxGuests || 1,
-                    checkIn: "",
-                    checkOut: "",
-                    status: "pending",
-                    createdAt: new Date()
-                };
-
-                try {
-                    await db.collection("bookings").add(bookingData);
-                    await loadBookings();
-                    openModal($("bookings-modal"));
-                } catch (err) {
-                    console.error("bookNow error:", err);
-                }
+            function handleBookNow() {
+                if (!state.propertyId) return;
+                window.location.href = `booking.html?propertyId=${encodeURIComponent(state.propertyId)}`;
             }
 
             async function handleShare() {
