@@ -324,6 +324,13 @@
     if (layout) layout.classList.toggle("hidden", !state.isLoggedIn);
   }
 
+  function requireAuth(action = true) {
+    if (state.isLoggedIn) return true;
+    ensureLoggedInUI();
+    if (action) showToast("يرجى تسجيل الدخول أولاً.", "warning");
+    return false;
+  }
+
   function normalizeBooking(raw) {
     const guest = isObject(raw?.guest) ? raw.guest : {};
     const stay = isObject(raw?.stay) ? raw.stay : {};
@@ -442,21 +449,30 @@
   }
 
   function login(username, password) {
+    username = cleanText(username);
+    password = cleanText(password);
+
     if (username === ADMIN_USER && password === ADMIN_PASS) {
       state.isLoggedIn = true;
+      state.activeTab = "dashboard";
       safeSet(ADMIN_SESSION_KEY, "1");
       ensureLoggedInUI();
-      activateTab(state.activeTab || "dashboard");
+      activateTab("dashboard", { silentAuth: true });
       loadAllData();
       showToast("تم تسجيل الدخول بنجاح.", "success");
       return true;
     }
+
+    state.isLoggedIn = false;
+    safeRemove(ADMIN_SESSION_KEY);
+    ensureLoggedInUI();
     showToast("بيانات الدخول غير صحيحة.", "error");
     return false;
   }
 
   function logout() {
     state.isLoggedIn = false;
+    state.activeTab = "dashboard";
     safeRemove(ADMIN_SESSION_KEY);
 
     if (state.listeners.chats) {
@@ -471,36 +487,44 @@
     state.currentChatId = null;
     state.currentChatMessages = [];
     ensureLoggedInUI();
+    renderCurrentChatMessages();
     showToast("تم تسجيل الخروج.", "info");
   }
 
-  function activateTab(tabName) {
-    state.activeTab = tabName;
+  function activateTab(tabName, options = {}) {
+    if (!options.silentAuth && !requireAuth()) return;
+
+    state.activeTab = cleanText(tabName || "dashboard") || "dashboard";
 
     qa("[data-tab-target]").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tabTarget === tabName);
+      btn.classList.toggle("active", btn.dataset.tabTarget === state.activeTab);
     });
 
     qa(".tab-pane").forEach((pane) => {
       const paneId = pane.id || "";
       const normalized = paneId.replace(/-pane$|tab-|^tab-/g, "");
-      const match = pane.dataset.tab === tabName || paneId === tabName || normalized === tabName || paneId === `${tabName}-pane`;
+      const match =
+        pane.dataset.tab === state.activeTab ||
+        paneId === state.activeTab ||
+        normalized === state.activeTab ||
+        paneId === `${state.activeTab}-pane`;
       pane.classList.toggle("active", !!match);
     });
 
-    const explicit = byId(`${tabName}-pane`) || byId(tabName);
+    const explicit = byId(`${state.activeTab}-pane`) || byId(state.activeTab);
     if (explicit && explicit.classList.contains("tab-pane")) {
       qa(".tab-pane").forEach((pane) => pane.classList.remove("active"));
       explicit.classList.add("active");
     }
 
-    if (tabName === "chats" && state.currentChatId) {
+    if (state.activeTab === "chats" && state.currentChatId) {
       renderChatThreads();
       renderCurrentChatMessages();
     }
   }
 
   async function loadAllData() {
+    if (!requireAuth(false)) return;
     if (!firebaseReady) return;
 
     await Promise.all([
@@ -1177,7 +1201,6 @@
   function fillOwnerForm(id) {
     const item = state.ownerAccounts.find((x) => x.id === id);
     if (!item) return;
-
     setValue(item.name || item.fullName || "", "owner-name", "owner-full-name");
     setValue(item.email || "", "owner-email");
     setValue(item.phone || "", "owner-phone");
@@ -1383,6 +1406,8 @@
   }
 
   function openChat(chatId) {
+    if (!requireAuth()) return;
+
     state.currentChatId = chatId;
     renderChatThreads();
 
@@ -1511,6 +1536,8 @@
   }
 
   async function ensureChatForBooking(bookingId) {
+    if (!requireAuth()) return;
+
     const booking = state.bookings.find((b) => b.id === bookingId);
     if (!booking) {
       showToast("الحجز غير موجود.", "error");
@@ -1703,18 +1730,34 @@
     }
   }
 
-  function bindStaticEvents() {
-    q("[data-admin-login-form]")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const username = getValue("admin-username", "username");
-      const password = getValue("admin-password", "password");
-      login(username, password);
-    });
+  function getLoginForm() {
+    return q("[data-admin-login-form]") || byId("admin-login-form") || byId("login-form");
+  }
 
-    byId("admin-login-btn")?.addEventListener("click", () => {
-      const username = getValue("admin-username", "username");
-      const password = getValue("admin-password", "password");
-      login(username, password);
+  function handleLoginSubmit(e) {
+    e.preventDefault();
+    const username = getValue("admin-username", "admin-user", "login-username", "username", "email");
+    const password = getValue("admin-password", "admin-pass", "login-password", "password");
+    login(username, password);
+  }
+
+  function bindStaticEvents() {
+    getLoginForm()?.addEventListener("submit", handleLoginSubmit);
+
+    byId("admin-login-btn")?.addEventListener("click", handleLoginSubmit);
+    byId("login-btn")?.addEventListener("click", handleLoginSubmit);
+
+    byId("admin-username")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-password")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-user")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-pass")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
     });
 
     byId("admin-logout-btn")?.addEventListener("click", logout);
@@ -1837,6 +1880,7 @@
     state.isLoggedIn = safeGet(ADMIN_SESSION_KEY) === "1";
     ensureLoggedInUI();
     if (state.isLoggedIn) {
+      activateTab(state.activeTab || "dashboard", { silentAuth: true });
       loadAllData();
     }
   }
