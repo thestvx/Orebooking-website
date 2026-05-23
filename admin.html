@@ -17,6 +17,7 @@
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
@@ -34,13 +35,16 @@
         if (!firebase.apps || !firebase.apps.length) {
           firebase.initializeApp(firebaseConfig);
         }
+
+        window.__auth = firebase.auth();
         window.__db = firebase.firestore();
         window.__firebaseReady = true;
+
         console.log("[OreBooking] Firebase initialized successfully ✅");
       } catch (err) {
         console.error("[OreBooking] Firebase initialization failed:", err);
         window.__firebaseReady = false;
-        window.__firebaseError = err.message;
+        window.__firebaseError = err.message || "Unknown Firebase error";
       }
     })();
   </script>
@@ -50,8 +54,10 @@
 
   <script>
     (function () {
-      const savedTheme = localStorage.getItem("ore_theme") || "light";
-      if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+      try {
+        const savedTheme = localStorage.getItem("ore_theme") || "light";
+        if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
+      } catch {}
     })();
   </script>
 
@@ -1846,33 +1852,51 @@
           <i class="ph ph-shield-check"></i>
           <span>لوحة إدارة OreBooking</span>
         </div>
+
         <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" style="margin:0 auto 16px;" onerror="this.style.display='none'">
-        <h2 style="margin:0 0 8px;">تسجيل دخول الأدمن</h2>
+
+        <h2 style="margin:0 0 8px;">تسجيل دخول الإدارة</h2>
         <p style="margin:0;color:var(--text-muted);line-height:1.8;">
           سجّل الدخول للوصول إلى إدارة العقارات والحجوزات والمحادثات.
         </p>
       </div>
 
-      <form id="admin-login-form" class="admin-form mt-4">
+      <form id="admin-login-form" class="admin-form mt-4" autocomplete="on">
         <div class="input-group">
           <label for="admin-user">اسم المستخدم</label>
-          <input type="text" id="admin-user" placeholder="أدخل اسم المستخدم" autocomplete="username" />
+          <input
+            type="text"
+            id="admin-user"
+            placeholder="أدخل اسم المستخدم"
+            autocomplete="username"
+            required
+          />
         </div>
 
         <div class="input-group mt-3">
           <label for="admin-pass">كلمة المرور</label>
-          <input type="password" id="admin-pass" placeholder="أدخل كلمة المرور" autocomplete="current-password" />
+          <input
+            type="password"
+            id="admin-pass"
+            placeholder="أدخل كلمة المرور"
+            autocomplete="current-password"
+            required
+          />
         </div>
 
-        <button type="submit" class="primary-btn mt-4" style="width:100%;">
+        <button id="admin-login-btn" type="submit" class="primary-btn mt-4" style="width:100%;">
           <i class="ph ph-sign-in"></i>
           <span>دخول</span>
         </button>
       </form>
 
       <div class="login-help">
-        <div><span class="font-bold">افتراضيًا:</span> admin / 123456</div>
-        <div class="mt-2">يمكنك تغيير بيانات الدخول من ملف <span class="text-primary">admin.js</span>.</div>
+        <div id="login-mode-note">
+          تسجيل الدخول هنا مرتبط الآن بـ Firebase Auth بالإضافة إلى صلاحيات Firestore.
+        </div>
+        <div class="mt-2">
+          للأدمن العام: استخدم اسم المستخدم المحلي ثم يجب أن يكون الحساب مربوطًا بحساب Firebase مخول.
+        </div>
       </div>
     </div>
   </div>
@@ -1947,8 +1971,8 @@
             <i class="ph ph-user-circle-gear"></i>
           </div>
           <div>
-            <div class="font-bold">مدير النظام</div>
-            <div style="color:var(--text-muted);font-size:.85rem;">إدارة مباشرة للمشروع</div>
+            <div id="admin-profile-name" class="font-bold">مدير النظام</div>
+            <div id="admin-profile-role" style="color:var(--text-muted);font-size:.85rem;">إدارة مباشرة للمشروع</div>
           </div>
         </div>
       </header>
@@ -2665,6 +2689,6 @@
     })();
   </script>
 
-  <script src="admin.js?v=3.1" defer></script>
+  <script src="admin.js?v=4.0" defer></script>
 </body>
 </html>
