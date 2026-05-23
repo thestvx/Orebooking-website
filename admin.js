@@ -89,6 +89,7 @@
   }
 
   function toNumber(value, fallback = 0) {
+    if (value === null || value === undefined || value === "") return fallback;
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
   }
@@ -521,6 +522,19 @@
       renderChatThreads();
       renderCurrentChatMessages();
     }
+
+    if (state.activeTab === "add-property") {
+      setTimeout(() => state.maps.add?.invalidateSize?.(), 250);
+    }
+    if (state.activeTab === "properties") {
+      renderPropertiesTable();
+    }
+    if (state.activeTab === "bookings") {
+      renderBookings();
+    }
+    if (state.activeTab === "owners") {
+      renderOwnerAccounts();
+    }
   }
 
   async function loadAllData() {
@@ -675,8 +689,10 @@
     const guests = toNumber(getValue(`${prefix}-guests`, `${prefix}-max-guests`), 1);
     const bedrooms = toNumber(getValue(`${prefix}-bedrooms`, `${prefix}-rooms`), 0);
     const bathrooms = toNumber(getValue(`${prefix}-bathrooms`, `${prefix}-baths`), 0);
-    const lat = cleanText(getValue(`${prefix}-lat`, `${prefix}-latitude`));
-    const lng = cleanText(getValue(`${prefix}-lng`, `${prefix}-longitude`));
+    const latRaw = getValue(`${prefix}-lat`, `${prefix}-latitude`);
+    const lngRaw = getValue(`${prefix}-lng`, `${prefix}-longitude`);
+    const lat = cleanText(latRaw);
+    const lng = cleanText(lngRaw);
     const amenitiesText = getValue(`${prefix}-amenities`, `${prefix}-features`);
     const selectedAmenities = getCheckedValues(`[name="${prefix}-amenities"]:checked, [name="${prefix}-features"]:checked`);
     const amenities = selectedAmenities.length ? selectedAmenities : normalizeArray(amenitiesText);
@@ -688,6 +704,9 @@
     const title = titleAr || titleEn || "بدون عنوان";
     const location = locationAr || locationEn || "غير محدد";
     const type = typeAr || typeEn || "إقامة";
+
+    const latNum = lat !== "" ? Number(lat) : null;
+    const lngNum = lng !== "" ? Number(lng) : null;
 
     return {
       title,
@@ -720,10 +739,10 @@
       amenities,
       features: amenities,
       extras,
-      lat: lat ? Number(lat) : null,
-      lng: lng ? Number(lng) : null,
-      latitude: lat ? Number(lat) : null,
-      longitude: lng ? Number(lng) : null,
+      lat: Number.isFinite(latNum) ? latNum : null,
+      lng: Number.isFinite(lngNum) ? lngNum : null,
+      latitude: Number.isFinite(latNum) ? latNum : null,
+      longitude: Number.isFinite(lngNum) ? lngNum : null,
       isActive: true,
       visible: true,
       slug: slugify(title),
@@ -755,6 +774,7 @@
       form.reset();
       resetUploadPreview("admin");
       clearMapCoords("admin");
+      hideMapPickedBadge("admin");
       await loadProperties();
       showToast("تمت إضافة العقار بنجاح.", "success");
       activateTab("properties");
@@ -833,6 +853,13 @@
 
     setUploadPreviewFromUrl("edit", prop.imageUrl || prop.mainImage || "");
     updateMapMarkerFromInputs("edit");
+    if ((prop.lat ?? prop.latitude) && (prop.lng ?? prop.longitude)) {
+      showMapPickedBadge("edit");
+    } else {
+      hideMapPickedBadge("edit");
+    }
+
+    setTimeout(() => state.maps.edit?.invalidateSize?.(), 250);
   }
 
   function closeModal(modal) {
@@ -1533,6 +1560,97 @@
         </div>
       `;
     }).join("");
+
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function findExistingChatForBooking(booking) {
+    const local = state.chats.find((chat) => {
+      if (chat.pseudo) return false;
+      return (
+        (booking.id && chat.bookingId && chat.bookingId === booking.id) ||
+        (booking.userId && chat.userId && chat.userId === booking.userId) ||
+        (booking.guestEmail && chat.userEmail && cleanText(chat.userEmail).toLowerCase() === cleanText(booking.guestEmail).toLowerCase())
+      );
+    });
+
+    if (local) return local;
+
+    if (!firebaseReady) return null;
+
+    try {
+      if (booking.id) {
+        const byBooking = await db.collection("chats").where("bookingId", "==", booking.id).limit(1).get();
+        if (!byBooking.empty) {
+          const doc = byBooking.docs[0];
+          return normalizeChat({ id: doc.id, ...doc.data() });
+        }
+      }
+    } catch (error) {
+      console.warn("findExistingChatForBooking bookingId lookup failed:", error);
+    }
+
+    try {
+      if (booking.userId) {
+        const byUser = await db.collection("chats").where("userId", "==", booking.userId).limit(1).get();
+        if (!byUser.empty) {
+          const doc = byUser.docs[0];
+          return normalizeChat({ id: doc.id, ...doc.data() });
+        }
+      }
+    } catch (error) {
+      console.warn("findExistingChatForBooking userId lookup failed:", error);
+    }
+
+    try {
+      if (booking.guestEmail) {
+        const byEmail = await db.collection("chats").where("userEmail", "==", booking.guestEmail).limit(1).get();
+        if (!byEmail.empty) {
+          const doc = byEmail.docs[0];
+          return normalizeChat({ id: doc.id, ...doc.data() });
+        }
+      }
+    } catch (error) {
+      console.warn("findExistingChatForBooking email lookup failed:", error);
+    }
+
+    return null;
+  }
+
+  async function createRealChatFromBooking(bookingId) {
+    if (!requireAuth()) return null;
+
+    const booking = state.bookings.find((b) => b.id === bookingId);
+    if (!booking) {
+      showToast("الحجز غير موجود.", "error");
+      return null;
+    }
+
+    const existing = await findExistingChatForBooking(booking);
+    if (existing) {
+      return existing.id;
+    }
+
+    if (!firebaseReady) return null;
+
+    const payload = {
+      bookingId,
+      propertyId: booking.propertyId || "",
+      propertyTitle: booking.propertyTitle || "",
+      userId: booking.userId || "",
+      userName: booking.guestName || "",
+      userEmail: booking.guestEmail || "",
+      participants: [booking.userId || booking.guestEmail || "", "admin"].filter(Boolean),
+      participantIds: [booking.userId || booking.guestEmail || "", "admin"].filter(Boolean),
+      lastMessage: "تم فتح المحادثة من لوحة الإدارة",
+      lastText: "تم فتح المحادثة من لوحة الإدارة",
+      lastMessageAt: getServerTimestamp(),
+      updatedAt: getServerTimestamp(),
+      createdAt: getServerTimestamp()
+    };
+
+    const ref = await db.collection("chats").add(payload);
+    return ref.id;
   }
 
   async function ensureChatForBooking(bookingId) {
@@ -1544,15 +1662,9 @@
       return;
     }
 
-    const existing = state.chats.find((chat) => {
-      return (
-        (chat.bookingId && chat.bookingId === bookingId) ||
-        (booking.userId && chat.userId && chat.userId === booking.userId) ||
-        (booking.guestEmail && chat.userEmail && chat.userEmail === booking.guestEmail)
-      );
-    });
+    const existing = await findExistingChatForBooking(booking);
 
-    if (existing && !existing.pseudo) {
+    if (existing) {
       activateTab("chats");
       openChat(existing.id);
       return;
@@ -1565,25 +1677,17 @@
     }
 
     try {
-      const payload = {
-        bookingId,
-        propertyId: booking.propertyId || "",
-        propertyTitle: booking.propertyTitle || "",
-        userId: booking.userId || "",
-        userName: booking.guestName || "",
-        userEmail: booking.guestEmail || "",
-        participants: [booking.userId || booking.guestEmail || "", "admin"].filter(Boolean),
-        participantIds: [booking.userId || booking.guestEmail || "", "admin"].filter(Boolean),
-        lastMessage: "تم فتح المحادثة من لوحة الإدارة",
-        lastMessageAt: getServerTimestamp(),
-        updatedAt: getServerTimestamp(),
-        createdAt: getServerTimestamp()
-      };
+      const chatId = await createRealChatFromBooking(bookingId);
+      if (chatId) {
+        activateTab("chats");
+        openChat(chatId);
+        showToast("تم إنشاء المحادثة بنجاح.", "success");
+        return;
+      }
 
-      const ref = await db.collection("chats").add(payload);
       activateTab("chats");
-      openChat(ref.id);
-      showToast("تم إنشاء المحادثة بنجاح.", "success");
+      openChat(`booking-thread-${bookingId}`);
+      showToast("تم فتح عرض بيانات العميل من الحجز.", "info");
     } catch (error) {
       console.error("ensureChatForBooking error:", error);
       activateTab("chats");
@@ -1595,8 +1699,8 @@
   async function sendAdminMessage(e) {
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
-    if (!state.currentChatId || state.currentChatId.startsWith("booking-thread-")) {
-      return showToast("لا يمكن الإرسال قبل إنشاء محادثة فعلية.", "warning");
+    if (!state.currentChatId) {
+      return showToast("اختر محادثة أولاً.", "warning");
     }
 
     const form = e.currentTarget;
@@ -1608,7 +1712,22 @@
     setButtonLoading(btn, true, "جارٍ الإرسال...");
 
     try {
-      const chatRef = db.collection("chats").doc(state.currentChatId);
+      let actualChatId = state.currentChatId;
+
+      if (actualChatId.startsWith("booking-thread-")) {
+        const bookingId = actualChatId.replace("booking-thread-", "");
+        const createdChatId = await createRealChatFromBooking(bookingId);
+        if (!createdChatId) {
+          showToast("لا يمكن الإرسال قبل إنشاء محادثة فعلية.", "warning");
+          return;
+        }
+        actualChatId = createdChatId;
+        state.currentChatId = actualChatId;
+        activateTab("chats");
+        openChat(actualChatId);
+      }
+
+      const chatRef = db.collection("chats").doc(actualChatId);
       const payload = {
         text,
         message: text,
@@ -1622,7 +1741,7 @@
       } catch {
         await db.collection("messages").add({
           ...payload,
-          chatId: state.currentChatId
+          chatId: actualChatId
         });
       }
 
@@ -1646,21 +1765,78 @@
     }
   }
 
+  function getPreviewElements(prefix) {
+    return {
+      wrapper: byId(`${prefix}-upload-preview`) || byId(`${prefix}-image-preview-wrapper`) || byId(`${prefix}-preview-wrapper`),
+      img:
+        byId(`${prefix}-upload-preview-img`) ||
+        byId(`${prefix}-image-preview`) ||
+        byId(`${prefix}-preview-image`),
+      name:
+        byId(`${prefix}-upload-preview-name`) ||
+        byId(`${prefix}-preview-name`),
+      meta:
+        byId(`${prefix}-upload-preview-meta`) ||
+        byId(`${prefix}-preview-meta`)
+    };
+  }
+
   function resetUploadPreview(prefix) {
-    const img = byId(`${prefix}-image-preview`) || byId(`${prefix}-preview-image`);
-    const input = byId(`${prefix}-image-url`) || byId(`${prefix}-main-image`) || byId(`${prefix}-photo-url`);
-    if (img) img.src = "images/placeholder.jpg";
-    if (input) input.value = "";
+    const { wrapper, img, name, meta } = getPreviewElements(prefix);
+    if (wrapper) wrapper.classList.remove("visible");
+    if (img) img.src = "";
+    if (name) name.textContent = "";
+    if (meta) meta.textContent = "";
   }
 
   function setUploadPreviewFromUrl(prefix, url) {
-    const img = byId(`${prefix}-image-preview`) || byId(`${prefix}-preview-image`);
-    if (img) {
-      img.src = cleanText(url || "images/placeholder.jpg");
-      img.onerror = function () {
-        this.src = "images/placeholder.jpg";
-      };
+    const cleanUrl = cleanText(url);
+    const { wrapper, img, name, meta } = getPreviewElements(prefix);
+
+    if (!img) return;
+
+    if (!cleanUrl) {
+      resetUploadPreview(prefix);
+      return;
     }
+
+    img.src = cleanUrl;
+    img.onerror = function () {
+      this.src = "images/placeholder.jpg";
+    };
+
+    if (wrapper) wrapper.classList.add("visible");
+    if (name) name.textContent = "صورة المعاينة";
+    if (meta) meta.textContent = cleanUrl;
+  }
+
+  function setUploadPreviewFromFile(prefix, file) {
+    const { wrapper, img, name, meta } = getPreviewElements(prefix);
+    if (!file || !img) {
+      resetUploadPreview(prefix);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+      img.src = ev.target?.result || "";
+      if (wrapper) wrapper.classList.add("visible");
+      if (name) name.textContent = file.name || "image";
+      if (meta) meta.textContent = `${Math.round((file.size || 0) / 1024)} KB`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getMapPickedBadge(prefix) {
+    return byId(`${prefix}-map-picked-badge`);
+  }
+
+  function showMapPickedBadge(prefix) {
+    getMapPickedBadge(prefix)?.classList.add("visible");
+  }
+
+  function hideMapPickedBadge(prefix) {
+    getMapPickedBadge(prefix)?.classList.remove("visible");
   }
 
   function clearMapCoords(prefix) {
@@ -1691,8 +1867,45 @@
         state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
       }
       map.setView([lat, lng], 13);
+      showMapPickedBadge(prefix);
     } catch (error) {
       console.warn("updateMapMarkerFromInputs error:", error);
+    }
+  }
+
+  async function searchLocationOnMap(prefix) {
+    const qInput = byId(`${prefix}-map-search`);
+    const query = cleanText(qInput?.value);
+    if (!query) return showToast("أدخل اسم موقع للبحث.", "warning");
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json"
+        }
+      });
+      const data = await res.json();
+      if (!Array.isArray(data) || !data.length) {
+        showToast("لم يتم العثور على الموقع.", "warning");
+        return;
+      }
+
+      const item = data[0];
+      const lat = Number(item.lat);
+      const lng = Number(item.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        showToast("إحداثيات الموقع غير صالحة.", "error");
+        return;
+      }
+
+      setValue(String(lat.toFixed(6)), `${prefix}-lat`, `${prefix}-latitude`);
+      setValue(String(lng.toFixed(6)), `${prefix}-lng`, `${prefix}-longitude`);
+      updateMapMarkerFromInputs(prefix);
+      showToast("تم تحديد الموقع على الخريطة.", "success");
+    } catch (error) {
+      console.error("searchLocationOnMap error:", error);
+      showToast("تعذر البحث عن الموقع.", "error");
     }
   }
 
@@ -1721,6 +1934,7 @@
         } else {
           state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
         }
+        showMapPickedBadge(prefix);
       });
 
       state.maps[mapKey] = map;
@@ -1798,6 +2012,45 @@
         qa("[data-booking-filter]").forEach((x) => x.classList.remove("active"));
         btn.classList.add("active");
         renderBookings();
+      });
+    });
+
+    ["admin-image-file", "edit-image-file"].forEach((id) => {
+      byId(id)?.addEventListener("change", (e) => {
+        const prefix = id.startsWith("edit") ? "edit" : "admin";
+        const file = e.target?.files?.[0];
+        setUploadPreviewFromFile(prefix, file);
+      });
+    });
+
+    ["admin-image-url", "edit-image-url"].forEach((id) => {
+      byId(id)?.addEventListener("input", (e) => {
+        const prefix = id.startsWith("edit") ? "edit" : "admin";
+        setUploadPreviewFromUrl(prefix, e.target?.value || "");
+      });
+    });
+
+    ["admin-map-search-btn", "edit-map-search-btn"].forEach((id) => {
+      byId(id)?.addEventListener("click", () => {
+        const prefix = id.startsWith("edit") ? "edit" : "admin";
+        searchLocationOnMap(prefix);
+      });
+    });
+
+    ["admin-map-search", "edit-map-search"].forEach((id) => {
+      byId(id)?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const prefix = id.startsWith("edit") ? "edit" : "admin";
+          searchLocationOnMap(prefix);
+        }
+      });
+    });
+
+    ["admin-lat", "admin-lng", "edit-lat", "edit-lng"].forEach((id) => {
+      byId(id)?.addEventListener("input", () => {
+        const prefix = id.startsWith("edit") ? "edit" : "admin";
+        updateMapMarkerFromInputs(prefix);
       });
     });
 
@@ -1890,8 +2143,8 @@
     bindStaticEvents();
     initSession();
 
-    initMap("admin", "admin-map");
-    initMap("edit", "edit-map");
+    initMap("admin", "admin-map-picker");
+    initMap("edit", "edit-map-picker");
 
     renderCurrentChatMessages();
   }
