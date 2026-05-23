@@ -355,6 +355,20 @@
                   </select>
                 </div>
 
+                <div class="form-group">
+                  <label for="bed-type" class="form-label">
+                    <span>نوع السرير</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <select id="bed-type" class="form-control" required>
+                    <option value="">اختر نوع السرير</option>
+                    <option value="single">مفرد / Single</option>
+                    <option value="double">مزدوج / Double</option>
+                    <option value="queen">كوين / Queen</option>
+                    <option value="king">كينغ / King</option>
+                  </select>
+                </div>
+
                 <div class="form-group full-width">
                   <label for="special-requests" class="form-label" data-i18n="specialrequests">طلبات خاصة</label>
                   <textarea
@@ -723,8 +737,12 @@
                       <span id="rev-purpose-arrival" class="rd-value"></span>
                     </div>
                     <div class="review-data">
+                      <span class="rd-label">نوع السرير</span>
+                      <span id="rev-bed-type" class="rd-value"></span>
+                    </div>
+                    <div class="review-data">
                       <span class="rd-label" data-i18n="specialrequests">طلبات إضافية</span>
-                      <span id="rev-room-preferences" class="rd-value"></span>
+                      <span id="rev-special-requests" class="rd-value"></span>
                     </div>
                   </div>
                 </div>
@@ -756,7 +774,7 @@
                     </div>
                     <div class="review-data">
                       <span class="rd-label" data-i18n="specialrequests">ملاحظات</span>
-                      <span id="rev-room-preferences" class="rd-value"></span>
+                      <span id="rev-payment-notes" class="rd-value"></span>
                     </div>
                   </div>
                 </div>
@@ -852,6 +870,11 @@
             <div class="summary-row">
               <span data-i18n="guests">الضيوف</span>
               <strong id="summary-guests">1</strong>
+            </div>
+
+            <div class="summary-row">
+              <span>نوع السرير</span>
+              <strong id="summary-bed-type">-</strong>
             </div>
 
             <div class="summary-row">
@@ -973,12 +996,10 @@
             </p>
           </form>
 
-          <!-- Forgot Password -->
+          <!-- Forgot -->
           <form id="forgot-form" class="auth-form">
             <h2 class="auth-title" data-i18n="forgotpassword">نسيت كلمة المرور؟</h2>
-            <p class="auth-subtitle" data-i18n="forgotsubtitle">
-              أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.
-            </p>
+            <p class="auth-subtitle">أدخل بريدك الإلكتروني لإرسال رابط الاستعادة.</p>
 
             <div class="input-group">
               <label for="forgot-email" data-i18n="emailaddress">البريد الإلكتروني</label>
@@ -986,12 +1007,11 @@
             </div>
 
             <button id="forgot-submit-btn" class="primary-btn" type="submit">
-              <span data-i18n="sendresetlink">إرسال رابط الاستعادة</span>
+              <span>إرسال</span>
             </button>
 
             <p class="switch-form-text">
-              <span data-i18n="rememberedpassword">تذكرت كلمة المرور؟</span>
-              <a href="#" id="back-to-login" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
+              <a href="#" data-auth-switch="login" data-i18n="signin">العودة لتسجيل الدخول</a>
             </p>
           </form>
         </div>
