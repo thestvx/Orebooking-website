@@ -1,8 +1,7 @@
 /* =========================================================
-   booking.css — OreBooking v15.2
+   booking.css — OreBooking v15.3
    RTL/LTR safe + responsive + auth modal support
-   Fixed responsive truncation + navbar/logo consistency
-   Fixed custom typed date inputs compatibility
+   Added bed type field support + fixed truncated responsive section
    ========================================================= */
 
 /* ═══════════════════════════════════════════
@@ -867,6 +866,8 @@ body.dark .step-header-icon {
   font-size: 0.97rem;
   transition: var(--transition, all .3s cubic-bezier(.16, 1, .3, 1));
   appearance: none;
+  -webkit-appearance: none;
+  background-clip: padding-box;
 }
 
 .form-control::placeholder {
@@ -898,6 +899,33 @@ input[type="time"].form-control,
 input[type="number"].form-control,
 select.form-control {
   padding-inline: 14px;
+}
+
+select.form-control {
+  cursor: pointer;
+  padding-inline-end: 42px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted, #64748b) 50%),
+    linear-gradient(135deg, var(--text-muted, #64748b) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+html[dir="rtl"] select.form-control {
+  background-position:
+    16px calc(50% - 3px),
+    22px calc(50% - 3px);
+  padding-inline-end: 16px;
+  padding-inline-start: 42px;
+}
+
+html[dir="ltr"] select.form-control {
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
 }
 
 /* Custom typed date inputs */
@@ -1266,6 +1294,7 @@ body.dark .review-card-header {
   font-weight: 700;
   line-height: 1.6;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 /* ═══════════════════════════════════════════
@@ -1530,14 +1559,14 @@ body.dark .review-card-header {
   max-width: 100%;
 }
 
-.summary-details {
+.summary-list {
   display: block;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 12px;
   color: var(--text-main, #0f172a);
@@ -1547,12 +1576,15 @@ body.dark .review-card-header {
 
 .summary-row span:first-child {
   color: var(--text-muted, #64748b);
+  flex: 1;
+  min-width: 0;
 }
 
 .summary-row span:last-child,
 .summary-row strong {
   text-align: end;
   word-break: break-word;
+  max-width: 58%;
 }
 
 .summary-row.total {
@@ -1927,18 +1959,29 @@ body.dark .review-card-header {
 
   .booking-summary-sidebar {
     position: static;
+    top: auto;
     order: -1;
-    margin-bottom: 24px;
   }
 
-  .profile-dropdown {
-    inset-inline-end: 0;
-    inset-inline-start: auto;
+  .review-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 
-  html[dir="ltr"] .profile-dropdown {
-    inset-inline-start: auto;
-    inset-inline-end: 0;
+  .navbar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .logo {
+    flex-basis: 100%;
+    justify-content: center;
+    max-width: 220px;
+  }
+
+  .nav-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 }
 
@@ -1947,64 +1990,13 @@ body.dark .review-card-header {
     padding-inline: 16px;
   }
 
-  .navbar {
-    padding: 10px 14px;
-    gap: 8px;
-    min-height: 68px;
-  }
-
-  .rewards-badge {
-    display: none !important;
-  }
-
-  .nav-actions {
-    gap: 4px;
-  }
-
-  .icon-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    padding: 0;
-    font-size: 1.05rem;
-  }
-
-  #lang-toggle {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 5px 10px;
-    font-size: 0.78rem;
-    white-space: nowrap;
-    border-radius: 999px;
-    min-width: auto;
-    max-width: none;
-  }
-
-  #lang-toggle span {
-    display: inline !important;
-  }
-
-  .profile-menu {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-  }
-
-  .logo {
-    max-width: 140px;
-  }
-
-  .logo-img {
-    height: 32px;
-    max-width: 100%;
-  }
-
   .booking-page {
     padding: 22px 0 56px;
+  }
+
+  .booking-main-card,
+  .booking-summary-sidebar {
+    border-radius: 20px;
   }
 
   .booking-main-card {
@@ -2012,11 +2004,11 @@ body.dark .review-card-header {
   }
 
   .booking-summary-sidebar {
-    padding: 18px;
+    padding: 20px;
   }
 
   .booking-hero-card {
-    padding: 20px 18px;
+    padding: 22px 18px;
     border-radius: 22px;
   }
 
@@ -2034,21 +2026,15 @@ body.dark .review-card-header {
   }
 
   .step-header {
-    gap: 12px;
-    margin-bottom: 22px;
-    padding-bottom: 18px;
-  }
-
-  .step-header-icon {
-    width: 46px;
-    height: 46px;
-    min-width: 46px;
-    font-size: 1.35rem;
-    border-radius: 14px;
+    align-items: flex-start;
   }
 
   .step-title {
     font-size: 1.2rem;
+  }
+
+  .step-subtitle {
+    font-size: 0.88rem;
   }
 
   .section-block {
@@ -2060,12 +2046,16 @@ body.dark .review-card-header {
     gap: 14px;
   }
 
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+
   .review-grid {
     grid-template-columns: 1fr;
   }
 
-  .payment-methods-grid {
-    grid-template-columns: 1fr;
+  .points-box {
+    flex-direction: column;
   }
 
   .step-actions,
@@ -2079,40 +2069,86 @@ body.dark .review-card-header {
     width: 100%;
   }
 
-  .bank-row {
+  .bank-row,
+  .summary-row,
+  .prop-mini-card {
     flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
+    align-items: flex-start;
   }
 
+  .summary-row span:last-child,
+  .summary-row strong,
   .bank-row strong {
     text-align: start;
+    max-width: 100%;
   }
 
-  .points-box {
-    padding: 14px 16px;
-    gap: 12px;
+  html[dir="rtl"] .summary-row span:last-child,
+  html[dir="rtl"] .summary-row strong,
+  html[dir="rtl"] .bank-row strong {
+    text-align: right;
+  }
+
+  html[dir="ltr"] .summary-row span:last-child,
+  html[dir="ltr"] .summary-row strong,
+  html[dir="ltr"] .bank-row strong {
+    text-align: left;
+  }
+
+  .prop-mini-img {
+    width: 100%;
+    min-width: 100%;
+    height: 180px;
+  }
+
+  .auth-modal {
+    padding: 10px;
+  }
+
+  .auth-modal .modal-content,
+  .modal-content {
+    max-width: 100%;
+    border-radius: 20px;
   }
 
   .auth-content {
-    padding: 22px 16px 20px;
+    padding: 22px 18px 22px;
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 560px) {
   .navbar {
-    flex-wrap: nowrap;
+    padding: 12px 14px;
   }
 
-  .back-home-btn span {
+  .nav-actions {
+    gap: 6px;
+  }
+
+  .lang-btn,
+  .icon-btn,
+  .back-home-btn,
+  .profile-menu {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 0 12px;
+    font-size: 0.86rem;
+  }
+
+  .rewards-badge {
+    min-height: 40px;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+
+  .back-home-btn span,
+  .rewards-badge span:last-child,
+  .lang-btn span {
     display: none;
   }
 
-  .back-home-btn {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    padding: 0;
+  .logo-img {
+    height: 40px;
   }
 
   .booking-hero-card h1 {
@@ -2123,41 +2159,78 @@ body.dark .review-card-header {
     font-size: 0.92rem;
   }
 
-  .booking-main-card,
-  .booking-summary-sidebar,
-  .booking-steps-header {
-    border-radius: 18px;
+  .step-num {
+    width: 38px;
+    height: 38px;
+    font-size: 0.85rem;
   }
 
-  .summary-row {
-    font-size: 0.86rem;
+  .step-indicator {
+    min-width: 72px;
   }
 
-  .prop-mini-card {
-    gap: 10px;
+  .step-label {
+    font-size: 0.7rem;
   }
 
-  .prop-mini-img {
-    width: 78px;
-    min-width: 78px;
-    height: 66px;
+  .payment-details-box {
+    padding: 16px;
   }
 
-  .auth-modal {
-    padding: 10px;
+  .file-upload-wrapper {
+    padding: 22px 14px;
   }
 
-  .auth-modal .modal-content,
-  .modal-content {
-    max-height: 94dvh;
-    border-radius: 20px;
-  }
-
-  .booking-date-input,
-  #arrival-date,
-  #departure-date,
-  #transfer-date {
-    font-size: 0.95rem;
+  .review-card-header,
+  .review-card-body {
     padding-inline: 14px;
+  }
+
+  .sidebar-title,
+  .section-block h3,
+  .review-card-header h3 {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .container {
+    padding-inline: 12px;
+  }
+
+  .booking-main-card {
+    padding: 18px 14px;
+  }
+
+  .booking-summary-sidebar {
+    padding: 16px;
+  }
+
+  .booking-hero-card {
+    padding: 18px 14px;
+  }
+
+  .step-header-icon {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    font-size: 1.4rem;
+  }
+
+  .primary-btn,
+  .ghost-btn {
+    min-height: 46px;
+    padding: 0 18px;
+    font-size: 0.92rem;
+  }
+
+  .form-control {
+    min-height: 48px;
+    padding: 13px 14px;
+    font-size: 0.92rem;
+  }
+
+  textarea.form-control {
+    min-height: 96px;
   }
 }
