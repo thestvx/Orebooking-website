@@ -1,8 +1,8 @@
 // =========================================
-// booking.js — OreBooking v16.2
+// booking.js — OreBooking v16.3
 // Simplified booking flow + auth + payment
 // Fixed stale dates + success popup
-// Fixed desktop date typing
+// Fixed desktop/mobile date typing
 // =========================================
 
 "use strict";
@@ -231,90 +231,140 @@ function safeCall(fn, label = "Unknown task") {
 // ──────────────────────────────────────────
 // Date Input Enhancement
 // ──────────────────────────────────────────
-function isDesktopDateTypingPreferred() {
-  return window.matchMedia
-    ? window.matchMedia("(min-width: 992px)").matches
-    : window.innerWidth >= 992;
+function sanitizeDateDigits(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
 }
 
-function sanitizeDateInputValue(value) {
-  return cleanText(value).replace(/[^\d-]/g, "").slice(0, 10);
+function formatDateDigits(digits) {
+  const clean = sanitizeDateDigits(digits);
+  if (!clean) return "";
+  if (clean.length <= 4) return clean;
+  if (clean.length <= 6) return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+  return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 8)}`;
 }
 
-function autoFormatDateInput(value) {
-  const digits = cleanText(value).replace(/\D/g, "").slice(0, 8);
-  if (!digits) return "";
+function normalizeDateInputLoose(value) {
+  const raw = cleanText(value);
+  if (!raw) return "";
 
-  if (digits.length <= 4) return digits;
-
-  let out = digits.slice(0, 4);
-  if (digits.length > 4) out += `-${digits.slice(4, 6)}`;
-  if (digits.length > 6) out += `-${digits.slice(6, 8)}`;
-
-  return out;
-}
-
-function normalizeTypedDateValue(value) {
-  const raw = sanitizeDateInputValue(value);
-  const formatted = raw.includes("-") ? raw : autoFormatDateInput(raw);
-  const parts = parseDateParts(formatted);
-  if (!parts) return formatted;
-
-  const probe = new Date(parts.year, parts.month - 1, parts.day, 12, 0, 0, 0);
-  if (
-    Number.isNaN(probe.getTime()) ||
-    probe.getFullYear() !== parts.year ||
-    probe.getMonth() !== parts.month - 1 ||
-    probe.getDate() !== parts.day
-  ) {
-    return formatted;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
   }
 
-  return formatDateInput(probe);
+  return formatDateDigits(raw);
 }
 
-function enhanceDateInput(el, onCommit) {
+function normalizeDateInputStrict(value) {
+  const formatted = normalizeDateInputLoose(value);
+  const parsed = parseDate(formatted);
+  if (!parsed) return formatted;
+  return formatDateInput(parsed);
+}
+
+function getCaretOffsetFromDigits(value, caretPos) {
+  const before = String(value || "").slice(0, caretPos);
+  return (before.match(/\d/g) || []).length;
+}
+
+function getCaretPositionFromDigitsCount(formattedValue, digitsCount) {
+  if (digitsCount <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < formattedValue.length; i += 1) {
+    if (/\d/.test(formattedValue[i])) {
+      seen += 1;
+      if (seen >= digitsCount) return i + 1;
+    }
+  }
+  return formattedValue.length;
+}
+
+function handleDateTypingInput(el) {
+  if (!el) return;
+
+  const rawValue = el.value;
+  const caret = typeof el.selectionStart === "number" ? el.selectionStart : rawValue.length;
+  const digitOffset = getCaretOffsetFromDigits(rawValue, caret);
+  const formatted = formatDateDigits(rawValue);
+
+  if (formatted !== rawValue) {
+    el.value = formatted;
+    const nextCaret = getCaretPositionFromDigitsCount(formatted, digitOffset);
+    try {
+      el.setSelectionRange(nextCaret, nextCaret);
+    } catch (_) {}
+  }
+}
+
+function enhanceDateInput(el, options = {}) {
   if (!el || el.dataset.dateEnhanced === "true") return;
 
-  el.setAttribute("inputmode", "numeric");
-  el.setAttribute("placeholder", "YYYY-MM-DD");
-  el.setAttribute("autocomplete", "off");
-  el.dataset.dateEnhanced = "true";
+  const {
+    allowPast = false,
+    onCommit = null
+  } = options;
 
-  if (isDesktopDateTypingPreferred()) {
-    try {
-      el.type = "text";
-    } catch (_) {}
+  el.dataset.dateEnhanced = "true";
+  el.setAttribute("type", "text");
+  el.setAttribute("inputmode", "numeric");
+  el.setAttribute("autocomplete", "off");
+  el.setAttribute("autocapitalize", "off");
+  el.setAttribute("autocorrect", "off");
+  el.setAttribute("spellcheck", "false");
+  el.setAttribute("dir", "ltr");
+  if (!el.getAttribute("placeholder")) {
+    el.setAttribute("placeholder", "YYYY-MM-DD");
   }
 
   el.addEventListener("input", () => {
-    const before = el.value;
-    const start = el.selectionStart || 0;
-    const after = autoFormatDateInput(before);
+    handleDateTypingInput(el);
+    markInvalid(el, false);
+  });
 
-    if (before !== after) {
-      el.value = after;
-      const nextPos = Math.max(0, start + (after.length - before.length));
-      try {
-        el.setSelectionRange(nextPos, nextPos);
-      } catch (_) {}
-    }
+  el.addEventListener("paste", () => {
+    requestAnimationFrame(() => {
+      handleDateTypingInput(el);
+    });
   });
 
   el.addEventListener("blur", () => {
-    el.value = normalizeTypedDateValue(el.value);
+    const normalized = normalizeDateInputStrict(el.value);
+    if (!normalized) {
+      el.value = "";
+    } else if (!allowPast && isPastDate(normalized)) {
+      el.value = "";
+    } else {
+      el.value = normalized;
+    }
+
     if (typeof onCommit === "function") onCommit();
   });
 
   el.addEventListener("change", () => {
-    el.value = normalizeTypedDateValue(el.value);
+    const normalized = normalizeDateInputStrict(el.value);
+    if (!normalized) {
+      el.value = "";
+    } else if (!allowPast && isPastDate(normalized)) {
+      el.value = "";
+    } else {
+      el.value = normalized;
+    }
+
     if (typeof onCommit === "function") onCommit();
   });
 
   el.addEventListener("keydown", (e) => {
     const allowed = [
-      "Backspace", "Delete", "Tab", "Escape", "Enter",
-      "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+      "Backspace",
+      "Delete",
+      "Tab",
+      "Escape",
+      "Enter",
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "Home",
+      "End"
     ];
 
     if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
@@ -326,51 +376,36 @@ function enhanceDateInput(el, onCommit) {
 }
 
 function setupDateInputs() {
-  const commit = () => {
-    updateBookingStateFromInputs();
-    updateSummary();
-    updateReview();
-  };
-
-  enhanceDateInput(bookingFields.arrivalDate, () => {
-    const checkIn = normalizeTypedDateValue(bookingFields.arrivalDate?.value || "");
-    bookingFields.arrivalDate.value = checkIn;
-
-    bookingState.checkIn = getSafeCheckIn(checkIn);
-
-    if (bookingFields.arrivalDate.value !== bookingState.checkIn) {
-      bookingFields.arrivalDate.value = bookingState.checkIn;
+  enhanceDateInput(bookingFields.arrivalDate, {
+    allowPast: false,
+    onCommit: () => {
+      updateBookingStateFromInputs();
+      updateDateConstraints();
+      updateSummary();
+      updateReview();
+      saveDraft();
     }
-
-    const minCheckout = bookingState.checkIn ? addDays(bookingState.checkIn, 1) : todayInputValue();
-
-    if (bookingFields.departureDate) {
-      bookingFields.departureDate.min = minCheckout;
-      const currentOut = normalizeTypedDateValue(bookingFields.departureDate.value || "");
-      bookingFields.departureDate.value = currentOut;
-
-      if (!currentOut || getDiffNights(bookingState.checkIn, currentOut) < 1) {
-        bookingFields.departureDate.value = bookingState.checkIn ? minCheckout : "";
-      }
-    }
-
-    commit();
   });
 
-  enhanceDateInput(bookingFields.departureDate, () => {
-    const checkOut = normalizeTypedDateValue(bookingFields.departureDate?.value || "");
-    bookingFields.departureDate.value = checkOut;
-
-    bookingState.checkOut = getSafeCheckOut(
-      getSafeCheckIn(bookingFields.arrivalDate?.value || bookingState.checkIn || ""),
-      checkOut
-    );
-
-    if (bookingFields.departureDate.value !== bookingState.checkOut) {
-      bookingFields.departureDate.value = bookingState.checkOut;
+  enhanceDateInput(bookingFields.departureDate, {
+    allowPast: false,
+    onCommit: () => {
+      updateBookingStateFromInputs();
+      updateDateConstraints();
+      updateSummary();
+      updateReview();
+      saveDraft();
     }
+  });
 
-    commit();
+  enhanceDateInput(bookingFields.transferDate, {
+    allowPast: false,
+    onCommit: () => {
+      updateBookingStateFromInputs();
+      updateSummary();
+      updateReview();
+      saveDraft();
+    }
   });
 }
 
@@ -1289,11 +1324,11 @@ function hydrateStayContext() {
   bookingState.guestCount = Math.max(1, parsePositiveInt(guests || 1, 1));
   bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
 
-  if (bookingFields.arrivalDate) {
+  if (bookingFields.arrivalDate && !cleanText(bookingFields.arrivalDate.value)) {
     bookingFields.arrivalDate.value = bookingState.checkIn || "";
   }
 
-  if (bookingFields.departureDate) {
+  if (bookingFields.departureDate && !cleanText(bookingFields.departureDate.value)) {
     bookingFields.departureDate.value = bookingState.checkOut || "";
   }
 
@@ -1314,78 +1349,51 @@ function persistStayContext() {
 
 function updateDateConstraints() {
   const today = todayInputValue();
-
-  if (bookingState.checkIn && isPastDate(bookingState.checkIn)) {
-    bookingState.checkIn = "";
-  }
-
-  if (bookingState.checkOut && isPastDate(bookingState.checkOut)) {
-    bookingState.checkOut = "";
-  }
+  const currentCheckIn = cleanText(bookingFields.arrivalDate?.value || bookingState.checkIn || "");
+  const currentCheckOut = cleanText(bookingFields.departureDate?.value || bookingState.checkOut || "");
 
   if (bookingFields.arrivalDate) {
     bookingFields.arrivalDate.min = today;
-
-    if (bookingFields.arrivalDate.value && isPastDate(bookingFields.arrivalDate.value)) {
-      bookingFields.arrivalDate.value = "";
-      bookingState.checkIn = "";
-    }
   }
-
-  const minCheckout = bookingState.checkIn ? addDays(bookingState.checkIn, 1) : today;
 
   if (bookingFields.departureDate) {
-    bookingFields.departureDate.min = minCheckout;
-
-    if (!bookingState.checkIn && bookingFields.departureDate.value) {
-      bookingFields.departureDate.value = "";
-      bookingState.checkOut = "";
-    }
-
-    if (
-      bookingState.checkIn &&
-      bookingFields.departureDate.value &&
-      getDiffNights(bookingState.checkIn, bookingFields.departureDate.value) < 1
-    ) {
-      bookingFields.departureDate.value = minCheckout || "";
-      bookingState.checkOut = bookingFields.departureDate.value;
-    }
+    bookingFields.departureDate.min = currentCheckIn && parseDate(currentCheckIn)
+      ? addDays(currentCheckIn, 1)
+      : today;
   }
 
-  bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
-  persistStayContext();
-}
+  bookingState.checkIn = getSafeCheckIn(currentCheckIn);
+  bookingState.checkOut = getSafeCheckOut(bookingState.checkIn, currentCheckOut);
 
-function generateBookingReference() {
-  if (bookingState.bookingReference) return bookingState.bookingReference;
-  const propPart = cleanText(bookingState.propertyId || "ORE").slice(0, 6).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  bookingState.bookingReference = `ORE-${propPart}-${rand}`;
-  return bookingState.bookingReference;
-}
-
-function updateBookingStateFromInputs() {
-  bookingState.checkIn = getSafeCheckIn(getFieldValue("arrivalDate"));
-  bookingState.checkOut = getSafeCheckOut(bookingState.checkIn, getFieldValue("departureDate"));
-
-  if (bookingFields.arrivalDate && bookingFields.arrivalDate.value !== bookingState.checkIn) {
+  if (bookingFields.arrivalDate && cleanText(bookingFields.arrivalDate.value) && !parseDate(bookingFields.arrivalDate.value)) {
+    // keep partially typed value during editing
+  } else if (bookingFields.arrivalDate && bookingState.checkIn) {
     bookingFields.arrivalDate.value = bookingState.checkIn;
   }
 
-  if (bookingFields.departureDate && bookingFields.departureDate.value !== bookingState.checkOut) {
+  if (bookingFields.departureDate && cleanText(bookingFields.departureDate.value) && !parseDate(bookingFields.departureDate.value)) {
+    // keep partially typed value during editing
+  } else if (bookingFields.departureDate && bookingState.checkOut) {
     bookingFields.departureDate.value = bookingState.checkOut;
   }
+}
 
-  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
-  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0));
+function updateBookingStateFromInputs() {
+  const rawCheckIn = getFieldValue("arrivalDate");
+  const rawCheckOut = getFieldValue("departureDate");
+
+  bookingState.checkIn = getSafeCheckIn(rawCheckIn);
+  bookingState.checkOut = getSafeCheckOut(bookingState.checkIn, rawCheckOut);
+
+  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", 1), 1));
+  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", 0), 0));
 
   bookingState.guestCount = adults + children;
   bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
   bookingState.paymentValue = getSelectedPaymentValue();
   bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
-  bookingState.rewardPoints = Math.floor((getEstimatedTotal() || 0) / 100);
+  bookingState.rewardPoints = Math.floor(getEstimatedTotal() / 100);
 
-  updateDateConstraints();
   persistStayContext();
 }
 
@@ -1405,6 +1413,14 @@ function getEstimatedTaxes() {
 
 function getEstimatedTotal() {
   return getEstimatedSubtotal() + getEstimatedServiceFee() + getEstimatedTaxes();
+}
+
+function generateBookingReference() {
+  if (bookingState.bookingReference) return bookingState.bookingReference;
+  const propPart = cleanText(bookingState.propertyId || "ORE").slice(0, 6).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  bookingState.bookingReference = `ORE-${propPart}-${rand}`;
+  return bookingState.bookingReference;
 }
 
 // ──────────────────────────────────────────
@@ -1435,25 +1451,8 @@ function applyFieldValues(values = {}) {
       return;
     }
 
-    if (key === "arrivalDate") {
-      const safeValue = getSafeCheckIn(normalizeTypedDateValue(value));
-      if (cleanText(el.value) === "") {
-        el.value = safeValue;
-      }
-      return;
-    }
-
-    if (key === "departureDate") {
-      const baseCheckIn = getSafeCheckIn(normalizeTypedDateValue(values.arrivalDate || bookingState.checkIn || ""));
-      const safeValue = getSafeCheckOut(baseCheckIn, normalizeTypedDateValue(value));
-      if (cleanText(el.value) === "") {
-        el.value = safeValue;
-      }
-      return;
-    }
-
-    if (value !== undefined && value !== null && cleanText(el.value) === "") {
-      el.value = value;
+    if (value !== undefined && value !== null) {
+      el.value = cleanText(value);
     }
   });
 }
@@ -1515,9 +1514,6 @@ function hydrateDraft() {
 // Summary / Review
 // ──────────────────────────────────────────
 function updateSummary() {
-  if (isUpdatingUI) return;
-  isUpdatingUI = true;
-
   updateBookingStateFromInputs();
 
   setText(els.summaryCheckin, formatDateDisplay(bookingState.checkIn));
@@ -1532,8 +1528,6 @@ function updateSummary() {
   if (els.paymentReference) {
     els.paymentReference.textContent = generateBookingReference();
   }
-
-  isUpdatingUI = false;
 }
 
 function buildGuestFullName() {
@@ -1552,12 +1546,12 @@ function buildPurposeArrivalText() {
 }
 
 function buildGuestsText() {
-  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
-  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0));
+  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", 1), 1));
+  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", 0), 0));
   const parts = [
     `${adults} ${t("adults", "بالغ")}`,
-    children ? `${children} ${t("children", "أطفال")}` : ""
-  ].filter(Boolean);
+    `${children} ${t("children", "طفل")}`
+  ];
   return parts.join(" • ");
 }
 
@@ -1570,7 +1564,7 @@ function buildBillingText() {
 
 function buildDocumentsText() {
   if (bookingState.paymentValue === "cash") {
-    return t("No receipt required", "لا يلزم إيصال");
+    return t("No receipt required", "لا يتطلب إيصال");
   }
   return bookingState.paymentProofName || t("No receipt uploaded", "لم يتم رفع إيصال");
 }
@@ -1580,9 +1574,6 @@ function buildSpecialRequestsText() {
 }
 
 function updateReview() {
-  if (isUpdatingUI) return;
-  isUpdatingUI = true;
-
   updateBookingStateFromInputs();
 
   setText(els.reviewGuestName, buildGuestFullName());
@@ -1595,6 +1586,7 @@ function updateReview() {
   );
   setText(els.reviewGuests, buildGuestsText());
   setText(els.reviewPurposeArrival, buildPurposeArrivalText());
+  setText(els.reviewAdditionalGuests, buildSpecialRequestsText());
   setText(els.reviewDocuments, buildDocumentsText());
   setText(els.reviewBillings, buildBillingText());
   setText(els.reviewRoomPreferences, buildSpecialRequestsText());
@@ -1602,8 +1594,6 @@ function updateReview() {
   setText(els.reviewPoints, String(bookingState.rewardPoints || 0));
   setText(els.reviewPointsInline, String(bookingState.rewardPoints || 0));
   setText(els.userPoints, String(bookingState.rewardPoints || 0));
-
-  isUpdatingUI = false;
 }
 
 // ──────────────────────────────────────────
@@ -1643,30 +1633,22 @@ function updatePaymentCardsUI() {
     card.classList.toggle("selected", !!active);
   });
 
-  const isBank = selected === "ccp" || selected === "bank" || selected === "bank-transfer";
-
-  if (els.bankTransferBox) {
-    els.bankTransferBox.classList.toggle("active", isBank);
-    els.bankTransferBox.style.display = isBank ? "block" : "none";
-  }
-
-  if (els.cashBox) {
-    const active = selected === "cash";
-    els.cashBox.classList.toggle("active", active);
-    els.cashBox.style.display = active ? "block" : "none";
-  }
+  els.bankTransferBox?.classList.toggle(
+    "active",
+    selected === "ccp" || selected === "bank" || selected === "bank-transfer"
+  );
+  els.cashBox?.classList.toggle("active", selected === "cash");
 
   if (els.cardBox) {
-    const active = selected === "card";
-    els.cardBox.classList.toggle("active", active);
-    els.cardBox.style.display = active ? "block" : "none";
+    els.cardBox.classList.remove("active");
+    els.cardBox.style.display = "none";
   }
 
   bookingState.paymentValue = selected;
   bookingState.paymentMethod = getPaymentMethodLabel(selected);
 }
 
-function showSelectedFile(name = "") {
+function showSelectedFile(name) {
   if (!els.uploadText) return;
   els.uploadText.textContent = name || t("Click to upload payment receipt", "اضغط لرفع إيصال الدفع");
 }
@@ -1741,27 +1723,37 @@ function validateStep1() {
     valid = false;
   }
 
-  const checkIn = getFieldValue("arrivalDate");
-  const checkOut = getFieldValue("departureDate");
+  const checkIn = normalizeDateInputStrict(getFieldValue("arrivalDate"));
+  const checkOut = normalizeDateInputStrict(getFieldValue("departureDate"));
   const nights = getDiffNights(checkIn, checkOut);
 
-  if (!checkIn || !checkOut || nights < 1) {
-    markInvalid(bookingFields.arrivalDate, !checkIn || nights < 1);
-    markInvalid(bookingFields.departureDate, !checkOut || nights < 1);
+  if (!checkIn || !parseDate(checkIn) || isPastDate(checkIn)) {
+    markInvalid(bookingFields.arrivalDate, true);
     valid = false;
   }
 
-  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
+  if (!checkOut || !parseDate(checkOut) || getDiffNights(checkIn, checkOut) < 1) {
+    markInvalid(bookingFields.departureDate, true);
+    valid = false;
+  }
+
+  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", 1), 1));
   if (adults < 1) {
     markInvalid(bookingFields.guestAdults, true);
     valid = false;
   }
 
-  if (!valid) {
-    showGlobalAlert(t("Please complete all required booking details correctly.", "يرجى إكمال بيانات الحجز المطلوبة بشكل صحيح."));
+  if (!valid || nights < 1) {
+    showGlobalAlert(t(
+      "Please complete all required booking details correctly.",
+      "يرجى إكمال جميع بيانات الحجز المطلوبة بشكل صحيح."
+    ));
     scrollToFirstInvalid();
     return false;
   }
+
+  bookingFields.arrivalDate.value = checkIn;
+  bookingFields.departureDate.value = checkOut;
 
   updateSummary();
   saveDraft();
@@ -1790,9 +1782,13 @@ function validateStep2() {
       markInvalid(bookingFields.transferAmount, true);
       valid = false;
     }
-    if (!getFieldValue("transferDate")) {
+
+    const transferDate = normalizeDateInputStrict(getFieldValue("transferDate"));
+    if (!transferDate || !parseDate(transferDate) || isPastDate(transferDate)) {
       markInvalid(bookingFields.transferDate, true);
       valid = false;
+    } else if (bookingFields.transferDate) {
+      bookingFields.transferDate.value = transferDate;
     }
   }
 
@@ -1808,7 +1804,10 @@ function validateStep2() {
   }
 
   if (!valid) {
-    showGlobalAlert(t("Please complete the required payment details.", "يرجى إكمال بيانات الدفع المطلوبة."));
+    showGlobalAlert(t(
+      "Please complete the required payment details.",
+      "يرجى إكمال تفاصيل الدفع المطلوبة."
+    ));
     scrollToFirstInvalid();
     return false;
   }
@@ -1820,7 +1819,10 @@ function validateStep2() {
 
 function validateFinalAgreement() {
   if (!els.agreePolicy?.checked) {
-    showGlobalAlert(t("Please agree to the booking terms before confirming.", "يرجى الموافقة على شروط الحجز قبل التأكيد."));
+    showGlobalAlert(t(
+      "Please agree to the booking terms before confirming.",
+      "يرجى الموافقة على شروط الحجز قبل التأكيد."
+    ));
     return false;
   }
   return true;
@@ -1834,7 +1836,6 @@ function buildBookingPayload() {
 
   return {
     bookingReference: generateBookingReference(),
-
     propertyId: bookingState.propertyId || null,
     propertyTitle: getPropertyTitle(),
     propertyLocation: getPropertyLocation(),
@@ -1852,8 +1853,8 @@ function buildBookingPayload() {
       checkIn: bookingState.checkIn,
       checkOut: bookingState.checkOut,
       nights: bookingState.nights,
-      adults: Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1)),
-      children: Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0)),
+      adults: Math.max(1, parsePositiveInt(getFieldValue("guestAdults", 1), 1)),
+      children: Math.max(0, parsePositiveInt(getFieldValue("guestChildren", 0), 0)),
       purpose: getFieldValue("stayPurpose"),
       purposeLabel: getFieldSelectedText("stayPurpose"),
       arrivalTime: getFieldValue("arrivalTime"),
@@ -1883,10 +1884,10 @@ function buildBookingPayload() {
       subtotal: getEstimatedSubtotal(),
       serviceFee: getEstimatedServiceFee(),
       taxes: getEstimatedTaxes(),
-      total: getEstimatedTotal()
+      total: getEstimatedTotal(),
+      rewardPoints: bookingState.rewardPoints
     },
 
-    rewardPoints: bookingState.rewardPoints || 0,
     userId: currentUser?.uid || null,
     userEmail: currentUser?.email || getFieldValue("guestEmail"),
     status: "pending",
@@ -1910,7 +1911,8 @@ async function saveBookingToFirestore(payload) {
   const data = {
     ...payload,
     createdAtServer:
-      typeof firebase !== "undefined" && firebase.firestore?.FieldValue?.serverTimestamp
+      typeof firebase !== "undefined" &&
+      firebase.firestore?.FieldValue?.serverTimestamp
         ? firebase.firestore.FieldValue.serverTimestamp()
         : null
   };
@@ -1922,11 +1924,7 @@ async function saveBookingToFirestore(payload) {
 function fireSuccessConfetti() {
   if (typeof confetti !== "function") return;
 
-  confetti({
-    particleCount: 100,
-    spread: 70,
-    origin: { y: 0.6 }
-  });
+  confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
   setTimeout(() => {
     confetti({ particleCount: 70, angle: 60, spread: 55, origin: { x: 0 } });
@@ -1950,7 +1948,10 @@ async function confirmBooking() {
   if (!validateFinalAgreement()) return;
 
   if (bookingState.paymentProofUploading) {
-    showToast(t("Please wait until the receipt upload finishes.", "يرجى الانتظار حتى يكتمل رفع الإيصال."), "info");
+    showToast(t(
+      "Please wait until the receipt upload finishes.",
+      "يرجى الانتظار حتى يكتمل رفع الإيصال."
+    ), "info");
     return;
   }
 
@@ -1959,21 +1960,16 @@ async function confirmBooking() {
 
     const payload = buildBookingPayload();
     await saveBookingToFirestore(payload);
-
     safeRemove(BOOKING_DRAFT_KEY);
+
     fireSuccessConfetti();
     showBookingSuccessPopup(payload.bookingReference);
-    showToast(
-      t(`Booking confirmed successfully. Reference: ${payload.bookingReference}`, `تم تأكيد الحجز بنجاح. المرجع: ${payload.bookingReference}`),
-      "success"
-    );
-
-    setTimeout(() => {
-      window.location.href = "index.html";
-    }, 1800);
   } catch (error) {
     console.error("Booking confirmation failed:", error);
-    showToast(t("Booking confirmation failed. Please try again.", "فشل تأكيد الحجز. حاول مرة أخرى."), "error");
+    showToast(t(
+      "Booking confirmation failed. Please try again.",
+      "فشل تأكيد الحجز. حاول مرة أخرى."
+    ), "error");
   } finally {
     setButtonLoading(els.btnConfirmBooking, false);
   }
@@ -1986,22 +1982,21 @@ function bindGeneralEvents() {
   els.langToggle?.addEventListener("click", () => {
     bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
     safeSet("ore_lang", bookingState.lang);
+    safeSet("orelang", bookingState.lang);
     refreshLocalizedUI();
   });
 
   els.themeToggle?.addEventListener("click", () => {
     bookingState.theme = bookingState.theme === "dark" ? "light" : "dark";
     safeSet("ore_theme", bookingState.theme);
+    safeSet("oretheme", bookingState.theme);
     applyTheme();
   });
 
   els.openAuthBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (currentUser) {
-      toggleProfileDropdown();
-    } else {
-      openAuthModal("login");
-    }
+    if (currentUser) toggleProfileDropdown();
+    else openAuthModal("login");
   });
 
   els.closeAuthBtn?.addEventListener("click", closeAuthModal);
@@ -2085,7 +2080,6 @@ function bindAuthEvents() {
 
   els.registerForm?.addEventListener("submit", (e) => {
     e.preventDefault();
-
     const name = cleanText(els.regName?.value);
     const email = cleanText(els.regEmail?.value);
     const password = cleanText(els.regPassword?.value);
@@ -2096,12 +2090,12 @@ function bindAuthEvents() {
     }
 
     if (!validateEmail(email)) {
-      showAuthMessage(t("Please enter a valid email.", "يرجى إدخال بريد صالح."));
+      showAuthMessage(t("Please enter a valid email.", "يرجى إدخال بريد صحيح."));
       return;
     }
 
     if (password.length < 6) {
-      showAuthMessage(t("Password must be at least 6 characters.", "يجب أن تكون كلمة المرور 6 أحرف على الأقل."));
+      showAuthMessage(t("Password must be at least 6 characters.", "كلمة المرور يجب أن تكون 6 أحرف على الأقل."));
       return;
     }
 
@@ -2113,7 +2107,7 @@ function bindAuthEvents() {
     const email = cleanText(els.forgotEmail?.value);
 
     if (!email || !validateEmail(email)) {
-      showAuthMessage(t("Please enter a valid email.", "يرجى إدخال بريد صالح."));
+      showAuthMessage(t("Please enter a valid email.", "يرجى إدخال بريد صحيح."));
       return;
     }
 
@@ -2186,6 +2180,7 @@ function bindPaymentEvents() {
     showSelectedFile(file.name);
     bookingState.paymentProofName = file.name;
     saveDraft();
+
     await uploadPaymentProof(file);
     updateReview();
   });
@@ -2195,7 +2190,8 @@ function bindBookingEvents() {
   Object.values(bookingFields).forEach((el) => {
     if (!el) return;
 
-    const evt = el.tagName === "SELECT" || el.type === "date" ? "change" : "input";
+    const isDateField = el === bookingFields.arrivalDate || el === bookingFields.departureDate || el === bookingFields.transferDate;
+    const evt = el.tagName === "SELECT" || isDateField ? "change" : "input";
 
     el.addEventListener(evt, () => {
       markInvalid(el, false);
@@ -2215,8 +2211,7 @@ function bindBookingEvents() {
   });
 
   bookingFields.arrivalDate?.addEventListener("change", () => {
-    bookingState.checkIn = getFieldValue("arrivalDate");
-    bookingState.bookingReference = "";
+    updateBookingStateFromInputs();
     updateDateConstraints();
     updateSummary();
     updateReview();
@@ -2224,8 +2219,15 @@ function bindBookingEvents() {
   });
 
   bookingFields.departureDate?.addEventListener("change", () => {
-    bookingState.checkOut = getFieldValue("departureDate");
+    updateBookingStateFromInputs();
     updateDateConstraints();
+    updateSummary();
+    updateReview();
+    saveDraft();
+  });
+
+  bookingFields.transferDate?.addEventListener("change", () => {
+    markInvalid(bookingFields.transferDate, false);
     updateSummary();
     updateReview();
     saveDraft();
@@ -2237,7 +2239,9 @@ function bindBookingEvents() {
     setStep(2);
   });
 
-  els.btnPrev2?.addEventListener("click", () => setStep(1));
+  els.btnPrev2?.addEventListener("click", () => {
+    setStep(1);
+  });
 
   els.btnNext2?.addEventListener("click", () => {
     if (!validateStep2()) return;
@@ -2245,11 +2249,23 @@ function bindBookingEvents() {
     setStep(3);
   });
 
-  els.btnPrev3?.addEventListener("click", () => setStep(2));
+  els.btnPrev3?.addEventListener("click", () => {
+    setStep(2);
+  });
+
   els.btnConfirmBooking?.addEventListener("click", confirmBooking);
 
-  els.editStep1Btns.forEach((btn) => btn.addEventListener("click", () => setStep(1)));
-  els.editStep2Btns.forEach((btn) => btn.addEventListener("click", () => setStep(2)));
+  els.editStep1Btns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setStep(1);
+    });
+  });
+
+  els.editStep2Btns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setStep(2);
+    });
+  });
 }
 
 // ──────────────────────────────────────────
@@ -2265,16 +2281,18 @@ async function init() {
   applyTheme();
   applyTranslations();
 
+  safeCall(clearLegacyDateStorage, "Clear legacy dates");
   safeCall(hydrateStayContext, "Hydrate stay context");
   safeCall(hydrateGuestBasics, "Hydrate guest basics");
   safeCall(hydrateDraft, "Hydrate draft");
-  safeCall(updateDateConstraints, "Update date constraints");
   safeCall(setupDateInputs, "Setup date inputs");
 
   bindGeneralEvents();
   bindAuthEvents();
   bindPaymentEvents();
   bindBookingEvents();
+
+  safeCall(updateDateConstraints, "Update date constraints");
 
   await safeCall(loadPropertyData, "Load property data");
 
