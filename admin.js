@@ -4,9 +4,27 @@
   const ADMIN_USER = "admin";
   const ADMIN_PASS = "123456";
   const ADMIN_SESSION_KEY = "ore_admin_logged_in";
+  const ADMIN_ROLE_KEY = "ore_admin_role";
+  const ADMIN_OWNER_DOC_KEY = "ore_admin_owner_doc";
 
-  const db = window.__db || (typeof firebase !== "undefined" && firebase.firestore ? firebase.firestore() : null);
-  const firebaseReady = !!db && typeof firebase !== "undefined" && !!firebase.firestore;
+  const firebaseApp =
+    typeof firebase !== "undefined" && firebase.apps && firebase.apps.length
+      ? firebase.app()
+      : null;
+
+  const db =
+    window.__db ||
+    (typeof firebase !== "undefined" && firebase.firestore
+      ? firebase.firestore()
+      : null);
+
+  const auth =
+    window.__auth ||
+    (typeof firebase !== "undefined" && firebase.auth
+      ? firebase.auth()
+      : null);
+
+  const firebaseReady = !!db && !!auth;
 
   const firestoreFieldValue =
     typeof firebase !== "undefined" &&
@@ -17,7 +35,11 @@
 
   const state = {
     isLoggedIn: false,
+    authReady: false,
     activeTab: "dashboard",
+    adminRole: safeGet(ADMIN_ROLE_KEY, ""),
+    ownerAccountDocId: safeGet(ADMIN_OWNER_DOC_KEY, ""),
+    currentAuthUser: null,
     properties: [],
     bookings: [],
     ownerAccounts: [],
@@ -88,6 +110,10 @@
     return String(value ?? "").trim();
   }
 
+  function normalizeEmail(value) {
+    return cleanText(value).toLowerCase();
+  }
+
   function toNumber(value, fallback = 0) {
     if (value === null || value === undefined || value === "") return fallback;
     const n = Number(value);
@@ -95,7 +121,9 @@
   }
 
   function getServerTimestamp() {
-    return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date().toISOString();
+    return firestoreFieldValue?.serverTimestamp
+      ? firestoreFieldValue.serverTimestamp()
+      : new Date().toISOString();
   }
 
   function isObject(value) {
@@ -296,7 +324,12 @@
   }
 
   function getPropertyImage(prop) {
-    return cleanText(prop?.imageUrl || prop?.mainImage || (Array.isArray(prop?.images) ? prop.images[0] : "") || "images/placeholder.jpg");
+    return cleanText(
+      prop?.imageUrl ||
+      prop?.mainImage ||
+      (Array.isArray(prop?.images) ? prop.images[0] : "") ||
+      "images/placeholder.jpg"
+    );
   }
 
   function getBookingStatus(status) {
@@ -326,10 +359,38 @@
   }
 
   function requireAuth(action = true) {
-    if (state.isLoggedIn) return true;
+    if (state.isLoggedIn && state.currentAuthUser) return true;
     ensureLoggedInUI();
     if (action) showToast("يرجى تسجيل الدخول أولاً.", "warning");
     return false;
+  }
+
+  function isSuperAdmin() {
+    return state.adminRole === "admin";
+  }
+
+  function isOwnerAdmin() {
+    return state.adminRole === "owner";
+  }
+
+  function canManageProperty(property) {
+    if (isSuperAdmin()) return true;
+    if (!isOwnerAdmin()) return false;
+    return cleanText(property?.ownerUid) === cleanText(state.currentAuthUser?.uid);
+  }
+
+  function canAccessBooking(booking) {
+    if (isSuperAdmin()) return true;
+    if (!isOwnerAdmin()) return false;
+    const prop = state.properties.find((p) => p.id === cleanText(booking?.propertyId));
+    return !!prop && canManageProperty(prop);
+  }
+
+  function canAccessChat(chat) {
+    if (isSuperAdmin()) return true;
+    if (!isOwnerAdmin()) return false;
+    const prop = state.properties.find((p) => p.id === cleanText(chat?.propertyId));
+    return !!prop && canManageProperty(prop);
   }
 
   function normalizeBooking(raw) {
@@ -449,32 +510,182 @@
     };
   }
 
-  function login(username, password) {
+  async function getAdminRoleFromFirestore(user) {
+    if (!user || !db) return { ok: false, role: "" };
+
+    try {
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      if (userDoc.exists) {
+        const role = cleanText(userDoc.data()?.role).toLowerCase();
+        if (role === "admin") {
+          return { ok: true, role: "admin" };
+        }
+      }
+    } catch (error) {
+      console.warn("users role lookup failed:", error);
+    }
+
+    try {
+      const ownerSnap = await db
+        .collection("ownerAccounts")
+        .where("uid", "==", user.uid)
+        .limit(1)
+        .get();
+
+      if (!ownerSnap.empty) {
+        const doc = ownerSnap.docs[0];
+        const data = doc.data() || {};
+        const role = cleanText(data.role || "owner").toLowerCase();
+        if (role === "owner" || role === "property_admin") {
+          return { ok: true, role: "owner", ownerDocId: doc.id, ownerData: data };
+        }
+      }
+    } catch (error) {
+      console.warn("ownerAccounts uid lookup failed:", error);
+    }
+
+    return { ok: false, role: "" };
+  }
+
+  async function signInWithFirebaseForAdmin(username, password) {
+    if (!auth || !db) {
+      throw new Error("Firebase Auth not ready");
+    }
+
     username = cleanText(username);
     password = cleanText(password);
 
     if (username === ADMIN_USER && password === ADMIN_PASS) {
+      const adminCandidates = [
+        "admin@orebooking.com",
+        "admin@orebooking.dz",
+        "orebooking.admin@gmail.com"
+      ];
+
+      let signed = null;
+      for (const email of adminCandidates) {
+        try {
+          const cred = await auth.signInWithEmailAndPassword(email, password);
+          signed = cred;
+          break;
+        } catch (error) {
+          continue;
+        }
+      }
+
+      if (!signed) {
+        throw new Error("ADMIN_FIREBASE_ACCOUNT_NOT_FOUND");
+      }
+
+      const roleResult = await getAdminRoleFromFirestore(signed.user);
+      if (!roleResult.ok || roleResult.role !== "admin") {
+        throw new Error("NOT_AUTHORIZED_ADMIN");
+      }
+
+      state.adminRole = "admin";
+      state.ownerAccountDocId = "";
+      safeSet(ADMIN_ROLE_KEY, "admin");
+      safeRemove(ADMIN_OWNER_DOC_KEY);
+      return signed.user;
+    }
+
+    const ownerSnap = await db
+      .collection("ownerAccounts")
+      .where("username", "==", username)
+      .where("password", "==", password)
+      .limit(1)
+      .get();
+
+    if (ownerSnap.empty) {
+      throw new Error("INVALID_OWNER_CREDENTIALS");
+    }
+
+    const ownerDoc = ownerSnap.docs[0];
+    const ownerData = ownerDoc.data() || {};
+    const ownerEmail = cleanText(ownerData.email);
+    const ownerUid = cleanText(ownerData.uid);
+
+    if (!ownerEmail) {
+      throw new Error("OWNER_EMAIL_REQUIRED");
+    }
+
+    const cred = await auth.signInWithEmailAndPassword(ownerEmail, password);
+    if (!cred?.user) {
+      throw new Error("OWNER_FIREBASE_LOGIN_FAILED");
+    }
+
+    if (ownerUid && ownerUid !== cred.user.uid) {
+      throw new Error("OWNER_UID_MISMATCH");
+    }
+
+    state.adminRole = "owner";
+    state.ownerAccountDocId = ownerDoc.id;
+    safeSet(ADMIN_ROLE_KEY, "owner");
+    safeSet(ADMIN_OWNER_DOC_KEY, ownerDoc.id);
+
+    return cred.user;
+  }
+
+  async function login(username, password) {
+    username = cleanText(username);
+    password = cleanText(password);
+
+    if (!username || !password) {
+      showToast("أدخل اسم المستخدم وكلمة المرور.", "warning");
+      return false;
+    }
+
+    if (!firebaseReady) {
+      showToast("Firebase غير جاهز.", "error");
+      return false;
+    }
+
+    try {
+      const user = await signInWithFirebaseForAdmin(username, password);
+      state.currentAuthUser = user;
       state.isLoggedIn = true;
       state.activeTab = "dashboard";
       safeSet(ADMIN_SESSION_KEY, "1");
       ensureLoggedInUI();
       activateTab("dashboard", { silentAuth: true });
-      loadAllData();
+      await loadAllData();
       showToast("تم تسجيل الدخول بنجاح.", "success");
       return true;
-    }
+    } catch (error) {
+      console.error("admin login error:", error);
+      state.isLoggedIn = false;
+      state.currentAuthUser = null;
+      state.adminRole = "";
+      state.ownerAccountDocId = "";
+      safeRemove(ADMIN_SESSION_KEY);
+      safeRemove(ADMIN_ROLE_KEY);
+      safeRemove(ADMIN_OWNER_DOC_KEY);
+      ensureLoggedInUI();
 
-    state.isLoggedIn = false;
-    safeRemove(ADMIN_SESSION_KEY);
-    ensureLoggedInUI();
-    showToast("بيانات الدخول غير صحيحة.", "error");
-    return false;
+      let message = "بيانات الدخول غير صحيحة.";
+      if (String(error?.message || "").includes("ADMIN_FIREBASE_ACCOUNT_NOT_FOUND")) {
+        message = "حساب أدمن الموقع غير موجود داخل Firebase Auth.";
+      } else if (String(error?.message || "").includes("NOT_AUTHORIZED_ADMIN")) {
+        message = "هذا الحساب ليس لديه صلاحية أدمن عام داخل users.role.";
+      } else if (String(error?.message || "").includes("OWNER_EMAIL_REQUIRED")) {
+        message = "حساب المالك يحتاج email داخل ownerAccounts.";
+      } else if (String(error?.message || "").includes("OWNER_UID_MISMATCH")) {
+        message = "uid داخل ownerAccounts لا يطابق حساب Firebase Auth.";
+      }
+      showToast(message, "error");
+      return false;
+    }
   }
 
-  function logout() {
+  async function logout() {
     state.isLoggedIn = false;
     state.activeTab = "dashboard";
+    state.adminRole = "";
+    state.ownerAccountDocId = "";
+    state.currentAuthUser = null;
     safeRemove(ADMIN_SESSION_KEY);
+    safeRemove(ADMIN_ROLE_KEY);
+    safeRemove(ADMIN_OWNER_DOC_KEY);
 
     if (state.listeners.chats) {
       state.listeners.chats();
@@ -489,6 +700,13 @@
     state.currentChatMessages = [];
     ensureLoggedInUI();
     renderCurrentChatMessages();
+
+    try {
+      if (auth?.currentUser) await auth.signOut();
+    } catch (error) {
+      console.warn("auth signOut failed:", error);
+    }
+
     showToast("تم تسجيل الخروج.", "info");
   }
 
@@ -583,7 +801,16 @@
 
     try {
       const items = [];
-      const snap = await db.collection("properties").get();
+      let snap;
+
+      if (isSuperAdmin()) {
+        snap = await db.collection("properties").get();
+      } else {
+        snap = await db.collection("properties")
+          .where("ownerUid", "==", cleanText(state.currentAuthUser?.uid))
+          .get();
+      }
+
       snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
       state.properties = items.sort((a, b) => {
         const at = a.createdAt?.toMillis?.() || 0;
@@ -622,7 +849,8 @@
           getPropertyLocation(prop),
           getPropertyType(prop),
           cleanText(prop.ownerName),
-          cleanText(prop.ownerEmail)
+          cleanText(prop.ownerEmail),
+          cleanText(prop.ownerUid)
         ]
           .join(" ")
           .toLowerCase()
@@ -708,7 +936,7 @@
     const latNum = lat !== "" ? Number(lat) : null;
     const lngNum = lng !== "" ? Number(lng) : null;
 
-    return {
+    const payload = {
       title,
       titleAr: titleAr || title,
       titleEn: titleEn || title,
@@ -748,6 +976,12 @@
       slug: slugify(title),
       updatedAt: getServerTimestamp()
     };
+
+    if (isOwnerAdmin()) {
+      payload.ownerUid = cleanText(state.currentAuthUser?.uid);
+    }
+
+    return payload;
   }
 
   function validatePropertyData(data) {
@@ -760,6 +994,7 @@
   async function handleAddPropertySubmit(e) {
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
+    if (!requireAuth()) return;
 
     const form = e.currentTarget;
     const btn = form.querySelector('button[type="submit"]');
@@ -788,6 +1023,11 @@
 
   async function togglePropertyVisibility(id, visibleNow) {
     if (!firebaseReady) return;
+    const prop = state.properties.find((p) => p.id === id);
+    if (!prop || !canManageProperty(prop)) {
+      showToast("ليست لديك صلاحية تعديل هذا العقار.", "error");
+      return;
+    }
     try {
       await db.collection("properties").doc(id).update({
         isActive: !visibleNow,
@@ -804,6 +1044,11 @@
 
   async function deleteProperty(id) {
     if (!firebaseReady) return;
+    const prop = state.properties.find((p) => p.id === id);
+    if (!prop || !canManageProperty(prop) || !isSuperAdmin()) {
+      showToast("حذف العقار متاح للأدمن العام فقط.", "error");
+      return;
+    }
     const ok = window.confirm("هل أنت متأكد من حذف هذا العقار؟");
     if (!ok) return;
     try {
@@ -821,6 +1066,7 @@
   function openEditPropertyModal(id) {
     const prop = state.properties.find((p) => p.id === id);
     if (!prop) return showToast("العقار غير موجود.", "error");
+    if (!canManageProperty(prop)) return showToast("ليست لديك صلاحية تعديل هذا العقار.", "error");
 
     const modal = byId("edit-modal") || byId("edit-property-modal") || byId("property-edit-modal");
     if (!modal) return showToast("مودال التعديل غير موجود في الصفحة.", "warning");
@@ -878,10 +1124,19 @@
     const docId = modal?.dataset.editId;
     if (!docId) return showToast("لم يتم تحديد العقار المراد تعديله.", "error");
 
+    const prop = state.properties.find((p) => p.id === docId);
+    if (!prop || !canManageProperty(prop)) {
+      return showToast("ليست لديك صلاحية تعديل هذا العقار.", "error");
+    }
+
     const btn = form.querySelector('button[type="submit"]');
     const data = collectPropertyFormData("edit");
     const validation = validatePropertyData(data);
     if (validation) return showToast(validation, "warning");
+
+    if (isOwnerAdmin()) {
+      data.ownerUid = cleanText(state.currentAuthUser?.uid);
+    }
 
     setButtonLoading(btn, true, "جارٍ حفظ التعديلات...");
     try {
@@ -906,10 +1161,35 @@
     try {
       const items = [];
       let snap;
-      try {
-        snap = await db.collection("bookings").orderBy("createdAt", "desc").get();
-      } catch {
-        snap = await db.collection("bookings").get();
+
+      if (isSuperAdmin()) {
+        try {
+          snap = await db.collection("bookings").orderBy("createdAt", "desc").get();
+        } catch {
+          snap = await db.collection("bookings").get();
+        }
+      } else {
+        const propertyIds = state.properties.map((p) => p.id).filter(Boolean);
+        if (!propertyIds.length) {
+          state.bookings = [];
+          renderBookings();
+          renderDashboardStats();
+          return;
+        }
+
+        const all = [];
+        for (const propertyId of propertyIds) {
+          const part = await db.collection("bookings").where("propertyId", "==", propertyId).get();
+          part.forEach((doc) => all.push(normalizeBooking({ id: doc.id, ...doc.data() })));
+        }
+        state.bookings = all.sort((a, b) => {
+          const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
+          const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
+          return bt - at;
+        });
+        renderBookings();
+        renderDashboardStats();
+        return;
       }
 
       snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
@@ -1060,6 +1340,12 @@
   }
 
   async function updateBookingStatus(id, status) {
+    const booking = state.bookings.find((b) => b.id === id);
+    if (!booking || !canAccessBooking(booking)) {
+      showToast("ليست لديك صلاحية تعديل هذا الحجز.", "error");
+      return;
+    }
+
     try {
       await db.collection("bookings").doc(id).update({
         status,
@@ -1084,35 +1370,32 @@
       tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;">جارٍ تحميل حسابات الملاك...</td></tr>`;
     }
 
-    const possibleCollections = ["ownerAccounts", "owners", "accounts", "users"];
-    let loaded = false;
-    let items = [];
+    try {
+      let items = [];
 
-    for (const collectionName of possibleCollections) {
-      try {
-        const snap = await db.collection(collectionName).get();
-        const arr = [];
-        snap.forEach((doc) => arr.push({ id: doc.id, ...doc.data(), __collection: collectionName }));
-        if (arr.length || collectionName === "ownerAccounts") {
-          items = arr;
-          loaded = true;
-          break;
-        }
-      } catch (error) {
-        console.warn(`loadOwnerAccounts skip ${collectionName}`, error);
+      if (isSuperAdmin()) {
+        const snap = await db.collection("ownerAccounts").get();
+        snap.forEach((doc) => items.push({ id: doc.id, ...doc.data(), __collection: "ownerAccounts" }));
+      } else if (state.ownerAccountDocId) {
+        const doc = await db.collection("ownerAccounts").doc(state.ownerAccountDocId).get();
+        if (doc.exists) items.push({ id: doc.id, ...doc.data(), __collection: "ownerAccounts" });
       }
+
+      items = items.filter((item) => {
+        const role = cleanText(item.role || item.accountType || item.type).toLowerCase();
+        return !role || role.includes("owner") || role.includes("مالك");
+      });
+
+      state.ownerAccounts = items;
+      renderOwnerAccounts();
+      renderDashboardStats();
+    } catch (error) {
+      console.error("loadOwnerAccounts error:", error);
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;color:#ef4444;">فشل تحميل حسابات الملاك.</td></tr>`;
+      }
+      showToast("تعذر تحميل حسابات الملاك.", "error");
     }
-
-    if (!loaded) items = [];
-
-    items = items.filter((item) => {
-      const role = cleanText(item.role || item.accountType || item.type).toLowerCase();
-      return !role || role.includes("owner") || role.includes("مالك") || item.__collection !== "users";
-    });
-
-    state.ownerAccounts = items;
-    renderOwnerAccounts();
-    renderDashboardStats();
   }
 
   function renderOwnerAccounts() {
@@ -1136,7 +1419,9 @@
           item.ownerName,
           item.email,
           item.phone,
-          item.username
+          item.username,
+          item.propertyName,
+          item.propertyId
         ].join(" ").toLowerCase().includes(query);
       });
     }
@@ -1151,7 +1436,7 @@
       const email = cleanText(item.email || "—");
       const phone = cleanText(item.phone || "—");
       const username = cleanText(item.username || "—");
-      const active = item.isActive !== false;
+      const active = item.isActive !== false && item.active !== false;
 
       return `
         <tr>
@@ -1162,12 +1447,16 @@
           <td>${active ? `<span class="status-badge visible">نشط</span>` : `<span class="status-badge hidden">معطل</span>`}</td>
           <td>
             <div class="table-actions">
+              ${isSuperAdmin() ? `
               <button type="button" class="edit-owner-btn" data-id="${escapeHtml(item.id)}">
                 <i class="ph ph-pencil-simple"></i> تعديل
               </button>
               <button type="button" class="delete-owner-btn" data-id="${escapeHtml(item.id)}">
                 <i class="ph ph-trash"></i> حذف
-              </button>
+              </button>` : `
+              <button type="button" class="edit-owner-btn" data-id="${escapeHtml(item.id)}">
+                <i class="ph ph-pencil-simple"></i> تعديل
+              </button>`}
             </div>
           </td>
         </tr>
@@ -1186,6 +1475,7 @@
       role: "owner",
       accountType: "owner",
       isActive: true,
+      active: true,
       updatedAt: getServerTimestamp()
     };
   }
@@ -1193,6 +1483,7 @@
   async function handleOwnerFormSubmit(e) {
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
+    if (!isSuperAdmin() && !isOwnerAdmin()) return showToast("ليست لديك صلاحية.", "error");
 
     const form = e.currentTarget;
     const btn = form.querySelector('button[type="submit"]');
@@ -1203,6 +1494,10 @@
       return showToast("اسم المالك والبريد الإلكتروني مطلوبان.", "warning");
     }
 
+    if (!isSuperAdmin() && editId !== state.ownerAccountDocId) {
+      return showToast("يمكنك تعديل حسابك فقط.", "error");
+    }
+
     setButtonLoading(btn, true, editId ? "جارٍ حفظ الحساب..." : "جارٍ إضافة الحساب...");
     try {
       const collectionName = "ownerAccounts";
@@ -1210,6 +1505,10 @@
         await db.collection(collectionName).doc(editId).update(data);
         showToast("تم تحديث حساب المالك.", "success");
       } else {
+        if (!isSuperAdmin()) {
+          showToast("إضافة حسابات ملاك جديدة متاحة للأدمن العام فقط.", "error");
+          return;
+        }
         data.createdAt = getServerTimestamp();
         await db.collection(collectionName).add(data);
         showToast("تمت إضافة حساب المالك.", "success");
@@ -1228,6 +1527,11 @@
   function fillOwnerForm(id) {
     const item = state.ownerAccounts.find((x) => x.id === id);
     if (!item) return;
+    if (!isSuperAdmin() && id !== state.ownerAccountDocId) {
+      showToast("يمكنك تعديل حسابك فقط.", "error");
+      return;
+    }
+
     setValue(item.name || item.fullName || "", "owner-name", "owner-full-name");
     setValue(item.email || "", "owner-email");
     setValue(item.phone || "", "owner-phone");
@@ -1244,6 +1548,10 @@
   }
 
   async function deleteOwnerAccount(id) {
+    if (!isSuperAdmin()) {
+      showToast("حذف حسابات الملاك متاح للأدمن العام فقط.", "error");
+      return;
+    }
     if (!window.confirm("هل أنت متأكد من حذف حساب المالك؟")) return;
     try {
       await db.collection("ownerAccounts").doc(id).delete();
@@ -1256,28 +1564,25 @@
   }
 
   async function loadUsers() {
-    const candidates = ["users", "customers", "clients"];
-    let items = [];
+    try {
+      let items = [];
 
-    for (const collectionName of candidates) {
-      try {
-        const snap = await db.collection(collectionName).get();
-        if (!snap.empty) {
-          const arr = [];
-          snap.forEach((doc) => arr.push(normalizeUser({ __collection: collectionName, ...doc.data() }, doc.id)));
-          items = arr;
-          break;
-        }
-      } catch (error) {
-        console.warn(`loadUsers skip ${collectionName}`, error);
+      if (isSuperAdmin()) {
+        const snap = await db.collection("users").get();
+        snap.forEach((doc) => items.push(normalizeUser({ __collection: "users", ...doc.data() }, doc.id)));
+      } else {
+        items = [];
       }
-    }
 
-    state.users = items.sort((a, b) => {
-      const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
-      const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
-      return bt - at;
-    });
+      state.users = items.sort((a, b) => {
+        const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
+        const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
+        return bt - at;
+      });
+    } catch (error) {
+      console.error("loadUsers error:", error);
+      state.users = [];
+    }
   }
 
   async function loadChats() {
@@ -1292,7 +1597,12 @@
     }
 
     try {
-      state.listeners.chats = db.collection("chats").onSnapshot(
+      let queryRef = db.collection("chats");
+      if (!isSuperAdmin()) {
+        queryRef = queryRef.where("propertyId", "in", state.properties.map((p) => p.id).slice(0, 10));
+      }
+
+      state.listeners.chats = queryRef.onSnapshot(
         (snap) => {
           const items = [];
           snap.forEach((doc) => items.push(normalizeChat({ id: doc.id, ...doc.data() })));
@@ -1306,7 +1616,7 @@
             return bt - at;
           });
 
-          state.chats = merged;
+          state.chats = merged.filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
           renderChatThreads();
 
           if (state.currentChatId && !state.chats.find((x) => x.id === state.currentChatId)) {
@@ -1324,16 +1634,16 @@
 
           renderDashboardStats();
         },
-        (error) => {
+        async (error) => {
           console.error("loadChats listener error:", error);
           const fallback = derivePseudoChatsFromBookings();
-          state.chats = fallback;
+          state.chats = fallback.filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
           renderChatThreads();
         }
       );
     } catch (error) {
       console.error("loadChats error:", error);
-      state.chats = derivePseudoChatsFromBookings();
+      state.chats = derivePseudoChatsFromBookings().filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
       renderChatThreads();
       showToast("تعذر تحميل المحادثات.", "error");
     }
@@ -1570,12 +1880,11 @@
       return (
         (booking.id && chat.bookingId && chat.bookingId === booking.id) ||
         (booking.userId && chat.userId && chat.userId === booking.userId) ||
-        (booking.guestEmail && chat.userEmail && cleanText(chat.userEmail).toLowerCase() === cleanText(booking.guestEmail).toLowerCase())
+        (booking.guestEmail && chat.userEmail && normalizeEmail(chat.userEmail) === normalizeEmail(booking.guestEmail))
       );
     });
 
     if (local) return local;
-
     if (!firebaseReady) return null;
 
     try {
@@ -1590,30 +1899,6 @@
       console.warn("findExistingChatForBooking bookingId lookup failed:", error);
     }
 
-    try {
-      if (booking.userId) {
-        const byUser = await db.collection("chats").where("userId", "==", booking.userId).limit(1).get();
-        if (!byUser.empty) {
-          const doc = byUser.docs[0];
-          return normalizeChat({ id: doc.id, ...doc.data() });
-        }
-      }
-    } catch (error) {
-      console.warn("findExistingChatForBooking userId lookup failed:", error);
-    }
-
-    try {
-      if (booking.guestEmail) {
-        const byEmail = await db.collection("chats").where("userEmail", "==", booking.guestEmail).limit(1).get();
-        if (!byEmail.empty) {
-          const doc = byEmail.docs[0];
-          return normalizeChat({ id: doc.id, ...doc.data() });
-        }
-      }
-    } catch (error) {
-      console.warn("findExistingChatForBooking email lookup failed:", error);
-    }
-
     return null;
   }
 
@@ -1623,6 +1908,11 @@
     const booking = state.bookings.find((b) => b.id === bookingId);
     if (!booking) {
       showToast("الحجز غير موجود.", "error");
+      return null;
+    }
+
+    if (!canAccessBooking(booking)) {
+      showToast("ليست لديك صلاحية إنشاء محادثة لهذا الحجز.", "error");
       return null;
     }
 
@@ -1640,8 +1930,8 @@
       userId: booking.userId || "",
       userName: booking.guestName || "",
       userEmail: booking.guestEmail || "",
-      participants: [booking.userId || booking.guestEmail || "", "admin"].filter(Boolean),
-      participantIds: [booking.userId || booking.guestEmail || "", "admin"].filter(Boolean),
+      participants: [booking.userId || booking.guestEmail || "", cleanText(state.currentAuthUser?.uid)].filter(Boolean),
+      participantIds: [booking.userId || booking.guestEmail || "", cleanText(state.currentAuthUser?.uid)].filter(Boolean),
       lastMessage: "تم فتح المحادثة من لوحة الإدارة",
       lastText: "تم فتح المحادثة من لوحة الإدارة",
       lastMessageAt: getServerTimestamp(),
@@ -1659,6 +1949,11 @@
     const booking = state.bookings.find((b) => b.id === bookingId);
     if (!booking) {
       showToast("الحجز غير موجود.", "error");
+      return;
+    }
+
+    if (!canAccessBooking(booking)) {
+      showToast("ليست لديك صلاحية الوصول لهذه المحادثة.", "error");
       return;
     }
 
@@ -1727,12 +2022,18 @@
         openChat(actualChatId);
       }
 
+      const chat = state.chats.find((c) => c.id === actualChatId);
+      if (chat && !chat.pseudo && !canAccessChat(chat)) {
+        showToast("ليست لديك صلاحية الإرسال في هذه المحادثة.", "error");
+        return;
+      }
+
       const chatRef = db.collection("chats").doc(actualChatId);
       const payload = {
         text,
         message: text,
-        senderRole: "admin",
-        senderName: "الإدارة",
+        senderRole: isSuperAdmin() ? "admin" : "owner",
+        senderName: isSuperAdmin() ? "الإدارة" : "مالك العقار",
         createdAt: getServerTimestamp()
       };
 
@@ -1741,7 +2042,9 @@
       } catch {
         await db.collection("messages").add({
           ...payload,
-          chatId: actualChatId
+          chatId: actualChatId,
+          propertyId: cleanText(chat?.propertyId || ""),
+          userId: cleanText(chat?.userId || "")
         });
       }
 
@@ -1890,7 +2193,6 @@
         showToast("لم يتم العثور على الموقع.", "warning");
         return;
       }
-
       const item = data[0];
       const lat = Number(item.lat);
       const lng = Number(item.lon);
@@ -1948,11 +2250,11 @@
     return q("[data-admin-login-form]") || byId("admin-login-form") || byId("login-form");
   }
 
-  function handleLoginSubmit(e) {
-    e.preventDefault();
+  async function handleLoginSubmit(e) {
+    if (e?.preventDefault) e.preventDefault();
     const username = getValue("admin-username", "admin-user", "login-username", "username", "email");
     const password = getValue("admin-password", "admin-pass", "login-password", "password");
-    login(username, password);
+    await login(username, password);
   }
 
   function bindStaticEvents() {
@@ -2129,10 +2431,37 @@
     });
   }
 
+  function bindAuthState() {
+    if (!auth) return;
+    auth.onAuthStateChanged(async (user) => {
+      state.authReady = true;
+      state.currentAuthUser = user || null;
+
+      if (!user) {
+        state.isLoggedIn = false;
+        ensureLoggedInUI();
+        return;
+      }
+
+      const roleResult = await getAdminRoleFromFirestore(user);
+      if (roleResult.ok) {
+        state.adminRole = roleResult.role;
+        safeSet(ADMIN_ROLE_KEY, roleResult.role);
+        if (roleResult.ownerDocId) {
+          state.ownerAccountDocId = roleResult.ownerDocId;
+          safeSet(ADMIN_OWNER_DOC_KEY, roleResult.ownerDocId);
+        }
+        state.isLoggedIn = true;
+        ensureLoggedInUI();
+      }
+    });
+  }
+
   function initSession() {
     state.isLoggedIn = safeGet(ADMIN_SESSION_KEY) === "1";
     ensureLoggedInUI();
-    if (state.isLoggedIn) {
+    if (state.isLoggedIn && auth?.currentUser) {
+      state.currentAuthUser = auth.currentUser;
       activateTab(state.activeTab || "dashboard", { silentAuth: true });
       loadAllData();
     }
@@ -2141,6 +2470,7 @@
   function init() {
     showFirebaseStatus();
     bindStaticEvents();
+    bindAuthState();
     initSession();
 
     initMap("admin", "admin-map-picker");
