@@ -1,26 +1,23 @@
 "use strict";
 
 (function () {
-  const ADMIN_USER = "admin";
-  const ADMIN_PASS = "123456";
   const ADMIN_SESSION_KEY = "ore_admin_logged_in";
   const ADMIN_ROLE_KEY = "ore_admin_role";
   const ADMIN_OWNER_DOC_KEY = "ore_admin_owner_doc";
-
-  const firebaseApp =
-    typeof firebase !== "undefined" && firebase.apps && firebase.apps.length
-      ? firebase.app()
-      : null;
+  const ADMIN_LOGIN_HINT_KEY = "ore_admin_login_hint";
+  const ADMIN_EMAIL_DOMAIN = "@orebooking.com";
 
   const db =
     window.__db ||
-    (typeof firebase !== "undefined" && firebase.firestore
+    window.__frontDb ||
+    (typeof firebase !== "undefined" && typeof firebase.firestore === "function"
       ? firebase.firestore()
       : null);
 
   const auth =
     window.__auth ||
-    (typeof firebase !== "undefined" && firebase.auth
+    window.__frontAuth ||
+    (typeof firebase !== "undefined" && typeof firebase.auth === "function"
       ? firebase.auth()
       : null);
 
@@ -40,6 +37,7 @@
     adminRole: safeGet(ADMIN_ROLE_KEY, ""),
     ownerAccountDocId: safeGet(ADMIN_OWNER_DOC_KEY, ""),
     currentAuthUser: null,
+    currentOwnerRecord: null,
     properties: [],
     bookings: [],
     ownerAccounts: [],
@@ -48,7 +46,9 @@
     currentChatId: null,
     currentChatMessages: [],
     bookingFilter: "all",
+    pendingRejectBookingId: "",
     listeners: {
+      auth: null,
       chats: null,
       chatMessages: null
     },
@@ -114,6 +114,19 @@
     return cleanText(value).toLowerCase();
   }
 
+  function normalizeAdminEmail(value) {
+    const raw = normalizeEmail(value).replace(/\s+/g, "");
+    if (!raw) return "";
+    return raw;
+  }
+
+  function maybeBuildDomainEmail(value) {
+    const raw = normalizeAdminEmail(value);
+    if (!raw) return "";
+    if (raw.includes("@")) return raw;
+    return `${raw}${ADMIN_EMAIL_DOMAIN}`;
+  }
+
   function toNumber(value, fallback = 0) {
     if (value === null || value === undefined || value === "") return fallback;
     const n = Number(value);
@@ -132,8 +145,7 @@
 
   function pickFirst(...values) {
     for (const value of values) {
-      if (value === 0) return value;
-      if (value === false) return value;
+      if (value === 0 || value === false) return value;
       if (value !== undefined && value !== null && String(value).trim() !== "") return value;
     }
     return "";
@@ -150,9 +162,7 @@
   function formatDate(value) {
     if (!value) return "—";
     try {
-      if (typeof value?.toDate === "function") {
-        return value.toDate().toLocaleString("ar-DZ");
-      }
+      if (typeof value?.toDate === "function") return value.toDate().toLocaleString("ar-DZ");
       if (typeof value === "object" && typeof value.seconds === "number") {
         return new Date(value.seconds * 1000).toLocaleString("ar-DZ");
       }
@@ -176,22 +186,6 @@
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "");
-  }
-
-  function getRandomRoomNumber() {
-    return String(Math.floor(Math.random() * 90) + 10);
-  }
-
-  function getApprovalBaseMessage() {
-    return "تم قبول حجزك بنجاح.";
-  }
-
-  function getRoomNumberMessage(roomNumber) {
-    return `رقم الغرفة: ${roomNumber}`;
-  }
-
-  function getAutoApprovalMessage(roomNumber) {
-    return `تم قبول حجزك بنجاح. رقم الغرفة: ${roomNumber}`;
   }
 
   function showToast(message, type = "info") {
@@ -269,49 +263,6 @@
     }
   }
 
-  function ensureAdminLogosVisible() {
-    qa('img[src*="orebooking"], img[src*="logo"]').forEach((img) => {
-      img.loading = "eager";
-      img.decoding = "async";
-
-      if (!img.dataset.logoFallbackBound) {
-        img.dataset.logoFallbackBound = "1";
-        img.addEventListener("error", function () {
-          const steps = [
-            "logos/orebooking.png",
-            "./logos/orebooking.png",
-            "logos/logo.png",
-            "./logos/logo.png",
-            "./images/logo.png"
-          ];
-
-          const current = cleanText(this.getAttribute("src"));
-          let index = steps.indexOf(current);
-          if (index === -1) index = Number(this.dataset.logoStep || 0);
-
-          const nextIndex = index + 1;
-          if (nextIndex < steps.length) {
-            this.dataset.logoStep = String(nextIndex);
-            this.src = steps[nextIndex];
-            return;
-          }
-
-          this.style.display = "none";
-        });
-      }
-
-      const parent = img.parentElement;
-      if (parent && getComputedStyle(parent).display === "none") {
-        parent.style.display = "flex";
-      }
-    });
-  }
-
-  function setStat(id, value) {
-    const el = byId(id);
-    if (el) el.textContent = value;
-  }
-
   function getValue(...ids) {
     for (const id of ids) {
       const el = byId(id);
@@ -350,18 +301,9 @@
     }
   }
 
-  function getCheckedValues(selector) {
-    return qa(selector)
-      .filter((el) => el.checked)
-      .map((el) => cleanText(el.value))
-      .filter(Boolean);
-  }
-
   function normalizeArray(value) {
     if (Array.isArray(value)) return value.filter(Boolean).map((v) => cleanText(v)).filter(Boolean);
-    if (typeof value === "string") {
-      return value.split(",").map((v) => cleanText(v)).filter(Boolean);
-    }
+    if (typeof value === "string") return value.split(",").map((v) => cleanText(v)).filter(Boolean);
     return [];
   }
 
@@ -410,13 +352,54 @@
     const layout = byId("admin-layout") || q(".admin-layout");
     if (loginScreen) loginScreen.classList.toggle("hidden", state.isLoggedIn);
     if (layout) layout.classList.toggle("hidden", !state.isLoggedIn);
-    ensureAdminLogosVisible();
   }
 
-  function requireAuth(action = true) {
+  function updateProfileUI() {
+    const name =
+      state.currentOwnerRecord?.name ||
+      state.currentAuthUser?.displayName ||
+      state.currentAuthUser?.email ||
+      "الحساب الحالي";
+
+    const role =
+      state.adminRole === "admin"
+        ? "أدمن عام"
+        : state.adminRole === "owner"
+          ? "مالك عقار"
+          : "غير معروف";
+
+    const email = state.currentAuthUser?.email || "—";
+
+    setText(name, "admin-profile-name");
+    setText(role, "admin-profile-role", "sidebar-user-role");
+    setText(email, "admin-profile-email");
+  }
+
+  function updateRoleBasedUI() {
+    const adminOnlyEls = qa(".admin-only");
+    adminOnlyEls.forEach((el) => {
+      el.classList.toggle("hidden", !isSuperAdmin());
+    });
+
+    const addPropertyBtn =
+      byId("add-property-btn") ||
+      byId("open-add-property-btn") ||
+      q('[data-tab="add-property-pane"]') ||
+      q('[data-tab-target="add-property"]');
+
+    if (addPropertyBtn) {
+      addPropertyBtn.classList.toggle("hidden", isOwnerAdmin());
+    }
+
+    if (state.adminRole === "owner" && state.activeTab === "owners") {
+      activateTab("dashboard", { silentAuth: true });
+    }
+  }
+
+  function requireAuth(showMessage = true) {
     if (state.isLoggedIn && state.currentAuthUser) return true;
     ensureLoggedInUI();
-    if (action) showToast("يرجى تسجيل الدخول أولاً.", "warning");
+    if (showMessage) showToast("يرجى تسجيل الدخول أولاً.", "warning");
     return false;
   }
 
@@ -431,19 +414,39 @@
   function canManageProperty(property) {
     if (isSuperAdmin()) return true;
     if (!isOwnerAdmin()) return false;
-    return cleanText(property?.ownerUid) === cleanText(state.currentAuthUser?.uid);
+
+    const uid = cleanText(state.currentAuthUser?.uid);
+    const email = normalizeEmail(state.currentAuthUser?.email);
+
+    return (
+      cleanText(property?.ownerUid) === uid ||
+      normalizeEmail(property?.ownerEmail) === email
+    );
   }
 
   function canAccessBooking(booking) {
     if (isSuperAdmin()) return true;
     if (!isOwnerAdmin()) return false;
-    const prop = state.properties.find((p) => p.id === cleanText(booking?.propertyId));
-    return !!prop && canManageProperty(prop);
+
+    const bookingPropertyId = cleanText(booking?.propertyId);
+    if (!bookingPropertyId) return false;
+
+    const prop = state.properties.find((p) => cleanText(p.id) === bookingPropertyId);
+    if (prop) return canManageProperty(prop);
+
+    const bookingOwnerUid = cleanText(booking?.ownerUid || booking?.hostUid);
+    const bookingOwnerEmail = normalizeEmail(booking?.ownerEmail || booking?.hostEmail);
+    return (
+      bookingOwnerUid === cleanText(state.currentAuthUser?.uid) ||
+      (bookingOwnerEmail && bookingOwnerEmail === normalizeEmail(state.currentAuthUser?.email))
+    );
   }
 
   function canAccessChat(chat) {
     if (isSuperAdmin()) return true;
     if (!isOwnerAdmin()) return false;
+
+    if (cleanText(chat.ownerId) === cleanText(state.currentAuthUser?.uid)) return true;
     const prop = state.properties.find((p) => p.id === cleanText(chat?.propertyId));
     return !!prop && canManageProperty(prop);
   }
@@ -452,7 +455,6 @@
     const guest = isObject(raw?.guest) ? raw.guest : {};
     const stay = isObject(raw?.stay) ? raw.stay : {};
     const pricing = isObject(raw?.pricing) ? raw.pricing : {};
-    const payment = isObject(raw?.payment) ? raw.payment : {};
     const property = isObject(raw?.property) ? raw.property : {};
 
     const guestName = cleanText(
@@ -462,7 +464,7 @@
         raw.customerName,
         guest.fullName,
         guest.name,
-        `${cleanText(guest.firstName)} ${cleanText(guest.fatherName)} ${cleanText(guest.familyName)}`.trim(),
+        `${cleanText(guest.firstName)} ${cleanText(guest.familyName)}`.trim(),
         raw.name
       )
     ) || "غير معروف";
@@ -472,7 +474,7 @@
     ) || "—";
 
     const guestPhone = cleanText(
-      pickFirst(raw.guestPhone, raw.phone, guest.phone, guest.whatsapp, raw.customerPhone)
+      pickFirst(raw.guestPhone, raw.phone, guest.phone, raw.customerPhone)
     ) || "—";
 
     const propertyTitle = cleanText(
@@ -486,43 +488,20 @@
       )
     ) || "عقار غير معروف";
 
-    const checkIn = cleanText(
-      pickFirst(raw.checkIn, raw.arrivalDate, stay.checkIn, stay.arrivalDate)
-    ) || "—";
-
-    const checkOut = cleanText(
-      pickFirst(raw.checkOut, raw.departureDate, stay.checkOut, stay.departureDate)
-    ) || "—";
-
-    const total =
-      pickFirst(
-        raw.total,
-        raw.totalAmount,
-        raw.amount,
-        raw.price,
-        pricing.total,
-        pricing.totalAmount,
-        pricing.finalTotal,
-        pricing.subtotal
-      ) || 0;
-
-    const reference = cleanText(
-      pickFirst(raw.reference, raw.bookingReference, raw.bookingRef, raw.id)
-    ) || raw.id;
-
-    const userId = cleanText(
-      pickFirst(raw.userId, raw.uid, guest.userId, raw.customerId)
-    );
-
+    const checkIn = cleanText(pickFirst(raw.checkIn, raw.arrivalDate, stay.checkIn)) || "—";
+    const checkOut = cleanText(pickFirst(raw.checkOut, raw.departureDate, stay.checkOut)) || "—";
+    const total = pickFirst(raw.total, raw.totalAmount, raw.amount, raw.price, pricing.total, pricing.totalAmount) || 0;
+    const reference = cleanText(pickFirst(raw.reference, raw.bookingReference, raw.bookingRef, raw.id)) || raw.id;
+    const userId = cleanText(pickFirst(raw.userId, raw.uid, guest.userId, raw.customerId));
+    const propertyId = cleanText(pickFirst(raw.propertyId, raw.listingId, property.id));
     const createdAt = pickFirst(raw.createdAt, raw.createdAtServer, raw.timestamp, raw.dateCreated, raw.createdOn);
 
     return {
       ...raw,
+      id: cleanText(raw.id),
       guest,
       stay,
       pricing,
-      payment,
-      property,
       guestName,
       guestEmail,
       guestPhone,
@@ -532,15 +511,15 @@
       total,
       reference,
       userId,
+      propertyId,
       createdAt,
-      roomNumber: cleanText(pickFirst(raw.roomNumber, raw.roomNo, raw.room)),
-      approvalReply: cleanText(pickFirst(raw.approvalReply, raw.ownerReply, raw.replyMessage)),
       status: getBookingStatus(raw.status)
     };
   }
 
-  function normalizeChat(raw) {
+  function normalizeChat(raw, id = "") {
     return {
+      id: cleanText(id || raw?.id),
       ...raw,
       participants: Array.isArray(raw?.participants) ? raw.participants : [],
       participantIds: normalizeArray(raw?.participantIds),
@@ -563,8 +542,89 @@
       name: cleanText(pickFirst(raw.name, raw.fullName, raw.displayName, raw.username)),
       email: cleanText(pickFirst(raw.email, raw.userEmail)),
       phone: cleanText(pickFirst(raw.phone, raw.mobile)),
+      role: cleanText(raw.role).toLowerCase(),
       createdAt: pickFirst(raw.createdAt, raw.createdAtServer, raw.timestamp)
     };
+  }
+
+  function sortByCreatedDesc(items) {
+    return [...items].sort((a, b) => {
+      const at = a?.createdAt?.toMillis?.() || new Date(a?.createdAt || 0).getTime() || 0;
+      const bt = b?.createdAt?.toMillis?.() || new Date(b?.createdAt || 0).getTime() || 0;
+      return bt - at;
+    });
+  }
+
+  async function setAdminSessionPersistence() {
+    if (!auth || typeof auth.setPersistence !== "function") return;
+    try {
+      if (typeof firebase !== "undefined" && firebase.auth?.Auth?.Persistence?.SESSION) {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+      }
+    } catch (error) {
+      console.warn("setPersistence SESSION failed:", error);
+    }
+  }
+
+  async function findPossibleLoginEmails(identifier) {
+    const input = cleanText(identifier);
+    const normalized = normalizeAdminEmail(input);
+    const candidates = new Set();
+
+    if (!normalized) return [];
+
+    if (normalized.includes("@")) {
+      candidates.add(normalized);
+    } else {
+      candidates.add(normalized);
+      candidates.add(maybeBuildDomainEmail(normalized));
+    }
+
+    try {
+      const usersByUsername = await db.collection("users").where("username", "==", input).limit(1).get();
+      if (!usersByUsername.empty) {
+        const data = usersByUsername.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("users username lookup failed:", error);
+    }
+
+    try {
+      const usersByHandle = await db.collection("users").where("handle", "==", input).limit(1).get();
+      if (!usersByHandle.empty) {
+        const data = usersByHandle.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("users handle lookup failed:", error);
+    }
+
+    try {
+      const ownerByUsername = await db.collection("ownerAccounts").where("username", "==", input).limit(1).get();
+      if (!ownerByUsername.empty) {
+        const data = ownerByUsername.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("ownerAccounts username lookup failed:", error);
+    }
+
+    try {
+      const ownerByEmail = await db.collection("ownerAccounts").where("email", "==", normalized).limit(1).get();
+      if (!ownerByEmail.empty) {
+        const data = ownerByEmail.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("ownerAccounts email lookup failed:", error);
+    }
+
+    return Array.from(candidates).filter(Boolean);
   }
 
   async function getAdminRoleFromFirestore(user) {
@@ -573,9 +633,11 @@
     try {
       const userDoc = await db.collection("users").doc(user.uid).get();
       if (userDoc.exists) {
-        const role = cleanText(userDoc.data()?.role).toLowerCase();
-        if (role === "admin") {
-          return { ok: true, role: "admin" };
+        const data = userDoc.data() || {};
+        const role = cleanText(data.role).toLowerCase();
+        if (role === "admin") return { ok: true, role: "admin", userData: data };
+        if (role === "owner" || role === "property_admin") {
+          return { ok: true, role: "owner", userData: data };
         }
       }
     } catch (error) {
@@ -583,112 +645,106 @@
     }
 
     try {
-      const ownerSnap = await db
-        .collection("ownerAccounts")
-        .where("uid", "==", user.uid)
-        .limit(1)
-        .get();
+      const usersByEmail = await db.collection("users").where("email", "==", normalizeEmail(user.email)).limit(1).get();
+      if (!usersByEmail.empty) {
+        const data = usersByEmail.docs[0].data() || {};
+        const role = cleanText(data.role).toLowerCase();
+        if (role === "admin") return { ok: true, role: "admin", userData: data };
+        if (role === "owner" || role === "property_admin") {
+          return { ok: true, role: "owner", userData: data };
+        }
+      }
+    } catch (error) {
+      console.warn("users email role lookup failed:", error);
+    }
 
-      if (!ownerSnap.empty) {
-        const doc = ownerSnap.docs[0];
+    try {
+      const ownerByUid = await db.collection("ownerAccounts").where("uid", "==", user.uid).limit(1).get();
+      if (!ownerByUid.empty) {
+        const doc = ownerByUid.docs[0];
         const data = doc.data() || {};
         const role = cleanText(data.role || "owner").toLowerCase();
-        if (role === "owner" || role === "property_admin") {
-          return { ok: true, role: "owner", ownerDocId: doc.id, ownerData: data };
+        if (role === "owner" || role === "property_admin" || role === "admin") {
+          return {
+            ok: true,
+            role: role === "admin" ? "admin" : "owner",
+            ownerDocId: doc.id,
+            ownerData: data
+          };
         }
       }
     } catch (error) {
       console.warn("ownerAccounts uid lookup failed:", error);
     }
 
+    try {
+      const ownerByEmail = await db.collection("ownerAccounts").where("email", "==", normalizeEmail(user.email)).limit(1).get();
+      if (!ownerByEmail.empty) {
+        const doc = ownerByEmail.docs[0];
+        const data = doc.data() || {};
+        const role = cleanText(data.role || "owner").toLowerCase();
+        if (role === "owner" || role === "property_admin" || role === "admin") {
+          return {
+            ok: true,
+            role: role === "admin" ? "admin" : "owner",
+            ownerDocId: doc.id,
+            ownerData: data
+          };
+        }
+      }
+    } catch (error) {
+      console.warn("ownerAccounts email lookup failed:", error);
+    }
+
     return { ok: false, role: "" };
   }
 
-  async function signInWithFirebaseForAdmin(username, password) {
-    if (!auth || !db) {
-      throw new Error("Firebase Auth not ready");
-    }
+  async function applyAuthorizedSession(user, roleResult) {
+    state.currentAuthUser = user;
+    state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
+    state.adminRole = roleResult.role;
+    state.ownerAccountDocId = roleResult.ownerDocId || "";
+    state.isLoggedIn = true;
+    state.activeTab = "dashboard";
 
-    username = cleanText(username);
-    password = cleanText(password);
+    safeSet(ADMIN_SESSION_KEY, "1");
+    safeSet(ADMIN_ROLE_KEY, state.adminRole);
+    if (state.ownerAccountDocId) safeSet(ADMIN_OWNER_DOC_KEY, state.ownerAccountDocId);
+    else safeRemove(ADMIN_OWNER_DOC_KEY);
 
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-      const adminCandidates = [
-        "admin@orebooking.com",
-        "admin@orebooking.dz",
-        "orebooking.admin@gmail.com"
-      ];
-
-      let signed = null;
-      for (const email of adminCandidates) {
-        try {
-          const cred = await auth.signInWithEmailAndPassword(email, password);
-          signed = cred;
-          break;
-        } catch (error) {
-          continue;
-        }
-      }
-
-      if (!signed) {
-        throw new Error("ADMIN_FIREBASE_ACCOUNT_NOT_FOUND");
-      }
-
-      const roleResult = await getAdminRoleFromFirestore(signed.user);
-      if (!roleResult.ok || roleResult.role !== "admin") {
-        throw new Error("NOT_AUTHORIZED_ADMIN");
-      }
-
-      state.adminRole = "admin";
-      state.ownerAccountDocId = "";
-      safeSet(ADMIN_ROLE_KEY, "admin");
-      safeRemove(ADMIN_OWNER_DOC_KEY);
-      return signed.user;
-    }
-
-    const ownerSnap = await db
-      .collection("ownerAccounts")
-      .where("username", "==", username)
-      .where("password", "==", password)
-      .limit(1)
-      .get();
-
-    if (ownerSnap.empty) {
-      throw new Error("INVALID_OWNER_CREDENTIALS");
-    }
-
-    const ownerDoc = ownerSnap.docs[0];
-    const ownerData = ownerDoc.data() || {};
-    const ownerEmail = cleanText(ownerData.email);
-    const ownerUid = cleanText(ownerData.uid);
-
-    if (!ownerEmail) {
-      throw new Error("OWNER_EMAIL_REQUIRED");
-    }
-
-    const cred = await auth.signInWithEmailAndPassword(ownerEmail, password);
-    if (!cred?.user) {
-      throw new Error("OWNER_FIREBASE_LOGIN_FAILED");
-    }
-
-    if (ownerUid && ownerUid !== cred.user.uid) {
-      throw new Error("OWNER_UID_MISMATCH");
-    }
-
-    state.adminRole = "owner";
-    state.ownerAccountDocId = ownerDoc.id;
-    safeSet(ADMIN_ROLE_KEY, "owner");
-    safeSet(ADMIN_OWNER_DOC_KEY, ownerDoc.id);
-
-    return cred.user;
+    ensureLoggedInUI();
+    updateProfileUI();
+    updateRoleBasedUI();
+    activateTab("dashboard", { silentAuth: true });
+    await loadAllData();
   }
 
-  async function login(username, password) {
-    username = cleanText(username);
+  function clearAdminSessionState() {
+    state.isLoggedIn = false;
+    state.adminRole = "";
+    state.ownerAccountDocId = "";
+    state.currentAuthUser = null;
+    state.currentOwnerRecord = null;
+    state.properties = [];
+    state.bookings = [];
+    state.ownerAccounts = [];
+    state.chats = [];
+    state.users = [];
+    state.currentChatId = null;
+    state.currentChatMessages = [];
+    state.pendingRejectBookingId = "";
+
+    safeRemove(ADMIN_SESSION_KEY);
+    safeRemove(ADMIN_ROLE_KEY);
+    safeRemove(ADMIN_OWNER_DOC_KEY);
+  }
+
+  async function login(email, password) {
+    const rawLogin = cleanText(email);
     password = cleanText(password);
 
-    if (!username || !password) {
-      showToast("أدخل اسم المستخدم وكلمة المرور.", "warning");
+    if (!rawLogin || !password) {
+      showToast("أدخل البريد الإلكتروني وكلمة المرور.", "warning");
       return false;
     }
 
@@ -698,51 +754,78 @@
     }
 
     try {
-      const user = await signInWithFirebaseForAdmin(username, password);
-      state.currentAuthUser = user;
-      state.isLoggedIn = true;
-      state.activeTab = "dashboard";
-      safeSet(ADMIN_SESSION_KEY, "1");
-      ensureLoggedInUI();
-      activateTab("dashboard", { silentAuth: true });
-      await loadAllData();
+      await setAdminSessionPersistence();
+
+      const candidates = await findPossibleLoginEmails(rawLogin);
+      if (!candidates.length) {
+        candidates.push(normalizeAdminEmail(rawLogin));
+        const withDomain = maybeBuildDomainEmail(rawLogin);
+        if (withDomain) candidates.push(withDomain);
+      }
+
+      let signedUser = null;
+      let lastError = null;
+
+      for (const candidateEmail of Array.from(new Set(candidates)).filter(Boolean)) {
+        try {
+          const cred = await auth.signInWithEmailAndPassword(candidateEmail, password);
+          if (cred?.user) {
+            signedUser = cred.user;
+            safeSet(ADMIN_LOGIN_HINT_KEY, candidateEmail);
+            break;
+          }
+        } catch (error) {
+          lastError = error;
+          const code = String(error?.code || "");
+          if (!code.includes("user-not-found") && !code.includes("invalid-email")) {
+            if (code.includes("wrong-password") || code.includes("invalid-credential")) break;
+          }
+        }
+      }
+
+      const user = signedUser || auth.currentUser;
+      if (!user) throw lastError || new Error("AUTH_USER_NOT_FOUND");
+
+      const roleResult = await getAdminRoleFromFirestore(user);
+      if (!roleResult.ok) {
+        try { await auth.signOut(); } catch {}
+        throw new Error("NOT_AUTHORIZED");
+      }
+
+      await applyAuthorizedSession(user, roleResult);
       showToast("تم تسجيل الدخول بنجاح.", "success");
       return true;
     } catch (error) {
       console.error("admin login error:", error);
-      state.isLoggedIn = false;
-      state.currentAuthUser = null;
-      state.adminRole = "";
-      state.ownerAccountDocId = "";
-      safeRemove(ADMIN_SESSION_KEY);
-      safeRemove(ADMIN_ROLE_KEY);
-      safeRemove(ADMIN_OWNER_DOC_KEY);
+      clearAdminSessionState();
       ensureLoggedInUI();
+      updateProfileUI();
 
       let message = "بيانات الدخول غير صحيحة.";
-      if (String(error?.message || "").includes("ADMIN_FIREBASE_ACCOUNT_NOT_FOUND")) {
-        message = "حساب أدمن الموقع غير موجود داخل Firebase Auth.";
-      } else if (String(error?.message || "").includes("NOT_AUTHORIZED_ADMIN")) {
-        message = "هذا الحساب ليس لديه صلاحية أدمن عام داخل users.role.";
-      } else if (String(error?.message || "").includes("OWNER_EMAIL_REQUIRED")) {
-        message = "حساب المالك يحتاج email داخل ownerAccounts.";
-      } else if (String(error?.message || "").includes("OWNER_UID_MISMATCH")) {
-        message = "uid داخل ownerAccounts لا يطابق حساب Firebase Auth.";
+      const code = String(error?.code || "");
+      const msg = String(error?.message || "");
+
+      if (msg.includes("NOT_AUTHORIZED")) {
+        message = "هذا الحساب لا يملك صلاحية الدخول إلى لوحة التحكم.";
+      } else if (code.includes("wrong-password")) {
+        message = "كلمة المرور غير صحيحة.";
+      } else if (code.includes("user-not-found")) {
+        message = "الحساب غير موجود داخل Firebase Authentication.";
+      } else if (code.includes("invalid-email")) {
+        message = "البريد الإلكتروني غير صالح.";
+      } else if (code.includes("too-many-requests")) {
+        message = "تمت محاولات كثيرة. حاول مرة أخرى لاحقًا.";
+      } else if (code.includes("invalid-credential")) {
+        message = "بيانات الدخول غير صحيحة.";
       }
+
       showToast(message, "error");
       return false;
     }
   }
 
   async function logout() {
-    state.isLoggedIn = false;
-    state.activeTab = "dashboard";
-    state.adminRole = "";
-    state.ownerAccountDocId = "";
-    state.currentAuthUser = null;
-    safeRemove(ADMIN_SESSION_KEY);
-    safeRemove(ADMIN_ROLE_KEY);
-    safeRemove(ADMIN_OWNER_DOC_KEY);
+    clearAdminSessionState();
 
     if (state.listeners.chats) {
       state.listeners.chats();
@@ -753,10 +836,11 @@
       state.listeners.chatMessages = null;
     }
 
-    state.currentChatId = null;
-    state.currentChatMessages = [];
     ensureLoggedInUI();
+    updateProfileUI();
+    updateRoleBasedUI();
     renderCurrentChatMessages();
+    renderChatThreads();
 
     try {
       if (auth?.currentUser) await auth.signOut();
@@ -767,83 +851,101 @@
     showToast("تم تسجيل الخروج.", "info");
   }
 
+  function tabAliases(name) {
+    const raw = cleanText(name);
+    const map = {
+      dashboard: "dashboard",
+      "dashboard-pane": "dashboard",
+      properties: "properties",
+      "properties-pane": "properties",
+      bookings: "bookings",
+      "bookings-pane": "bookings",
+      owners: "owners",
+      "owners-pane": "owners",
+      messages: "messages",
+      "messages-pane": "messages",
+      chats: "messages",
+      "chats-pane": "messages",
+      "add-property": "properties",
+      "add-property-pane": "properties"
+    };
+    return map[raw] || raw || "dashboard";
+  }
+
   function activateTab(tabName, options = {}) {
     if (!options.silentAuth && !requireAuth()) return;
 
-    state.activeTab = cleanText(tabName || "dashboard") || "dashboard";
+    const requested = tabAliases(tabName || "dashboard");
+    state.activeTab = requested;
 
-    qa("[data-tab-target]").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tabTarget === state.activeTab);
-    });
-
-    qa(".tab-pane").forEach((pane) => {
-      const paneId = pane.id || "";
-      const normalized = paneId.replace(/-pane$|tab-|^tab-/g, "");
-      const match =
-        pane.dataset.tab === state.activeTab ||
-        paneId === state.activeTab ||
-        normalized === state.activeTab ||
-        paneId === `${state.activeTab}-pane`;
-      pane.classList.toggle("active", !!match);
-    });
-
-    const explicit = byId(`${state.activeTab}-pane`) || byId(state.activeTab);
-    if (explicit && explicit.classList.contains("tab-pane")) {
-      qa(".tab-pane").forEach((pane) => pane.classList.remove("active"));
-      explicit.classList.add("active");
+    if (state.adminRole === "owner" && requested === "owners") {
+      state.activeTab = "dashboard";
     }
 
-    if (state.activeTab === "chats" && state.currentChatId) {
+    qa("[data-tab-target], .sidebar-nav .nav-item[data-tab]").forEach((btn) => {
+      const key = tabAliases(btn.dataset.tabTarget || btn.dataset.tab || "");
+      btn.classList.toggle("active", key === state.activeTab);
+    });
+
+    qa(".tab-pane").forEach((pane) => pane.classList.remove("active"));
+    const explicit =
+      byId(`${state.activeTab}-pane`) ||
+      byId(state.activeTab) ||
+      q(`.tab-pane[id="${state.activeTab}-pane"]`);
+
+    if (explicit && explicit.classList.contains("tab-pane")) explicit.classList.add("active");
+
+    if (state.activeTab === "messages" && state.currentChatId) {
       renderChatThreads();
       renderCurrentChatMessages();
     }
-
-    if (state.activeTab === "add-property") {
-      setTimeout(() => state.maps.add?.invalidateSize?.(), 250);
-    }
-    if (state.activeTab === "properties") {
-      renderPropertiesTable();
-    }
-    if (state.activeTab === "bookings") {
-      renderBookings();
-    }
-    if (state.activeTab === "owners") {
-      renderOwnerAccounts();
-    }
+    if (state.activeTab === "properties") renderPropertiesTable();
+    if (state.activeTab === "bookings") renderBookings();
+    if (state.activeTab === "owners") renderOwnerAccounts();
   }
 
   async function loadAllData() {
-    if (!requireAuth(false)) return;
-    if (!firebaseReady) return;
+    if (!requireAuth(false) || !firebaseReady) return;
+
+    await loadProperties();
 
     await Promise.all([
-      loadProperties(),
       loadBookings(),
-      loadOwnerAccounts(),
       loadUsers(),
-      loadChats()
+      loadChats(),
+      isSuperAdmin() ? loadOwnerAccounts() : Promise.resolve()
     ]);
 
+    if (!isSuperAdmin()) {
+      state.ownerAccounts = state.currentOwnerRecord
+        ? [{ id: state.ownerAccountDocId || cleanText(state.currentAuthUser?.uid), ...state.currentOwnerRecord }]
+        : [];
+    }
+
     renderDashboardStats();
+    updateProfileUI();
+    updateRoleBasedUI();
   }
 
   function renderDashboardStats() {
-    setStat("stat-properties-count", String(state.properties.length));
-    setStat("stat-bookings-count", String(state.bookings.length));
-    setStat("stat-owners-count", String(state.ownerAccounts.length));
-    setStat("stat-chats-count", String(state.chats.length));
-
     const pending = state.bookings.filter((b) => getBookingStatus(b.status) === "pending").length;
     const confirmed = state.bookings.filter((b) => getBookingStatus(b.status) === "confirmed").length;
     const rejected = state.bookings.filter((b) => getBookingStatus(b.status) === "rejected").length;
 
-    setText(String(state.properties.length), "dashboard-properties-count", "mini-properties-count");
-    setText(String(state.bookings.length), "dashboard-bookings-count", "mini-bookings-count");
+    setText(String(state.properties.length), "dashboard-properties-count", "mini-properties-count", "stat-properties-count", "total-properties-count");
+    setText(String(state.bookings.length), "dashboard-bookings-count", "mini-bookings-count", "stat-bookings-count", "total-bookings-count");
+    setText(String(state.ownerAccounts.length), "stat-owners-count", "owners-count");
+    setText(String(state.chats.length), "stat-chats-count");
     setText(String(pending), "pending-bookings-count", "bookings-count-pending");
     setText(String(confirmed), "confirmed-bookings-count", "bookings-count-confirmed");
     setText(String(rejected), "rejected-bookings-count", "bookings-count-rejected");
     setText(String(state.users.length), "dashboard-users-count", "users-count");
     setText(String(state.bookings.length), "bookings-count-all");
+
+    const visibleCount = state.properties.filter((p) => p.isActive !== false && p.visible !== false).length;
+    const hiddenCount = Math.max(0, state.properties.length - visibleCount);
+    setText(`${visibleCount} عقار ظاهر`, "visible-properties-count");
+    setText(`${hiddenCount} عقار مخفي`, "hidden-properties-count");
   }
 
   async function loadProperties() {
@@ -864,17 +966,19 @@
       if (isSuperAdmin()) {
         snap = await db.collection("properties").get();
       } else {
-        snap = await db.collection("properties")
-          .where("ownerUid", "==", cleanText(state.currentAuthUser?.uid))
-          .get();
+        try {
+          snap = await db.collection("properties").where("ownerUid", "==", cleanText(state.currentAuthUser?.uid)).get();
+        } catch {
+          snap = await db.collection("properties").get();
+        }
       }
 
       snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-      state.properties = items.sort((a, b) => {
-        const at = a.createdAt?.toMillis?.() || 0;
-        const bt = b.createdAt?.toMillis?.() || 0;
-        return bt - at;
-      });
+
+      let filtered = items;
+      if (isOwnerAdmin()) filtered = items.filter(canManageProperty);
+
+      state.properties = sortByCreatedDesc(filtered);
 
       renderPropertiesTable();
       renderDashboardStats();
@@ -896,12 +1000,12 @@
 
     if (!tbody) return;
 
-    const query = cleanText(getValue("properties-search", "property-search")).toLowerCase();
+    const query = cleanText(getValue("properties-search", "property-search", "properties-search-input")).toLowerCase();
     let rows = [...state.properties];
 
     if (query) {
-      rows = rows.filter((prop) => {
-        return [
+      rows = rows.filter((prop) =>
+        [
           prop.id,
           getPropertyTitle(prop),
           getPropertyLocation(prop),
@@ -909,11 +1013,8 @@
           cleanText(prop.ownerName),
           cleanText(prop.ownerEmail),
           cleanText(prop.ownerUid)
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      });
+        ].join(" ").toLowerCase().includes(query)
+      );
     }
 
     if (!rows.length) {
@@ -923,6 +1024,7 @@
 
     tbody.innerHTML = rows.map((prop) => {
       const visible = prop.isActive !== false && prop.visible !== false;
+      const canDelete = isSuperAdmin();
       return `
         <tr>
           <td>
@@ -947,9 +1049,11 @@
                 <i class="ph ${visible ? "ph-eye-slash" : "ph-eye"}"></i>
                 ${visible ? "إخفاء" : "إظهار"}
               </button>
-              <button type="button" class="delete-property-btn" data-id="${escapeHtml(prop.id)}">
-                <i class="ph ph-trash"></i> حذف
-              </button>
+              ${canDelete ? `
+                <button type="button" class="delete-property-btn" data-id="${escapeHtml(prop.id)}">
+                  <i class="ph ph-trash"></i> حذف
+                </button>
+              ` : ``}
             </div>
           </td>
         </tr>
@@ -958,31 +1062,27 @@
   }
 
   function collectPropertyFormData(prefix = "admin") {
-    const titleAr = getValue(`${prefix}-title-ar`, `${prefix}-title`, `${prefix}-property-title-ar`, `${prefix}-property-title`);
-    const titleEn = getValue(`${prefix}-title-en`, `${prefix}-property-title-en`);
-    const locationAr = getValue(`${prefix}-location-ar`, `${prefix}-location`, `${prefix}-property-location-ar`, `${prefix}-property-location`);
-    const locationEn = getValue(`${prefix}-location-en`, `${prefix}-property-location-en`);
-    const typeAr = getValue(`${prefix}-type-ar`, `${prefix}-type`, `${prefix}-property-type-ar`, `${prefix}-property-type`);
-    const typeEn = getValue(`${prefix}-type-en`, `${prefix}-property-type-en`);
-    const descriptionAr = getValue(`${prefix}-description-ar`, `${prefix}-description`, `${prefix}-property-description-ar`, `${prefix}-property-description`);
-    const descriptionEn = getValue(`${prefix}-description-en`, `${prefix}-property-description-en`);
-    const ownerName = getValue(`${prefix}-owner-name`, `${prefix}-host-name`);
-    const ownerEmail = getValue(`${prefix}-owner-email`, `${prefix}-host-email`);
-    const ownerPhone = getValue(`${prefix}-owner-phone`, `${prefix}-host-phone`);
-    const imageUrl = getValue(`${prefix}-image-url`, `${prefix}-main-image`, `${prefix}-photo-url`);
-    const gallery = getValue(`${prefix}-gallery`, `${prefix}-images`, `${prefix}-gallery-urls`);
-    const price = toNumber(getValue(`${prefix}-price`, `${prefix}-price-per-night`, `${prefix}-night-price`), 0);
-    const guests = toNumber(getValue(`${prefix}-guests`, `${prefix}-max-guests`), 1);
-    const bedrooms = toNumber(getValue(`${prefix}-bedrooms`, `${prefix}-rooms`), 0);
-    const bathrooms = toNumber(getValue(`${prefix}-bathrooms`, `${prefix}-baths`), 0);
-    const latRaw = getValue(`${prefix}-lat`, `${prefix}-latitude`);
-    const lngRaw = getValue(`${prefix}-lng`, `${prefix}-longitude`);
-    const lat = cleanText(latRaw);
-    const lng = cleanText(lngRaw);
-    const amenitiesText = getValue(`${prefix}-amenities`, `${prefix}-features`);
-    const selectedAmenities = getCheckedValues(`[name="${prefix}-amenities"]:checked, [name="${prefix}-features"]:checked`);
-    const amenities = selectedAmenities.length ? selectedAmenities : normalizeArray(amenitiesText);
-    const extras = normalizeArray(getValue(`${prefix}-extras`, `${prefix}-property-extras`));
+    const titleAr = getValue(`${prefix}-title-ar`);
+    const titleEn = getValue(`${prefix}-title-en`);
+    const locationAr = getValue(`${prefix}-location-ar`);
+    const locationEn = getValue(`${prefix}-location-en`);
+    const typeAr = getValue(`${prefix}-type-ar`);
+    const typeEn = getValue(`${prefix}-type-en`);
+    const descriptionAr = getValue(`${prefix}-description-ar`);
+    const descriptionEn = getValue(`${prefix}-description-en`);
+    const ownerName = getValue(`${prefix}-owner-name`);
+    const ownerEmail = getValue(`${prefix}-owner-email`);
+    const ownerPhone = getValue(`${prefix}-owner-phone`);
+    const imageUrl = getValue(`${prefix}-image-url`);
+    const gallery = getValue(`${prefix}-gallery`);
+    const price = toNumber(getValue(`${prefix}-price`), 0);
+    const guests = toNumber(getValue(`${prefix}-guests`), 1);
+    const bedrooms = toNumber(getValue(`${prefix}-bedrooms`), 0);
+    const bathrooms = toNumber(getValue(`${prefix}-bathrooms`), 0);
+    const lat = cleanText(getValue(`${prefix}-lat`));
+    const lng = cleanText(getValue(`${prefix}-lng`));
+    const amenities = normalizeArray(getValue(`${prefix}-amenities`));
+    const extras = normalizeArray(getValue(`${prefix}-extras`));
 
     const allImages = normalizeArray(gallery);
     if (imageUrl && !allImages.includes(imageUrl)) allImages.unshift(imageUrl);
@@ -1008,7 +1108,7 @@
       descriptionAr: descriptionAr || descriptionEn || "",
       descriptionEn: descriptionEn || descriptionAr || "",
       ownerName,
-      ownerEmail,
+      ownerEmail: normalizeEmail(ownerEmail),
       ownerPhone,
       hostName: ownerName,
       imageUrl: imageUrl || allImages[0] || "images/placeholder.jpg",
@@ -1029,14 +1129,15 @@
       lng: Number.isFinite(lngNum) ? lngNum : null,
       latitude: Number.isFinite(latNum) ? latNum : null,
       longitude: Number.isFinite(lngNum) ? lngNum : null,
-      isActive: true,
-      visible: true,
       slug: slugify(title),
       updatedAt: getServerTimestamp()
     };
 
     if (isOwnerAdmin()) {
       payload.ownerUid = cleanText(state.currentAuthUser?.uid);
+      payload.ownerEmail = normalizeEmail(state.currentAuthUser?.email || ownerEmail);
+      payload.ownerName = state.currentOwnerRecord?.name || ownerName;
+      payload.hostName = payload.ownerName;
     }
 
     return payload;
@@ -1053,6 +1154,7 @@
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
     if (!requireAuth()) return;
+    if (isOwnerAdmin()) return showToast("إضافة العقار متاحة للأدمن العام فقط.", "warning");
 
     const form = e.currentTarget;
     const btn = form.querySelector('button[type="submit"]');
@@ -1063,12 +1165,15 @@
     setButtonLoading(btn, true, "جارٍ إضافة العقار...");
     try {
       data.createdAt = getServerTimestamp();
+      data.isActive = true;
+      data.visible = true;
       await db.collection("properties").add(data);
       form.reset();
       resetUploadPreview("admin");
       clearMapCoords("admin");
       hideMapPickedBadge("admin");
       await loadProperties();
+      await loadBookings();
       showToast("تمت إضافة العقار بنجاح.", "success");
       activateTab("properties");
     } catch (error) {
@@ -1107,11 +1212,11 @@
       showToast("حذف العقار متاح للأدمن العام فقط.", "error");
       return;
     }
-    const ok = window.confirm("هل أنت متأكد من حذف هذا العقار؟");
-    if (!ok) return;
+    if (!window.confirm("هل أنت متأكد من حذف هذا العقار؟")) return;
     try {
       await db.collection("properties").doc(id).delete();
       state.properties = state.properties.filter((p) => p.id !== id);
+      await loadBookings();
       renderPropertiesTable();
       renderDashboardStats();
       showToast("تم حذف العقار.", "success");
@@ -1126,42 +1231,39 @@
     if (!prop) return showToast("العقار غير موجود.", "error");
     if (!canManageProperty(prop)) return showToast("ليست لديك صلاحية تعديل هذا العقار.", "error");
 
-    const modal = byId("edit-modal") || byId("edit-property-modal") || byId("property-edit-modal");
+    const modal = byId("edit-modal");
     if (!modal) return showToast("مودال التعديل غير موجود في الصفحة.", "warning");
 
     modal.classList.add("active");
     document.body.classList.add("modal-open");
     modal.dataset.editId = id;
 
-    setValue(prop.titleAr || prop.title || "", "edit-title-ar", "edit-title", "edit-property-title-ar", "edit-property-title");
-    setValue(prop.titleEn || "", "edit-title-en", "edit-property-title-en");
-    setValue(prop.locationAr || prop.location || "", "edit-location-ar", "edit-location", "edit-property-location-ar", "edit-property-location");
-    setValue(prop.locationEn || "", "edit-location-en", "edit-property-location-en");
-    setValue(prop.typeAr || prop.type || "", "edit-type-ar", "edit-type", "edit-property-type-ar", "edit-property-type");
-    setValue(prop.typeEn || "", "edit-type-en", "edit-property-type-en");
-    setValue(prop.descriptionAr || prop.description || "", "edit-description-ar", "edit-description", "edit-property-description-ar", "edit-property-description");
-    setValue(prop.descriptionEn || "", "edit-description-en", "edit-property-description-en");
-    setValue(prop.ownerName || prop.hostName || "", "edit-owner-name", "edit-host-name");
-    setValue(prop.ownerEmail || "", "edit-owner-email", "edit-host-email");
-    setValue(prop.ownerPhone || "", "edit-owner-phone", "edit-host-phone");
-    setValue(prop.imageUrl || prop.mainImage || "", "edit-image-url", "edit-main-image", "edit-photo-url");
-    setValue(normalizeArray(prop.images || prop.gallery).join(", "), "edit-gallery", "edit-images", "edit-gallery-urls");
-    setValue(prop.price || prop.basePrice || prop.pricePerNight || "", "edit-price", "edit-price-per-night", "edit-night-price");
-    setValue(prop.guests || prop.maxGuests || "", "edit-guests", "edit-max-guests");
-    setValue(prop.bedrooms || "", "edit-bedrooms", "edit-rooms");
-    setValue(prop.bathrooms || "", "edit-bathrooms", "edit-baths");
-    setValue(prop.lat ?? prop.latitude ?? "", "edit-lat", "edit-latitude");
-    setValue(prop.lng ?? prop.longitude ?? "", "edit-lng", "edit-longitude");
-    setValue(normalizeArray(prop.amenities || prop.features).join(", "), "edit-amenities", "edit-features");
-    setValue(normalizeArray(prop.extras).join(", "), "edit-extras", "edit-property-extras");
+    setValue(prop.titleAr || prop.title || "", "edit-title-ar");
+    setValue(prop.titleEn || "", "edit-title-en");
+    setValue(prop.locationAr || prop.location || "", "edit-location-ar");
+    setValue(prop.locationEn || "", "edit-location-en");
+    setValue(prop.typeAr || prop.type || "", "edit-type-ar");
+    setValue(prop.typeEn || "", "edit-type-en");
+    setValue(prop.descriptionAr || prop.description || "", "edit-description-ar");
+    setValue(prop.descriptionEn || "", "edit-description-en");
+    setValue(prop.ownerName || prop.hostName || "", "edit-owner-name");
+    setValue(prop.ownerEmail || "", "edit-owner-email");
+    setValue(prop.ownerPhone || "", "edit-owner-phone");
+    setValue(prop.imageUrl || prop.mainImage || "", "edit-image-url");
+    setValue(normalizeArray(prop.images || prop.gallery).join(", "), "edit-gallery");
+    setValue(prop.price || prop.basePrice || prop.pricePerNight || "", "edit-price");
+    setValue(prop.guests || prop.maxGuests || "", "edit-guests");
+    setValue(prop.bedrooms || "", "edit-bedrooms");
+    setValue(prop.bathrooms || "", "edit-bathrooms");
+    setValue(prop.lat ?? prop.latitude ?? "", "edit-lat");
+    setValue(prop.lng ?? prop.longitude ?? "", "edit-lng");
+    setValue(normalizeArray(prop.amenities || prop.features).join(", "), "edit-amenities");
+    setValue(normalizeArray(prop.extras).join(", "), "edit-extras");
 
     setUploadPreviewFromUrl("edit", prop.imageUrl || prop.mainImage || "");
     updateMapMarkerFromInputs("edit");
-    if ((prop.lat ?? prop.latitude) && (prop.lng ?? prop.longitude)) {
-      showMapPickedBadge("edit");
-    } else {
-      hideMapPickedBadge("edit");
-    }
+    if ((prop.lat ?? prop.latitude) && (prop.lng ?? prop.longitude)) showMapPickedBadge("edit");
+    else hideMapPickedBadge("edit");
 
     setTimeout(() => state.maps.edit?.invalidateSize?.(), 250);
   }
@@ -1178,14 +1280,12 @@
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
 
     const form = e.currentTarget;
-    const modal = form.closest(".modal-overlay") || byId("edit-modal") || byId("edit-property-modal");
+    const modal = form.closest(".modal-overlay") || byId("edit-modal");
     const docId = modal?.dataset.editId;
     if (!docId) return showToast("لم يتم تحديد العقار المراد تعديله.", "error");
 
     const prop = state.properties.find((p) => p.id === docId);
-    if (!prop || !canManageProperty(prop)) {
-      return showToast("ليست لديك صلاحية تعديل هذا العقار.", "error");
-    }
+    if (!prop || !canManageProperty(prop)) return showToast("ليست لديك صلاحية تعديل هذا العقار.", "error");
 
     const btn = form.querySelector('button[type="submit"]');
     const data = collectPropertyFormData("edit");
@@ -1194,6 +1294,9 @@
 
     if (isOwnerAdmin()) {
       data.ownerUid = cleanText(state.currentAuthUser?.uid);
+      data.ownerEmail = normalizeEmail(state.currentAuthUser?.email || data.ownerEmail);
+      data.ownerName = state.currentOwnerRecord?.name || data.ownerName;
+      data.hostName = data.ownerName;
     }
 
     setButtonLoading(btn, true, "جارٍ حفظ التعديلات...");
@@ -1201,6 +1304,7 @@
       await db.collection("properties").doc(docId).update(data);
       closeModal(modal);
       await loadProperties();
+      await loadBookings();
       showToast("تم تحديث بيانات العقار.", "success");
     } catch (error) {
       console.error("edit property error:", error);
@@ -1212,16 +1316,15 @@
 
   async function loadBookings() {
     const container = byId("bookings-container");
-    const tbody = byId("bookings-tbody");
-
     if (container) {
       container.innerHTML = `<div class="empty-state"><i class="ph ph-spinner-gap ph-spin"></i><div>جارٍ تحميل الحجوزات...</div></div>`;
     }
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;">جارٍ تحميل الحجوزات...</td></tr>`;
-    }
 
     try {
+      if (isOwnerAdmin() && !state.properties.length) {
+        await loadProperties();
+      }
+
       const items = [];
       let snap;
 
@@ -1231,55 +1334,155 @@
         } catch {
           snap = await db.collection("bookings").get();
         }
-      } else {
-        const propertyIds = state.properties.map((p) => p.id).filter(Boolean);
-        if (!propertyIds.length) {
-          state.bookings = [];
-          renderBookings();
-          renderDashboardStats();
-          return;
-        }
 
-        const all = [];
-        for (const propertyId of propertyIds) {
-          const part = await db.collection("bookings").where("propertyId", "==", propertyId).get();
-          part.forEach((doc) => all.push(normalizeBooking({ id: doc.id, ...doc.data() })));
-        }
-        state.bookings = all.sort((a, b) => {
-          const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
-          const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
-          return bt - at;
-        });
+        snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
+        state.bookings = sortByCreatedDesc(items);
         renderBookings();
         renderDashboardStats();
         return;
       }
 
-      snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
-      items.sort((a, b) => {
-        const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
-        const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
-        return bt - at;
+      const propertyIds = state.properties.map((p) => cleanText(p.id)).filter(Boolean);
+
+      if (!propertyIds.length) {
+        state.bookings = [];
+        renderBookings();
+        renderDashboardStats();
+        return;
+      }
+
+      const all = [];
+      for (const propertyId of propertyIds) {
+        const part = await db.collection("bookings").where("propertyId", "==", propertyId).get();
+        part.forEach((doc) => all.push(normalizeBooking({ id: doc.id, ...doc.data() })));
+      }
+
+      const unique = new Map();
+      all.forEach((booking) => {
+        unique.set(cleanText(booking.id), booking);
       });
 
-      state.bookings = items;
+      state.bookings = sortByCreatedDesc(
+        Array.from(unique.values()).filter((booking) => canAccessBooking(booking))
+      );
+
       renderBookings();
       renderDashboardStats();
     } catch (error) {
       console.error("loadBookings error:", error);
-      if (container) {
-        container.innerHTML = `<div class="empty-state"><i class="ph ph-warning-circle"></i><div>تعذر تحميل الحجوزات.</div></div>`;
-      }
-      if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;color:#ef4444;">تعذر تحميل الحجوزات.</td></tr>`;
-      }
+      state.bookings = [];
+      renderBookings();
       showToast("تعذر تحميل الحجوزات.", "error");
     }
   }
 
+  function getFilteredBookings() {
+    const filter = cleanText(state.bookingFilter || "all").toLowerCase();
+    if (filter === "all") return [...state.bookings];
+    return state.bookings.filter((booking) => getBookingStatus(booking.status) === filter);
+  }
+
   function renderBookings() {
     const container = byId("bookings-container");
-    const tbody = byId("bookings-tbody");
+    if (!container) return;
+
+    const rows = getFilteredBookings();
+
+    if (!rows.length) {
+      container.innerHTML = `
+        <div class="bookings-grid">
+          <div class="empty-state">
+            <i class="ph ph-calendar-blank"></i>
+            <div>لا توجد حجوزات ضمن هذا التصنيف.</div>
+          </div>
+        </div>
+      `;
+      renderDashboardStats();
+      updateBookingFilterButtons();
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="bookings-grid">
+        ${rows.map((booking) => {
+          const status = getBookingStatus(booking.status);
+          const canApprove = status !== "confirmed";
+          const canReject = status !== "rejected";
+          return `
+            <div class="booking-card" data-status="${escapeHtml(status)}">
+              <div class="booking-head">
+                <div class="booking-title">
+                  <strong>${escapeHtml(booking.propertyTitle || "عقار غير معروف")}</strong>
+                  <span>مرجع: ${escapeHtml(booking.reference || booking.id || "—")}</span>
+                </div>
+                ${statusBadge(status)}
+              </div>
+
+              <div class="booking-meta-grid">
+                <div class="booking-meta-item">
+                  <label>الزبون</label>
+                  <strong>${escapeHtml(booking.guestName || "غير معروف")}</strong>
+                </div>
+                <div class="booking-meta-item">
+                  <label>البريد</label>
+                  <span>${escapeHtml(booking.guestEmail || "—")}</span>
+                </div>
+                <div class="booking-meta-item">
+                  <label>الهاتف</label>
+                  <span>${escapeHtml(booking.guestPhone || "—")}</span>
+                </div>
+                <div class="booking-meta-item">
+                  <label>المبلغ</label>
+                  <strong>${escapeHtml(formatPrice(booking.total || booking.pricing?.total || 0))}</strong>
+                </div>
+                <div class="booking-meta-item">
+                  <label>الدخول</label>
+                  <span>${escapeHtml(booking.checkIn || "—")}</span>
+                </div>
+                <div class="booking-meta-item">
+                  <label>الخروج</label>
+                  <span>${escapeHtml(booking.checkOut || "—")}</span>
+                </div>
+                <div class="booking-meta-item">
+                  <label>أنشئ في</label>
+                  <span>${escapeHtml(formatDate(booking.createdAt))}</span>
+                </div>
+                <div class="booking-meta-item">
+                  <label>الحالة</label>
+                  <strong>${escapeHtml(statusLabel(status))}</strong>
+                </div>
+              </div>
+
+              <div class="booking-actions-row">
+                <button type="button" class="btn-approve approve-booking-btn" data-id="${escapeHtml(booking.id)}" ${canApprove ? "" : "disabled"}>
+                  <i class="ph ph-check-circle"></i>
+                  <span>قبول</span>
+                </button>
+
+                <button type="button" class="btn-reject reject-booking-btn" data-id="${escapeHtml(booking.id)}" ${canReject ? "" : "disabled"}>
+                  <i class="ph ph-x-circle"></i>
+                  <span>رفض</span>
+                </button>
+
+                <button type="button" class="btn-open-chat open-booking-chat-btn" data-id="${escapeHtml(booking.id)}">
+                  <i class="ph ph-chat-circle-text"></i>
+                  <span>مراسلة الزبون</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    updateBookingFilterButtons();
+  }
+
+  function updateBookingFilterButtons() {
+    qa("[data-bookings-filter]").forEach((btn) => {
+      const val = cleanText(btn.dataset.bookingsFilter || "all");
+      btn.classList.toggle("active", val === state.bookingFilter);
+    });
 
     const counts = {
       all: state.bookings.length,
@@ -1288,415 +1491,62 @@
       rejected: state.bookings.filter((b) => getBookingStatus(b.status) === "rejected").length
     };
 
-    setText(String(counts.all), "booking-count-all", "all-bookings-count", "bookings-count-all");
-    setText(String(counts.pending), "booking-count-pending", "pending-bookings-filter-count", "bookings-count-pending");
-    setText(String(counts.confirmed), "booking-count-confirmed", "confirmed-bookings-filter-count", "bookings-count-confirmed");
-    setText(String(counts.rejected), "booking-count-rejected", "rejected-bookings-filter-count", "bookings-count-rejected");
-
-    let rows = [...state.bookings];
-
-    if (state.bookingFilter !== "all") {
-      rows = rows.filter((b) => getBookingStatus(b.status) === state.bookingFilter);
-    }
-
-    const query = cleanText(getValue("bookings-search", "booking-search")).toLowerCase();
-    if (query) {
-      rows = rows.filter((b) => {
-        const hay = [
-          b.id,
-          b.reference,
-          b.bookingReference,
-          b.userName,
-          b.guestName,
-          b.userEmail,
-          b.guestEmail,
-          b.propertyTitle,
-          b.propertyTitleAr,
-          b.propertyName,
-          b.phone,
-          b.guestPhone,
-          b.userId,
-          b.roomNumber,
-          b.approvalReply,
-          deepGet(b, "guest.fullName"),
-          deepGet(b, "guest.email"),
-          deepGet(b, "guest.phone"),
-          deepGet(b, "stay.checkIn"),
-          deepGet(b, "stay.checkOut")
-        ].join(" ").toLowerCase();
-        return hay.includes(query);
-      });
-    }
-
-    if (tbody) {
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:28px;">لا توجد حجوزات حالياً.</td></tr>`;
-      } else {
-        tbody.innerHTML = rows.map((booking) => {
-          const status = getBookingStatus(booking.status);
-          return `
-            <tr>
-              <td>${escapeHtml(cleanText(booking.reference || booking.id))}</td>
-              <td>${escapeHtml(cleanText(booking.guestName))}</td>
-              <td>${escapeHtml(cleanText(booking.propertyTitle))}</td>
-              <td>${escapeHtml(`${cleanText(booking.checkIn)} ← ${cleanText(booking.checkOut)}`)}</td>
-              <td><span class="price-pill">${formatPrice(booking.total || 0)}</span></td>
-              <td>${escapeHtml(cleanText(booking.roomNumber || "—"))}</td>
-              <td>${statusBadge(status)}</td>
-              <td>${escapeHtml(cleanText(booking.approvalReply || booking.ownerReply || booking.replyMessage || "—"))}</td>
-              <td>
-                <div class="table-actions">
-                  <button type="button" class="btn-approve" data-booking-id="${escapeHtml(booking.id)}" ${status === "confirmed" ? "disabled" : ""}>
-                    <i class="ph ph-check"></i> قبول
-                  </button>
-                  <button type="button" class="btn-reject" data-booking-id="${escapeHtml(booking.id)}" ${status === "rejected" ? "disabled" : ""}>
-                    <i class="ph ph-x"></i> رفض
-                  </button>
-                  <button type="button" class="btn-open-chat" data-booking-id="${escapeHtml(booking.id)}" ${!(booking.userId || booking.guestEmail) ? "disabled" : ""}>
-                    <i class="ph ph-chat-centered-text"></i> محادثة
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `;
-        }).join("");
-      }
-    }
-
-    if (!container) return;
-
-    if (!rows.length) {
-      container.innerHTML = `<div class="empty-state"><i class="ph ph-calendar-x"></i><div>لا توجد حجوزات حالياً.</div></div>`;
-      return;
-    }
-
-    const grid = document.createElement("div");
-    grid.className = "bookings-grid";
-
-    grid.innerHTML = rows.map((booking) => {
-      const status = getBookingStatus(booking.status);
-      const title = cleanText(booking.propertyTitle);
-      const guest = cleanText(booking.guestName);
-      const email = cleanText(booking.guestEmail);
-      const phone = cleanText(booking.guestPhone);
-      const checkIn = cleanText(booking.checkIn);
-      const checkOut = cleanText(booking.checkOut);
-      const total = booking.total || 0;
-      const reference = cleanText(booking.reference || booking.id);
-      const canOpenChat = !!(booking.userId || booking.guestEmail);
-      const roomNumber = cleanText(booking.roomNumber || "—");
-      const reply = cleanText(booking.approvalReply || booking.ownerReply || booking.replyMessage || "—");
-
-      return `
-        <div class="booking-card" data-status="${status}">
-          <div class="booking-head">
-            <div class="booking-title">
-              <strong>${escapeHtml(title)}</strong>
-              <span>مرجع الحجز: ${escapeHtml(reference)}</span>
-            </div>
-            ${statusBadge(status)}
-          </div>
-
-          <div class="booking-meta-grid">
-            <div class="booking-meta-item"><label>الضيف</label><strong>${escapeHtml(guest)}</strong></div>
-            <div class="booking-meta-item"><label>البريد</label><span>${escapeHtml(email)}</span></div>
-            <div class="booking-meta-item"><label>الهاتف</label><span>${escapeHtml(phone)}</span></div>
-            <div class="booking-meta-item"><label>الإجمالي</label><strong>${formatPrice(total)}</strong></div>
-            <div class="booking-meta-item"><label>تاريخ الدخول</label><span>${escapeHtml(checkIn)}</span></div>
-            <div class="booking-meta-item"><label>تاريخ الخروج</label><span>${escapeHtml(checkOut)}</span></div>
-            <div class="booking-meta-item"><label>رقم الغرفة</label><strong>${escapeHtml(roomNumber)}</strong></div>
-            <div class="booking-meta-item"><label>الرد</label><span>${escapeHtml(reply)}</span></div>
-          </div>
-
-          <div class="booking-actions-row">
-            <button type="button" class="btn-approve" data-booking-id="${escapeHtml(booking.id)}" ${status === "confirmed" ? "disabled" : ""}>
-              <i class="ph ph-check"></i> قبول
-            </button>
-            <button type="button" class="btn-reject" data-booking-id="${escapeHtml(booking.id)}" ${status === "rejected" ? "disabled" : ""}>
-              <i class="ph ph-x"></i> رفض
-            </button>
-            <button type="button" class="btn-open-chat" data-booking-id="${escapeHtml(booking.id)}" ${canOpenChat ? "" : "disabled"}>
-              <i class="ph ph-chat-centered-text"></i> محادثة
-            </button>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    container.innerHTML = "";
-    container.appendChild(grid);
-  }
-
-  async function addBookingApprovalMessages(booking, approvalReply, roomNumberReply, roomNumber) {
-    if (!firebaseReady || !booking) return;
-
-    const tasks = [];
-
-    try {
-      if (booking.userId) {
-        tasks.push(
-          db.collection("notifications").add({
-            userId: booking.userId,
-            bookingId: booking.id,
-            propertyId: booking.propertyId || "",
-            type: "booking_confirmed",
-            title: "تم قبول الحجز",
-            message: approvalReply,
-            read: false,
-            createdAt: getServerTimestamp()
-          })
-        );
-
-        tasks.push(
-          db.collection("notifications").add({
-            userId: booking.userId,
-            bookingId: booking.id,
-            propertyId: booking.propertyId || "",
-            type: "room_number",
-            title: "رقم الغرفة",
-            message: roomNumberReply,
-            roomNumber,
-            read: false,
-            createdAt: getServerTimestamp()
-          })
-        );
-      }
-    } catch (error) {
-      console.warn("notifications add failed:", error);
-    }
-
-    try {
-      tasks.push(
-        db.collection("bookingReplies").add({
-          bookingId: booking.id,
-          propertyId: booking.propertyId || "",
-          userId: booking.userId || "",
-          guestEmail: booking.guestEmail || "",
-          guestName: booking.guestName || "",
-          ownerId: cleanText(state.currentAuthUser?.uid),
-          ownerEmail: normalizeEmail(state.currentAuthUser?.email),
-          message: approvalReply,
-          type: "approval",
-          createdAt: getServerTimestamp()
-        })
-      );
-
-      tasks.push(
-        db.collection("bookingReplies").add({
-          bookingId: booking.id,
-          propertyId: booking.propertyId || "",
-          userId: booking.userId || "",
-          guestEmail: booking.guestEmail || "",
-          guestName: booking.guestName || "",
-          ownerId: cleanText(state.currentAuthUser?.uid),
-          ownerEmail: normalizeEmail(state.currentAuthUser?.email),
-          message: roomNumberReply,
-          roomNumber,
-          type: "room_number",
-          createdAt: getServerTimestamp()
-        })
-      );
-    } catch (error) {
-      console.warn("bookingReplies add failed:", error);
-    }
-
-    try {
-      const existingChat = await findExistingChatForBooking(booking);
-      let actualChatId = existingChat?.id || "";
-
-      if (!actualChatId) {
-        actualChatId = await createRealChatFromBooking(booking.id);
-      }
-
-      if (actualChatId) {
-        const chatRef = db.collection("chats").doc(actualChatId);
-
-        const approvalPayload = {
-          text: approvalReply,
-          message: approvalReply,
-          senderRole: isSuperAdmin() ? "admin" : "owner",
-          senderName: isSuperAdmin() ? "الإدارة" : "مالك العقار",
-          bookingId: booking.id,
-          propertyId: booking.propertyId || "",
-          userId: booking.userId || "",
-          createdAt: getServerTimestamp()
-        };
-
-        const roomPayload = {
-          text: roomNumberReply,
-          message: roomNumberReply,
-          senderRole: isSuperAdmin() ? "admin" : "owner",
-          senderName: isSuperAdmin() ? "الإدارة" : "مالك العقار",
-          bookingId: booking.id,
-          propertyId: booking.propertyId || "",
-          userId: booking.userId || "",
-          roomNumber,
-          createdAt: getServerTimestamp()
-        };
-
-        try {
-          await chatRef.collection("messages").add(approvalPayload);
-          await chatRef.collection("messages").add(roomPayload);
-        } catch {
-          await db.collection("messages").add({ ...approvalPayload, chatId: actualChatId });
-          await db.collection("messages").add({ ...roomPayload, chatId: actualChatId });
-        }
-
-        await chatRef.set(
-          {
-            lastMessage: roomNumberReply,
-            lastText: roomNumberReply,
-            lastMessageAt: getServerTimestamp(),
-            updatedAt: getServerTimestamp()
-          },
-          { merge: true }
-        );
-      }
-    } catch (error) {
-      console.warn("chat approval messages failed:", error);
-    }
-
-    await Promise.allSettled(tasks);
-  }
-
-  async function updateBookingStatus(id, status) {
-    const booking = state.bookings.find((b) => b.id === id);
-    if (!booking || !canAccessBooking(booking)) {
-      showToast("ليست لديك صلاحية تعديل هذا الحجز.", "error");
-      return;
-    }
-
-    try {
-      const normalizedStatus = getBookingStatus(status);
-
-      if (normalizedStatus === "confirmed") {
-        const roomNumber = getRandomRoomNumber();
-        const approvalBaseMessage = getApprovalBaseMessage();
-        const roomNumberMessage = getRoomNumberMessage(roomNumber);
-        const autoApprovalMessage = getAutoApprovalMessage(roomNumber);
-
-        await db.collection("bookings").doc(id).set(
-          {
-            status: "confirmed",
-            roomNumber,
-            approvalReply: approvalBaseMessage,
-            replyMessage: roomNumberMessage,
-            ownerReply: autoApprovalMessage,
-            approvedAt: getServerTimestamp(),
-            updatedAt: getServerTimestamp()
-          },
-          { merge: true }
-        );
-
-        await addBookingApprovalMessages(
-          booking,
-          approvalBaseMessage,
-          roomNumberMessage,
-          roomNumber
-        );
-
-        showToast(`تم قبول الحجز وإرسال رقم الغرفة ${roomNumber}`, "success");
-        await loadBookings();
-        return;
-      }
-
-      await db.collection("bookings").doc(id).set(
-        {
-          status: normalizedStatus,
-          updatedAt: getServerTimestamp()
-        },
-        { merge: true }
-      );
-
-      showToast(`تم تحديث حالة الحجز إلى: ${statusLabel(normalizedStatus)}`, "success");
-      await loadBookings();
-    } catch (error) {
-      console.error("updateBookingStatus error:", error);
-      showToast("تعذر تحديث حالة الحجز.", "error");
-    }
+    setText(String(counts.all), "bookings-count-all");
+    setText(String(counts.pending), "bookings-count-pending");
+    setText(String(counts.confirmed), "bookings-count-confirmed");
+    setText(String(counts.rejected), "bookings-count-rejected");
   }
 
   async function loadOwnerAccounts() {
-    const tbody = byId("owner-accounts-tbody") || byId("owners-tbody") || byId("owner-table-body") || byId("accounts-tbody");
-    if (tbody) tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;">جارٍ تحميل الحسابات...</td></tr>`;
-
     try {
-      let items = [];
-      if (isSuperAdmin()) {
-        const snap = await db.collection("ownerAccounts").get();
-        snap.forEach((doc) => items.push({ id: doc.id, ...doc.data(), collection: "ownerAccounts" }));
-      } else if (state.ownerAccountDocId) {
-        const doc = await db.collection("ownerAccounts").doc(state.ownerAccountDocId).get();
-        if (doc.exists) items.push({ id: doc.id, ...doc.data(), collection: "ownerAccounts" });
-      }
-
-      items = items.filter((item) => {
-        const role = cleanText(item.role || item.accountType || item.type).toLowerCase();
-        return !role || role.includes("owner") || role.includes("property");
-      });
-
-      state.ownerAccounts = items;
+      const items = [];
+      const snap = await db.collection("ownerAccounts").get();
+      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+      state.ownerAccounts = sortByCreatedDesc(items);
       renderOwnerAccounts();
       renderDashboardStats();
     } catch (error) {
       console.error("loadOwnerAccounts error:", error);
-      if (tbody) tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;color:#ef4444;">فشل تحميل الحسابات.</td></tr>`;
-      showToast("تعذر تحميل حسابات الملاك.", "error");
+      state.ownerAccounts = [];
+      renderOwnerAccounts();
     }
   }
 
   function renderOwnerAccounts() {
-    const tbody = byId("owner-accounts-tbody") || byId("owners-tbody") || byId("owner-table-body") || byId("accounts-tbody");
+    const tbody = byId("owners-table-body") || byId("owners-tbody");
     if (!tbody) return;
 
-    const query = cleanText(getValue("owners-search", "owner-search")).toLowerCase();
-    let rows = [...state.ownerAccounts];
-
-    if (query) {
-      rows = rows.filter((item) => {
-        return [
-          item.id,
-          item.name,
-          item.fullName,
-          item.ownerName,
-          item.email,
-          item.phone,
-          item.username,
-          item.propertyName,
-          item.propertyId
-        ].join(" ").toLowerCase().includes(query);
-      });
-    }
+    const rows = isSuperAdmin()
+      ? [...state.ownerAccounts]
+      : state.ownerAccounts.filter((row) => normalizeEmail(row.email) === normalizeEmail(state.currentAuthUser?.email));
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:24px;">لا توجد حسابات حالياً.</td></tr>`;
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="ph ph-users-three"></i>
+              لا يوجد مُلّاك لعرضهم حالياً.
+            </div>
+          </td>
+        </tr>
+      `;
       return;
     }
 
-    tbody.innerHTML = rows.map((item) => {
-      const name = cleanText(item.name || item.fullName || item.ownerName);
-      const email = cleanText(item.email);
-      const phone = cleanText(item.phone);
-      const username = cleanText(item.username);
-      const active = item.isActive !== false && item.active !== false;
-
+    tbody.innerHTML = rows.map((owner) => {
+      const linkedProperties = state.properties.filter((p) => normalizeEmail(p.ownerEmail) === normalizeEmail(owner.email)).length;
       return `
         <tr>
-          <td>${escapeHtml(name)}</td>
-          <td>${escapeHtml(email)}</td>
-          <td>${escapeHtml(phone)}</td>
-          <td>${escapeHtml(username)}</td>
-          <td>${active ? `<span class="status-badge visible">نشط</span>` : `<span class="status-badge hidden">معطل</span>`}</td>
+          <td>${escapeHtml(owner.name || "—")}</td>
+          <td>${escapeHtml(owner.email || "—")}</td>
+          <td>${escapeHtml(owner.role || "owner")}</td>
+          <td>${escapeHtml(String(linkedProperties))}</td>
           <td>
             <div class="table-actions">
-              <button type="button" class="edit-owner-btn" data-id="${escapeHtml(item.id)}">
-                <i class="ph ph-pencil-simple"></i> تعديل
+              <button type="button" class="open-owner-properties-btn" data-email="${escapeHtml(owner.email || "")}">
+                <i class="ph ph-buildings"></i> العقارات
               </button>
-              ${isSuperAdmin() ? `
-                <button type="button" class="delete-owner-btn" data-id="${escapeHtml(item.id)}">
-                  <i class="ph ph-trash"></i> حذف
-                </button>
-              ` : ``}
             </div>
           </td>
         </tr>
@@ -1704,114 +1554,13 @@
     }).join("");
   }
 
-  function collectOwnerFormData(prefix = "owner") {
-    return {
-      name: getValue(`${prefix}-name`, `${prefix}-full-name`),
-      fullName: getValue(`${prefix}-full-name`, `${prefix}-name`),
-      email: getValue(`${prefix}-email`),
-      phone: getValue(`${prefix}-phone`),
-      username: getValue(`${prefix}-username`),
-      password: getValue(`${prefix}-password`),
-      role: "owner",
-      accountType: "owner",
-      isActive: true,
-      active: true,
-      updatedAt: getServerTimestamp()
-    };
-  }
-
-  async function handleOwnerFormSubmit(e) {
-    e.preventDefault();
-    if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
-    if (!isSuperAdmin() && !isOwnerAdmin()) return showToast("ليست لديك صلاحية.", "error");
-
-    const form = e.currentTarget;
-    const btn = form.querySelector('button[type="submit"]');
-    const editId = form.dataset.editId;
-    const data = collectOwnerFormData("owner");
-
-    if (!data.name || !data.email) return showToast("الاسم والبريد مطلوبان.", "warning");
-    if (!isSuperAdmin() && editId && editId !== state.ownerAccountDocId) return showToast("ليست لديك صلاحية تعديل هذا الحساب.", "error");
-
-    setButtonLoading(btn, true, editId ? "جارٍ حفظ التعديلات..." : "جارٍ إضافة الحساب...");
-    try {
-      const collectionName = "ownerAccounts";
-      if (editId) {
-        await db.collection(collectionName).doc(editId).update(data);
-        showToast("تم تحديث الحساب.", "success");
-      } else {
-        if (!isSuperAdmin()) {
-          showToast("إضافة حساب مالك متاحة للأدمن العام فقط.", "error");
-          return;
-        }
-        data.createdAt = getServerTimestamp();
-        await db.collection(collectionName).add(data);
-        showToast("تمت إضافة الحساب.", "success");
-      }
-
-      form.reset();
-      delete form.dataset.editId;
-      await loadOwnerAccounts();
-    } catch (error) {
-      console.error("owner form error:", error);
-      showToast("تعذر حفظ الحساب.", "error");
-    } finally {
-      setButtonLoading(btn, false);
-    }
-  }
-
-  function fillOwnerForm(id) {
-    const item = state.ownerAccounts.find((x) => x.id === id);
-    if (!item) return;
-    if (!isSuperAdmin() && id !== state.ownerAccountDocId) {
-      showToast("ليست لديك صلاحية تعديل هذا الحساب.", "error");
-      return;
-    }
-
-    setValue(item.name || item.fullName || "", "owner-name", "owner-full-name");
-    setValue(item.email || "", "owner-email");
-    setValue(item.phone || "", "owner-phone");
-    setValue(item.username || "", "owner-username");
-    setValue(item.password || "", "owner-password");
-
-    const form = byId("owner-account-form") || byId("owner-form");
-    if (form) form.dataset.editId = id;
-    activateTab("owners");
-    showToast("تم تحميل بيانات الحساب للتعديل.", "info");
-  }
-
-  async function deleteOwnerAccount(id) {
-    if (!isSuperAdmin()) {
-      showToast("حذف الحسابات متاح للأدمن العام فقط.", "error");
-      return;
-    }
-    if (!window.confirm("هل أنت متأكد من حذف هذا الحساب؟")) return;
-
-    try {
-      await db.collection("ownerAccounts").doc(id).delete();
-      showToast("تم حذف الحساب.", "success");
-      await loadOwnerAccounts();
-    } catch (error) {
-      console.error("deleteOwnerAccount error:", error);
-      showToast("تعذر حذف الحساب.", "error");
-    }
-  }
-
   async function loadUsers() {
     try {
-      let items = [];
-      if (isSuperAdmin()) {
-        const snap = await db.collection("users").get();
-        snap.forEach((doc) => items.push(normalizeUser({ collection: "users", ...doc.data() }, doc.id)));
-      } else {
-        items = state.users;
-      }
-
-      state.users = items.sort((a, b) => {
-        const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
-        const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
-        return bt - at;
-      });
+      const items = [];
+      const snap = await db.collection("users").get();
+      snap.forEach((doc) => items.push(normalizeUser(doc.data() || {}, doc.id)));
+      state.users = sortByCreatedDesc(items);
+      renderDashboardStats();
     } catch (error) {
       console.error("loadUsers error:", error);
       state.users = [];
@@ -1819,192 +1568,72 @@
   }
 
   async function loadChats() {
-    const list = byId("admin-chat-list") || byId("chats-list") || byId("chat-threads-list");
-    if (list) {
-      list.innerHTML = `<div class="empty-state" style="padding:24px;"><i class="ph ph-spinner-gap ph-spin"></i><div>جارٍ تحميل المحادثات...</div></div>`;
-    }
-
-    if (state.listeners.chats) {
-      state.listeners.chats();
-      state.listeners.chats = null;
-    }
-
     try {
-      let queryRef = db.collection("chats");
-
-      if (!isSuperAdmin()) {
-        const propertyIds = state.properties.map((p) => p.id).filter(Boolean).slice(0, 10);
-        if (propertyIds.length) {
-          queryRef = queryRef.where("propertyId", "in", propertyIds);
-        }
+      if (state.listeners.chats) {
+        state.listeners.chats();
+        state.listeners.chats = null;
       }
 
-      state.listeners.chats = queryRef.onSnapshot(async (snap) => {
+      state.listeners.chats = db.collection("chats").onSnapshot((snap) => {
         const items = [];
-        snap.forEach((doc) => items.push(normalizeChat({ id: doc.id, ...doc.data() })));
-
-        const bookingDerivedThreads = derivePseudoChatsFromBookings();
-        const merged = mergeChats(items, bookingDerivedThreads);
-
-        merged.sort((a, b) => {
-          const at = a.updatedAt?.toMillis?.() || new Date(a.updatedAt || 0).getTime() || 0;
-          const bt = b.updatedAt?.toMillis?.() || new Date(b.updatedAt || 0).getTime() || 0;
-          return bt - at;
-        });
-
-        state.chats = merged.filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
+        snap.forEach((doc) => items.push(normalizeChat(doc.data() || {}, doc.id)));
+        state.chats = sortByCreatedDesc(items.filter(canAccessChat));
         renderChatThreads();
 
-        if (state.currentChatId && !state.chats.find((x) => x.id === state.currentChatId)) {
+        if (state.currentChatId && !state.chats.some((c) => c.id === state.currentChatId)) {
           state.currentChatId = null;
           state.currentChatMessages = [];
+          renderCurrentChatMessages();
         }
-
-        if (state.currentChatId) {
-          if (state.currentChatId.startsWith("booking-thread-")) {
-            loadPseudoChatMessages(state.currentChatId);
-          } else {
-            subscribeToChatMessages(state.currentChatId);
-          }
-        }
-
-        renderDashboardStats();
-      }, async (error) => {
-        console.error("loadChats listener error:", error);
-        const fallback = derivePseudoChatsFromBookings();
-        state.chats = fallback.filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
-        renderChatThreads();
+      }, (error) => {
+        console.error("chat listener error:", error);
       });
     } catch (error) {
       console.error("loadChats error:", error);
-      state.chats = derivePseudoChatsFromBookings().filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
+      state.chats = [];
       renderChatThreads();
-      showToast("تعذر تحميل المحادثات.", "error");
     }
-  }
-
-  function derivePseudoChatsFromBookings() {
-    return state.bookings.map((booking) => ({
-      id: `booking-thread-${booking.id}`,
-      pseudo: true,
-      bookingId: booking.id,
-      userId: booking.userId,
-      userEmail: booking.guestEmail,
-      userName: booking.guestName,
-      propertyId: booking.propertyId,
-      propertyTitle: booking.propertyTitle,
-      lastMessage: booking.reference,
-      updatedAt: booking.createdAt,
-      booking
-    }));
-  }
-
-  function mergeChats(realChats, derivedChats) {
-    const map = new Map();
-
-    realChats.forEach((chat) => map.set(chat.id, chat));
-
-    derivedChats.forEach((chat) => {
-      const exists = realChats.some((real) => {
-        return (
-          (chat.bookingId && real.bookingId && chat.bookingId === real.bookingId) ||
-          (chat.userId && real.userId && chat.userId === real.userId) ||
-          (chat.userEmail && real.userEmail && normalizeEmail(chat.userEmail) === normalizeEmail(real.userEmail))
-        );
-      });
-      if (!exists) map.set(chat.id, chat);
-    });
-
-    return Array.from(map.values());
   }
 
   function renderChatThreads() {
-    const list = byId("admin-chat-list") || byId("chats-list") || byId("chat-threads-list");
+    const list = byId("chat-threads-list");
     if (!list) return;
 
-    const query = cleanText(getValue("chats-search", "chat-search")).toLowerCase();
-    let rows = [...state.chats];
-
-    if (query) {
-      rows = rows.filter((chat) => {
-        return [
-          chat.id,
-          chat.userName,
-          chat.userEmail,
-          chat.lastMessage,
-          chat.bookingId,
-          chat.propertyTitle,
-          chat.userId
-        ].join(" ").toLowerCase().includes(query);
-      });
-    }
-
-    if (!rows.length) {
-      list.innerHTML = `<div class="empty-state"><i class="ph ph-chat-centered-dots"></i><div>لا توجد محادثات حالياً.</div></div>`;
+    if (!state.chats.length) {
+      list.innerHTML = `
+        <div class="empty-state" style="padding:24px;">
+          <i class="ph ph-chat-teardrop-dots"></i>
+          لا توجد محادثات حالياً.
+        </div>
+      `;
       return;
     }
 
-    list.innerHTML = rows.map((chat) => {
-      const name = cleanText(chat.userName || chat.customerName || chat.name || chat.userEmail || chat.id);
-      const subtitle = cleanText(chat.lastMessage || chat.lastText);
-      const isActive = state.currentChatId === chat.id;
-      const smallMeta = cleanText(chat.propertyTitle || chat.bookingId);
-
+    list.innerHTML = state.chats.map((chat) => {
+      const active = chat.id === state.currentChatId;
       return `
-        <button
-          type="button"
-          class="chat-thread-item ${isActive ? "active" : ""}"
-          data-chat-id="${escapeHtml(chat.id)}"
-          style="
-            width:100%;
-            border:1px solid var(--border-color,#e2e8f0);
-            background:${isActive ? "rgba(67,90,191,.08)" : "#fff"};
-            border-radius:16px;
-            padding:14px;
-            text-align:right;
-            cursor:pointer;
-            display:grid;
-            gap:6px;
-            margin-bottom:10px;
-          "
-        >
-          <strong style="font-size:.95rem;color:var(--text-main,#0f172a);">${escapeHtml(name)}</strong>
-          <span style="font-size:.82rem;color:var(--text-muted,#64748b);line-height:1.6;">${escapeHtml(subtitle)}</span>
-          ${smallMeta ? `<small style="color:#94a3b8;">${escapeHtml(smallMeta)}</small>` : ""}
+        <button type="button" class="ghost-action chat-thread-btn ${active ? "active" : ""}" data-chat-id="${escapeHtml(chat.id)}" style="width:100%;justify-content:flex-start;text-align:right;">
+          <span style="display:grid;gap:4px;text-align:right;">
+            <strong>${escapeHtml(chat.userName || chat.userEmail || "محادثة")}</strong>
+            <small style="color:#64748b;">${escapeHtml(chat.lastMessage || "لا توجد رسالة بعد")}</small>
+          </span>
         </button>
       `;
     }).join("");
   }
 
-  function openChat(chatId) {
-    if (!requireAuth()) return;
-
+  async function openChat(chatId) {
+    if (!chatId) return;
     state.currentChatId = chatId;
     renderChatThreads();
 
-    const titleEl = byId("admin-chat-title") || byId("chat-room-title");
-    const subEl = byId("admin-chat-subtitle") || byId("chat-room-subtitle");
     const chat = state.chats.find((c) => c.id === chatId);
+    setText(chat?.userName || "بريد الرسائل", "chat-active-title");
+    setText(chat?.userEmail || "اختر محادثة لعرض الرسائل.", "chat-active-subtitle");
 
-    if (titleEl) titleEl.textContent = cleanText(chat?.userName || chat?.customerName || chat?.userEmail || chatId);
-    if (subEl) subEl.textContent = cleanText(chat?.propertyTitle || chat?.bookingId || chat?.lastMessage);
-
-    if (chatId.startsWith("booking-thread-")) {
-      loadPseudoChatMessages(chatId);
-    } else {
-      subscribeToChatMessages(chatId);
-    }
-  }
-
-  function subscribeToChatMessages(chatId) {
     if (state.listeners.chatMessages) {
       state.listeners.chatMessages();
       state.listeners.chatMessages = null;
-    }
-
-    const list = byId("admin-chat-messages") || byId("chat-messages-list") || byId("chat-messages");
-    if (list) {
-      list.innerHTML = `<div class="empty-state"><i class="ph ph-spinner-gap ph-spin"></i><div>جارٍ تحميل الرسائل...</div></div>`;
     }
 
     try {
@@ -2013,706 +1642,588 @@
         .doc(chatId)
         .collection("messages")
         .orderBy("createdAt", "asc")
-        .onSnapshot(async (snap) => {
-          const messages = [];
-          snap.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
-          state.currentChatMessages = messages;
+        .onSnapshot((snap) => {
+          const items = [];
+          snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+          state.currentChatMessages = items;
           renderCurrentChatMessages();
-        }, async () => {
-          try {
-            const snap = await db.collection("messages").where("chatId", "==", chatId).get();
-            const messages = [];
-            snap.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
-            messages.sort((a, b) => {
-              const at = a.createdAt?.toMillis?.() || new Date(a.createdAt || 0).getTime() || 0;
-              const bt = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime() || 0;
-              return at - bt;
-            });
-            state.currentChatMessages = messages;
-            renderCurrentChatMessages();
-          } catch (err) {
-            console.error("messages fallback error:", err);
-            state.currentChatMessages = [];
-            renderCurrentChatMessages();
-          }
+        }, (error) => {
+          console.error("chat messages listener error:", error);
         });
     } catch (error) {
-      console.error("subscribeToChatMessages error:", error);
+      console.error("openChat error:", error);
       state.currentChatMessages = [];
       renderCurrentChatMessages();
     }
-  }
-
-  function loadPseudoChatMessages(chatId) {
-    const bookingId = chatId.replace("booking-thread-", "");
-    const booking = state.bookings.find((b) => b.id === bookingId);
-
-    if (!booking) {
-      state.currentChatMessages = [];
-      renderCurrentChatMessages();
-      return;
-    }
-
-    const messages = [
-      {
-        id: `pseudo-booking-${booking.id}`,
-        system: true,
-        text: `طلب حجز من ${booking.guestName} - المرجع ${booking.reference} - من ${booking.checkIn} إلى ${booking.checkOut}`,
-        senderRole: "system",
-        createdAt: booking.createdAt || new Date().toISOString()
-      }
-    ];
-
-    if (booking.approvalReply) {
-      messages.push({
-        id: `pseudo-approval-${booking.id}`,
-        text: booking.approvalReply,
-        senderRole: "owner",
-        senderName: isSuperAdmin() ? "الإدارة" : "مالك العقار",
-        createdAt: booking.updatedAt || booking.createdAt || new Date().toISOString()
-      });
-    }
-
-    if (booking.roomNumber) {
-      messages.push({
-        id: `pseudo-room-${booking.id}`,
-        text: `رقم الغرفة: ${booking.roomNumber}`,
-        senderRole: "owner",
-        senderName: isSuperAdmin() ? "الإدارة" : "مالك العقار",
-        createdAt: booking.updatedAt || booking.createdAt || new Date().toISOString()
-      });
-    }
-
-    state.currentChatMessages = messages;
-    renderCurrentChatMessages();
   }
 
   function renderCurrentChatMessages() {
-    const list = byId("admin-chat-messages") || byId("chat-messages-list") || byId("chat-messages");
-    if (!list) return;
+    const box = byId("chat-messages-list");
+    if (!box) return;
 
     if (!state.currentChatId) {
-      list.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle"></i><div>اختر محادثة لعرض الرسائل.</div></div>`;
+      box.innerHTML = `
+        <div class="chat-empty-state">
+          <i class="ph ph-chat-circle"></i>
+          اختر محادثة لعرض الرسائل.
+        </div>
+      `;
       return;
     }
 
     if (!state.currentChatMessages.length) {
-      list.innerHTML = `<div class="empty-state"><i class="ph ph-chat-centered-dots"></i><div>لا توجد رسائل في هذه المحادثة.</div></div>`;
+      box.innerHTML = `
+        <div class="chat-empty-state">
+          <i class="ph ph-chat-circle"></i>
+          لا توجد رسائل لعرضها.
+        </div>
+      `;
       return;
     }
 
-    list.innerHTML = state.currentChatMessages.map((msg) => {
-      const mine = ["admin", "owner", "host", "support"].includes(cleanText(msg.senderRole).toLowerCase());
-      const text = cleanText(pickFirst(msg.text, msg.message, msg.body, msg.content, ""));
-      const sender = cleanText(pickFirst(msg.senderName, msg.name, msg.senderRole, mine ? "الإدارة" : "العميل"));
-      const date = formatDate(pickFirst(msg.createdAt, msg.timestamp, msg.sentAt));
-
+    box.innerHTML = state.currentChatMessages.map((msg) => {
+      const fromAdmin = cleanText(msg.senderRole || msg.role) === "admin";
       return `
-        <div class="chat-bubble ${mine ? "mine" : "theirs"}"
-          style="
-            background:${mine ? "#dbeafe" : "#f8fafc"};
-            border:1px solid ${mine ? "#93c5fd" : "#e2e8f0"};
-            border-radius:16px;
-            padding:12px 14px;
-            margin-bottom:10px;
-          "
-        >
-          <div style="font-weight:700;margin-bottom:6px;">${escapeHtml(sender)}</div>
-          <div style="line-height:1.8;">${escapeHtml(text)}</div>
-          <div style="margin-top:8px;font-size:.78rem;color:#64748b;">${escapeHtml(date)}</div>
+        <div style="
+          max-width:78%;
+          align-self:${fromAdmin ? "flex-end" : "flex-start"};
+          background:${fromAdmin ? "#dbeafe" : "#ffffff"};
+          color:#0f172a;
+          border:1px solid ${fromAdmin ? "#93c5fd" : "#e2e8f0"};
+          border-radius:18px;
+          padding:12px 14px;
+          line-height:1.8;
+          box-shadow:0 8px 18px rgba(15,23,42,.05);
+        ">
+          <div style="font-weight:700;margin-bottom:6px;">${escapeHtml(msg.senderName || (fromAdmin ? "الإدارة" : "الزبون"))}</div>
+          <div>${escapeHtml(msg.text || msg.message || "")}</div>
+          <div style="margin-top:8px;font-size:.76rem;color:#64748b;">${escapeHtml(formatDate(msg.createdAt))}</div>
         </div>
       `;
     }).join("");
 
-    list.scrollTop = list.scrollHeight;
+    box.scrollTop = box.scrollHeight;
   }
 
-  async function findExistingChatForBooking(booking) {
-    const local = state.chats.find((chat) => {
-      if (chat.pseudo) return false;
-      return (
-        (booking.id && chat.bookingId && booking.id === chat.bookingId) ||
-        (booking.userId && chat.userId && chat.userId === booking.userId) ||
-        (booking.guestEmail && chat.userEmail && normalizeEmail(chat.userEmail) === normalizeEmail(booking.guestEmail))
-      );
-    });
+  async function ensureChatForBooking(booking) {
+    if (!booking || !booking.id) throw new Error("BOOKING_REQUIRED");
 
-    if (local) return local;
-    if (!firebaseReady) return null;
+    const userId = cleanText(booking.userId);
+    const ownerId = cleanText(
+      pickFirst(
+        booking.ownerUid,
+        state.properties.find((p) => cleanText(p.id) === cleanText(booking.propertyId))?.ownerUid,
+        state.currentAuthUser?.uid
+      )
+    );
 
-    try {
-      if (booking.id) {
-        const byBooking = await db.collection("chats").where("bookingId", "==", booking.id).limit(1).get();
-        if (!byBooking.empty) {
-          const doc = byBooking.docs[0];
-          return normalizeChat({ id: doc.id, ...doc.data() });
-        }
-      }
-    } catch (error) {
-      console.warn("findExistingChatForBooking bookingId lookup failed:", error);
-    }
-
-    return null;
-  }
-
-  async function createRealChatFromBooking(bookingId) {
-    if (!requireAuth()) return null;
-
-    const booking = state.bookings.find((b) => b.id === bookingId);
-    if (!booking) {
-      showToast("الحجز غير موجود.", "error");
-      return null;
-    }
-    if (!canAccessBooking(booking)) {
-      showToast("ليست لديك صلاحية الوصول إلى هذه المحادثة.", "error");
-      return null;
-    }
-
-    const existing = await findExistingChatForBooking(booking);
+    const existing = state.chats.find((chat) => cleanText(chat.bookingId) === cleanText(booking.id));
     if (existing) return existing.id;
-    if (!firebaseReady) return null;
 
     const payload = {
-      bookingId,
-      propertyId: booking.propertyId || "",
-      propertyTitle: booking.propertyTitle || "",
-      userId: booking.userId || "",
-      userName: booking.guestName || "",
-      userEmail: booking.guestEmail || "",
-      participants: [booking.userId || booking.guestEmail || "", cleanText(state.currentAuthUser?.uid)].filter(Boolean),
-      participantIds: [booking.userId || booking.guestEmail || "", cleanText(state.currentAuthUser?.uid)].filter(Boolean),
+      bookingId: cleanText(booking.id),
+      propertyId: cleanText(booking.propertyId),
+      userId,
+      ownerId,
+      userName: cleanText(booking.guestName),
+      userEmail: cleanText(booking.guestEmail),
+      participantIds: [userId, ownerId].filter(Boolean),
+      participants: [userId, ownerId].filter(Boolean),
       lastMessage: "",
-      lastText: "",
-      lastMessageAt: getServerTimestamp(),
-      updatedAt: getServerTimestamp(),
-      createdAt: getServerTimestamp()
+      createdAt: getServerTimestamp(),
+      updatedAt: getServerTimestamp()
     };
 
     const ref = await db.collection("chats").add(payload);
     return ref.id;
   }
 
-  async function ensureChatForBooking(bookingId) {
-    if (!requireAuth()) return;
+  async function sendSystemMessageToBookingUser(booking, text, extra = {}) {
+    if (!firebaseReady || !booking?.id || !cleanText(text)) return;
 
-    const booking = state.bookings.find((b) => b.id === bookingId);
+    const chatId = await ensureChatForBooking(booking);
+
+    const msg = {
+      text: cleanText(text),
+      message: cleanText(text),
+      senderId: cleanText(state.currentAuthUser?.uid || "admin"),
+      senderName: cleanText(state.currentAuthUser?.displayName || state.currentAuthUser?.email || "إدارة OreBooking"),
+      senderRole: "admin",
+      type: extra.type || "system",
+      bookingId: cleanText(booking.id),
+      propertyId: cleanText(booking.propertyId),
+      createdAt: getServerTimestamp()
+    };
+
+    await db.collection("chats").doc(chatId).collection("messages").add(msg);
+    await db.collection("chats").doc(chatId).set({
+      bookingId: cleanText(booking.id),
+      propertyId: cleanText(booking.propertyId),
+      userId: cleanText(booking.userId),
+      ownerId: cleanText(
+        pickFirst(
+          booking.ownerUid,
+          state.properties.find((p) => cleanText(p.id) === cleanText(booking.propertyId))?.ownerUid,
+          state.currentAuthUser?.uid
+        )
+      ),
+      userName: cleanText(booking.guestName),
+      userEmail: cleanText(booking.guestEmail),
+      lastMessage: cleanText(text),
+      updatedAt: getServerTimestamp()
+    }, { merge: true });
+  }
+
+  function getRejectModal() {
+    return byId("reject-booking-modal");
+  }
+
+  function clearRejectReasonSelection() {
+    qa('input[name="reject-reason"]').forEach((input) => {
+      input.checked = false;
+    });
+    byId("reject-reason-error")?.classList.remove("show");
+  }
+
+  function getSelectedRejectReason() {
+    const selected = q('input[name="reject-reason"]:checked');
+    return cleanText(selected?.value);
+  }
+
+  function openRejectBookingModal(bookingId) {
+    const booking = state.bookings.find((b) => cleanText(b.id) === cleanText(bookingId));
     if (!booking) {
       showToast("الحجز غير موجود.", "error");
       return;
     }
     if (!canAccessBooking(booking)) {
-      showToast("ليست لديك صلاحية الوصول إلى هذه المحادثة.", "error");
+      showToast("ليست لديك صلاحية تعديل هذا الحجز.", "error");
       return;
     }
 
-    const existing = await findExistingChatForBooking(booking);
-    if (existing) {
-      activateTab("chats");
-      openChat(existing.id);
+    state.pendingRejectBookingId = bookingId;
+    clearRejectReasonSelection();
+
+    const modal = getRejectModal();
+    if (!modal) {
+      showToast("مودال الرفض غير موجود في الصفحة.", "error");
       return;
     }
 
-    if (!firebaseReady) {
-      activateTab("chats");
-      openChat(`booking-thread-${bookingId}`);
-      return;
-    }
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeRejectBookingModal() {
+    const modal = getRejectModal();
+    if (!modal) return;
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+    state.pendingRejectBookingId = "";
+    clearRejectReasonSelection();
+  }
+
+  async function approveBooking(bookingId) {
+    if (!firebaseReady) return;
+    const booking = state.bookings.find((b) => cleanText(b.id) === cleanText(bookingId));
+    if (!booking) return showToast("الحجز غير موجود.", "error");
+    if (!canAccessBooking(booking)) return showToast("ليست لديك صلاحية تعديل هذا الحجز.", "error");
 
     try {
-      const chatId = await createRealChatFromBooking(bookingId);
-      if (chatId) {
-        activateTab("chats");
-        openChat(chatId);
-        showToast("تم فتح المحادثة.", "success");
-        return;
-      }
+      await db.collection("bookings").doc(bookingId).update({
+        status: "confirmed",
+        approvedAt: getServerTimestamp(),
+        approvedBy: cleanText(state.currentAuthUser?.uid),
+        updatedAt: getServerTimestamp()
+      });
 
-      activateTab("chats");
-      openChat(`booking-thread-${bookingId}`);
-      showToast("تم فتح محادثة مؤقتة.", "info");
+      const msg = `تم قبول حجزك للعقار "${booking.propertyTitle}". المرجع: ${booking.reference || booking.id}.`;
+      await sendSystemMessageToBookingUser(booking, msg, { type: "booking-approved" });
+
+      showToast("تم قبول الحجز وإرسال إشعار للزبون.", "success");
+      await loadBookings();
     } catch (error) {
-      console.error("ensureChatForBooking error:", error);
-      activateTab("chats");
-      openChat(`booking-thread-${bookingId}`);
-      showToast("تم فتح محادثة مؤقتة.", "info");
+      console.error("approveBooking error:", error);
+      showToast("تعذر قبول الحجز.", "error");
     }
   }
 
-  async function sendAdminMessage(e) {
-    e.preventDefault();
-    if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
-    if (!state.currentChatId) return showToast("اختر محادثة أولاً.", "warning");
+  async function confirmRejectBooking() {
+    if (!firebaseReady) return;
 
-    const form = e.currentTarget;
-    const input = form.querySelector('textarea, input[type="text"]');
-    const text = cleanText(input?.value);
-    if (!text) return;
+    const bookingId = cleanText(state.pendingRejectBookingId);
+    const reason = getSelectedRejectReason();
+    const errorBox = byId("reject-reason-error");
 
-    const btn = form.querySelector('button[type="submit"]');
-    setButtonLoading(btn, true, "جارٍ الإرسال...");
+    if (!reason) {
+      errorBox?.classList.add("show");
+      showToast("يجب اختيار سبب الرفض أولاً.", "warning");
+      return;
+    }
+
+    const booking = state.bookings.find((b) => cleanText(b.id) === cleanText(bookingId));
+    if (!booking) return showToast("الحجز غير موجود.", "error");
+    if (!canAccessBooking(booking)) return showToast("ليست لديك صلاحية تعديل هذا الحجز.", "error");
+
+    const btn = byId("confirm-reject-booking-btn");
+    setButtonLoading(btn, true, "جارٍ رفض الحجز...");
 
     try {
-      let actualChatId = state.currentChatId;
+      await db.collection("bookings").doc(bookingId).update({
+        status: "rejected",
+        rejectionReason: reason,
+        rejectedAt: getServerTimestamp(),
+        rejectedBy: cleanText(state.currentAuthUser?.uid),
+        updatedAt: getServerTimestamp()
+      });
 
-      if (actualChatId.startsWith("booking-thread-")) {
-        const bookingId = actualChatId.replace("booking-thread-", "");
-        const createdChatId = await createRealChatFromBooking(bookingId);
-        if (!createdChatId) {
-          showToast("تعذر إنشاء المحادثة.", "warning");
-          return;
-        }
-        actualChatId = createdChatId;
-        state.currentChatId = actualChatId;
-        activateTab("chats");
-        openChat(actualChatId);
-      }
+      const msg = `تم رفض حجزك للعقار "${booking.propertyTitle}". السبب: ${reason}. المرجع: ${booking.reference || booking.id}.`;
+      await sendSystemMessageToBookingUser(booking, msg, { type: "booking-rejected" });
 
-      const chat = state.chats.find((c) => c.id === actualChatId);
-      if (chat && !chat.pseudo && !canAccessChat(chat)) {
-        showToast("ليست لديك صلاحية الإرسال في هذه المحادثة.", "error");
-        return;
-      }
+      closeRejectBookingModal();
+      showToast("تم رفض الحجز وإرسال السبب للزبون.", "success");
+      await loadBookings();
+    } catch (error) {
+      console.error("confirmRejectBooking error:", error);
+      showToast("تعذر رفض الحجز.", "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
 
-      const chatRef = db.collection("chats").doc(actualChatId);
+  async function openChatFromBooking(bookingId) {
+    const booking = state.bookings.find((b) => cleanText(b.id) === cleanText(bookingId));
+    if (!booking) return showToast("الحجز غير موجود.", "error");
+
+    try {
+      const chatId = await ensureChatForBooking(booking);
+      activateTab("messages", { silentAuth: true });
+      await openChat(chatId);
+    } catch (error) {
+      console.error("openChatFromBooking error:", error);
+      showToast("تعذر فتح المحادثة.", "error");
+    }
+  }
+
+  async function sendCurrentChatMessage() {
+    if (!firebaseReady) return;
+    if (!state.currentChatId) return showToast("اختر محادثة أولاً.", "warning");
+
+    const textarea = byId("chat-message-input");
+    const btn = byId("send-chat-message-btn");
+    const text = cleanText(textarea?.value);
+
+    if (!text) return showToast("اكتب رسالة أولاً.", "warning");
+
+    setButtonLoading(btn, true, "جارٍ الإرسال...");
+    try {
       const payload = {
         text,
         message: text,
-        senderRole: isSuperAdmin() ? "admin" : "owner",
-        senderName: isSuperAdmin() ? "الإدارة" : "مالك العقار",
+        senderId: cleanText(state.currentAuthUser?.uid || "admin"),
+        senderName: cleanText(state.currentAuthUser?.displayName || state.currentAuthUser?.email || "إدارة OreBooking"),
+        senderRole: "admin",
         createdAt: getServerTimestamp()
       };
 
-      try {
-        await chatRef.collection("messages").add(payload);
-      } catch {
-        await db.collection("messages").add({
-          ...payload,
-          chatId: actualChatId,
-          propertyId: cleanText(chat?.propertyId || ""),
-          userId: cleanText(chat?.userId || "")
-        });
-      }
+      await db.collection("chats").doc(state.currentChatId).collection("messages").add(payload);
+      await db.collection("chats").doc(state.currentChatId).set({
+        lastMessage: text,
+        updatedAt: getServerTimestamp()
+      }, { merge: true });
 
-      await chatRef.set(
-        {
-          lastMessage: text,
-          lastText: text,
-          lastMessageAt: getServerTimestamp(),
-          updatedAt: getServerTimestamp()
-        },
-        { merge: true }
-      );
-
-      if (input) input.value = "";
-      showToast("تم إرسال الرسالة.", "success");
+      if (textarea) textarea.value = "";
     } catch (error) {
-      console.error("sendAdminMessage error:", error);
+      console.error("sendCurrentChatMessage error:", error);
       showToast("تعذر إرسال الرسالة.", "error");
     } finally {
       setButtonLoading(btn, false);
     }
   }
 
-  function getPreviewElements(prefix) {
-    return {
-      wrapper: byId(`${prefix}-upload-preview`) || byId(`${prefix}-image-preview-wrapper`) || byId(`${prefix}-preview-wrapper`),
-      img: byId(`${prefix}-upload-preview-img`) || byId(`${prefix}-image-preview`) || byId(`${prefix}-preview-image`),
-      name: byId(`${prefix}-upload-preview-name`) || byId(`${prefix}-preview-name`),
-      meta: byId(`${prefix}-upload-preview-meta`) || byId(`${prefix}-preview-meta`)
-    };
+  function resetUploadPreview(prefix = "admin") {
+    const img = byId(`${prefix}-preview-image`);
+    if (img) img.src = "images/placeholder.jpg";
   }
 
-  function resetUploadPreview(prefix) {
-    const { wrapper, img, name, meta } = getPreviewElements(prefix);
-    if (wrapper) wrapper.classList.remove("visible");
-    if (img) img.src = "";
-    if (name) name.textContent = "";
-    if (meta) meta.textContent = "";
+  function setUploadPreviewFromUrl(prefix = "admin", url = "") {
+    const img = byId(`${prefix}-preview-image`);
+    if (img) img.src = cleanText(url) || "images/placeholder.jpg";
   }
 
-  function setUploadPreviewFromUrl(prefix, url) {
-    const cleanUrl = cleanText(url);
-    const { wrapper, img, name, meta } = getPreviewElements(prefix);
-    if (!img) return;
-
-    if (!cleanUrl) {
-      resetUploadPreview(prefix);
-      return;
-    }
-
-    img.src = cleanUrl;
-    img.onerror = function () {
-      this.src = "images/placeholder.jpg";
-    };
-
-    if (wrapper) wrapper.classList.add("visible");
-    if (name) name.textContent = "رابط الصورة";
-    if (meta) meta.textContent = cleanUrl;
+  function clearMapCoords(prefix = "admin") {
+    setValue("", `${prefix}-lat`);
+    setValue("", `${prefix}-lng`);
   }
 
-  function setUploadPreviewFromFile(prefix, file) {
-    const { wrapper, img, name, meta } = getPreviewElements(prefix);
-    if (!file || !img) {
-      resetUploadPreview(prefix);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-      img.src = ev.target?.result;
-      if (wrapper) wrapper.classList.add("visible");
-      if (name) name.textContent = file.name || "image";
-      if (meta) meta.textContent = `${Math.round((file.size || 0) / 1024)} KB`;
-    };
-    reader.readAsDataURL(file);
+  function hideMapPickedBadge(prefix = "admin") {
+    const badge = byId(`${prefix}-map-picked-badge`);
+    if (badge) badge.classList.add("hidden");
   }
 
-  function getMapPickedBadge(prefix) {
-    return byId(`${prefix}-map-picked-badge`);
+  function showMapPickedBadge(prefix = "admin") {
+    const badge = byId(`${prefix}-map-picked-badge`);
+    if (badge) badge.classList.remove("hidden");
   }
 
-  function showMapPickedBadge(prefix) {
-    getMapPickedBadge(prefix)?.classList.add("visible");
-  }
-
-  function hideMapPickedBadge(prefix) {
-    getMapPickedBadge(prefix)?.classList.remove("visible");
-  }
-
-  function clearMapCoords(prefix) {
-    setValue("", `${prefix}-lat`, `${prefix}-latitude`);
-    setValue("", `${prefix}-lng`, `${prefix}-longitude`);
-
-    const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
-    if (state.maps[markerKey]?.remove) {
-      try {
-        state.maps[markerKey].remove();
-      } catch {}
-    }
-    state.maps[markerKey] = null;
-  }
-
-  function updateMapMarkerFromInputs(prefix) {
-    const lat = toNumber(getValue(`${prefix}-lat`, `${prefix}-latitude`), null);
-    const lng = toNumber(getValue(`${prefix}-lng`, `${prefix}-longitude`), null);
-
-    if (lat === null || lng === null || typeof L === "undefined") return;
-
-    const mapKey = prefix === "edit" ? "edit" : "add";
-    const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
-    const map = state.maps[mapKey];
-    if (!map) return;
-
-    try {
-      if (state.maps[markerKey]) state.maps[markerKey].setLatLng([lat, lng]);
-      else state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
-
+  function updateMapMarkerFromInputs(prefix = "admin") {
+    const lat = Number(getValue(`${prefix}-lat`));
+    const lng = Number(getValue(`${prefix}-lng`));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const map = state.maps[prefix];
+    const markerKey = `${prefix}Marker`;
+    if (map && typeof L !== "undefined") {
+      if (!state.maps[markerKey]) {
+        state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
+      } else {
+        state.maps[markerKey].setLatLng([lat, lng]);
+      }
       map.setView([lat, lng], 13);
+    }
+  }
+
+  function initMap(prefix = "admin") {
+    const mapEl = byId(`${prefix}-map`);
+    if (!mapEl || typeof L === "undefined") return;
+
+    if (state.maps[prefix]) return;
+
+    const defaultLat = 33.3678;
+    const defaultLng = 6.8517;
+
+    state.maps[prefix] = L.map(mapEl).setView([defaultLat, defaultLng], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(state.maps[prefix]);
+
+    state.maps[prefix].on("click", (e) => {
+      const { lat, lng } = e.latlng || {};
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      setValue(String(lat), `${prefix}-lat`);
+      setValue(String(lng), `${prefix}-lng`);
+      updateMapMarkerFromInputs(prefix);
       showMapPickedBadge(prefix);
-    } catch (error) {
-      console.warn("updateMapMarkerFromInputs error:", error);
-    }
+    });
   }
 
-  async function searchLocationOnMap(prefix) {
-    const qInput = byId(`${prefix}-map-search`);
-    const query = cleanText(qInput?.value);
-    if (!query) return showToast("اكتب اسم المكان أولاً.", "warning");
-
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-      const res = await fetch(url, {
-        headers: { Accept: "application/json" }
+  function wireTabs() {
+    qa("[data-tab-target], .sidebar-nav .nav-item[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.tabTarget || btn.dataset.tab;
+        activateTab(target);
       });
-      const data = await res.json();
-
-      if (!Array.isArray(data) || !data.length) {
-        showToast("لم يتم العثور على الموقع.", "warning");
-        return;
-      }
-
-      const item = data[0];
-      const lat = Number(item.lat);
-      const lng = Number(item.lon);
-
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        showToast("إحداثيات غير صالحة.", "error");
-        return;
-      }
-
-      setValue(String(lat.toFixed(6)), `${prefix}-lat`, `${prefix}-latitude`);
-      setValue(String(lng.toFixed(6)), `${prefix}-lng`, `${prefix}-longitude`);
-      updateMapMarkerFromInputs(prefix);
-      showToast("تم تحديد الموقع على الخريطة.", "success");
-    } catch (error) {
-      console.error("searchLocationOnMap error:", error);
-      showToast("تعذر البحث عن الموقع.", "error");
-    }
+    });
   }
 
-  function initMap(prefix, mapId) {
-    if (typeof L === "undefined") return;
-    const el = byId(mapId);
-    if (!el) return;
-
-    const mapKey = prefix === "edit" ? "edit" : "add";
-    const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
-    if (state.maps[mapKey]) return;
-
-    try {
-      const map = L.map(el).setView([31.95, 5.33], 6);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap"
-      }).addTo(map);
-
-      map.on("click", (ev) => {
-        const { lat, lng } = ev.latlng;
-        setValue(String(lat.toFixed(6)), `${prefix}-lat`, `${prefix}-latitude`);
-        setValue(String(lng.toFixed(6)), `${prefix}-lng`, `${prefix}-longitude`);
-
-        if (state.maps[markerKey]) state.maps[markerKey].setLatLng([lat, lng]);
-        else state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
-
-        showMapPickedBadge(prefix);
-      });
-
-      state.maps[mapKey] = map;
-      setTimeout(() => map.invalidateSize(), 250);
-    } catch (error) {
-      console.warn("initMap error:", error);
-    }
-  }
-
-  function getLoginForm() {
-    return q("[data-admin-login-form]") || byId("admin-login-form") || byId("login-form");
-  }
-
-  async function handleLoginSubmit(e) {
-    if (e?.preventDefault) e.preventDefault();
-    const username = getValue("admin-login-email", "admin-username", "admin-user", "login-username", "username", "email");
-    const password = getValue("admin-login-password", "admin-password", "admin-pass", "login-password", "password");
-    await login(username, password);
-  }
-
-  function bindStaticEvents() {
-    getLoginForm()?.addEventListener("submit", handleLoginSubmit);
-    byId("admin-login-btn")?.addEventListener("click", handleLoginSubmit);
-    byId("login-btn")?.addEventListener("click", handleLoginSubmit);
-
-    byId("admin-login-email")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-login-password")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-username")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-password")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-user")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-pass")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-
-    byId("admin-logout-btn")?.addEventListener("click", logout);
-    byId("logout-btn")?.addEventListener("click", logout);
-
-    qa("[data-tab-target]").forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tabTarget)));
-    qa(".sidebar-nav .nav-item[data-tab]").forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
-
-    byId("add-property-form")?.addEventListener("submit", handleAddPropertySubmit);
-    byId("admin-property-form")?.addEventListener("submit", handleAddPropertySubmit);
-    byId("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
-    byId("property-edit-form")?.addEventListener("submit", handleEditPropertySubmit);
-    byId("owner-account-form")?.addEventListener("submit", handleOwnerFormSubmit);
-    byId("owner-form")?.addEventListener("submit", handleOwnerFormSubmit);
-    byId("admin-chat-send-form")?.addEventListener("submit", sendAdminMessage);
-    byId("chat-send-form")?.addEventListener("submit", sendAdminMessage);
-
-    ["properties-search", "property-search"].forEach((id) => byId(id)?.addEventListener("input", renderPropertiesTable));
-    ["bookings-search", "booking-search"].forEach((id) => byId(id)?.addEventListener("input", renderBookings));
-    ["owners-search", "owner-search"].forEach((id) => byId(id)?.addEventListener("input", renderOwnerAccounts));
-    ["chats-search", "chat-search"].forEach((id) => byId(id)?.addEventListener("input", renderChatThreads));
-
-    qa("[data-booking-filter]").forEach((btn) => btn.addEventListener("click", () => {
-      state.bookingFilter = cleanText(btn.dataset.bookingFilter || "all");
-      qa("[data-booking-filter]").forEach((x) => x.classList.remove("active"));
-      btn.classList.add("active");
-      renderBookings();
-    }));
-
-    ["admin-image-file", "edit-image-file"].forEach((id) => byId(id)?.addEventListener("change", (e) => {
-      const prefix = id.startsWith("edit") ? "edit" : "admin";
-      const file = e.target?.files?.[0];
-      setUploadPreviewFromFile(prefix, file);
-    }));
-
-    ["admin-image-url", "edit-image-url"].forEach((id) => byId(id)?.addEventListener("input", (e) => {
-      const prefix = id.startsWith("edit") ? "edit" : "admin";
-      setUploadPreviewFromUrl(prefix, e.target?.value);
-    }));
-
-    ["admin-map-search-btn", "edit-map-search-btn"].forEach((id) => byId(id)?.addEventListener("click", () => {
-      const prefix = id.startsWith("edit") ? "edit" : "admin";
-      searchLocationOnMap(prefix);
-    }));
-
-    ["admin-map-search", "edit-map-search"].forEach((id) => byId(id)?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const prefix = id.startsWith("edit") ? "edit" : "admin";
-        searchLocationOnMap(prefix);
-      }
-    }));
-
-    ["admin-lat", "admin-lng", "edit-lat", "edit-lng"].forEach((id) => byId(id)?.addEventListener("input", () => {
-      const prefix = id.startsWith("edit") ? "edit" : "admin";
-      updateMapMarkerFromInputs(prefix);
-    }));
-
+  function wirePropertyActions() {
     document.addEventListener("click", async (e) => {
-      const editPropBtn = e.target.closest(".edit-property-btn");
-      if (editPropBtn) {
-        openEditPropertyModal(editPropBtn.dataset.id);
+      const editBtn = e.target.closest(".edit-property-btn");
+      if (editBtn) {
+        openEditPropertyModal(editBtn.dataset.id);
         return;
       }
 
       const toggleBtn = e.target.closest(".toggle-property-btn");
       if (toggleBtn) {
-        const id = toggleBtn.dataset.id;
-        const visibleNow = toggleBtn.dataset.visible === "1";
-        await togglePropertyVisibility(id, visibleNow);
+        await togglePropertyVisibility(toggleBtn.dataset.id, toggleBtn.dataset.visible === "1");
         return;
       }
 
-      const deletePropBtn = e.target.closest(".delete-property-btn");
-      if (deletePropBtn) {
-        await deleteProperty(deletePropBtn.dataset.id);
+      const deleteBtn = e.target.closest(".delete-property-btn");
+      if (deleteBtn) {
+        await deleteProperty(deleteBtn.dataset.id);
         return;
       }
 
-      const approveBtn = e.target.closest(".btn-approve");
+      const approveBtn = e.target.closest(".approve-booking-btn");
       if (approveBtn) {
-        await updateBookingStatus(approveBtn.dataset.bookingId, "confirmed");
+        await approveBooking(approveBtn.dataset.id);
         return;
       }
 
-      const rejectBtn = e.target.closest(".btn-reject");
+      const rejectBtn = e.target.closest(".reject-booking-btn");
       if (rejectBtn) {
-        await updateBookingStatus(rejectBtn.dataset.bookingId, "rejected");
+        openRejectBookingModal(rejectBtn.dataset.id);
         return;
       }
 
-      const openChatBtn = e.target.closest(".btn-open-chat");
+      const openChatBtn = e.target.closest(".open-booking-chat-btn");
       if (openChatBtn) {
-        await ensureChatForBooking(openChatBtn.dataset.bookingId);
+        await openChatFromBooking(openChatBtn.dataset.id);
         return;
       }
 
-      const editOwnerBtn = e.target.closest(".edit-owner-btn");
-      if (editOwnerBtn) {
-        fillOwnerForm(editOwnerBtn.dataset.id);
+      const threadBtn = e.target.closest(".chat-thread-btn");
+      if (threadBtn) {
+        await openChat(threadBtn.dataset.chatId);
         return;
       }
 
-      const deleteOwnerBtn = e.target.closest(".delete-owner-btn");
-      if (deleteOwnerBtn) {
-        await deleteOwnerAccount(deleteOwnerBtn.dataset.id);
-        return;
-      }
-
-      const chatThreadBtn = e.target.closest(".chat-thread-item");
-      if (chatThreadBtn) {
-        openChat(chatThreadBtn.dataset.chatId);
-        return;
-      }
-
-      const closeModalBtn = e.target.closest("[data-close-modal], .modal-close, .close-modal, .close-modal-btn");
-      if (closeModalBtn) {
-        closeModal(closeModalBtn.closest(".modal-overlay, .modal"));
-        return;
-      }
-
-      if (e.target.classList?.contains("modal-overlay")) {
-        closeModal(e.target);
-      }
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        qa(".modal-overlay.active, .modal.active").forEach((modal) => closeModal(modal));
-      }
-    });
-  }
-
-  function bindAuthState() {
-    if (!auth) return;
-
-    auth.onAuthStateChanged(async (user) => {
-      state.authReady = true;
-      state.currentAuthUser = user || null;
-
-      if (!user) {
-        state.isLoggedIn = false;
-        ensureLoggedInUI();
-        return;
-      }
-
-      const roleResult = await getAdminRoleFromFirestore(user);
-      if (roleResult.ok) {
-        state.adminRole = roleResult.role;
-        safeSet(ADMIN_ROLE_KEY, roleResult.role);
-
-        if (roleResult.ownerDocId) {
-          state.ownerAccountDocId = roleResult.ownerDocId;
-          safeSet(ADMIN_OWNER_DOC_KEY, roleResult.ownerDocId);
+      const ownerPropsBtn = e.target.closest(".open-owner-properties-btn");
+      if (ownerPropsBtn) {
+        activateTab("properties", { silentAuth: true });
+        const search = byId("properties-search") || byId("property-search") || byId("properties-search-input");
+        if (search) {
+          search.value = ownerPropsBtn.dataset.email || "";
+          renderPropertiesTable();
         }
-
-        state.isLoggedIn = true;
-        ensureLoggedInUI();
       }
     });
   }
 
-  function initSession() {
-    state.isLoggedIn = safeGet(ADMIN_SESSION_KEY) === "1";
-    ensureLoggedInUI();
+  function wireBookingFilters() {
+    qa("[data-bookings-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.bookingFilter = cleanText(btn.dataset.bookingsFilter || "all");
+        renderBookings();
+      });
+    });
+  }
 
-    if (state.isLoggedIn && auth?.currentUser) {
-      state.currentAuthUser = auth.currentUser;
-      activateTab(state.activeTab || "dashboard", { silentAuth: true });
-      loadAllData();
+  function wireSearches() {
+    const propSearch = byId("properties-search") || byId("property-search") || byId("properties-search-input");
+    if (propSearch) {
+      propSearch.addEventListener("input", renderPropertiesTable);
     }
   }
 
-  function init() {
-    showFirebaseStatus();
-    bindStaticEvents();
-    bindAuthState();
-    initSession();
-    initMap("admin", "admin-map-picker");
-    initMap("edit", "edit-map-picker");
-    renderCurrentChatMessages();
-    ensureAdminLogosVisible();
+  function wireForms() {
+    const loginForm = byId("admin-login-form") || byId("login-form");
+    if (loginForm) {
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = loginForm.querySelector('button[type="submit"]');
+        const email = getValue("admin-login-email", "login-email", "admin-email");
+        const password = getValue("admin-login-password", "login-password", "admin-password");
+
+        setButtonLoading(btn, true, "جارٍ تسجيل الدخول...");
+        try {
+          await login(email, password);
+        } finally {
+          setButtonLoading(btn, false);
+        }
+      });
+    }
+
+    const addForm = byId("add-property-form") || byId("admin-property-form");
+    if (addForm) addForm.addEventListener("submit", handleAddPropertySubmit);
+
+    const editForm = byId("edit-property-form") || byId("edit-form");
+    if (editForm) editForm.addEventListener("submit", handleEditPropertySubmit);
+
+    const logoutBtn = byId("admin-logout-btn") || byId("logout-btn");
+    if (logoutBtn) logoutBtn.addEventListener("click", logout);
+
+    const sendChatBtn = byId("send-chat-message-btn");
+    if (sendChatBtn) sendChatBtn.addEventListener("click", sendCurrentChatMessage);
+
+    const chatInput = byId("chat-message-input");
+    if (chatInput) {
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendCurrentChatMessage();
+        }
+      });
+    }
+
+    const confirmRejectBtn = byId("confirm-reject-booking-btn");
+    if (confirmRejectBtn) confirmRejectBtn.addEventListener("click", confirmRejectBooking);
+
+    const cancelRejectBtn = byId("cancel-reject-booking-btn");
+    if (cancelRejectBtn) cancelRejectBtn.addEventListener("click", closeRejectBookingModal);
+
+    qa("[data-close-modal], .modal-close").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const modal = btn.closest(".modal-overlay");
+        if (modal?.id === "reject-booking-modal") closeRejectBookingModal();
+        else closeModal(modal);
+      });
+    });
+
+    qa(".modal-overlay").forEach((modal) => {
+      modal.addEventListener("click", (e) => {
+        if (e.target !== modal) return;
+        if (modal.id === "reject-booking-modal") closeRejectBookingModal();
+        else closeModal(modal);
+      });
+    });
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  function setupAuthObserver() {
+    if (!auth || typeof auth.onAuthStateChanged !== "function") {
+      state.authReady = true;
+      ensureLoggedInUI();
+      return;
+    }
 
-  window.adminApp = {
-    state,
-    login,
-    logout,
-    activateTab,
-    loadAllData,
-    loadProperties,
-    loadBookings,
-    loadOwnerAccounts,
-    loadChats,
-    openChat,
-    ensureChatForBooking
-  };
+    if (state.listeners.auth) {
+      try { state.listeners.auth(); } catch {}
+      state.listeners.auth = null;
+    }
+
+    state.listeners.auth = auth.onAuthStateChanged(async (user) => {
+      state.authReady = true;
+
+      if (!user) {
+        clearAdminSessionState();
+        ensureLoggedInUI();
+        updateProfileUI();
+        updateRoleBasedUI();
+        return;
+      }
+
+      try {
+        const roleResult = await getAdminRoleFromFirestore(user);
+        if (!roleResult.ok) {
+          clearAdminSessionState();
+          ensureLoggedInUI();
+          updateProfileUI();
+          updateRoleBasedUI();
+          return;
+        }
+
+        await applyAuthorizedSession(user, roleResult);
+      } catch (error) {
+        console.error("auth observer restore failed:", error);
+        clearAdminSessionState();
+        ensureLoggedInUI();
+        updateProfileUI();
+        updateRoleBasedUI();
+      }
+    });
+  }
+
+  function preloadRememberedLogin() {
+    const remembered = safeGet(ADMIN_LOGIN_HINT_KEY, "");
+    if (!remembered) return;
+    const input = byId("admin-login-email") || byId("login-email") || byId("admin-email");
+    if (input && !cleanText(input.value)) input.value = remembered;
+  }
+
+  function boot() {
+    showFirebaseStatus();
+    ensureLoggedInUI();
+    updateProfileUI();
+    updateRoleBasedUI();
+    preloadRememberedLogin();
+    initMap("add");
+    initMap("edit");
+    wireTabs();
+    wirePropertyActions();
+    wireBookingFilters();
+    wireSearches();
+    wireForms();
+    setupAuthObserver();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
 })();
