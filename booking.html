@@ -276,15 +276,15 @@
                     type="text"
                     inputmode="numeric"
                     placeholder="YYYY-MM-DD"
-                    pattern="\d{4}-\d{2}-\d{2}"
-                    data-date-input="checkin"
-                    data-no-prefill="true"
                     autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
                     spellcheck="false"
+                    dir="ltr"
                     aria-describedby="arrival-date-hint"
                     required
                   />
-                  <span id="arrival-date-hint" class="hint-text">YYYY-MM-DD</span>
+                  <span id="arrival-date-hint" class="hint-text">مثال: 2026-05-23</span>
                 </div>
 
                 <div class="form-group">
@@ -298,15 +298,15 @@
                     type="text"
                     inputmode="numeric"
                     placeholder="YYYY-MM-DD"
-                    pattern="\d{4}-\d{2}-\d{2}"
-                    data-date-input="checkout"
-                    data-no-prefill="true"
                     autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
                     spellcheck="false"
+                    dir="ltr"
                     aria-describedby="departure-date-hint"
                     required
                   />
-                  <span id="departure-date-hint" class="hint-text">YYYY-MM-DD</span>
+                  <span id="departure-date-hint" class="hint-text">مثال: 2026-05-25</span>
                 </div>
 
                 <div class="form-group">
@@ -554,9 +554,11 @@
                     type="text"
                     inputmode="numeric"
                     placeholder="YYYY-MM-DD"
-                    pattern="\d{4}-\d{2}-\d{2}"
                     autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
                     spellcheck="false"
+                    dir="ltr"
                   />
                 </div>
 
@@ -722,7 +724,7 @@
                     </div>
                     <div class="review-data">
                       <span class="rd-label" data-i18n="specialrequests">طلبات إضافية</span>
-                      <span id="rev-additional-guests" class="rd-value"></span>
+                      <span id="rev-room-preferences" class="rd-value"></span>
                     </div>
                   </div>
                 </div>
@@ -962,7 +964,7 @@
             </div>
 
             <button id="register-submit-btn" class="primary-btn" type="submit">
-              <span data-i18n="createaccountbtn">إنشاء الحساب</span>
+              <span data-i18n="signup">إنشاء حساب</span>
             </button>
 
             <p class="switch-form-text">
@@ -971,10 +973,10 @@
             </p>
           </form>
 
-          <!-- Forgot -->
+          <!-- Forgot Password -->
           <form id="forgot-form" class="auth-form">
-            <h2 class="auth-title" data-i18n="resetpassword">إعادة تعيين كلمة المرور</h2>
-            <p class="auth-subtitle" data-i18n="resetpasswordsubtitle">
+            <h2 class="auth-title" data-i18n="forgotpassword">نسيت كلمة المرور؟</h2>
+            <p class="auth-subtitle" data-i18n="forgotsubtitle">
               أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.
             </p>
 
@@ -984,11 +986,12 @@
             </div>
 
             <button id="forgot-submit-btn" class="primary-btn" type="submit">
-              <span data-i18n="sendresetlink">إرسال رابط إعادة التعيين</span>
+              <span data-i18n="sendresetlink">إرسال رابط الاستعادة</span>
             </button>
 
             <p class="switch-form-text">
-              <a href="#" id="back-to-login" data-i18n="signin">تسجيل الدخول</a>
+              <span data-i18n="rememberedpassword">تذكرت كلمة المرور؟</span>
+              <a href="#" id="back-to-login" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
             </p>
           </form>
         </div>
