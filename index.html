@@ -1503,6 +1503,57 @@
             min-height: 46px;
         }
 
+        .favorite-entry-thumb {
+            width: 84px;
+            height: 64px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+            flex-shrink: 0;
+            background: #e2e8f0;
+        }
+
+        .favorite-entry-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .favorite-entry-content {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .favorite-entry-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .favorite-entry-actions a,
+        .favorite-entry-actions button {
+            min-height: 42px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .favorite-entry-actions .primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            border-color: transparent;
+        }
+
         @media (max-width: 900px) {
             .search-bar {
                 flex-direction: column;
@@ -1751,8 +1802,9 @@
     </button>
 
     <div class="modal-overlay" id="auth-modal" aria-hidden="true">
-        <div class="modal-content auth-card">
-            <button type="button" class="close-modal-btn" onclick="document.getElementById('auth-modal').classList.remove('active'); document.body.classList.remove('modal-open');">
+        <div class="modal-content auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+            <button type="button" class="close-modal-btn"
+                onclick="document.getElementById('auth-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('auth-modal').setAttribute('aria-hidden','true');">
                 <i class="ph ph-x"></i>
             </button>
 
@@ -1764,7 +1816,7 @@
                 <div id="auth-message" class="auth-message"></div>
 
                 <form id="login-form" class="auth-form active">
-                    <h2 class="auth-title">Welcome Back</h2>
+                    <h2 class="auth-title" id="auth-dialog-title">Welcome Back</h2>
                     <p class="auth-subtitle">Sign in to access your bookings and favorites.</p>
 
                     <div class="input-group">
@@ -1862,13 +1914,14 @@
     </div>
 
     <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog">
+        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-dialog-title">
             <div class="bookings-modal-header">
-                <h3>
+                <h3 id="bookings-dialog-title">
                     <i class="ph ph-calendar-check"></i>
                     <span>My Bookings</span>
                 </h3>
-                <button type="button" onclick="document.getElementById('bookings-modal').classList.remove('active'); document.body.classList.remove('modal-open');">
+                <button type="button"
+                    onclick="document.getElementById('bookings-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('bookings-modal').setAttribute('aria-hidden','true');">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
@@ -1876,8 +1929,39 @@
         </div>
     </div>
 
+    <div class="bookings-modal" id="favorites-modal" aria-hidden="true">
+        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="favorites-dialog-title">
+            <div class="bookings-modal-header">
+                <h3 id="favorites-dialog-title">
+                    <i class="ph ph-heart-straight"></i>
+                    <span>My Favorites</span>
+                </h3>
+                <button type="button"
+                    onclick="document.getElementById('favorites-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('favorites-modal').setAttribute('aria-hidden','true');">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="bookings-modal-body" id="favorites-list">
+                <div class="booking-entry">
+                    <div class="booking-entry-head">
+                        <div>
+                            <h4 class="booking-entry-title">No favorites yet.</h4>
+                            <div class="booking-entry-meta">
+                                <span>Properties you save will appear here.</span>
+                            </div>
+                        </div>
+                        <span class="booking-status-badge pending">
+                            <i class="ph ph-heart"></i>
+                            <span>Empty</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="chat-modal" id="chat-modal" aria-hidden="true">
-        <div class="chat-modal-dialog">
+        <div class="chat-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-title">
             <div class="chat-modal-header">
                 <div class="chat-modal-title">
                     <div class="chat-avatar">
@@ -1893,7 +1977,8 @@
                     </div>
                 </div>
 
-                <button type="button" class="chat-close-btn" onclick="document.getElementById('chat-modal').classList.remove('active'); document.body.classList.remove('modal-open');">
+                <button type="button" class="chat-close-btn"
+                    onclick="document.getElementById('chat-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('chat-modal').setAttribute('aria-hidden','true');">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
