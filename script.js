@@ -1,5 +1,6 @@
 // =========================================
-// script.js — OreBooking Index Page v4.0
+// script.js — OreBooking Index Page v5.0
+// Frontend Firebase isolated from Admin app
 // Full Firebase + Auth + Real-time Chat + Listings
 // Compatible with current index.html IDs
 // =========================================
@@ -18,35 +19,53 @@ const firebaseConfig = {
   measurementId: "G-5GKMRMVHC3"
 };
 
-const FRONT_APP_NAME = "frontendApp";
+const FRONTEND_APP_NAME = "frontendApp";
 
-let frontApp = null;
+let firebaseApp = null;
 let db = null;
 let auth = null;
 let firestoreFieldValue = null;
+let firebaseReady = false;
 
 try {
   if (typeof firebase !== "undefined") {
-    const existingFrontApp =
-      firebase.apps?.find?.((app) => app.name === FRONT_APP_NAME) || null;
-
-    frontApp = existingFrontApp || firebase.initializeApp(firebaseConfig, FRONT_APP_NAME);
-
-    if (typeof firebase.firestore === "function") {
-      db = frontApp.firestore();
-      firestoreFieldValue = firebase.firestore.FieldValue || null;
+    if (firebase.apps && firebase.apps.length) {
+      firebaseApp =
+        firebase.apps.find((app) => app.name === FRONTEND_APP_NAME) ||
+        firebase.initializeApp(firebaseConfig, FRONTEND_APP_NAME);
+    } else {
+      firebaseApp = firebase.initializeApp(firebaseConfig, FRONTEND_APP_NAME);
     }
 
-    if (typeof firebase.auth === "function") {
-      auth = frontApp.auth();
+    if (typeof firebaseApp.firestore === "function") {
+      db = firebaseApp.firestore();
+      firestoreFieldValue = firebase.firestore?.FieldValue || null;
     }
 
-    window.__frontApp = frontApp;
-    window.__frontAuth = auth;
+    if (typeof firebaseApp.auth === "function") {
+      auth = firebaseApp.auth();
+    }
+
+    firebaseReady = !!db && !!auth;
+
+    window.__frontApp = firebaseApp;
     window.__frontDb = db;
+    window.__frontAuth = auth;
+
+    if (
+      auth &&
+      typeof auth.setPersistence === "function" &&
+      typeof firebase !== "undefined" &&
+      firebase.auth?.Auth?.Persistence?.LOCAL
+    ) {
+      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e) => {
+        console.warn("Frontend auth persistence:", e);
+      });
+    }
   }
 } catch (e) {
   console.error("Firebase init:", e);
+  firebaseReady = false;
 }
 
 // ──────────────────────────────────────────
@@ -96,6 +115,7 @@ const state = {
     return l === "ar" ? "ar" : "en";
   })(),
   theme: safeGet("ore_theme") || safeGet("oretheme") || "light",
+  authReady: false,
   currentUser: null,
   currentUserProfile: null,
   allProperties: [],
@@ -110,7 +130,9 @@ const state = {
   authTab: "login",
   currentChatId: safeGet("ore_current_chat_id", ""),
   currentChatUnsub: null,
-  chatInitializedForUser: ""
+  chatsListUnsub: null,
+  chatInitializedForUser: "",
+  supportChatDoc: null
 };
 
 // ──────────────────────────────────────────
@@ -205,7 +227,10 @@ const i18n = {
     fillAllFields: "Please fill all fields",
     passwordShort: "Password too short",
     firebaseMissing: "Firebase not available",
-    adminFrontendBlocked: "This account is for the admin panel only."
+    adminFrontendBlocked: "This account is for the admin panel only.",
+    passwordsMismatch: "Passwords don't match",
+    enterEmail: "Enter your email",
+    bookingsLoading: "Loading bookings..."
   },
   ar: {
     heroTitle: "اكتشف إقامتك المثالية",
@@ -295,12 +320,15 @@ const i18n = {
     fillAllFields: "يرجى ملء جميع الحقول",
     passwordShort: "كلمة المرور قصيرة جداً",
     firebaseMissing: "Firebase غير متاح",
-    adminFrontendBlocked: "هذا الحساب مخصص للوحة الإدارة فقط."
+    adminFrontendBlocked: "هذا الحساب مخصص للوحة الإدارة فقط.",
+    passwordsMismatch: "كلمتا المرور غير متطابقتين",
+    enterEmail: "أدخل بريدك الإلكتروني",
+    bookingsLoading: "جارٍ تحميل الحجوزات..."
   }
 };
 
 function t(key) {
-  return (i18n[state.lang] && i18n[state.lang][key]) || (i18n.en[key]) || key;
+  return (i18n[state.lang] && i18n[state.lang][key]) || i18n.en[key] || key;
 }
 
 // ──────────────────────────────────────────
@@ -460,6 +488,10 @@ function cleanText(v) {
   return String(v ?? "").trim();
 }
 
+function normalizeEmail(v) {
+  return cleanText(v).toLowerCase();
+}
+
 function toNumber(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -467,17 +499,6 @@ function toNumber(v, fallback = 0) {
 
 function getServerTimestamp() {
   return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date();
-}
-
-async function setFrontendAuthPersistenceLocal() {
-  if (!auth || typeof auth.setPersistence !== "function") return;
-  try {
-    if (typeof firebase !== "undefined" && firebase.auth?.Auth?.Persistence?.LOCAL) {
-      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    }
-  } catch (err) {
-    console.warn("set frontend LOCAL persistence failed:", err);
-  }
 }
 
 function formatChatTime(value) {
@@ -494,6 +515,21 @@ function formatChatTime(value) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return "";
+  }
+}
+
+function formatDate(value) {
+  try {
+    if (!value) return "—";
+    if (typeof value?.toDate === "function") return value.toDate().toLocaleDateString();
+    if (typeof value === "object" && typeof value.seconds === "number") {
+      return new Date(value.seconds * 1000).toLocaleDateString();
+    }
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString();
+  } catch {
+    return "—";
   }
 }
 
@@ -536,9 +572,9 @@ function setChatStatus(mode = "syncing", text = "") {
   if (els.chatConnectionText) {
     els.chatConnectionText.textContent =
       text ||
-      (mode === "connected" ? t("chatConnected") :
-      mode === "error" ? t("chatError") :
-      t("chatSyncing"));
+      (mode === "connected" ? t("chatConnected")
+        : mode === "error" ? t("chatError")
+        : t("chatSyncing"));
   }
 }
 
@@ -555,7 +591,7 @@ function getCurrentUserName(user = state.currentUser) {
     user?.name ||
     state.currentUserProfile?.name ||
     user?.email ||
-    "Guest"
+    t("guestUser")
   );
 }
 
@@ -579,41 +615,13 @@ function stopChatSubscription() {
   state.currentChatUnsub = null;
 }
 
-function closeProfileDropdown() {
-  if (els.profileDropdown) {
-    els.profileDropdown.classList.remove("active");
+function stopChatsListSubscription() {
+  if (typeof state.chatsListUnsub === "function") {
+    try {
+      state.chatsListUnsub();
+    } catch {}
   }
-}
-
-function renderChatMessages() {
-  if (!els.chatMessages) return;
-
-  if (!state.chatMessages.length) {
-    if (els.chatEmptyState) els.chatEmptyState.style.display = "";
-    els.chatMessages.innerHTML = "";
-    return;
-  }
-
-  if (els.chatEmptyState) els.chatEmptyState.style.display = "none";
-
-  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
-    const item = normalizeMessage(msg);
-    const mine = item.role !== "admin";
-    return `
-      <div class="chat-message ${mine ? "mine" : "admin"}">
-        <div class="chat-bubble">
-          <p>${escapeHtml(item.text)}</p>
-          <span>${escapeHtml(item.time || "")}</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-}
-
-async function ensureSupportChat() {
-  return null;
+  state.chatsListUnsub = null;
 }
 
 function resetFrontendUserState() {
@@ -622,12 +630,20 @@ function resetFrontendUserState() {
   state.chatMessages = [];
   state.chatUnread = 0;
   state.currentChatId = "";
+  state.supportChatDoc = null;
   safeRemove("ore_current_chat_id");
   stopChatSubscription();
+  stopChatsListSubscription();
   setUnreadBadge();
   setChatStatus("syncing", t("chatPreparing"));
   renderChatMessages();
   updateChatHiddenFields("");
+}
+
+function closeProfileDropdown() {
+  if (els.profileDropdown) {
+    els.profileDropdown.classList.remove("active");
+  }
 }
 
 function applyGuestAuthUI() {
@@ -676,6 +692,8 @@ function applyLang() {
   if (els.sectionTitle) els.sectionTitle.textContent = t("sectionTitle");
   if (els.sectionDesc) els.sectionDesc.textContent = t("sectionDesc");
   if (els.chatInput) els.chatInput.placeholder = t("chatPlaceholder");
+  if (els.chatTitle) els.chatTitle.textContent = t("chatTitle");
+  if (els.chatSubtitle) els.chatSubtitle.textContent = t("chatSubtitle");
   if (els.chatEmptyTitle) els.chatEmptyTitle.textContent = t("noMessages");
   if (els.chatEmptySubtitle) els.chatEmptySubtitle.textContent = t("startConversation");
   if (els.chatNote) els.chatNote.textContent = t("chatWorksNow");
@@ -774,18 +792,12 @@ async function updateAuthUI(user) {
   }
 
   if (isBackofficeRole(role)) {
-    try {
-      await auth.signOut();
-    } catch (err) {
-      console.warn("forced frontend signOut for backoffice user:", err);
-    }
-
+    try { await auth.signOut(); } catch {}
     applyGuestAuthUI();
     resetFrontendUserState();
     closeProfileDropdown();
-
     if (els.loginEmail) els.loginEmail.value = user.email || "";
-    showAuthMessage(t("adminFrontendBlocked"));
+    showToast(t("adminFrontendBlocked"), "warning");
     return;
   }
 
@@ -834,7 +846,7 @@ async function updateAuthUI(user) {
     state.chatMessages = [];
     state.chatUnread = 0;
     setUnreadBadge();
-    ensureSupportChat(false).catch((err) => console.warn("ensureSupportChat after auth:", err));
+    await ensureSupportChat(false);
   }
 }
 
@@ -879,11 +891,11 @@ function clearAuthMessage() {
 // ──────────────────────────────────────────
 // Auth Actions
 // ──────────────────────────────────────────
-async function handleLogin(e) {
+function handleLogin(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const email = els.loginEmail?.value?.trim();
+  const email = normalizeEmail(els.loginEmail?.value);
   const pass = els.loginPassword?.value;
 
   if (!email || !pass) {
@@ -898,39 +910,40 @@ async function handleLogin(e) {
     btn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i>';
   }
 
-  try {
-    await setFrontendAuthPersistenceLocal();
-    const cred = await auth.signInWithEmailAndPassword(email, pass);
-    const user = cred?.user;
-    const profile = user && db ? await getUserProfile(user.uid) : null;
-    const role = normalizeRole(profile?.role);
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(async (cred) => {
+      const user = cred?.user;
+      const profile = user && db ? await getUserProfile(user.uid) : null;
+      const role = normalizeRole(profile?.role);
 
-    if (isBackofficeRole(role)) {
-      await auth.signOut();
-      showAuthMessage(t("adminFrontendBlocked"));
-      applyGuestAuthUI();
-      resetFrontendUserState();
-      return;
-    }
+      if (isBackofficeRole(role)) {
+        await auth.signOut();
+        showAuthMessage(t("adminFrontendBlocked"));
+        applyGuestAuthUI();
+        resetFrontendUserState();
+        return;
+      }
 
-    hideAuthModal();
-    showToast(t("signedInDone"), "success");
-  } catch (err) {
-    showAuthMessage(getAuthError(err));
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<span>${t("signIn")}</span>`;
-    }
-  }
+      hideAuthModal();
+      showToast(t("signedInDone"), "success");
+    })
+    .catch((err) => {
+      showAuthMessage(getAuthError(err));
+    })
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>${t("signIn")}</span>`;
+      }
+    });
 }
 
-async function handleRegister(e) {
+function handleRegister(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const name = els.regName?.value?.trim();
-  const email = els.regEmail?.value?.trim();
+  const name = cleanText(els.regName?.value);
+  const email = normalizeEmail(els.regEmail?.value);
   const pass = els.regPassword?.value;
   const confirm = els.regConfirm?.value;
 
@@ -939,7 +952,7 @@ async function handleRegister(e) {
   }
 
   if (els.regConfirm && pass !== confirm) {
-    return showAuthMessage(state.lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords don't match");
+    return showAuthMessage(t("passwordsMismatch"));
   }
 
   if (pass.length < 6) {
@@ -954,41 +967,40 @@ async function handleRegister(e) {
     btn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i>';
   }
 
-  try {
-    await setFrontendAuthPersistenceLocal();
-
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    await cred.user.updateProfile({ displayName: name });
-
-    if (db) {
-      await db.collection("users").doc(cred.user.uid).set({
-        name,
-        email,
-        role: "user",
-        points: 0,
-        createdAt: getServerTimestamp()
-      }, { merge: true });
-    }
-
-    hideAuthModal();
-    showToast(t("accountCreated"), "success");
-  } catch (err) {
-    showAuthMessage(getAuthError(err));
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<span>${t("register")}</span>`;
-    }
-  }
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then((cred) => {
+      return cred.user.updateProfile({ displayName: name }).then(() => {
+        if (db) {
+          return db.collection("users").doc(cred.user.uid).set({
+            name,
+            email,
+            role: "user",
+            points: 0,
+            createdAt: getServerTimestamp()
+          }, { merge: true });
+        }
+      });
+    })
+    .then(() => {
+      hideAuthModal();
+      showToast(t("accountCreated"), "success");
+    })
+    .catch((err) => showAuthMessage(getAuthError(err)))
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>${t("register")}</span>`;
+      }
+    });
 }
 
 function handleForgot(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const email = els.forgotEmail?.value?.trim();
+  const email = normalizeEmail(els.forgotEmail?.value);
   if (!email) {
-    return showAuthMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني" : "Enter your email");
+    return showAuthMessage(t("enterEmail"));
   }
 
   clearAuthMessage();
@@ -1052,13 +1064,32 @@ async function loadProperties() {
   showLoadingState();
 
   try {
-    const snap = await db.collection("properties").where("isActive", "!=", false).get();
+    let snap = null;
     state.allProperties = [];
-    snap.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
+
+    try {
+      snap = await db.collection("properties").where("isActive", "!=", false).get();
+    } catch (err) {
+      console.warn("Properties active query fallback:", err);
+    }
+
+    if (snap) {
+      snap.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
+    }
 
     if (!state.allProperties.length) {
       const snap2 = await db.collection("properties").get();
-      snap2.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
+      snap2.forEach((doc) => {
+        const data = { id: doc.id, ...doc.data() };
+        if (data.isActive !== false && data.visible !== false) {
+          state.allProperties.push(data);
+        }
+      });
+    }
+
+    if (!state.allProperties.length) {
+      const snap3 = await db.collection("properties").get();
+      snap3.forEach((doc) => state.allProperties.push({ id: doc.id, ...doc.data() }));
     }
 
     applyFilters();
@@ -1078,6 +1109,8 @@ function normalizeCategory(cat = "") {
 
 function applyFilters() {
   let list = [...state.allProperties];
+
+  list = list.filter((p) => p.isActive !== false && p.visible !== false);
 
   if (state.activeCategory !== "all") {
     list = list.filter((p) => {
@@ -1211,7 +1244,7 @@ function renderListings() {
       <article class="property-card ore-reveal" style="--ore-delay:${delay}ms;" tabindex="0" data-id="${escapeHtml(p.id)}">
         <div class="property-card-media">
           <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-          <button class="favorite-btn ${fav ? "active" : ""}" data-id="${escapeHtml(p.id)}" aria-label="Favorite">
+          <button class="favorite-btn ${fav ? "active" : ""}" data-id="${escapeHtml(p.id)}" aria-label="Favorite" type="button">
             <i class="ph ${fav ? "ph-heart-straight ph-fill" : "ph-heart-straight"}"></i>
           </button>
           ${(p.isNew || p.badge) ? `
@@ -1297,6 +1330,13 @@ function goToProperty(id) {
 // ──────────────────────────────────────────
 let searchTimeout = null;
 
+function closeSuggestions() {
+  if (els.searchDropdown) {
+    els.searchDropdown.classList.remove("active");
+    els.searchDropdown.innerHTML = "";
+  }
+}
+
 function buildSuggestions(q) {
   if (!q || q.length < 2) {
     closeSuggestions();
@@ -1318,7 +1358,7 @@ function buildSuggestions(q) {
   }
 
   els.searchDropdown.innerHTML = results.map((p) => `
-    <button class="search-suggestion-item" type="button" data-title="${escapeHtml(getTitle(p))}">
+    <button class="search-suggestion-item" type="button" data-id="${escapeHtml(p.id)}">
       <div class="search-suggestion-main">${escapeHtml(getTitle(p))}</div>
       <div class="search-suggestion-sub">${escapeHtml(getLocation(p))}</div>
     </button>
@@ -1328,16 +1368,618 @@ function buildSuggestions(q) {
 
   els.searchDropdown.querySelectorAll(".search-suggestion-item").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (els.searchInput) els.searchInput.value = btn.dataset.title || "";
-      state.searchQuery = btn.dataset.title || "";
-      closeSuggestions();
+      const property = state.allProperties.find((p) => p.id === btn.dataset.id);
+      if (!property) return;
+      if (els.searchInput) els.searchInput.value = getTitle(property);
+      state.searchQuery = getTitle(property);
       applyFilters();
+      closeSuggestions();
     });
   });
 }
 
-function closeSuggestions() {
-  if (!els.searchDropdown) return;
-  els.searchDropdown.classList.remove("active");
-  els.searchDropdown.innerHTML = "";
+// ──────────────────────────────────────────
+// Bookings
+// ──────────────────────────────────────────
+function getBookingStatusLabel(status) {
+  const s = cleanText(status).toLowerCase();
+  if (s === "confirmed" || s === "approved") return t("status_confirmed");
+  if (s === "cancelled" || s === "canceled") return t("status_cancelled");
+  if (s === "rejected") return t("status_rejected");
+  return t("status_pending");
+}
+
+async function loadMyBookings() {
+  if (!db || !state.currentUser || !els.bookingsList) return;
+
+  els.bookingsList.innerHTML = `
+    <div class="empty-bookings">
+      <i class="ph ph-spinner-gap ph-spin"></i>
+      <p>${t("bookingsLoading")}</p>
+    </div>
+  `;
+
+  try {
+    let items = [];
+    const uid = cleanText(state.currentUser.uid);
+    const email = normalizeEmail(getCurrentUserEmail());
+
+    try {
+      const snap = await db.collection("bookings").where("userId", "==", uid).get();
+      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn("bookings by uid failed:", err);
+    }
+
+    if (!items.length && email) {
+      try {
+        const snap2 = await db.collection("bookings").where("guestEmail", "==", email).get();
+        snap2.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+      } catch (err) {
+        console.warn("bookings by guestEmail failed:", err);
+      }
+    }
+
+    const unique = new Map();
+    items.forEach((item) => unique.set(item.id, item));
+    const bookings = Array.from(unique.values());
+
+    if (!bookings.length) {
+      els.bookingsList.innerHTML = `
+        <div class="empty-bookings">
+          <i class="ph ph-calendar-blank"></i>
+          <p>${t("noBookings")}</p>
+          <small>${t("noBookingsDesc")}</small>
+        </div>
+      `;
+      return;
+    }
+
+    els.bookingsList.innerHTML = bookings.map((booking) => {
+      const title = cleanText(
+        booking.propertyTitle ||
+        booking.propertyName ||
+        booking.property?.title ||
+        booking.property?.titleAr ||
+        booking.property?.titleEn ||
+        "Property"
+      );
+
+      const amount = toNumber(booking.total || booking.totalAmount || booking.amount || booking.price, 0);
+      const status = getBookingStatusLabel(booking.status);
+      const checkIn = cleanText(booking.checkIn || booking.arrivalDate || booking.stay?.checkIn || "—");
+      const checkOut = cleanText(booking.checkOut || booking.departureDate || booking.stay?.checkOut || "—");
+
+      return `
+        <article class="booking-item-card">
+          <div class="booking-item-head">
+            <strong>${escapeHtml(title)}</strong>
+            <span class="booking-status">${escapeHtml(status)}</span>
+          </div>
+          <div class="booking-item-meta">
+            <span>${escapeHtml(t("checkIn"))}: ${escapeHtml(checkIn)}</span>
+            <span>${escapeHtml(t("checkOut"))}: ${escapeHtml(checkOut)}</span>
+            <span>${escapeHtml(amount ? amount.toLocaleString() : "0")} ${state.lang === "ar" ? "د.ج" : "DZD"}</span>
+            <span>${escapeHtml(formatDate(booking.createdAt || booking.timestamp))}</span>
+          </div>
+        </article>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error("loadMyBookings:", err);
+    els.bookingsList.innerHTML = `
+      <div class="empty-bookings">
+        <i class="ph ph-warning-circle"></i>
+        <p>${escapeHtml(t("noBookingsDesc"))}</p>
+      </div>
+    `;
+  }
+}
+
+// ──────────────────────────────────────────
+// Chat
+// ──────────────────────────────────────────
+function renderChatMessages() {
+  if (!els.chatMessages) return;
+
+  if (!state.chatMessages.length) {
+    if (els.chatEmptyState) els.chatEmptyState.style.display = "";
+    els.chatMessages.innerHTML = "";
+    return;
+  }
+
+  if (els.chatEmptyState) els.chatEmptyState.style.display = "none";
+
+  els.chatMessages.innerHTML = state.chatMessages.map((msg) => {
+    const item = normalizeMessage(msg);
+    return `
+      <div class="chat-message ${item.role === "admin" ? "admin" : "user"}">
+        <div class="chat-message-bubble">
+          <p>${escapeHtml(item.text)}</p>
+          <span>${escapeHtml(item.time)}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+}
+
+async function findOrCreateSupportChat() {
+  if (!db || !state.currentUser) return null;
+
+  const uid = cleanText(state.currentUser.uid);
+  const email = getCurrentUserEmail();
+  const name = getCurrentUserName();
+
+  try {
+    const byUserId = await db.collection("chats").where("userId", "==", uid).limit(1).get();
+    if (!byUserId.empty) {
+      const doc = byUserId.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+  } catch (err) {
+    console.warn("find chat by userId:", err);
+  }
+
+  if (email) {
+    try {
+      const byEmail = await db.collection("chats").where("userEmail", "==", email).limit(1).get();
+      if (!byEmail.empty) {
+        const doc = byEmail.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+    } catch (err) {
+      console.warn("find chat by email:", err);
+    }
+  }
+
+  const payload = {
+    userId: uid,
+    userEmail: email,
+    userName: name,
+    participantIds: [uid].filter(Boolean),
+    participants: [uid].filter(Boolean),
+    ownerId: "",
+    bookingId: "",
+    propertyId: "",
+    lastMessage: "",
+    status: "open",
+    createdAt: getServerTimestamp(),
+    updatedAt: getServerTimestamp()
+  };
+
+  const ref = await db.collection("chats").add(payload);
+  return { id: ref.id, ...payload };
+}
+
+function subscribeToCurrentChat(chatId) {
+  if (!db || !chatId) return;
+  stopChatSubscription();
+
+  setChatStatus("syncing");
+
+  state.currentChatUnsub = db
+    .collection("chats")
+    .doc(chatId)
+    .collection("messages")
+    .orderBy("createdAt", "asc")
+    .onSnapshot((snap) => {
+      const items = [];
+      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+      state.chatMessages = items;
+      renderChatMessages();
+      setChatStatus("connected");
+      if (state.chatOpen) {
+        state.chatUnread = 0;
+        setUnreadBadge();
+      }
+    }, (err) => {
+      console.error("chat messages snapshot:", err);
+      setChatStatus("error");
+    });
+}
+
+function subscribeToChatThreadList() {
+  if (!db || !state.currentUser) return;
+  stopChatsListSubscription();
+
+  const uid = cleanText(state.currentUser.uid);
+
+  state.chatsListUnsub = db.collection("chats")
+    .where("userId", "==", uid)
+    .onSnapshot((snap) => {
+      let unread = 0;
+      snap.forEach((doc) => {
+        const data = doc.data() || {};
+        unread += toNumber(data.unreadForUser, 0);
+      });
+
+      state.chatUnread = state.chatOpen ? 0 : unread;
+      setUnreadBadge();
+    }, (err) => {
+      console.warn("chat list snapshot:", err);
+    });
+}
+
+async function ensureSupportChat(openAfter = false) {
+  if (!db || !state.currentUser) {
+    state.chatMessages = [];
+    renderChatMessages();
+    return null;
+  }
+
+  if (state.chatInitializedForUser === state.currentUser.uid && state.currentChatId) {
+    if (openAfter) openChatModal();
+    return state.currentChatId;
+  }
+
+  setChatStatus("syncing", t("chatPreparing"));
+
+  try {
+    const chat = await findOrCreateSupportChat();
+    if (!chat?.id) throw new Error("CHAT_NOT_READY");
+
+    state.currentChatId = chat.id;
+    state.supportChatDoc = chat;
+    state.chatInitializedForUser = state.currentUser.uid;
+    safeSet("ore_current_chat_id", chat.id);
+    updateChatHiddenFields(chat.id);
+    subscribeToCurrentChat(chat.id);
+    subscribeToChatThreadList();
+
+    if (openAfter) openChatModal();
+
+    return chat.id;
+  } catch (err) {
+    console.error("ensureSupportChat:", err);
+    setChatStatus("error");
+    return null;
+  }
+}
+
+async function sendCurrentChatMessage(e) {
+  if (e) e.preventDefault();
+
+  if (!state.currentUser) {
+    showToast(t("loginRequired"), "warning");
+    showAuthModal("login");
+    return;
+  }
+
+  if (!db || !state.currentChatId) {
+    const chatId = await ensureSupportChat(false);
+    if (!chatId) {
+      showToast(t("chatError"), "error");
+      return;
+    }
+  }
+
+  const text = cleanText(els.chatInput?.value);
+  if (!text) return;
+
+  const btn = els.chatSendBtn;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i>';
+  }
+
+  try {
+    const payload = {
+      text,
+      message: text,
+      senderId: cleanText(state.currentUser?.uid),
+      senderName: getCurrentUserName(),
+      senderRole: "customer",
+      createdAt: getServerTimestamp()
+    };
+
+    await db.collection("chats").doc(state.currentChatId).collection("messages").add(payload);
+    await db.collection("chats").doc(state.currentChatId).set({
+      userId: cleanText(state.currentUser?.uid),
+      userEmail: getCurrentUserEmail(),
+      userName: getCurrentUserName(),
+      lastMessage: text,
+      updatedAt: getServerTimestamp()
+    }, { merge: true });
+
+    if (els.chatInput) els.chatInput.value = "";
+    setChatStatus("connected", t("supportReady"));
+  } catch (err) {
+    console.error("sendCurrentChatMessage:", err);
+    showToast(t("chatError"), "error");
+    setChatStatus("error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>${t("sendMsg")}</span>`;
+    }
+  }
+}
+
+function openChatModal() {
+  if (!els.chatModal) return;
+  els.chatModal.classList.add("active");
+  els.body.classList.add("modal-open");
+  state.chatOpen = true;
+  state.chatUnread = 0;
+  setUnreadBadge();
+  renderChatMessages();
+}
+
+function closeChatModal() {
+  if (!els.chatModal) return;
+  els.chatModal.classList.remove("active");
+  els.body.classList.remove("modal-open");
+  state.chatOpen = false;
+}
+
+// ──────────────────────────────────────────
+// Events
+// ──────────────────────────────────────────
+function bindAuthEvents() {
+  if (els.loginForm) els.loginForm.addEventListener("submit", handleLogin);
+  if (els.registerForm) els.registerForm.addEventListener("submit", handleRegister);
+  if (els.forgotForm) els.forgotForm.addEventListener("submit", handleForgot);
+
+  $$("[data-auth-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.authTab;
+      if (tab) showAuthForm(tab);
+    });
+  });
+
+  $$("[data-open-auth]").forEach((btn) => {
+    btn.addEventListener("click", () => showAuthModal("login"));
+  });
+
+  $$("[data-close-auth], .auth-modal-close").forEach((btn) => {
+    btn.addEventListener("click", hideAuthModal);
+  });
+
+  if (els.authModal) {
+    els.authModal.addEventListener("click", (e) => {
+      if (e.target === els.authModal) hideAuthModal();
+    });
+  }
+
+  if (els.navAuthBtn) {
+    els.navAuthBtn.addEventListener("click", () => {
+      if (state.currentUser) {
+        if (els.profileDropdown) els.profileDropdown.classList.toggle("active");
+      } else {
+        showAuthModal("login");
+      }
+    });
+  }
+
+  if (els.logoutBtn) {
+    els.logoutBtn.addEventListener("click", async () => {
+      try {
+        if (auth) await auth.signOut();
+        closeProfileDropdown();
+        showToast(t("signedOut"), "info");
+      } catch (err) {
+        console.warn("signOut:", err);
+      }
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#profile-menu") && !e.target.closest("#profile-dropdown")) {
+      closeProfileDropdown();
+    }
+  });
+}
+
+function bindSearchEvents() {
+  if (els.searchInput) {
+    els.searchInput.addEventListener("input", () => {
+      state.searchQuery = cleanText(els.searchInput.value);
+
+      if (searchTimeout) clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => buildSuggestions(state.searchQuery), 150);
+
+      applyFilters();
+    });
+  }
+
+  if (els.searchBtn) {
+    els.searchBtn.addEventListener("click", () => {
+      state.searchQuery = cleanText(els.searchInput?.value);
+      applyFilters();
+      closeSuggestions();
+    });
+  }
+
+  if (els.clearSearchBtn) {
+    els.clearSearchBtn.addEventListener("click", () => {
+      state.searchQuery = "";
+      if (els.searchInput) els.searchInput.value = "";
+      closeSuggestions();
+      applyFilters();
+    });
+  }
+
+  if (els.sortSelect) {
+    els.sortSelect.addEventListener("change", () => {
+      state.sortBy = cleanText(els.sortSelect.value || "featured");
+      applyFilters();
+    });
+  }
+
+  [els.checkInInput, els.checkOutInput, els.guestsInput].forEach((el) => {
+    if (el) el.addEventListener("change", applyFilters);
+  });
+
+  $$(".category-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $$(".category-item").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.activeCategory = normalizeCategory(btn.dataset.category || "all") || "all";
+      applyFilters();
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#search-input") && !e.target.closest("#search-dropdown")) {
+      closeSuggestions();
+    }
+  });
+}
+
+function bindMiscEvents() {
+  if (els.langBtn) {
+    els.langBtn.addEventListener("click", () => {
+      state.lang = state.lang === "ar" ? "en" : "ar";
+      safeSet("ore_lang", state.lang);
+      safeSet("orelang", state.lang);
+      applyLang();
+    });
+  }
+
+  if (els.themeBtn) {
+    els.themeBtn.addEventListener("click", () => {
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      safeSet("ore_theme", state.theme);
+      safeSet("oretheme", state.theme);
+      applyTheme();
+    });
+  }
+
+  if (els.openChatBtn) {
+    els.openChatBtn.addEventListener("click", async () => {
+      if (!state.currentUser) {
+        showAuthModal("login");
+        return;
+      }
+      await ensureSupportChat(true);
+    });
+  }
+
+  if (els.chatOpenBtn) {
+    els.chatOpenBtn.addEventListener("click", async () => {
+      if (!state.currentUser) {
+        showAuthModal("login");
+        return;
+      }
+      await ensureSupportChat(true);
+    });
+  }
+
+  if (els.chatSendForm) {
+    els.chatSendForm.addEventListener("submit", sendCurrentChatMessage);
+  } else if (els.chatSendBtn) {
+    els.chatSendBtn.addEventListener("click", sendCurrentChatMessage);
+  }
+
+  if (els.chatInput) {
+    els.chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendCurrentChatMessage();
+      }
+    });
+  }
+
+  $$("[data-close-chat], .chat-close-btn").forEach((btn) => {
+    btn.addEventListener("click", closeChatModal);
+  });
+
+  if (els.chatModal) {
+    els.chatModal.addEventListener("click", (e) => {
+      if (e.target === els.chatModal) closeChatModal();
+    });
+  }
+
+  if (els.myBookingsBtn) {
+    els.myBookingsBtn.addEventListener("click", async () => {
+      if (!state.currentUser) {
+        showAuthModal("login");
+        return;
+      }
+      if (els.bookingsModal) {
+        els.bookingsModal.classList.add("active");
+        els.body.classList.add("modal-open");
+      }
+      await loadMyBookings();
+    });
+  }
+
+  if (els.myFavoritesBtn) {
+    els.myFavoritesBtn.addEventListener("click", () => {
+      if (!state.currentUser) {
+        showAuthModal("login");
+        return;
+      }
+      const favOnly = state.allProperties.filter((p) => state.favorites.includes(p.id));
+      state.filteredProperties = favOnly.filter((p) => p.isActive !== false && p.visible !== false);
+      renderListings();
+      window.scrollTo({ top: els.listingsGrid?.offsetTop || 0, behavior: "smooth" });
+    });
+  }
+
+  $$("[data-close-bookings], .bookings-close-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (els.bookingsModal) {
+        els.bookingsModal.classList.remove("active");
+        els.body.classList.remove("modal-open");
+      }
+    });
+  });
+
+  if (els.bookingsModal) {
+    els.bookingsModal.addEventListener("click", (e) => {
+      if (e.target === els.bookingsModal) {
+        els.bookingsModal.classList.remove("active");
+        els.body.classList.remove("modal-open");
+      }
+    });
+  }
+
+  if (els.scrollTopBtn) {
+    window.addEventListener("scroll", () => {
+      els.scrollTopBtn.classList.toggle("show", window.scrollY > 350);
+    });
+    els.scrollTopBtn.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+}
+
+// ──────────────────────────────────────────
+// Auth Observer
+// ──────────────────────────────────────────
+function setupAuthObserver() {
+  if (!auth || typeof auth.onAuthStateChanged !== "function") {
+    state.authReady = true;
+    applyGuestAuthUI();
+    return;
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    state.authReady = true;
+    await updateAuthUI(user);
+  });
+}
+
+// ──────────────────────────────────────────
+// Boot
+// ──────────────────────────────────────────
+async function boot() {
+  applyTheme();
+  applyLang();
+  bindAuthEvents();
+  bindSearchEvents();
+  bindMiscEvents();
+  setupAuthObserver();
+  setUnreadBadge();
+  setChatStatus("syncing", t("chatPreparing"));
+  await loadProperties();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
 }
