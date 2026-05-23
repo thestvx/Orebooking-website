@@ -43,7 +43,6 @@
       const legacyKeys = [
         "ore_guest_basics",
         "ore_booking_draft_v4",
-        "ore_booking_draft_v5",
         "booking_check_in",
         "booking_check_out",
         "selectedCheckIn",
@@ -74,10 +73,12 @@
   <nav class="navbar">
     <a href="index.html" class="logo" aria-label="OreBooking">
       <img
-        src="./logos/logo.png"
+        src="logos/orebooking.png"
         alt="OreBooking"
         class="logo-img"
-        onerror="this.onerror=null;if(this.getAttribute('data-fallback-step')!=='1'){this.setAttribute('data-fallback-step','1');this.src='logos/logo.png';return;}if(this.getAttribute('data-fallback-step')!=='2'){this.setAttribute('data-fallback-step','2');this.src='./images/logo.png';return;}this.style.display='none';"
+        loading="eager"
+        decoding="async"
+        onerror="this.onerror=null;this.src='logos/orebooking.png';"
       />
     </a>
 
@@ -103,27 +104,33 @@
       </button>
 
       <div class="profile-container">
-        <button id="open-auth-btn" class="profile-menu" type="button" aria-expanded="false">
+        <button
+          id="open-auth-btn"
+          class="profile-menu"
+          type="button"
+          aria-expanded="false"
+          aria-controls="profile-dropdown"
+        >
           <i class="ph ph-user"></i>
         </button>
 
-        <div id="profile-dropdown" class="profile-dropdown">
+        <div id="profile-dropdown" class="profile-dropdown" role="menu">
           <div class="dropdown-header">
             <strong id="dropdown-user-name" data-i18n="guestuser">مستخدم ضيف</strong>
             <span id="dropdown-user-email" data-i18n="signintocontinue">سجل الدخول للمتابعة</span>
           </div>
 
-          <button id="my-bookings-btn" class="dropdown-item" type="button">
+          <button id="my-bookings-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
             <i class="ph ph-suitcase-rolling"></i>
             <span data-i18n="mybookings">حجوزاتي</span>
           </button>
 
-          <button id="my-favorites-btn" class="dropdown-item" type="button">
+          <button id="my-favorites-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
             <i class="ph ph-heart-straight"></i>
             <span data-i18n="myfavorites">المفضلة</span>
           </button>
 
-          <button id="logout-btn" class="dropdown-item" type="button">
+          <button id="logout-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
             <i class="ph ph-sign-out"></i>
             <span data-i18n="logout">تسجيل الخروج</span>
           </button>
@@ -357,11 +364,11 @@
 
                 <div class="form-group">
                   <label for="bed-type" class="form-label">
-                    <span>نوع السرير</span>
+                    <span data-i18n="bedtype">نوع السرير</span>
                     <span class="required-star">*</span>
                   </label>
                   <select id="bed-type" class="form-control" required>
-                    <option value="">اختر نوع السرير</option>
+                    <option value="" data-i18n-option="selectbedtype">اختر نوع السرير</option>
                     <option value="single">مفرد / Single</option>
                     <option value="double">مزدوج / Double</option>
                     <option value="queen">كوين / Queen</option>
@@ -737,7 +744,7 @@
                       <span id="rev-purpose-arrival" class="rd-value"></span>
                     </div>
                     <div class="review-data">
-                      <span class="rd-label">نوع السرير</span>
+                      <span class="rd-label" data-i18n="bedtype">نوع السرير</span>
                       <span id="rev-bed-type" class="rd-value"></span>
                     </div>
                     <div class="review-data">
@@ -774,7 +781,7 @@
                     </div>
                     <div class="review-data">
                       <span class="rd-label" data-i18n="specialrequests">ملاحظات</span>
-                      <span id="rev-payment-notes" class="rd-value"></span>
+                      <span id="rev-special-requests" class="rd-value"></span>
                     </div>
                   </div>
                 </div>
@@ -873,7 +880,7 @@
             </div>
 
             <div class="summary-row">
-              <span>نوع السرير</span>
+              <span data-i18n="bedtype">نوع السرير</span>
               <strong id="summary-bed-type">-</strong>
             </div>
 
@@ -917,9 +924,11 @@
 
         <div class="auth-header">
           <img
-            src="./logos/logo.png"
+            src="logos/orebooking.png"
             alt="OreBooking"
-            onerror="this.onerror=null;if(this.getAttribute('data-fallback-step')!=='1'){this.setAttribute('data-fallback-step','1');this.src='logos/logo.png';return;}if(this.getAttribute('data-fallback-step')!=='2'){this.setAttribute('data-fallback-step','2');this.src='./images/logo.png';return;}this.style.display='none';"
+            loading="eager"
+            decoding="async"
+            onerror="this.onerror=null;this.src='logos/orebooking.png';"
           />
         </div>
 
@@ -968,7 +977,7 @@
           <form id="register-form" class="auth-form">
             <h2 class="auth-title" data-i18n="createaccount">إنشاء حساب</h2>
             <p class="auth-subtitle" data-i18n="registersubtitle">
-              انضم إلى OreBooking للوصول إلى مزايا إضافية.
+              أنشئ حسابك للوصول إلى الحجوزات والمفضلة بسهولة.
             </p>
 
             <div class="input-group">
@@ -992,26 +1001,28 @@
 
             <p class="switch-form-text">
               <span data-i18n="alreadyhaveaccount">لديك حساب بالفعل؟</span>
-              <a href="#" id="go-to-login" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
+              <a href="#" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
             </p>
           </form>
 
           <!-- Forgot -->
           <form id="forgot-form" class="auth-form">
-            <h2 class="auth-title" data-i18n="forgotpassword">نسيت كلمة المرور؟</h2>
-            <p class="auth-subtitle">أدخل بريدك الإلكتروني لإرسال رابط الاستعادة.</p>
+            <h2 class="auth-title" data-i18n="forgotpassword">نسيت كلمة المرور</h2>
+            <p class="auth-subtitle" data-i18n="forgotsubtitle">
+              أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.
+            </p>
 
             <div class="input-group">
               <label for="forgot-email" data-i18n="emailaddress">البريد الإلكتروني</label>
               <input id="forgot-email" type="email" placeholder="name@example.com" autocomplete="email" />
             </div>
 
-            <button id="forgot-submit-btn" class="primary-btn" type="submit">
-              <span>إرسال</span>
+            <button class="primary-btn" type="submit">
+              <span data-i18n="sendresetlink">إرسال رابط الاستعادة</span>
             </button>
 
             <p class="switch-form-text">
-              <a href="#" data-auth-switch="login" data-i18n="signin">العودة لتسجيل الدخول</a>
+              <a href="#" data-auth-switch="login" data-i18n="backtologin">العودة لتسجيل الدخول</a>
             </p>
           </form>
         </div>
@@ -1019,6 +1030,7 @@
     </div>
   </div>
 
+  <script src="booking-translations.js"></script>
   <script src="booking.js"></script>
 </body>
 
