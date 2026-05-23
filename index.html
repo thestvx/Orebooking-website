@@ -1031,6 +1031,7 @@
 
         .auth-card {
             width: min(460px, 100%);
+            position: relative;
         }
 
         .auth-header {
@@ -1038,6 +1039,12 @@
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: center;
+        }
+
+        .auth-header img {
+            height: 52px;
+            width: auto;
+            object-fit: contain;
         }
 
         .auth-content {
@@ -1481,689 +1488,724 @@
             justify-content: space-between;
             align-items: center;
             gap: 10px;
-            flex-wrap: wrap;
         }
 
-        .chat-note {
-            color: var(--text-muted);
-            font-size: 0.82rem;
-        }
-
-        .chat-send-btn {
-            min-width: 140px;
+        .chat-actions button {
             min-height: 46px;
-        }
-
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            inset-inline-end: 20px;
-            z-index: 12000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: min(92vw, 360px);
-        }
-
-        .toast {
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 16px;
-            padding: 14px 16px;
-            box-shadow: var(--shadow-hover);
-            animation: scaleIn .2s ease;
-            font-weight: 700;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .toast.success {
-            border-color: rgba(16, 185, 129, .25);
-        }
-
-        .toast.error {
-            border-color: rgba(239, 68, 68, .25);
-        }
-
-        #fav-toast {
-            position: fixed;
-            bottom: 150px;
-            inset-inline-start: 50%;
-            transform: translateX(-50%) translateY(12px);
-            background: rgba(15, 23, 42, .92);
-            color: #fff;
-            padding: 12px 18px;
             border-radius: 999px;
-            font-weight: 700;
-            z-index: 12000;
-            opacity: 0;
-            pointer-events: none;
-            transition: .25s ease;
-            box-shadow: 0 16px 30px rgba(15, 23, 42, .24);
-            white-space: nowrap;
-        }
-
-        #fav-toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        #mobile-bottom-nav {
-            position: sticky;
-            bottom: 0;
-            z-index: 999;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            display: none;
-        }
-
-        .dark #mobile-bottom-nav {
-            background: rgba(15, 23, 42, 0.92);
-            border-top-color: rgba(255, 255, 255, 0.06);
-        }
-
-        .mobile-nav-inner {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-        }
-
-        .mob-nav-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            background: none;
             border: none;
-            color: var(--text-muted);
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            padding: 0 18px;
+            font-weight: 800;
             cursor: pointer;
-            padding: 6px 10px;
-            min-width: 68px;
-            transition: var(--transition-fast);
         }
 
-        .mob-nav-btn i {
-            font-size: 1.25rem;
+        .hero-search-wrap {
+            max-width: 1120px;
+            margin: 0 auto;
         }
 
-        .mob-nav-btn span {
-            font-size: 0.78rem;
+        .site-footer {
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+            margin-top: 70px;
+            padding: 28px 0 36px;
+        }
+
+        .site-footer-inner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .site-footer-text {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.98rem;
+            line-height: 1.9;
+            font-weight: 600;
+        }
+
+        .site-footer-text strong {
+            color: var(--text-main);
             font-weight: 800;
         }
 
-        .mob-nav-btn.active,
-        .mob-nav-btn:hover {
-            color: var(--primary);
-        }
-
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            margin: -1px;
-            padding: 0;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
-        }
-
-        @media (max-width: 1024px) {
-            .search-bar {
+        @media (max-width: 900px) {
+            .navbar {
+                padding: 14px 16px;
+                gap: 12px;
                 flex-wrap: wrap;
-                border-radius: 28px;
-                padding: 14px;
-                gap: 10px;
+            }
+
+            .logo,
+            .nav-actions {
+                flex: unset;
+            }
+
+            .nav-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .search-bar {
+                flex-direction: column;
+                border-radius: 24px;
             }
 
             .search-divider {
-                display: none;
-            }
-
-            .search-field {
-                min-width: calc(50% - 10px);
-                padding: 10px 12px;
-                border: 1px solid var(--border-color);
-                border-radius: 16px;
-                background: var(--bg-color);
-            }
-
-            .search-dropdown {
                 width: 100%;
+                height: 1px;
+                margin: 4px 0;
             }
 
             .search-btn {
                 width: 100%;
             }
-        }
-
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 14px 18px;
-                gap: 12px;
-            }
-
-            .nav-actions {
-                gap: 10px;
-            }
-
-            .rewards-badge {
-                display: none;
-            }
-
-            .hero {
-                padding: 64px 0 28px;
-            }
-
-            .hero p {
-                margin-bottom: 24px;
-            }
-
-            .container {
-                padding: 0 16px;
-            }
-
-            #mobile-bottom-nav {
-                display: block;
-            }
-
-            #chat-open-btn,
-            #scroll-top-btn {
-                inset-inline-end: 16px;
-            }
-
-            #chat-open-btn {
-                bottom: 134px;
-            }
-
-            #scroll-top-btn {
-                bottom: 72px;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .logo-img {
-                height: 36px;
-            }
-
-            .lang-btn,
-            .auth-link-btn {
-                padding: 0 14px;
-                font-size: 0.9rem;
-            }
-
-            .search-field {
-                min-width: 100%;
-            }
-
-            .section-header-wrapper h2 {
-                font-size: 1.45rem;
-            }
 
             #listings-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .property-card-actions {
-                flex-direction: column;
-            }
-
-            .chat-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .chat-send-btn {
-                width: 100%;
             }
         }
     </style>
 </head>
 
-<body data-view="home">
-    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
-    <div id="fav-toast" aria-live="polite"></div>
-
-    <header class="navbar" role="navigation" aria-label="Main navigation">
-        <a id="home-logo-btn" class="logo" href="index.html" aria-label="OreBooking Home">
-            <img id="main-logo" src="logos/orebooking.png" alt="OreBooking" class="logo-img">
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo" aria-label="OreBooking">
+            <img
+                id="site-logo"
+                src="logos/orebooking.png"
+                alt="OreBooking"
+                class="logo-img"
+                loading="eager"
+                decoding="async"
+                data-logo-light="logos/orebooking.png"
+                data-logo-dark="logos/orebooking2.png"
+                onerror="this.onerror=null;this.src='logos/orebooking.png';"
+            />
         </a>
 
         <div class="nav-actions">
-            <div class="rewards-badge" id="nav-rewards-badge">
-                <i class="ph-fill ph-gift"></i>
-                <span>Loyalty Rewards</span>
+            <div class="rewards-badge">
+                <i class="ph ph-gift"></i>
+                <span id="user-points">0</span>
+                <span>pts</span>
             </div>
+
+            <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
+                <i class="ph ph-translate"></i>
+                <span>AR</span>
+            </button>
 
             <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
                 <i class="ph ph-moon"></i>
             </button>
 
-            <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
-                <i class="ph ph-translate"></i>
-                <span id="lang-toggle-text">العربية</span>
-            </button>
-
-            <a id="auth-cta" class="auth-link-btn" href="auth.html?redirect=index.html">
-                <i class="ph ph-sign-in"></i>
-                <span data-i18n="sign_in">Sign In</span>
-            </a>
-
             <div class="profile-container">
-                <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button" aria-label="Account"
-                    aria-haspopup="true" aria-expanded="false" aria-controls="profile-dropdown">
+                <button
+                    id="open-auth-btn"
+                    class="profile-menu"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="profile-dropdown"
+                >
                     <i class="ph ph-user"></i>
                 </button>
 
-                <div id="profile-dropdown" role="menu">
+                <div id="profile-dropdown" class="profile-dropdown" role="menu">
                     <div class="dropdown-header">
-                        <span id="dropdown-user-name">Guest User</span>
+                        <strong id="dropdown-user-name">Guest User</strong>
                         <span id="dropdown-user-email" class="text-muted">Sign in to continue</span>
                     </div>
 
                     <div class="dropdown-body">
-                        <button class="dropdown-item" id="my-bookings-btn" type="button" role="menuitem">
-                            <i class="ph ph-calendar-check"></i>
-                            <span data-i18n="mybookings">My Bookings</span>
+                        <button id="my-bookings-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
+                            <i class="ph ph-suitcase-rolling"></i>
+                            <span>My Bookings</span>
                         </button>
 
-                        <button class="dropdown-item" id="my-favorites-btn" type="button" role="menuitem">
-                            <i class="ph ph-heart"></i>
-                            <span data-i18n="myfavorites">Favorites</span>
+                        <button id="my-favorites-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
+                            <i class="ph ph-heart-straight"></i>
+                            <span>Favorites</span>
                         </button>
 
-                        <button class="dropdown-item" id="open-chat-btn" type="button" role="menuitem">
-                            <i class="ph ph-chat-centered-text"></i>
-                            <span data-i18n="supportchat">Support Chat</span>
-                        </button>
-
-                        <button class="dropdown-item text-danger" id="logout-btn" type="button" role="menuitem">
+                        <button id="logout-btn" class="dropdown-item text-danger" type="button" role="menuitem" style="display:none;">
                             <i class="ph ph-sign-out"></i>
-                            <span data-i18n="logout">Log Out</span>
+                            <span>Logout</span>
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-    </header>
+    </nav>
 
     <main>
         <section class="hero">
             <div class="container">
-                <div class="hero-copy">
-                    <div class="hero-badges ore-reveal ore-reveal-in">
-                        <div class="hero-badge" id="hero-badge">
-                            <i class="ph-fill ph-crown-simple"></i>
-                            <span>Premium stays</span>
-                        </div>
-                        <div class="hero-badge">
-                            <i class="ph-fill ph-shield-check"></i>
-                            <span>Trusted booking flow</span>
-                        </div>
-                        <div class="hero-badge">
-                            <i class="ph-fill ph-map-pin"></i>
-                            <span>Across Algeria</span>
-                        </div>
+                <div class="hero-copy animate-up">
+                    <div class="hero-badges">
+                        <span class="hero-badge"><i class="ph ph-buildings"></i> Premium stays</span>
+                        <span class="hero-badge"><i class="ph ph-map-pin"></i> El Oued & more</span>
+                        <span class="hero-badge"><i class="ph ph-shield-check"></i> Trusted booking</span>
                     </div>
 
-                    <h1 id="hero-title" class="animate-up">
-                        Find your ideal stay in Algeria
-                    </h1>
-
-                    <p id="hero-desc" class="animate-up delay-1">
-                        Carefully selected hotels, apartments, and villas with a smooth booking experience.
+                    <h1 id="hero-title">Discover premium stays with OreBooking</h1>
+                    <p id="hero-desc">
+                        Explore hotels, apartments, and villas with a faster booking experience, cleaner design, and flexible stay options.
                     </p>
                 </div>
 
-                <div class="search-bar animate-up delay-2">
-                    <div class="search-field">
-                        <label for="destination-input" data-i18n="search_hint">Search by city, wilaya, or property name</label>
-                        <input id="destination-input" type="text" data-search="destination"
-                            placeholder="Search city or property" autocomplete="off">
-                        <div class="search-dropdown" id="search-dropdown"></div>
+                <div class="hero-search-wrap animate-up delay-1">
+                    <div class="search-bar">
+                        <div class="search-field">
+                            <label for="search-destination">Destination</label>
+                            <input id="search-destination" type="text" placeholder="Where do you want to stay?" />
+                            <div id="destination-dropdown" class="search-dropdown"></div>
+                        </div>
+
+                        <div class="search-divider"></div>
+
+                        <div class="search-field">
+                            <label for="search-checkin">Check in</label>
+                            <input id="search-checkin" type="text" placeholder="YYYY-MM-DD" dir="ltr" />
+                        </div>
+
+                        <div class="search-divider"></div>
+
+                        <div class="search-field">
+                            <label for="search-checkout">Check out</label>
+                            <input id="search-checkout" type="text" placeholder="YYYY-MM-DD" dir="ltr" />
+                        </div>
+
+                        <div class="search-divider"></div>
+
+                        <div class="search-field">
+                            <label for="search-guests">Guests</label>
+                            <input id="search-guests" type="number" min="1" value="1" />
+                        </div>
+
+                        <button id="search-btn" class="search-btn" type="button">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <span>Search</span>
+                        </button>
                     </div>
-
-                    <div class="search-divider" aria-hidden="true"></div>
-
-                    <div class="search-field">
-                        <label for="search-checkin">Check-in</label>
-                        <input id="search-checkin" type="date" name="checkin">
-                    </div>
-
-                    <div class="search-divider" aria-hidden="true"></div>
-
-                    <div class="search-field">
-                        <label for="search-checkout">Check-out</label>
-                        <input id="search-checkout" type="date" name="checkout">
-                    </div>
-
-                    <div class="search-divider" aria-hidden="true"></div>
-
-                    <div class="search-field">
-                        <label for="search-guests">Guests</label>
-                        <input id="search-guests" type="number" name="guests" min="1" max="20" value="2"
-                            placeholder="2">
-                    </div>
-
-                    <button id="search-btn" class="search-btn" type="button">
-                        <i class="ph ph-magnifying-glass"></i>
-                        <span data-i18n="search_btn">Search</span>
-                    </button>
                 </div>
             </div>
         </section>
 
-        <section class="categories">
-            <button class="category-item active" type="button" data-category="all">
-                <i class="ph ph-buildings"></i>
-                <span data-i18n="cat_all">All stays</span>
-            </button>
-
-            <button class="category-item" type="button" data-category="hotels">
-                <i class="ph ph-bed"></i>
-                <span data-i18n="cat_hotels">Hotels</span>
-            </button>
-
-            <button class="category-item" type="button" data-category="apartments">
-                <i class="ph ph-house-line"></i>
-                <span data-i18n="cat_apartments">Apartments</span>
-            </button>
-
-            <button class="category-item" type="button" data-category="villas">
-                <i class="ph ph-house"></i>
-                <span data-i18n="cat_villas">Villas</span>
-            </button>
+        <section class="categories container animate-up delay-2">
+            <button class="category-item active" type="button"><i class="ph ph-grid-four"></i> All</button>
+            <button class="category-item" type="button"><i class="ph ph-buildings"></i> Apartments</button>
+            <button class="category-item" type="button"><i class="ph ph-house-line"></i> Villas</button>
+            <button class="category-item" type="button"><i class="ph ph-bed"></i> Hotels</button>
+            <button class="category-item" type="button"><i class="ph ph-tree-palm"></i> Resorts</button>
         </section>
 
-        <section class="container">
-            <div class="section-header-wrapper ore-reveal">
+        <section class="container animate-up delay-3">
+            <div class="section-header-wrapper">
                 <div class="section-header-main">
-                    <h2 id="section-main-title" data-section-title data-i18n="featured_title">Featured properties</h2>
-                    <p>Explore handpicked stays with comfort, style, and fast booking.</p>
+                    <h2>Featured stays</h2>
+                    <p>Handpicked places with elegant design, comfort, and fast booking.</p>
                 </div>
 
                 <div class="section-header-controls">
-                    <select id="sort-select" class="sort-select" data-sort-select>
-                        <option value="featured" data-i18n="sort_featured">Featured</option>
-                        <option value="rating" data-i18n="sort_rating">Top rated</option>
-                        <option value="price_low" data-i18n="sort_price_low">Price: low to high</option>
-                        <option value="price_high" data-i18n="sort_price_high">Price: high to low</option>
+                    <select class="sort-select" id="sort-select">
+                        <option value="recommended">Recommended</option>
+                        <option value="price-low">Price: Low to High</option>
+                        <option value="price-high">Price: High to Low</option>
+                        <option value="rating-high">Rating</option>
                     </select>
 
-                    <button id="clear-search-btn" class="clear-search-btn" type="button" data-clear-search>
+                    <button class="clear-search-btn" id="clear-search-btn" type="button">
                         <i class="ph ph-x"></i>
-                        <span data-i18n="clear_search">Clear search</span>
+                        <span>Clear</span>
                     </button>
                 </div>
             </div>
 
-            <div id="listings-grid" class="listings-grid" aria-live="polite"></div>
+            <div id="listings-grid">
+                <article class="property-card ore-reveal" style="--ore-delay:0ms;">
+                    <div class="property-card-media">
+                        <button class="favorite-btn" type="button" aria-label="Add to favorites">
+                            <i class="ph ph-heart"></i>
+                        </button>
+                        <div class="property-urgency">
+                            <i class="ph ph-fire"></i>
+                            <span>Popular</span>
+                        </div>
+                        <img src="images/placeholder.jpg" alt="Property" />
+                    </div>
+                    <div class="property-card-body">
+                        <div class="property-card-top">
+                            <h3 class="property-card-title">Luxury Apartment</h3>
+                            <div class="property-card-rating">
+                                <i class="ph ph-star-fill"></i>
+                                <span>4.9</span>
+                            </div>
+                        </div>
+                        <div class="property-card-location">
+                            <i class="ph ph-map-pin"></i>
+                            <span>El Oued, Algeria</span>
+                        </div>
+                        <div class="property-card-meta">
+                            <i class="ph ph-bed"></i>
+                            <span>2 bedrooms</span>
+                            <i class="ph ph-users"></i>
+                            <span>4 guests</span>
+                        </div>
+                        <div class="property-card-price">12,000 DZD <span>/ night</span></div>
+                        <div class="property-card-actions">
+                            <a href="booking.html" class="primary">Book now</a>
+                            <a href="details.html">Details</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="property-card ore-reveal" style="--ore-delay:100ms;">
+                    <div class="property-card-media">
+                        <button class="favorite-btn" type="button" aria-label="Add to favorites">
+                            <i class="ph ph-heart"></i>
+                        </button>
+                        <div class="property-urgency">
+                            <i class="ph ph-lightning"></i>
+                            <span>Fast booking</span>
+                        </div>
+                        <img src="images/placeholder.jpg" alt="Property" />
+                    </div>
+                    <div class="property-card-body">
+                        <div class="property-card-top">
+                            <h3 class="property-card-title">Modern Villa</h3>
+                            <div class="property-card-rating">
+                                <i class="ph ph-star-fill"></i>
+                                <span>4.8</span>
+                            </div>
+                        </div>
+                        <div class="property-card-location">
+                            <i class="ph ph-map-pin"></i>
+                            <span>Biskra, Algeria</span>
+                        </div>
+                        <div class="property-card-meta">
+                            <i class="ph ph-bed"></i>
+                            <span>4 bedrooms</span>
+                            <i class="ph ph-users"></i>
+                            <span>8 guests</span>
+                        </div>
+                        <div class="property-card-price">24,000 DZD <span>/ night</span></div>
+                        <div class="property-card-actions">
+                            <a href="booking.html" class="primary">Book now</a>
+                            <a href="details.html">Details</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="property-card ore-reveal" style="--ore-delay:200ms;">
+                    <div class="property-card-media">
+                        <button class="favorite-btn" type="button" aria-label="Add to favorites">
+                            <i class="ph ph-heart"></i>
+                        </button>
+                        <div class="property-urgency">
+                            <i class="ph ph-seal-check"></i>
+                            <span>Verified</span>
+                        </div>
+                        <img src="images/placeholder.jpg" alt="Property" />
+                    </div>
+                    <div class="property-card-body">
+                        <div class="property-card-top">
+                            <h3 class="property-card-title">Elegant Hotel Suite</h3>
+                            <div class="property-card-rating">
+                                <i class="ph ph-star-fill"></i>
+                                <span>4.7</span>
+                            </div>
+                        </div>
+                        <div class="property-card-location">
+                            <i class="ph ph-map-pin"></i>
+                            <span>Algiers, Algeria</span>
+                        </div>
+                        <div class="property-card-meta">
+                            <i class="ph ph-bed"></i>
+                            <span>1 suite</span>
+                            <i class="ph ph-users"></i>
+                            <span>2 guests</span>
+                        </div>
+                        <div class="property-card-price">18,500 DZD <span>/ night</span></div>
+                        <div class="property-card-actions">
+                            <a href="booking.html" class="primary">Book now</a>
+                            <a href="details.html">Details</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
         </section>
     </main>
 
-    <button id="chat-open-btn" type="button" aria-label="Open support chat">
-        <i class="ph ph-chat-centered-dots"></i>
-        <span class="chat-unread-badge" id="chat-unread-badge">0</span>
-    </button>
-
-    <button id="scroll-top-btn" type="button" aria-label="Scroll to top">
-        <i class="ph ph-arrow-up"></i>
-    </button>
-
-    <nav id="mobile-bottom-nav" aria-label="Mobile navigation">
-        <div class="mobile-nav-inner">
-            <button id="mob-stays-btn" class="mob-nav-btn active" type="button">
-                <i class="ph ph-house-line"></i>
-                <span data-i18n="mobile_stays">Stays</span>
-            </button>
-
-            <button id="mob-fav-btn" class="mob-nav-btn" type="button">
-                <i class="ph ph-heart"></i>
-                <span data-i18n="mobile_favorites">Favorites</span>
-            </button>
-
-            <button id="mob-profile-btn" class="mob-nav-btn" type="button">
-                <i class="ph ph-user-circle"></i>
-                <span data-i18n="mobile_profile">Profile</span>
-            </button>
-        </div>
-    </nav>
-
-    <div class="modal-overlay" id="auth-modal" aria-hidden="true">
-        <div class="modal-content auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
-            <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
+    <div id="auth-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content auth-card">
+            <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
                 <i class="ph ph-x"></i>
             </button>
 
             <div class="auth-header">
-                <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="modal-logo">
+                <img
+                    id="auth-logo"
+                    src="logos/orebooking.png"
+                    alt="OreBooking"
+                    data-logo-light="logos/orebooking.png"
+                    data-logo-dark="logos/orebooking2.png"
+                    loading="eager"
+                    decoding="async"
+                    onerror="this.onerror=null;this.src='logos/orebooking.png';"
+                />
             </div>
 
             <div class="auth-content">
                 <div id="auth-message" class="auth-message"></div>
 
-                <form id="login-form" class="auth-form active" novalidate>
-                    <h2 class="auth-title" id="auth-dialog-title" data-i18n="welcomeback">Welcome back</h2>
-                    <p class="auth-subtitle" data-i18n="logindesc">Enter your details to access your account.</p>
+                <form id="login-form" class="auth-form active">
+                    <h2 class="auth-title">Welcome back</h2>
+                    <p class="auth-subtitle">Sign in to manage bookings and favorites.</p>
 
                     <div class="input-group">
-                        <label for="login-email" data-i18n="email">Email Address</label>
-                        <input type="email" id="login-email" placeholder="name@example.com" required>
+                        <label for="login-email">Email address</label>
+                        <input id="login-email" type="email" placeholder="name@example.com" autocomplete="email">
                     </div>
 
                     <div class="input-group">
-                        <label for="login-password" data-i18n="password">Password</label>
-                        <div class="pass-wrapper">
-                            <input type="password" id="login-password" placeholder="••••••••" required>
-                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
-                                <i class="ph ph-eye"></i>
-                            </button>
-                        </div>
+                        <label for="login-password">Password</label>
+                        <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
                     </div>
 
                     <div class="auth-options">
-                        <label class="auth-check">
-                            <input type="checkbox" checked>
-                            <span class="auth-checkmark"></span>
-                            <span data-i18n="rememberme">Remember me</span>
-                        </label>
-
-                        <a href="#" class="forgot-link" id="go-to-forgot" data-i18n="forgotpass">Forgot password?</a>
+                        <a href="#" class="forgot-link">Forgot password?</a>
                     </div>
 
-                    <button type="submit" class="primary-btn" id="login-submit-btn">
-                        <span data-i18n="signin">Sign In</span>
-                    </button>
+                    <button class="primary-btn" type="submit">Sign in</button>
 
-                    <div class="social-logins">
-                        <button type="button" class="social-btn" id="google-login-btn">
-                            <i class="ph ph-google-logo"></i>
-                            <span>Google</span>
-                        </button>
-                    </div>
-
-                    <p class="switch-form-text">
-                        <span data-i18n="noaccount">Don't have an account?</span>
-                        <a href="#" id="go-to-register" data-i18n="signup">Sign up</a>
-                    </p>
-                </form>
-
-                <form id="register-form" class="auth-form" novalidate>
-                    <h2 class="auth-title" data-i18n="createaccount">Create an account</h2>
-                    <p class="auth-subtitle" data-i18n="registerdesc">Join OreBooking to unlock premium features.</p>
-
-                    <div class="input-group">
-                        <label for="reg-name" data-i18n="fullname">Full Name</label>
-                        <input type="text" id="reg-name" placeholder="John Doe" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="reg-email" data-i18n="email">Email Address</label>
-                        <input type="email" id="reg-email" placeholder="name@example.com" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="reg-password" data-i18n="password">Password</label>
-                        <div class="pass-wrapper">
-                            <input type="password" id="reg-password" placeholder="Create password" required>
-                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
-                                <i class="ph ph-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="password-strength" id="password-strength">
-                        <div class="strength-bars">
-                            <div class="str-bar"></div>
-                            <div class="str-bar"></div>
-                            <div class="str-bar"></div>
-                            <div class="str-bar"></div>
-                        </div>
-                        <div class="strength-label" id="strength-label"></div>
-                    </div>
-
-                    <button type="submit" class="primary-btn" id="register-submit-btn">
-                        <span data-i18n="signupbtn">Create Account</span>
-                    </button>
-
-                    <div class="social-logins">
-                        <button type="button" class="social-btn" id="google-register-btn">
-                            <i class="ph ph-google-logo"></i>
-                            <span>Google</span>
-                        </button>
-                    </div>
-
-                    <p class="switch-form-text">
-                        <span data-i18n="hasaccount">Already have an account?</span>
-                        <a href="#" id="go-to-login">Sign in</a>
-                    </p>
-                </form>
-
-                <form id="forgot-form" class="auth-form" novalidate>
-                    <h2 class="auth-title" data-i18n="resetpasstitle">Reset Password</h2>
-                    <p class="auth-subtitle" data-i18n="resetpassdesc">Enter your email and we'll send you a reset link.</p>
-
-                    <div class="input-group">
-                        <label for="forgot-email" data-i18n="email">Email Address</label>
-                        <input type="email" id="forgot-email" placeholder="name@example.com" required>
-                    </div>
-
-                    <button type="submit" class="primary-btn">
-                        <span data-i18n="send_link">Send reset link</span>
-                    </button>
-
-                    <p class="switch-form-text">
-                        <a href="#" id="back-to-login" data-auth-view="login">Back to login</a>
+                    <p class="switch-form-text" style="margin-top:16px;">
+                        Don’t have an account?
+                        <a href="#">Create one</a>
                     </p>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-modal-title">
+    <div id="bookings-modal" class="bookings-modal" aria-hidden="true">
+        <div class="bookings-modal-dialog">
             <div class="bookings-modal-header">
-                <h3 id="bookings-modal-title">
-                    <i class="ph ph-calendar-check"></i>
-                    <span data-i18n="mybookings">My Bookings</span>
+                <h3>
+                    <i class="ph ph-suitcase-rolling"></i>
+                    <span>My Bookings</span>
                 </h3>
-                <button id="close-bookings-btn" type="button" aria-label="Close">
+                <button id="close-bookings-modal" type="button" aria-label="Close">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div class="bookings-modal-body">
-                <div id="bookings-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="chat-modal" id="chat-modal" aria-hidden="true">
-        <div class="chat-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-title">
-            <div class="chat-modal-header">
-                <div class="chat-modal-title">
-                    <div class="chat-avatar">
-                        <i class="ph ph-headset"></i>
-                    </div>
-                    <div class="chat-title-text">
-                        <h3 id="chat-title" data-i18n="chat_title">Support chat</h3>
-                        <p id="chat-subtitle" data-i18n="chat_subtitle">We usually reply quickly</p>
-                        <div id="chat-connection-status" class="chat-status-line syncing" aria-live="polite">
-                            <span class="chat-status-dot"></span>
-                            <span id="chat-connection-text">Preparing secure connection...</span>
+            <div id="bookings-modal-body" class="bookings-modal-body">
+                <div class="booking-entry">
+                    <div class="booking-entry-head">
+                        <div>
+                            <h4 class="booking-entry-title">No bookings yet</h4>
+                            <div class="booking-entry-meta">
+                                <span>Your bookings will appear here after you complete a reservation.</span>
+                            </div>
                         </div>
+                        <span class="booking-status-badge pending">
+                            <i class="ph ph-clock"></i>
+                            <span>Empty</span>
+                        </span>
                     </div>
                 </div>
-
-                <button class="chat-close-btn" id="chat-close-btn" type="button" aria-label="Close chat">
-                    <i class="ph ph-x"></i>
-                </button>
-            </div>
-
-            <div id="chat-messages" class="chat-modal-body">
-                <div class="chat-empty-state" id="chat-empty-state">
-                    <i class="ph ph-chat-circle-dots"></i>
-                    <div id="chat-empty-title">No messages yet.</div>
-                    <p id="chat-empty-subtitle">Start the conversation to contact support and receive replies here directly.</p>
-                </div>
-            </div>
-
-            <div class="chat-input-area">
-                <form id="chat-send-form" class="chat-send-form">
-                    <div class="chat-hidden-inputs">
-                        <input type="hidden" id="chat-property-id" value="global">
-                        <input type="hidden" id="chat-current-id" value="">
-                        <input type="hidden" id="chat-current-booking-id" value="">
-                        <input type="hidden" id="chat-current-user-id" value="">
-                        <input type="hidden" id="chat-current-user-email" value="">
-                        <input type="hidden" id="chat-current-user-name" value="">
-                    </div>
-
-                    <textarea id="chat-textarea" name="message" placeholder="Type your message"></textarea>
-
-                    <div class="chat-actions">
-                        <div class="chat-note" id="chat-note">Messages in this chat are synced with support through Firebase.</div>
-
-                        <button class="primary-btn chat-send-btn" id="chat-send-btn" type="submit">
-                            <i class="ph ph-paper-plane-tilt"></i>
-                            <span id="send-chat-text" data-i18n="send_message">Send message</span>
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
 
-    <script>
-        (function () {
-            try {
-                const savedLang = localStorage.getItem("ore_lang") || localStorage.getItem("orelang") || "en";
-                const label = document.getElementById("lang-toggle-text");
-                if (label) {
-                    label.textContent = savedLang === "ar" ? "English" : "العربية";
-                }
-            } catch (_) { }
-        })();
-    </script>
+    <button id="scroll-top-btn" type="button" aria-label="Scroll to top">
+        <i class="ph ph-arrow-up"></i>
+    </button>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="site-footer-inner">
+                <p class="site-footer-text">
+                    تم تطوير هذا الموقع من طرف :
+                    <strong>Henni Abdennour</strong> ,
+                    <strong>Kouidi Adel</strong> ,
+                    <strong>Khadem Mohammed</strong>
+                </p>
+            </div>
+        </div>
+    </footer>
 
     <script>
         (function () {
-            const btn = document.getElementById("scroll-top-btn");
-            if (!btn) return;
+            const body = document.body;
+            const html = document.documentElement;
 
-            function onScroll() {
-                if (window.scrollY > 280) btn.classList.add("visible");
-                else btn.classList.remove("visible");
+            const els = {
+                siteLogo: document.getElementById("site-logo"),
+                authLogo: document.getElementById("auth-logo"),
+                themeToggle: document.getElementById("theme-toggle"),
+                langToggle: document.getElementById("lang-toggle"),
+                openAuthBtn: document.getElementById("open-auth-btn"),
+                profileDropdown: document.getElementById("profile-dropdown"),
+                profileContainer: document.querySelector(".profile-container"),
+                authModal: document.getElementById("auth-modal"),
+                closeAuthBtn: document.getElementById("close-auth-btn"),
+                myBookingsBtn: document.getElementById("my-bookings-btn"),
+                myFavoritesBtn: document.getElementById("my-favorites-btn"),
+                logoutBtn: document.getElementById("logout-btn"),
+                closeBookingsModal: document.getElementById("close-bookings-modal"),
+                bookingsModal: document.getElementById("bookings-modal"),
+                scrollTopBtn: document.getElementById("scroll-top-btn")
+            };
+
+            let currentUser = null;
+
+            function getSavedTheme() {
+                return localStorage.getItem("ore_theme") || localStorage.getItem("oretheme") || "light";
             }
 
-            window.addEventListener("scroll", onScroll, { passive: true });
-            onScroll();
+            function setSavedTheme(value) {
+                localStorage.setItem("ore_theme", value);
+                localStorage.setItem("oretheme", value);
+            }
+
+            function getSavedLang() {
+                return localStorage.getItem("ore_lang") || localStorage.getItem("orelang") || "en";
+            }
+
+            function setSavedLang(value) {
+                localStorage.setItem("ore_lang", value);
+                localStorage.setItem("orelang", value);
+            }
+
+            function updateThemeLogos() {
+                const isDark = body.classList.contains("dark");
+                const lightLogo = "logos/orebooking.png";
+                const darkLogo = "logos/orebooking2.png";
+                const nextSrc = isDark ? darkLogo : lightLogo;
+
+                if (els.siteLogo) els.siteLogo.src = nextSrc;
+                if (els.authLogo) els.authLogo.src = nextSrc;
+            }
+
+            function applyTheme(theme) {
+                const isDark = theme === "dark";
+                body.classList.toggle("dark", isDark);
+                html.classList.remove("preload-dark");
+
+                const icon = els.themeToggle?.querySelector("i");
+                if (icon) {
+                    icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
+                }
+
+                updateThemeLogos();
+            }
+
+            function applyLanguage(lang) {
+                const isArabic = lang === "ar";
+                html.lang = isArabic ? "ar" : "en";
+                html.dir = isArabic ? "rtl" : "ltr";
+
+                const langText = els.langToggle?.querySelector("span");
+                if (langText) {
+                    langText.textContent = isArabic ? "EN" : "AR";
+                }
+            }
+
+            function toggleProfileDropdown(force = null) {
+                if (!els.profileDropdown || !els.openAuthBtn) return;
+
+                const active = typeof force === "boolean"
+                    ? force
+                    : !els.profileDropdown.classList.contains("active");
+
+                els.profileDropdown.classList.toggle("active", active);
+                els.openAuthBtn.setAttribute("aria-expanded", active ? "true" : "false");
+            }
+
+            function openAuthModal() {
+                toggleProfileDropdown(false);
+                if (els.authModal) {
+                    els.authModal.classList.add("active");
+                    els.authModal.setAttribute("aria-hidden", "false");
+                    body.classList.add("modal-open");
+                }
+            }
+
+            function closeAuthModal() {
+                if (els.authModal) {
+                    els.authModal.classList.remove("active");
+                    els.authModal.setAttribute("aria-hidden", "true");
+                    body.classList.remove("modal-open");
+                }
+            }
+
+            function openBookingsModal() {
+                toggleProfileDropdown(false);
+                if (els.bookingsModal) {
+                    els.bookingsModal.classList.add("active");
+                    els.bookingsModal.setAttribute("aria-hidden", "false");
+                    body.classList.add("modal-open");
+                }
+            }
+
+            function closeBookingsModal() {
+                if (els.bookingsModal) {
+                    els.bookingsModal.classList.remove("active");
+                    els.bookingsModal.setAttribute("aria-hidden", "true");
+                    body.classList.remove("modal-open");
+                }
+            }
+
+            function updateAuthUI(user) {
+                currentUser = user || null;
+
+                const userName = document.getElementById("dropdown-user-name");
+                const userEmail = document.getElementById("dropdown-user-email");
+                const icon = els.openAuthBtn?.querySelector("i");
+
+                if (userName) userName.textContent = user?.displayName || "Guest User";
+                if (userEmail) userEmail.textContent = user?.email || "Sign in to continue";
+
+                if (icon) {
+                    icon.className = user ? "ph ph-user-circle-check" : "ph ph-user";
+                }
+
+                if (els.myBookingsBtn) {
+                    els.myBookingsBtn.style.display = user ? "flex" : "none";
+                }
+
+                if (els.myFavoritesBtn) {
+                    els.myFavoritesBtn.style.display = user ? "flex" : "none";
+                }
+
+                if (els.logoutBtn) {
+                    els.logoutBtn.style.display = user ? "flex" : "none";
+                }
+            }
+
+            els.themeToggle?.addEventListener("click", () => {
+                const next = body.classList.contains("dark") ? "light" : "dark";
+                setSavedTheme(next);
+                applyTheme(next);
+            });
+
+            els.langToggle?.addEventListener("click", () => {
+                const next = getSavedLang() === "ar" ? "en" : "ar";
+                setSavedLang(next);
+                applyLanguage(next);
+            });
+
+            els.openAuthBtn?.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (currentUser) {
+                    toggleProfileDropdown();
+                } else {
+                    openAuthModal();
+                }
+            });
+
+            els.profileDropdown?.addEventListener("click", (e) => {
+                e.stopPropagation();
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!els.profileContainer?.contains(e.target)) {
+                    toggleProfileDropdown(false);
+                }
+            });
+
+            els.closeAuthBtn?.addEventListener("click", closeAuthModal);
+
+            els.authModal?.addEventListener("click", (e) => {
+                if (e.target === els.authModal) {
+                    closeAuthModal();
+                }
+            });
+
+            els.myBookingsBtn?.addEventListener("click", () => {
+                openBookingsModal();
+            });
+
+            els.myFavoritesBtn?.addEventListener("click", () => {
+                toggleProfileDropdown(false);
+                window.location.href = "favorites.html";
+            });
+
+            els.logoutBtn?.addEventListener("click", async () => {
+                toggleProfileDropdown(false);
+                try {
+                    if (typeof firebase !== "undefined" && firebase.auth) {
+                        await firebase.auth().signOut();
+                    }
+                    updateAuthUI(null);
+                } catch (_) {}
+            });
+
+            els.closeBookingsModal?.addEventListener("click", closeBookingsModal);
+
+            els.bookingsModal?.addEventListener("click", (e) => {
+                if (e.target === els.bookingsModal) {
+                    closeBookingsModal();
+                }
+            });
+
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") {
+                    closeAuthModal();
+                    closeBookingsModal();
+                    toggleProfileDropdown(false);
+                }
+            });
+
+            window.addEventListener("scroll", () => {
+                if (!els.scrollTopBtn) return;
+                els.scrollTopBtn.classList.toggle("visible", window.scrollY > 280);
+            });
+
+            els.scrollTopBtn?.addEventListener("click", () => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+
+            document.querySelectorAll(".favorite-btn").forEach((btn) => {
+                btn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    btn.classList.toggle("active");
+                    const icon = btn.querySelector("i");
+                    if (icon) {
+                        icon.className = btn.classList.contains("active")
+                            ? "ph ph-heart-fill"
+                            : "ph ph-heart";
+                    }
+                });
+            });
+
+            if (typeof firebase !== "undefined" && firebase.auth) {
+                firebase.auth().onAuthStateChanged((user) => {
+                    updateAuthUI(user);
+                });
+            } else {
+                updateAuthUI(null);
+            }
+
+            applyTheme(getSavedTheme());
+            applyLanguage(getSavedLang());
+
+            document.querySelectorAll(".ore-reveal").forEach((el) => {
+                requestAnimationFrame(() => {
+                    el.classList.add("ore-reveal-in");
+                });
+            });
         })();
     </script>
-
-    <script src="script.js?v=2.7" defer></script>
 </body>
 
 </html>
