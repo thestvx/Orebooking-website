@@ -1,7 +1,8 @@
 /* =========================================================
-   booking.css — OreBooking v15.1
+   booking.css — OreBooking v15.2
    RTL/LTR safe + responsive + auth modal support
    Fixed responsive truncation + navbar/logo consistency
+   Fixed custom typed date inputs compatibility
    ========================================================= */
 
 /* ═══════════════════════════════════════════
@@ -196,8 +197,10 @@ html[dir="ltr"] select {
 html[dir="rtl"] input[type="email"],
 html[dir="rtl"] input[type="tel"],
 html[dir="rtl"] input[type="number"],
-html[dir="rtl"] input[type="date"],
 html[dir="rtl"] input[type="time"],
+html[dir="rtl"] #arrival-date,
+html[dir="rtl"] #departure-date,
+html[dir="rtl"] #transfer-date,
 html[dir="rtl"] #bank-iban,
 html[dir="rtl"] #payment-reference,
 html[dir="rtl"] #sb-night-price,
@@ -212,8 +215,10 @@ html[dir="rtl"] #sb-final-total {
 html[dir="ltr"] input[type="email"],
 html[dir="ltr"] input[type="tel"],
 html[dir="ltr"] input[type="number"],
-html[dir="ltr"] input[type="date"],
 html[dir="ltr"] input[type="time"],
+html[dir="ltr"] #arrival-date,
+html[dir="ltr"] #departure-date,
+html[dir="ltr"] #transfer-date,
 html[dir="ltr"] #bank-iban,
 html[dir="ltr"] #payment-reference,
 html[dir="ltr"] #sb-night-price,
@@ -890,10 +895,49 @@ textarea.form-control {
 }
 
 input[type="time"].form-control,
-input[type="date"].form-control,
 input[type="number"].form-control,
 select.form-control {
   padding-inline: 14px;
+}
+
+/* Custom typed date inputs */
+.booking-date-input,
+#arrival-date,
+#departure-date,
+#transfer-date {
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--primary, #435abf);
+}
+
+.booking-date-input::placeholder,
+#arrival-date::placeholder,
+#departure-date::placeholder,
+#transfer-date::placeholder {
+  letter-spacing: 0.04em;
+  opacity: 0.78;
+}
+
+html[dir="rtl"] .booking-date-input,
+html[dir="rtl"] #arrival-date,
+html[dir="rtl"] #departure-date,
+html[dir="rtl"] #transfer-date {
+  direction: ltr;
+  text-align: left;
+}
+
+html[dir="ltr"] .booking-date-input,
+html[dir="ltr"] #arrival-date,
+html[dir="ltr"] #departure-date,
+html[dir="ltr"] #transfer-date {
+  direction: ltr;
+  text-align: left;
+}
+
+.form-group:has(.booking-date-input) .hint-text {
+  margin-top: 2px;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 /* ═══════════════════════════════════════════
@@ -1809,7 +1853,8 @@ body.dark .review-card-header {
   margin-bottom: 20px;
 }
 
-.social-btn {
+.social-btn,
+.google-btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -1827,10 +1872,20 @@ body.dark .review-card-header {
   min-height: 44px;
 }
 
-.social-btn:hover {
+.social-btn:hover,
+.google-btn:hover {
   background-color: var(--surface-color, #fff);
   border-color: var(--primary, #435abf);
   box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, 0.05));
+}
+
+.divider {
+  margin: 16px 0;
+  text-align: center;
+  color: var(--text-muted, #64748b);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .switch-form-text {
@@ -1945,125 +2000,108 @@ body.dark .review-card-header {
 
   .logo-img {
     height: 32px;
-    max-width: 140px;
-  }
-
-  .back-home-btn {
-    padding: 0 12px;
-    min-height: 36px;
-    font-size: 0.84rem;
+    max-width: 100%;
   }
 
   .booking-page {
-    padding: 22px 0 40px;
+    padding: 22px 0 56px;
   }
 
-  .booking-hero-card {
-    padding: 20px;
-    border-radius: 20px;
-  }
-
-  .booking-steps-header {
-    padding: 16px;
-    margin-bottom: 20px;
-  }
-
-  .step-connector {
-    margin: 0 4px 28px;
-  }
-
-  .step-label {
-    font-size: 0.72rem;
-  }
-
-  .booking-main-card,
-  .booking-summary-sidebar {
+  .booking-main-card {
     padding: 22px 18px;
   }
 
-  .form-grid,
-  .payment-methods-grid,
-  .review-grid,
-  .amenities-box {
-    grid-template-columns: 1fr;
+  .booking-summary-sidebar {
+    padding: 18px;
+  }
+
+  .booking-hero-card {
+    padding: 20px 18px;
+    border-radius: 22px;
+  }
+
+  .booking-steps-header {
+    padding: 16px 14px;
+    gap: 10px;
+  }
+
+  .step-indicator {
+    min-width: 84px;
+  }
+
+  .step-label {
+    font-size: 0.76rem;
   }
 
   .step-header {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: start;
+    gap: 12px;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
   }
 
-  .step-actions {
-    flex-direction: column-reverse;
+  .step-header-icon {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    font-size: 1.35rem;
+    border-radius: 14px;
   }
 
+  .step-title {
+    font-size: 1.2rem;
+  }
+
+  .section-block {
+    padding: 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .step-actions,
   .step-actions-between {
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .step-actions .ghost-btn,
-  .step-actions .primary-btn {
+  .primary-btn,
+  .ghost-btn {
     width: 100%;
-    justify-content: center;
-  }
-
-  .review-data.full-width {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .points-box {
-    flex-direction: column;
   }
 
   .bank-row {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 4px;
   }
 
-  .bank-row strong,
-  .summary-row span:last-child,
-  .summary-row strong {
+  .bank-row strong {
     text-align: start;
   }
 
-  .prop-mini-card {
-    align-items: flex-start;
-  }
-
-  .prop-mini-img {
-    width: 84px;
-    min-width: 84px;
-    height: 72px;
-  }
-
-  .social-logins {
-    flex-direction: column;
+  .points-box {
+    padding: 14px 16px;
+    gap: 12px;
   }
 
   .auth-content {
-    padding: 24px 18px;
+    padding: 22px 16px 20px;
   }
 }
 
-@media (max-width: 560px) {
-  .container {
-    padding-inline: 14px;
-  }
-
+@media (max-width: 520px) {
   .navbar {
-    padding: 10px 12px;
-  }
-
-  .logo {
-    max-width: 118px;
-  }
-
-  .logo-img {
-    height: 28px;
-    max-width: 118px;
+    flex-wrap: nowrap;
   }
 
   .back-home-btn span {
@@ -2071,15 +2109,14 @@ body.dark .review-card-header {
   }
 
   .back-home-btn {
-    min-width: 38px;
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
     padding: 0;
-    border-radius: 50%;
   }
 
   .booking-hero-card h1 {
-    font-size: 1.5rem;
+    font-size: 1.55rem;
   }
 
   .booking-hero-card p {
@@ -2087,93 +2124,40 @@ body.dark .review-card-header {
   }
 
   .booking-main-card,
-  .booking-summary-sidebar {
-    padding: 18px 14px;
+  .booking-summary-sidebar,
+  .booking-steps-header {
     border-radius: 18px;
   }
 
-  .section-block {
-    padding: 16px;
+  .summary-row {
+    font-size: 0.86rem;
   }
 
-  .payment-details-box {
-    padding: 18px 14px;
+  .prop-mini-card {
+    gap: 10px;
   }
 
-  .review-card-header,
-  .review-card-body {
-    padding-inline: 14px;
+  .prop-mini-img {
+    width: 78px;
+    min-width: 78px;
+    height: 66px;
   }
 
-  .step-num {
-    width: 38px;
-    height: 38px;
+  .auth-modal {
+    padding: 10px;
   }
 
-  .step-indicator {
-    min-width: 86px;
+  .auth-modal .modal-content,
+  .modal-content {
+    max-height: 94dvh;
+    border-radius: 20px;
   }
 
-  .step-label {
-    font-size: 0.68rem;
-  }
-
-  .form-control {
-    min-height: 48px;
-    padding: 13px 14px;
-  }
-
-  .primary-btn,
-  .ghost-btn {
-    min-height: 48px;
-    padding-inline: 20px;
+  .booking-date-input,
+  #arrival-date,
+  #departure-date,
+  #transfer-date {
     font-size: 0.95rem;
-  }
-
-  .profile-dropdown {
-    min-width: min(92vw, 280px);
-  }
-}
-
-@media (max-width: 420px) {
-  .navbar {
-    gap: 6px;
-  }
-
-  .nav-actions {
-    gap: 3px;
-  }
-
-  #lang-toggle {
-    padding: 4px 8px;
-    font-size: 0.74rem;
-  }
-
-  .icon-btn,
-  .profile-menu,
-  .back-home-btn {
-    min-width: 34px;
-    min-height: 34px;
-  }
-
-  .booking-hero-card {
-    padding: 16px;
-  }
-
-  .booking-steps-header {
-    padding: 12px;
-  }
-
-  .booking-main-card,
-  .booking-summary-sidebar {
-    padding: 16px 12px;
-  }
-
-  .auth-header {
-    padding: 18px 18px 14px;
-  }
-
-  .auth-content {
-    padding: 20px 16px;
+    padding-inline: 14px;
   }
 }
