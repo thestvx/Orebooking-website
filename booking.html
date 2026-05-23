@@ -272,12 +272,19 @@
                   </label>
                   <input
                     id="arrival-date"
-                    class="form-control"
-                    type="date"
+                    class="form-control booking-date-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="YYYY-MM-DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    data-date-input="checkin"
                     data-no-prefill="true"
                     autocomplete="off"
+                    spellcheck="false"
+                    aria-describedby="arrival-date-hint"
                     required
                   />
+                  <span id="arrival-date-hint" class="hint-text">YYYY-MM-DD</span>
                 </div>
 
                 <div class="form-group">
@@ -287,12 +294,19 @@
                   </label>
                   <input
                     id="departure-date"
-                    class="form-control"
-                    type="date"
+                    class="form-control booking-date-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="YYYY-MM-DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    data-date-input="checkout"
                     data-no-prefill="true"
                     autocomplete="off"
+                    spellcheck="false"
+                    aria-describedby="departure-date-hint"
                     required
                   />
+                  <span id="departure-date-hint" class="hint-text">YYYY-MM-DD</span>
                 </div>
 
                 <div class="form-group">
@@ -534,7 +548,16 @@
                     <span data-i18n="transferdate">تاريخ التحويل</span>
                     <span class="required-star">*</span>
                   </label>
-                  <input id="transfer-date" class="form-control" type="date" />
+                  <input
+                    id="transfer-date"
+                    class="form-control booking-date-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="YYYY-MM-DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
                 </div>
 
                 <div class="form-group">
@@ -896,7 +919,7 @@
             </div>
 
             <div class="auth-options">
-              <a href="#" class="forgot-link" data-auth-switch="forgot" data-i18n="forgotpassword">نسيت كلمة المرور؟</a>
+              <a href="#" id="go-to-forgot" class="forgot-link" data-auth-switch="forgot" data-i18n="forgotpassword">نسيت كلمة المرور؟</a>
             </div>
 
             <button id="login-submit-btn" class="primary-btn" type="submit">
@@ -912,7 +935,7 @@
 
             <p class="switch-form-text">
               <span data-i18n="donthaveaccount">ليس لديك حساب؟</span>
-              <a href="#" data-auth-switch="register" data-i18n="signup">إنشاء حساب</a>
+              <a href="#" id="go-to-register" data-auth-switch="register" data-i18n="signup">إنشاء حساب</a>
             </p>
           </form>
 
@@ -944,7 +967,7 @@
 
             <p class="switch-form-text">
               <span data-i18n="alreadyhaveaccount">لديك حساب بالفعل؟</span>
-              <a href="#" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
+              <a href="#" id="go-to-login" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
             </p>
           </form>
 
@@ -965,7 +988,7 @@
             </button>
 
             <p class="switch-form-text">
-              <a href="#" data-auth-switch="login" data-i18n="backtologin">العودة لتسجيل الدخول</a>
+              <a href="#" id="back-to-login" data-i18n="signin">تسجيل الدخول</a>
             </p>
           </form>
         </div>
@@ -973,249 +996,7 @@
     </div>
   </div>
 
-  <script>
-    const bookingI18n = {
-      ar: {
-        pageTitle: "OreBooking",
-        home: "الرئيسية",
-        pts: "نقطة",
-        guestuser: "مستخدم ضيف",
-        signintocontinue: "سجل الدخول للمتابعة",
-        mybookings: "حجوزاتي",
-        myfavorites: "المفضلة",
-        logout: "تسجيل الخروج",
-        welcomeback: "مرحبًا بعودتك",
-        loginsubtitle: "أدخل بياناتك للوصول إلى حسابك.",
-        emailaddress: "البريد الإلكتروني",
-        email: "البريد الإلكتروني",
-        password: "كلمة المرور",
-        forgotpassword: "نسيت كلمة المرور؟",
-        signin: "تسجيل الدخول",
-        donthaveaccount: "ليس لديك حساب؟",
-        signup: "إنشاء حساب",
-        createaccount: "إنشاء حساب",
-        registersubtitle: "انضم إلى OreBooking للوصول إلى مزايا إضافية.",
-        fullname: "الاسم الكامل",
-        fullnameplaceholder: "الاسم الكامل",
-        emailplaceholder: "name@example.com",
-        phoneplaceholder: "+213 ...",
-        countryregionplaceholder: "الدولة أو الجنسية",
-        billingnameplaceholder: "الاسم الكامل للفوترة",
-        billingnoteplaceholder: "ملاحظة اختيارية للفوترة أو الدفع",
-        sendernameplaceholder: "الاسم المستخدم في التحويل",
-        transferamountplaceholder: "المبلغ المدفوع",
-        cashpayerplaceholder: "اسم الشخص المسؤول عن الدفع",
-        specialrequestsplaceholder: "ملاحظة اختيارية للمضيف",
-        createaccountbtn: "إنشاء الحساب",
-        alreadyhaveaccount: "لديك حساب بالفعل؟",
-        resetpassword: "إعادة تعيين كلمة المرور",
-        resetpasswordsubtitle: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
-        sendresetlink: "إرسال رابط إعادة التعيين",
-        backtologin: "العودة لتسجيل الدخول",
-        completebooking: "أكمل حجزك",
-        bookingherotext: "أدخل المعلومات الأساسية فقط لإتمام الحجز بسرعة ووضوح.",
-        completerequiredfields: "يرجى إكمال جميع الحقول المطلوبة قبل المتابعة.",
-        details: "البيانات",
-        payment: "الدفع",
-        review: "المراجعة",
-        guestreservationdetails: "بيانات الحجز والضيف",
-        guestreservationsubtitle: "أدخل فقط البيانات الأساسية المطلوبة لإتمام الحجز.",
-        primaryguestinformation: "معلومات الضيف الأساسية",
-        phonenumber: "رقم الهاتف",
-        phone: "الهاتف",
-        countryregion: "الدولة / الجنسية",
-        staydetails: "تفاصيل الإقامة",
-        checkindate: "تاريخ الدخول",
-        checkoutdate: "تاريخ الخروج",
-        checkincheckout: "الدخول والخروج",
-        adults: "البالغون",
-        children: "الأطفال",
-        guests: "الضيوف",
-        expectedarrivaltime: "وقت الوصول المتوقع",
-        selectarrivaltime: "اختر وقت الوصول",
-        after20: "بعد 20:00",
-        aftermidnight: "بعد منتصف الليل",
-        purposeofstay: "غرض الإقامة",
-        selectpurpose: "اختر الغرض",
-        familystay: "عائلية",
-        business: "عمل",
-        tourism: "سياحة",
-        medical: "علاج",
-        other: "أخرى",
-        specialrequests: "طلبات خاصة",
-        specialrequestshint: "اجعل الطلبات قصيرة وواضحة.",
-        propertyamenities: "مرافق العقار",
-        wifi: "واي فاي",
-        parking: "موقف سيارات",
-        airconditioning: "تكييف",
-        kitchen: "مطبخ",
-        continuetopayment: "متابعة إلى الدفع",
-        paymentbilling: "الدفع والفوترة",
-        paymentbillingsubtitle: "اختر طريقة الدفع وأدخل فقط التفاصيل الأساسية.",
-        banktransferccp: "تحويل بنكي / CCP",
-        banktransferdesc: "حول قيمة الحجز ثم ارفع وصل الدفع.",
-        payatproperty: "الدفع عند الوصول",
-        payatpropertydesc: "الدفع نقدًا عند تسجيل الدخول حسب موافقة المضيف.",
-        billingdetails: "بيانات الفوترة",
-        billingname: "اسم الفوترة",
-        billingnote: "ملاحظة الفوترة",
-        banktransferdetails: "تفاصيل التحويل البنكي",
-        banktransferinstruction: "يرجى تحويل المبلغ الكامل ثم رفع الإيصال وإدخال بيانات المرسل.",
-        accountname: "اسم الحساب",
-        bank: "البنك",
-        senderfullname: "اسم المرسل",
-        transferredamount: "المبلغ المحول",
-        transferdate: "تاريخ التحويل",
-        clickuploadreceipt: "اضغط لرفع إيصال الدفع",
-        uploadhint: "JPG, PNG, PDF, WEBP - 5MB",
-        cashpaymentconfirmation: "تأكيد الدفع النقدي",
-        cashpaymentinstruction: "أكد من سيدفع عند الوصول.",
-        whowillpaycheckin: "من سيدفع عند الوصول",
-        preferredcurrency: "العملة المفضلة",
-        selectcurrency: "اختر العملة",
-        backtodetails: "العودة للبيانات",
-        reviewbooking: "مراجعة الحجز",
-        reviewconfirm: "المراجعة والتأكيد",
-        reviewconfirmsubtitle: "راجع بيانات الضيف والإقامة والدفع قبل التأكيد النهائي.",
-        guestinformation: "معلومات الضيف",
-        edit: "تعديل",
-        paymentmethod: "طريقة الدفع",
-        documents: "المستندات",
-        rewardpoints: "نقاط المكافأة",
-        rewardpointstext: "ستحصل على نقاط تقديرية بعد تأكيد الحجز.",
-        agreepolicy: "أوافق على الشروط والأحكام وسياسة الحجز.",
-        backtopayment: "العودة للدفع",
-        confirmbooking: "تأكيد الحجز",
-        bookingsummary: "ملخص الحجز",
-        pricepernight: "السعر لكل ليلة",
-        nights: "الليالي",
-        servicefee: "رسوم الخدمة",
-        taxes: "الضرائب والرسوم",
-        total: "الإجمالي"
-      },
-      en: {
-        pageTitle: "OreBooking",
-        home: "Home",
-        pts: "pts",
-        guestuser: "Guest User",
-        signintocontinue: "Sign in to continue",
-        mybookings: "My Bookings",
-        myfavorites: "My Favorites",
-        logout: "Logout",
-        welcomeback: "Welcome back",
-        loginsubtitle: "Enter your details to access your account.",
-        emailaddress: "Email address",
-        email: "Email",
-        password: "Password",
-        forgotpassword: "Forgot password?",
-        signin: "Sign in",
-        donthaveaccount: "Don't have an account?",
-        signup: "Sign up",
-        createaccount: "Create account",
-        registersubtitle: "Join OreBooking to unlock extra benefits.",
-        fullname: "Full name",
-        fullnameplaceholder: "Full name",
-        emailplaceholder: "name@example.com",
-        phoneplaceholder: "+213 ...",
-        countryregionplaceholder: "Country or nationality",
-        billingnameplaceholder: "Full billing name",
-        billingnoteplaceholder: "Optional billing or payment note",
-        sendernameplaceholder: "Name used in transfer",
-        transferamountplaceholder: "Transferred amount",
-        cashpayerplaceholder: "Person responsible for payment",
-        specialrequestsplaceholder: "Optional note for the host",
-        createaccountbtn: "Create account",
-        alreadyhaveaccount: "Already have an account?",
-        resetpassword: "Reset password",
-        resetpasswordsubtitle: "Enter your email and we'll send you a reset link.",
-        sendresetlink: "Send reset link",
-        backtologin: "Back to login",
-        completebooking: "Complete your booking",
-        bookingherotext: "Enter only the essential details to finish your booking quickly and clearly.",
-        completerequiredfields: "Please complete all required fields before continuing.",
-        details: "Details",
-        payment: "Payment",
-        review: "Review",
-        guestreservationdetails: "Guest and booking details",
-        guestreservationsubtitle: "Enter only the essential information needed to complete the booking.",
-        primaryguestinformation: "Primary guest information",
-        phonenumber: "Phone number",
-        phone: "Phone",
-        countryregion: "Country / Nationality",
-        staydetails: "Stay details",
-        checkindate: "Check-in date",
-        checkoutdate: "Check-out date",
-        checkincheckout: "Check-in / Check-out",
-        adults: "Adults",
-        children: "Children",
-        guests: "Guests",
-        expectedarrivaltime: "Expected arrival time",
-        selectarrivaltime: "Select arrival time",
-        after20: "After 20:00",
-        aftermidnight: "After midnight",
-        purposeofstay: "Purpose of stay",
-        selectpurpose: "Select purpose",
-        familystay: "Family",
-        business: "Business",
-        tourism: "Tourism",
-        medical: "Medical",
-        other: "Other",
-        specialrequests: "Special requests",
-        specialrequestshint: "Keep requests short and clear.",
-        propertyamenities: "Property amenities",
-        wifi: "Wi‑Fi",
-        parking: "Parking",
-        airconditioning: "Air conditioning",
-        kitchen: "Kitchen",
-        continuetopayment: "Continue to payment",
-        paymentbilling: "Payment and billing",
-        paymentbillingsubtitle: "Choose a payment method and enter only the essential details.",
-        banktransferccp: "Bank transfer / CCP",
-        banktransferdesc: "Transfer the booking amount, then upload the receipt.",
-        payatproperty: "Pay on arrival",
-        payatpropertydesc: "Pay in cash at check-in subject to host approval.",
-        billingdetails: "Billing details",
-        billingname: "Billing name",
-        billingnote: "Billing note",
-        banktransferdetails: "Bank transfer details",
-        banktransferinstruction: "Please transfer the full amount, upload the receipt, and enter sender details.",
-        accountname: "Account name",
-        bank: "Bank",
-        senderfullname: "Sender name",
-        transferredamount: "Transferred amount",
-        transferdate: "Transfer date",
-        clickuploadreceipt: "Click to upload payment receipt",
-        uploadhint: "JPG, PNG, PDF, WEBP - 5MB",
-        cashpaymentconfirmation: "Cash payment confirmation",
-        cashpaymentinstruction: "Confirm who will pay on arrival.",
-        whowillpaycheckin: "Who will pay at check-in",
-        preferredcurrency: "Preferred currency",
-        selectcurrency: "Select currency",
-        backtodetails: "Back to details",
-        reviewbooking: "Review booking",
-        reviewconfirm: "Review and confirm",
-        reviewconfirmsubtitle: "Review guest, stay, and payment details before final confirmation.",
-        guestinformation: "Guest information",
-        edit: "Edit",
-        paymentmethod: "Payment method",
-        documents: "Documents",
-        rewardpoints: "Reward points",
-        rewardpointstext: "You will receive estimated points after booking confirmation.",
-        agreepolicy: "I agree to the terms, conditions, and booking policy.",
-        backtopayment: "Back to payment",
-        confirmbooking: "Confirm booking",
-        bookingsummary: "Booking summary",
-        pricepernight: "Price per night",
-        nights: "Nights",
-        servicefee: "Service fee",
-        taxes: "Taxes and fees",
-        total: "Total"
-      }
-    };
-
-    window.bookingI18n = bookingI18n;
-  </script>
-
   <script src="booking.js"></script>
 </body>
+
 </html>
