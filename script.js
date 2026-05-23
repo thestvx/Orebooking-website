@@ -1370,7 +1370,8 @@ function bindListingEvents() {
     card.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         const id = card.dataset.id;
-        window.location.href = `property-details.html?id=${encodeURIComponent(id)}`;
+        window.location.href = `property.html?id=${encodeURIComponent(id)}`;
+
       }
     });
   });
