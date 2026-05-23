@@ -6,8 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Details - OreBooking</title>
-    <meta name="description"
-        content="Explore full property details, amenities, host info, location, and booking options on OreBooking.">
+    <meta name="description" content="Explore full property details, amenities, host info, location, and booking options on OreBooking.">
     <meta name="theme-color" content="#435abf">
     <meta name="format-detection" content="telephone=no">
 
@@ -15,9 +14,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
     <script>
         (function () {
@@ -27,7 +24,7 @@
                 document.documentElement.lang = savedLang === "ar" ? "ar" : "en";
                 document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
                 if (savedTheme === "dark") document.documentElement.classList.add("preload-dark");
-            } catch (_) { }
+            } catch (_) {}
         })();
     </script>
 
@@ -39,7 +36,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
-    <link rel="stylesheet" href="style.css?v=2.4">
+    <link rel="stylesheet" href="style.css?v=2.5">
 
     <style>
         :root {
@@ -67,15 +64,8 @@
             --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
 
         body {
             background:
@@ -87,13 +77,8 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        html[dir="ltr"] body {
-            font-family: 'Outfit', sans-serif;
-        }
-
-        html[dir="rtl"] body {
-            font-family: 'Tajawal', sans-serif;
-        }
+        html[dir="ltr"] body { font-family: 'Outfit', sans-serif; }
+        html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
 
         .preload-dark body,
         html.dark body,
@@ -110,32 +95,10 @@
             --shadow-card-hover: 0 24px 46px rgba(0, 0, 0, 0.38);
         }
 
-        body.modal-open {
-            overflow: hidden;
-        }
-
-        img {
-            display: block;
-            max-width: 100%;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        button,
-        input,
-        textarea,
-        select {
-            font: inherit;
-        }
-
-        .container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
+        body.modal-open { overflow: hidden; }
+        img { display: block; max-width: 100%; }
+        a { color: inherit; text-decoration: none; }
+        button, input, textarea, select { font: inherit; }
 
         .navbar {
             width: 100%;
@@ -198,10 +161,7 @@
 
         .icon-btn,
         .lang-btn,
-        .profile-menu,
         .auth-link-btn,
-        .secondary-btn,
-        .ghost-icon-btn,
         .back-btn,
         .share-btn,
         .fav-property-btn,
@@ -212,10 +172,7 @@
 
         .icon-btn,
         .lang-btn,
-        .profile-menu,
-        .auth-link-btn,
-        .secondary-btn,
-        .ghost-icon-btn {
+        .auth-link-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -228,9 +185,7 @@
             text-decoration: none;
         }
 
-        .icon-btn,
-        .profile-menu,
-        .ghost-icon-btn {
+        .icon-btn {
             width: 42px;
             height: 42px;
             border-radius: 50%;
@@ -238,8 +193,7 @@
         }
 
         .lang-btn,
-        .auth-link-btn,
-        .secondary-btn {
+        .auth-link-btn {
             padding: 0 18px;
             border-radius: var(--radius-full);
             font-weight: 700;
@@ -249,19 +203,14 @@
 
         .icon-btn:hover,
         .lang-btn:hover,
-        .profile-menu:hover,
-        .auth-link-btn:hover,
-        .secondary-btn:hover,
-        .ghost-icon-btn:hover {
+        .auth-link-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
             transform: translateY(-2px);
             box-shadow: var(--shadow-sm);
         }
 
-        .profile-container {
-            position: relative;
-        }
+        .profile-container { position: relative; }
 
         #profile-dropdown {
             position: absolute;
@@ -278,9 +227,7 @@
             z-index: 1200;
         }
 
-        #profile-dropdown.active {
-            display: flex;
-        }
+        #profile-dropdown.active { display: flex; }
 
         .dropdown-header {
             padding: 16px;
@@ -290,9 +237,7 @@
             gap: 4px;
         }
 
-        .dropdown-body {
-            padding: 8px;
-        }
+        .dropdown-body { padding: 8px; }
 
         .dropdown-item {
             width: 100%;
@@ -358,19 +303,6 @@
             padding: 0 24px 80px;
         }
 
-        .card-skeleton {
-            border-radius: 24px;
-            background: linear-gradient(90deg, rgba(148, 163, 184, 0.18) 25%, rgba(148, 163, 184, 0.32) 37%, rgba(148, 163, 184, 0.18) 63%);
-            background-size: 400% 100%;
-            animation: skeletonLoading 1.2s ease-in-out infinite;
-            border: 1px solid var(--border-color);
-        }
-
-        @keyframes skeletonLoading {
-            0% { background-position: 100% 50%; }
-            100% { background-position: 0 50%; }
-        }
-
         .prop-header {
             display: flex;
             flex-direction: column;
@@ -416,9 +348,7 @@
             gap: 6px;
         }
 
-        .prop-rating i {
-            color: #f59e0b;
-        }
+        .prop-rating i { color: #f59e0b; }
 
         .prop-actions {
             display: flex;
@@ -481,9 +411,7 @@
             font-weight: 700;
         }
 
-        .quick-chip i {
-            color: var(--primary);
-        }
+        .quick-chip i { color: var(--primary); }
 
         .prop-image-gallery {
             border-radius: var(--radius-2xl);
@@ -535,35 +463,8 @@
             backdrop-filter: blur(8px);
         }
 
-        .slider-fullscreen-btn,
         .slider-btn {
             position: absolute;
-            z-index: 10;
-            border: none;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .slider-fullscreen-btn {
-            top: 16px;
-            inset-inline-start: 16px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.52);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(8px);
-        }
-
-        .slider-fullscreen-btn:hover {
-            background: var(--primary);
-            transform: scale(1.06);
-        }
-
-        .slider-btn {
             top: 50%;
             transform: translateY(-50%);
             width: 46px;
@@ -576,12 +477,12 @@
             justify-content: center;
             font-size: 1.2rem;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+            z-index: 10;
+            border: none;
+            cursor: pointer;
         }
 
-        body.dark .slider-btn {
-            background: rgba(15, 23, 42, 0.92);
-            color: #fff;
-        }
+        body.dark .slider-btn { background: rgba(15, 23, 42, 0.92); color: #fff; }
 
         .slider-btn:hover {
             background: var(--primary);
@@ -682,9 +583,7 @@
             gap: 10px;
         }
 
-        .section-title i {
-            color: var(--primary);
-        }
+        .section-title i { color: var(--primary); }
 
         .prop-description {
             font-size: 1rem;
@@ -745,9 +644,7 @@
             box-shadow: 0 10px 24px rgba(67, 90, 191, 0.25);
         }
 
-        .host-info {
-            flex: 1;
-        }
+        .host-info { flex: 1; }
 
         .host-info strong {
             display: block;
@@ -802,12 +699,6 @@
             transition: var(--transition);
         }
 
-        .map-open-btn:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(67, 90, 191, 0.35);
-        }
-
         .map-no-location {
             width: 100%;
             min-height: 180px;
@@ -826,20 +717,11 @@
             margin-top: 14px;
         }
 
-        .map-no-location i {
-            font-size: 2.2rem;
-            opacity: 0.4;
-        }
-
         .prop-booking-card {
             padding: 28px;
             position: sticky;
             top: 94px;
             transition: box-shadow 0.3s;
-        }
-
-        .prop-booking-card:hover {
-            box-shadow: var(--shadow-card-hover);
         }
 
         .booking-price {
@@ -880,11 +762,6 @@
             text-decoration: none;
         }
 
-        .primary-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
-        }
-
         .secondary-action-btn {
             margin-top: 12px;
             width: 100%;
@@ -900,12 +777,6 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-        }
-
-        .secondary-action-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: rgba(67, 90, 191, 0.04);
         }
 
         .chat-fab-btn {
@@ -926,10 +797,6 @@
             cursor: pointer;
             z-index: 1100;
             transition: var(--transition);
-        }
-
-        .chat-fab-btn:hover {
-            transform: translateY(-3px) scale(1.05);
         }
 
         .chat-unread-badge {
@@ -1020,18 +887,14 @@
             object-fit: contain;
         }
 
-        .auth-content {
-            padding: 24px;
-        }
+        .auth-content { padding: 24px; }
 
         .auth-form {
             display: none;
             flex-direction: column;
         }
 
-        .auth-form.active {
-            display: flex;
-        }
+        .auth-form.active { display: flex; }
 
         .auth-title {
             margin: 0 0 8px;
@@ -1091,9 +954,7 @@
             outline: none;
         }
 
-        .pass-wrapper {
-            position: relative;
-        }
+        .pass-wrapper { position: relative; }
 
         .toggle-pass-btn {
             position: absolute;
@@ -1152,9 +1013,7 @@
             box-shadow: var(--shadow-sm);
         }
 
-        .booking-entry:last-child {
-            margin-bottom: 0;
-        }
+        .booking-entry:last-child { margin-bottom: 0; }
 
         .booking-entry-head {
             display: flex;
@@ -1193,154 +1052,15 @@
             color: #b45309;
         }
 
-        .chat-modal-dialog {
-            width: min(460px, 100%);
-            height: min(720px, 88vh);
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            box-shadow: var(--shadow-hover);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+        .booking-status-badge.confirmed {
+            background: rgba(16, 185, 129, .12);
+            color: #047857;
         }
 
-        .chat-modal-header {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .chat-modal-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .chat-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: rgba(67, 90, 191, 0.12);
-            color: var(--primary);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-
-        .chat-title-text h3 {
-            margin: 0;
-            font-size: 1rem;
-        }
-
-        .chat-title-text p {
-            margin: 3px 0 0;
-            font-size: 0.84rem;
-            color: var(--text-muted);
-        }
-
-        .chat-status-line {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 6px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: var(--text-muted);
-        }
-
-        .chat-status-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: #cbd5e1;
-            display: inline-block;
-        }
-
-        .chat-modal-body,
-        #chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            background: var(--bg-color);
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .chat-empty-state {
-            margin: auto 0;
-            text-align: center;
-            color: var(--text-muted);
-            padding: 24px;
-            border: 1px dashed var(--border-color);
-            border-radius: 18px;
-            background: var(--surface-color);
-        }
-
-        .chat-message {
-            max-width: 82%;
-            padding: 12px 14px;
-            border-radius: 16px;
-            line-height: 1.6;
-            font-size: 0.93rem;
-            box-shadow: var(--shadow-sm);
-            word-break: break-word;
-        }
-
-        .chat-message.admin {
-            align-self: flex-start;
-            background: var(--surface-color);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-top-left-radius: 6px;
-        }
-
-        .chat-message.customer {
-            align-self: flex-end;
-            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            color: #fff;
-            border-top-right-radius: 6px;
-        }
-
-        .chat-meta {
-            display: block;
-            margin-top: 6px;
-            font-size: 0.75rem;
-            opacity: 0.8;
-        }
-
-        .chat-input-area {
-            border-top: 1px solid var(--border-color);
-            background: var(--surface-color);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .chat-send-form {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .chat-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .chat-note {
-            color: var(--text-muted);
-            font-size: 0.82rem;
+        .booking-status-badge.cancelled,
+        .booking-status-badge.rejected {
+            background: rgba(239, 68, 68, .12);
+            color: #b91c1c;
         }
 
         .favorite-entry-thumb {
@@ -1394,61 +1114,119 @@
             border-color: transparent;
         }
 
-        @media (max-width: 980px) {
-            .prop-content-grid {
-                grid-template-columns: 1fr;
-            }
+        .chat-modal-dialog {
+            width: min(460px, 100%);
+            height: min(720px, 88vh);
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: var(--shadow-hover);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-            .prop-booking-card {
-                position: static;
-                top: auto;
-            }
+        .chat-modal-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .chat-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(67, 90, 191, 0.12);
+            color: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .chat-title-text h3 { margin: 0; font-size: 1rem; }
+        .chat-title-text p { margin: 3px 0 0; font-size: 0.84rem; color: var(--text-muted); }
+
+        .chat-modal-body,
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-color);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-empty-state {
+            margin: auto 0;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 24px;
+            border: 1px dashed var(--border-color);
+            border-radius: 18px;
+            background: var(--surface-color);
+        }
+
+        .chat-input-area {
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-send-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .chat-note {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        @media (max-width: 980px) {
+            .prop-content-grid { grid-template-columns: 1fr; }
+            .prop-booking-card { position: static; top: auto; }
         }
 
         @media (max-width: 768px) {
-            .navbar {
-                padding: 14px 16px;
-            }
-
-            .prop-subnav,
-            .property-page,
-            .container {
-                padding-left: 16px;
-                padding-right: 16px;
-            }
-
-            .features-list {
-                grid-template-columns: 1fr;
-            }
-
-            .gallery-thumbs {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
-
-            .rewards-badge {
-                display: none;
-            }
+            .navbar { padding: 14px 16px; }
+            .prop-subnav, .property-page { padding-left: 16px; padding-right: 16px; }
+            .features-list { grid-template-columns: 1fr; }
+            .gallery-thumbs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .rewards-badge { display: none; }
         }
 
         @media (max-width: 560px) {
-            .nav-actions {
-                gap: 8px;
-            }
-
-            .prop-actions {
-                width: 100%;
-            }
-
-            .share-btn,
-            .fav-property-btn,
-            .contact-host-btn {
+            .nav-actions { gap: 8px; }
+            .prop-actions { width: 100%; }
+            .share-btn, .fav-property-btn, .contact-host-btn {
                 flex: 1 1 calc(50% - 8px);
                 justify-content: center;
             }
-
-            .gallery-thumbs {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
+            .gallery-thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
     </style>
 </head>
@@ -1463,7 +1241,7 @@
             <div class="rewards-badge" id="rewards-badge">
                 <i class="ph ph-gift"></i>
                 <span id="user-points">0</span>
-                <span>pts</span>
+                <span id="points-label">pts</span>
             </div>
 
             <button type="button" class="lang-btn" id="lang-toggle" aria-label="Change language">
@@ -1476,8 +1254,7 @@
             </button>
 
             <div class="profile-container">
-                <button type="button" class="auth-link-btn" id="open-auth-btn" aria-label="Open account menu"
-                    aria-haspopup="menu" aria-expanded="false">
+                <button type="button" class="auth-link-btn" id="open-auth-btn" aria-haspopup="menu" aria-expanded="false">
                     <i class="ph ph-user"></i>
                     <span id="nav-sign-in-text">Sign In</span>
                 </button>
@@ -1485,27 +1262,28 @@
                 <div id="profile-dropdown" role="menu" aria-hidden="true">
                     <div class="dropdown-header">
                         <strong id="dropdown-user-name">Guest User</strong>
-                        <span id="dropdown-user-email" class="text-muted text-sm">Sign in to continue</span>
+                        <span id="dropdown-user-email">Sign in to continue</span>
                     </div>
+
                     <div class="dropdown-body">
                         <button type="button" class="dropdown-item" id="my-bookings-btn" style="display:none;">
                             <i class="ph ph-calendar-check"></i>
-                            <span>My Bookings</span>
+                            <span id="my-bookings-text">My Bookings</span>
                         </button>
 
                         <button type="button" class="dropdown-item" id="my-favorites-btn" style="display:none;">
                             <i class="ph ph-heart"></i>
-                            <span>Favorites</span>
+                            <span id="my-favorites-text">Favorites</span>
                         </button>
 
                         <button type="button" class="dropdown-item" id="open-chat-btn">
                             <i class="ph ph-chat-centered-dots"></i>
-                            <span>Support Chat</span>
+                            <span id="support-chat-text">Support Chat</span>
                         </button>
 
                         <button type="button" class="dropdown-item text-danger" id="logout-btn" style="display:none;">
                             <i class="ph ph-sign-out"></i>
-                            <span>Sign Out</span>
+                            <span id="logout-text">Sign Out</span>
                         </button>
                     </div>
                 </div>
@@ -1535,17 +1313,17 @@
                 <div class="prop-actions">
                     <button type="button" class="share-btn" id="share-property-btn">
                         <i class="ph ph-share-network"></i>
-                        <span>Share</span>
+                        <span id="share-btn-text">Share</span>
                     </button>
 
                     <button type="button" class="fav-property-btn" id="fav-property-btn">
                         <i class="ph ph-heart"></i>
-                        <span>Favorite</span>
+                        <span id="fav-btn-text">Favorite</span>
                     </button>
 
                     <button type="button" class="contact-host-btn" id="contact-host-btn">
                         <i class="ph ph-chat-centered-dots"></i>
-                        <span>Contact Host</span>
+                        <span id="contact-host-text">Contact Host</span>
                     </button>
                 </div>
             </div>
@@ -1554,7 +1332,7 @@
                 <span class="quick-chip"><i class="ph ph-house"></i><span id="property-type">Apartment</span></span>
                 <span class="quick-chip"><i class="ph ph-bed"></i><span id="property-bedrooms">2 bedrooms</span></span>
                 <span class="quick-chip"><i class="ph ph-bathtub"></i><span id="property-bathrooms">1 bathroom</span></span>
-                <span class="quick-chip"><i class="ph ph-wifi-high"></i><span>Fast Wi‑Fi</span></span>
+                <span class="quick-chip"><i class="ph ph-wifi-high"></i><span id="wifi-label">Fast Wi‑Fi</span></span>
             </div>
         </section>
 
@@ -1565,10 +1343,6 @@
                 </div>
 
                 <span class="slider-count-badge" id="slider-count-badge">1 / 1</span>
-
-                <button class="slider-fullscreen-btn" id="open-lightbox-btn" type="button" aria-label="Open gallery">
-                    <i class="ph ph-arrows-out"></i>
-                </button>
 
                 <button class="slider-btn prev-btn" id="prev-slide-btn" type="button" aria-label="Previous image">
                     <i class="ph ph-caret-left"></i>
@@ -1589,11 +1363,9 @@
                 <div class="prop-details-section">
                     <h2 class="section-title">
                         <i class="ph ph-file-text"></i>
-                        <span>Description</span>
+                        <span id="description-title">Description</span>
                     </h2>
-                    <p class="prop-description" id="property-description">
-                        Loading property description...
-                    </p>
+                    <p class="prop-description" id="property-description">Loading property description...</p>
                 </div>
 
                 <div class="host-card">
@@ -1607,7 +1379,7 @@
                     <div class="host-actions">
                         <button type="button" class="contact-host-btn" id="contact-host-btn-inline">
                             <i class="ph ph-chat-circle-dots"></i>
-                            <span>Message host</span>
+                            <span id="message-host-text">Message host</span>
                         </button>
                     </div>
                 </div>
@@ -1615,25 +1387,20 @@
                 <div class="prop-details-section">
                     <h2 class="section-title">
                         <i class="ph ph-sparkle"></i>
-                        <span>Amenities</span>
+                        <span id="amenities-title">Amenities</span>
                     </h2>
-                    <ul class="features-list" id="property-features">
-                        <li><i class="ph ph-check-circle"></i><span>Wi‑Fi</span></li>
-                        <li><i class="ph ph-check-circle"></i><span>Air Conditioning</span></li>
-                        <li><i class="ph ph-check-circle"></i><span>Parking</span></li>
-                        <li><i class="ph ph-check-circle"></i><span>Kitchen</span></li>
-                    </ul>
+                    <ul class="features-list" id="property-features"></ul>
                 </div>
 
                 <div class="map-card">
                     <h2 class="section-title">
                         <i class="ph ph-map-trifold"></i>
-                        <span>Location</span>
+                        <span id="location-title">Location</span>
                     </h2>
                     <div id="property-map"></div>
                     <a href="#" target="_blank" rel="noopener" class="map-open-btn" id="open-map-link">
                         <i class="ph ph-map-pin-line"></i>
-                        <span>Open in Maps</span>
+                        <span id="open-map-text">Open in Maps</span>
                     </a>
                 </div>
             </div>
@@ -1641,17 +1408,17 @@
             <aside class="prop-booking-card">
                 <div class="booking-price">
                     <span class="price-val" id="property-price">15000 DZD</span>
-                    <span>/ night</span>
+                    <span id="per-night-text">/ night</span>
                 </div>
 
-                <a href="#" class="primary-btn" id="book-now-btn">
+                <button type="button" class="primary-btn" id="book-now-btn">
                     <i class="ph ph-calendar-plus"></i>
-                    <span>Book Now</span>
-                </a>
+                    <span id="book-now-text">Book Now</span>
+                </button>
 
                 <button type="button" class="secondary-action-btn" id="open-chat-from-card">
                     <i class="ph ph-chat-centered-dots"></i>
-                    <span>Ask about this property</span>
+                    <span id="ask-property-text">Ask about this property</span>
                 </button>
             </aside>
         </section>
@@ -1663,9 +1430,8 @@
     </button>
 
     <div class="modal-overlay" id="auth-modal" aria-hidden="true">
-        <div class="modal-content auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
-            <button type="button" class="close-modal-btn"
-                onclick="document.getElementById('auth-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('auth-modal').setAttribute('aria-hidden','true');">
+        <div class="modal-content auth-card" role="dialog" aria-modal="true">
+            <button type="button" class="close-modal-btn" id="close-auth-modal-btn">
                 <i class="ph ph-x"></i>
             </button>
 
@@ -1677,16 +1443,16 @@
                 <div id="auth-message" class="auth-message"></div>
 
                 <form id="login-form" class="auth-form active">
-                    <h2 class="auth-title" id="auth-dialog-title">Welcome Back</h2>
-                    <p class="auth-subtitle">Sign in to access your bookings and favorites.</p>
+                    <h2 class="auth-title" id="login-title">Welcome Back</h2>
+                    <p class="auth-subtitle" id="login-subtitle">Sign in to access your bookings and favorites.</p>
 
                     <div class="input-group">
-                        <label for="login-email">Email</label>
+                        <label for="login-email" id="email-label">Email</label>
                         <input id="login-email" type="email" autocomplete="email">
                     </div>
 
                     <div class="input-group">
-                        <label for="login-password">Password</label>
+                        <label for="login-password" id="password-label">Password</label>
                         <div class="pass-wrapper">
                             <input id="login-password" type="password" autocomplete="current-password">
                             <button type="button" class="toggle-pass-btn" data-target="login-password">
@@ -1696,31 +1462,31 @@
                     </div>
 
                     <button type="submit" class="primary-btn" id="login-submit-btn">
-                        <span>Sign In</span>
+                        <span id="login-btn-text">Sign In</span>
                     </button>
 
                     <p class="switch-form-text">
-                        Don't have an account?
-                        <a href="#" data-auth-tab="register">Register</a>
+                        <span id="no-account-text">Don't have an account?</span>
+                        <a href="#" data-auth-tab="register" id="register-link-text">Register</a>
                     </p>
                 </form>
 
                 <form id="register-form" class="auth-form">
-                    <h2 class="auth-title">Create Account</h2>
-                    <p class="auth-subtitle">Join OreBooking for the best deals.</p>
+                    <h2 class="auth-title" id="register-title">Create Account</h2>
+                    <p class="auth-subtitle" id="register-subtitle">Join OreBooking for the best deals.</p>
 
                     <div class="input-group">
-                        <label for="reg-name">Full Name</label>
+                        <label for="reg-name" id="full-name-label">Full Name</label>
                         <input id="reg-name" type="text" autocomplete="name">
                     </div>
 
                     <div class="input-group">
-                        <label for="reg-email">Email</label>
+                        <label for="reg-email" id="register-email-label">Email</label>
                         <input id="reg-email" type="email" autocomplete="email">
                     </div>
 
                     <div class="input-group">
-                        <label for="reg-password">Password</label>
+                        <label for="reg-password" id="register-password-label">Password</label>
                         <div class="pass-wrapper">
                             <input id="reg-password" type="password" autocomplete="new-password">
                             <button type="button" class="toggle-pass-btn" data-target="reg-password">
@@ -1730,7 +1496,7 @@
                     </div>
 
                     <div class="input-group">
-                        <label for="reg-confirm">Confirm Password</label>
+                        <label for="reg-confirm" id="confirm-password-label">Confirm Password</label>
                         <div class="pass-wrapper">
                             <input id="reg-confirm" type="password" autocomplete="new-password">
                             <button type="button" class="toggle-pass-btn" data-target="reg-confirm">
@@ -1740,12 +1506,12 @@
                     </div>
 
                     <button type="submit" class="primary-btn" id="register-submit-btn">
-                        <span>Register</span>
+                        <span id="register-btn-text">Register</span>
                     </button>
 
                     <p class="switch-form-text">
-                        Already have an account?
-                        <a href="#" data-auth-tab="login">Sign In</a>
+                        <span id="have-account-text">Already have an account?</span>
+                        <a href="#" data-auth-tab="login" id="signin-link-text">Sign In</a>
                     </p>
                 </form>
             </div>
@@ -1753,14 +1519,13 @@
     </div>
 
     <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-dialog-title">
+        <div class="bookings-modal-dialog" role="dialog" aria-modal="true">
             <div class="bookings-modal-header">
-                <h3 id="bookings-dialog-title">
+                <h3>
                     <i class="ph ph-calendar-check"></i>
-                    <span>My Bookings</span>
+                    <span id="bookings-modal-title">My Bookings</span>
                 </h3>
-                <button type="button"
-                    onclick="document.getElementById('bookings-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('bookings-modal').setAttribute('aria-hidden','true');">
+                <button type="button" id="close-bookings-btn">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
@@ -1769,38 +1534,22 @@
     </div>
 
     <div class="bookings-modal" id="favorites-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="favorites-dialog-title">
+        <div class="bookings-modal-dialog" role="dialog" aria-modal="true">
             <div class="bookings-modal-header">
-                <h3 id="favorites-dialog-title">
+                <h3>
                     <i class="ph ph-heart-straight"></i>
-                    <span>My Favorites</span>
+                    <span id="favorites-modal-title">My Favorites</span>
                 </h3>
-                <button type="button"
-                    onclick="document.getElementById('favorites-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('favorites-modal').setAttribute('aria-hidden','true');">
+                <button type="button" id="close-favorites-btn">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-            <div class="bookings-modal-body" id="favorites-list">
-                <div class="booking-entry">
-                    <div class="booking-entry-head">
-                        <div>
-                            <h4 class="booking-entry-title">No favorites yet.</h4>
-                            <div class="booking-entry-meta">
-                                <span>Properties you save will appear here.</span>
-                            </div>
-                        </div>
-                        <span class="booking-status-badge pending">
-                            <i class="ph ph-heart"></i>
-                            <span>Empty</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
+            <div class="bookings-modal-body" id="favorites-list"></div>
         </div>
     </div>
 
     <div class="chat-modal" id="chat-modal" aria-hidden="true">
-        <div class="chat-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-title">
+        <div class="chat-modal-dialog" role="dialog" aria-modal="true">
             <div class="chat-modal-header">
                 <div class="chat-modal-title">
                     <div class="chat-avatar">
@@ -1809,21 +1558,16 @@
                     <div class="chat-title-text">
                         <h3 id="chat-title">OreBooking Support</h3>
                         <p id="chat-subtitle">Typically replies in minutes</p>
-                        <div class="chat-status-line syncing" id="chat-connection-status">
-                            <span class="chat-status-dot"></span>
-                            <span id="chat-connection-text">Preparing secure connection...</span>
-                        </div>
                     </div>
                 </div>
 
-                <button type="button" class="chat-close-btn"
-                    onclick="document.getElementById('chat-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('chat-modal').setAttribute('aria-hidden','true');">
+                <button type="button" class="chat-close-btn" id="close-chat-btn">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
             <div id="chat-messages">
-                <div class="chat-empty-state" id="chat-empty-state">
+                <div class="chat-empty-state">
                     <p id="chat-empty-title" style="font-weight:800;margin-bottom:8px;">No messages yet.</p>
                     <p id="chat-empty-subtitle">Start the conversation to contact support and receive replies here directly.</p>
                 </div>
@@ -1832,19 +1576,11 @@
             <div class="chat-input-area">
                 <form id="chat-send-form" class="chat-send-form">
                     <textarea id="chat-input" rows="3" placeholder="Type a message..."></textarea>
-
-                    <input type="hidden" id="chat-current-id">
-                    <input type="hidden" id="chat-current-booking-id">
-                    <input type="hidden" id="chat-current-user-id">
-                    <input type="hidden" id="chat-current-user-email">
-                    <input type="hidden" id="chat-current-user-name">
-                    <input type="hidden" id="chat-property-id">
-
                     <div class="chat-actions">
                         <span class="chat-note" id="chat-note">Messages in this chat are synced with support through Firebase.</span>
                         <button type="submit" class="primary-btn" id="chat-send-btn">
                             <i class="ph ph-paper-plane-tilt"></i>
-                            <span>Send</span>
+                            <span id="send-text">Send</span>
                         </button>
                     </div>
                 </form>
@@ -1854,78 +1590,6 @@
 
     <script>
         (() => {
-            const $ = (id) => document.getElementById(id);
-            const safeGet = (key, fallback = null) => {
-                try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-            };
-            const safeSet = (key, value) => {
-                try { localStorage.setItem(key, value); } catch { }
-            };
-            const safeJsonGet = (key, fallback = []) => {
-                try {
-                    const raw = localStorage.getItem(key);
-                    return raw ? JSON.parse(raw) : fallback;
-                } catch { return fallback; }
-            };
-            const safeJsonSet = (key, value) => {
-                try { localStorage.setItem(key, JSON.stringify(value)); } catch { }
-            };
-
-            const state = {
-                lang: safeGet("ore_lang") || safeGet("orelang") || "en",
-                theme: safeGet("ore_theme") || safeGet("oretheme") || "light",
-                currentUser: null,
-                favorites: safeJsonGet("ore_favorites", []),
-                propertyId: new URLSearchParams(location.search).get("id") || "",
-                property: null
-            };
-
-            const els = {
-                body: document.body,
-                html: document.documentElement,
-                langBtn: $("lang-toggle"),
-                langBtnText: $("lang-toggle-text"),
-                themeBtn: $("theme-toggle"),
-                profileMenu: $("open-auth-btn"),
-                profileDropdown: $("profile-dropdown"),
-                dropdownUserName: $("dropdown-user-name"),
-                dropdownUserEmail: $("dropdown-user-email"),
-                userPoints: $("user-points"),
-                logoutBtn: $("logout-btn"),
-                myBookingsBtn: $("my-bookings-btn"),
-                myFavoritesBtn: $("my-favorites-btn"),
-                openChatBtn: $("open-chat-btn"),
-                navSignInText: $("nav-sign-in-text"),
-                siteLogo: $("site-logo"),
-                authLogo: $("auth-logo"),
-                authModal: $("auth-modal"),
-                bookingsModal: $("bookings-modal"),
-                favoritesModal: $("favorites-modal"),
-                chatModal: $("chat-modal"),
-                chatOpenBtn: $("chat-open-btn"),
-                favPropertyBtn: $("fav-property-btn"),
-                bookNowBtn: $("book-now-btn"),
-                propertyTitle: $("property-title"),
-                propertyLocation: $("property-location"),
-                propertyPrice: $("property-price"),
-                propertyDescription: $("property-description"),
-                propertyRating: $("property-rating"),
-                propertyGuests: $("property-guests"),
-                propertyType: $("property-type"),
-                propertyBedrooms: $("property-bedrooms"),
-                propertyBathrooms: $("property-bathrooms"),
-                propertyFeatures: $("property-features"),
-                sliderTrack: $("slider-track"),
-                sliderDots: $("slider-dots"),
-                galleryThumbs: $("gallery-thumbs"),
-                sliderCountBadge: $("slider-count-badge"),
-                prevSlideBtn: $("prev-slide-btn"),
-                nextSlideBtn: $("next-slide-btn"),
-                sharePropertyBtn: $("share-property-btn"),
-                openMapLink: $("open-map-link"),
-                propertyMap: $("property-map")
-            };
-
             const firebaseConfig = {
                 apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
                 authDomain: "orebooking-website.firebaseapp.com",
@@ -1939,7 +1603,7 @@
             let auth = null;
             let map = null;
             let currentSlide = 0;
-            let images = ["images/placeholder.jpg"];
+            let galleryImages = ["images/placeholder.jpg"];
 
             try {
                 if (typeof firebase !== "undefined") {
@@ -1948,31 +1612,306 @@
                     if (typeof firebase.auth === "function") auth = firebase.auth();
                 }
             } catch (e) {
-                console.error(e);
+                console.error("Firebase init error:", e);
+            }
+
+            const $ = (id) => document.getElementById(id);
+
+            function safeGet(key, fallback = null) {
+                try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+            }
+
+            function safeSet(key, value) {
+                try { localStorage.setItem(key, value); } catch {}
+            }
+
+            function safeJsonGet(key, fallback = null) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    return raw ? JSON.parse(raw) : fallback;
+                } catch {
+                    return fallback;
+                }
+            }
+
+            function safeJsonSet(key, value) {
+                try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+            }
+
+            const state = {
+                lang: (() => {
+                    const l = safeGet("ore_lang") || safeGet("orelang") || "en";
+                    return l === "ar" ? "ar" : "en";
+                })(),
+                theme: safeGet("ore_theme") || safeGet("oretheme") || "light",
+                currentUser: null,
+                currentUserProfile: null,
+                propertyId: new URLSearchParams(location.search).get("id") || "",
+                property: null,
+                favorites: safeJsonGet("ore_favorites", []),
+                bookings: []
+            };
+
+            const i18n = {
+                en: {
+                    points: "pts",
+                    signIn: "Sign In",
+                    signOut: "Sign Out",
+                    guestUser: "Guest User",
+                    signInToContinue: "Sign in to continue",
+                    myBookings: "My Bookings",
+                    myFavorites: "Favorites",
+                    supportChat: "Support Chat",
+                    backToListings: "Back to listings",
+                    share: "Share",
+                    favorite: "Favorite",
+                    favorited: "Favorited",
+                    contactHost: "Contact Host",
+                    fastWifi: "Fast Wi‑Fi",
+                    description: "Description",
+                    amenities: "Amenities",
+                    location: "Location",
+                    openMaps: "Open in Maps",
+                    night: "/ night",
+                    bookNow: "Book Now",
+                    askProperty: "Ask about this property",
+                    verifiedHost: "Verified host",
+                    messageHost: "Message host",
+                    loadingProperty: "Loading property...",
+                    loadingDescription: "Loading property description...",
+                    email: "Email",
+                    password: "Password",
+                    fullName: "Full Name",
+                    confirmPassword: "Confirm Password",
+                    welcomeBack: "Welcome Back",
+                    loginSubtitle: "Sign in to access your bookings and favorites.",
+                    createAccount: "Create Account",
+                    registerSubtitle: "Join OreBooking for the best deals.",
+                    noAccount: "Don't have an account?",
+                    haveAccount: "Already have an account?",
+                    register: "Register",
+                    noMessages: "No messages yet.",
+                    startConversation: "Start the conversation to contact support and receive replies here directly.",
+                    chatTitle: "OreBooking Support",
+                    chatSubtitle: "Typically replies in minutes",
+                    chatPlaceholder: "Type a message...",
+                    chatNote: "Messages in this chat are synced with support through Firebase.",
+                    send: "Send",
+                    fillAllFields: "Please fill all fields",
+                    passwordShort: "Password too short",
+                    passwordsDontMatch: "Passwords don't match",
+                    resetLinkSent: "Reset link sent!",
+                    accountCreated: "Account created!",
+                    signedIn: "Signed in!",
+                    signedOut: "Signed out.",
+                    loginRequired: "Please sign in to continue.",
+                    noFavorites: "No favorites yet.",
+                    favoritesDesc: "Properties you save will appear here.",
+                    viewDetails: "View Details",
+                    remove: "Remove",
+                    noBookings: "No bookings yet.",
+                    noBookingsDesc: "Your confirmed bookings will appear here.",
+                    bookingProperty: "Property",
+                    bookingStatus: "Status",
+                    bookingDates: "Dates",
+                    bookingGuests: "Guests",
+                    pending: "Pending",
+                    confirmed: "Confirmed",
+                    cancelled: "Cancelled",
+                    rejected: "Rejected",
+                    propertyNotFound: "Property not found.",
+                    locationUnavailable: "Location is not available for this property.",
+                    linkCopied: "Link copied",
+                    shareFailed: "Unable to share right now"
+                },
+                ar: {
+                    points: "نقطة",
+                    signIn: "تسجيل الدخول",
+                    signOut: "تسجيل الخروج",
+                    guestUser: "مستخدم ضيف",
+                    signInToContinue: "سجل الدخول للمتابعة",
+                    myBookings: "حجوزاتي",
+                    myFavorites: "المفضلة",
+                    supportChat: "الدعم المباشر",
+                    backToListings: "العودة إلى العقارات",
+                    share: "مشاركة",
+                    favorite: "إضافة للمفضلة",
+                    favorited: "في المفضلة",
+                    contactHost: "تواصل مع المضيف",
+                    fastWifi: "واي فاي سريع",
+                    description: "الوصف",
+                    amenities: "المرافق",
+                    location: "الموقع",
+                    openMaps: "فتح في الخرائط",
+                    night: "/ ليلة",
+                    bookNow: "احجز الآن",
+                    askProperty: "اسأل عن هذا العقار",
+                    verifiedHost: "مضيف موثق",
+                    messageHost: "مراسلة المضيف",
+                    loadingProperty: "جارٍ تحميل العقار...",
+                    loadingDescription: "جارٍ تحميل وصف العقار...",
+                    email: "البريد الإلكتروني",
+                    password: "كلمة المرور",
+                    fullName: "الاسم الكامل",
+                    confirmPassword: "تأكيد كلمة المرور",
+                    welcomeBack: "مرحبًا بعودتك",
+                    loginSubtitle: "سجل الدخول للوصول إلى حجوزاتك ومفضلتك.",
+                    createAccount: "إنشاء حساب",
+                    registerSubtitle: "انضم إلى OreBooking للحصول على أفضل العروض.",
+                    noAccount: "ليس لديك حساب؟",
+                    haveAccount: "لديك حساب بالفعل؟",
+                    register: "إنشاء حساب",
+                    noMessages: "لا توجد رسائل بعد.",
+                    startConversation: "ابدأ المحادثة للتواصل مع الدعم وستظهر الردود هنا مباشرة.",
+                    chatTitle: "دعم OreBooking",
+                    chatSubtitle: "يرد عادةً خلال دقائق",
+                    chatPlaceholder: "اكتب رسالة...",
+                    chatNote: "رسائل هذه المحادثة متزامنة مع الدعم عبر Firebase.",
+                    send: "إرسال",
+                    fillAllFields: "يرجى ملء جميع الحقول",
+                    passwordShort: "كلمة المرور قصيرة جدًا",
+                    passwordsDontMatch: "كلمتا المرور غير متطابقتين",
+                    resetLinkSent: "تم إرسال رابط الاستعادة!",
+                    accountCreated: "تم إنشاء الحساب!",
+                    signedIn: "تم تسجيل الدخول!",
+                    signedOut: "تم تسجيل الخروج.",
+                    loginRequired: "يرجى تسجيل الدخول للمتابعة.",
+                    noFavorites: "لا توجد مفضلة بعد.",
+                    favoritesDesc: "ستظهر هنا العقارات التي تحفظها.",
+                    viewDetails: "عرض التفاصيل",
+                    remove: "إزالة",
+                    noBookings: "لا توجد حجوزات حتى الآن.",
+                    noBookingsDesc: "ستظهر هنا حجوزاتك المؤكدة.",
+                    bookingProperty: "العقار",
+                    bookingStatus: "الحالة",
+                    bookingDates: "التواريخ",
+                    bookingGuests: "الضيوف",
+                    pending: "قيد الانتظار",
+                    confirmed: "مؤكد",
+                    cancelled: "ملغى",
+                    rejected: "مرفوض",
+                    propertyNotFound: "العقار غير موجود.",
+                    locationUnavailable: "موقع هذا العقار غير متوفر.",
+                    linkCopied: "تم نسخ الرابط",
+                    shareFailed: "تعذر تنفيذ المشاركة الآن"
+                }
+            };
+
+            function t(key) {
+                return i18n[state.lang]?.[key] || i18n.en[key] || key;
+            }
+
+            function cleanText(v) {
+                return String(v ?? "").trim();
+            }
+
+            function escapeHtml(str) {
+                const d = document.createElement("div");
+                d.textContent = String(str ?? "");
+                return d.innerHTML;
+            }
+
+            function openModal(el) {
+                if (!el) return;
+                el.classList.add("active");
+                el.setAttribute("aria-hidden", "false");
+                document.body.classList.add("modal-open");
+            }
+
+            function closeModal(el) {
+                if (!el) return;
+                el.classList.remove("active");
+                el.setAttribute("aria-hidden", "true");
+                if (!document.querySelector(".modal-overlay.active, .bookings-modal.active, .chat-modal.active")) {
+                    document.body.classList.remove("modal-open");
+                }
             }
 
             function applyTheme() {
                 if (state.theme === "dark") {
-                    els.body.classList.add("dark");
-                    els.html.classList.add("dark");
+                    document.body.classList.add("dark");
+                    document.documentElement.classList.add("dark");
                 } else {
-                    els.body.classList.remove("dark");
-                    els.html.classList.remove("dark");
+                    document.body.classList.remove("dark");
+                    document.documentElement.classList.remove("dark");
                 }
 
-                const icon = els.themeBtn?.querySelector("i");
+                const icon = $("theme-toggle")?.querySelector("i");
                 if (icon) icon.className = state.theme === "dark" ? "ph ph-sun" : "ph ph-moon";
 
                 const logo = state.theme === "dark" ? "logos/orebooking2.png" : "logos/orebooking.png";
-                if (els.siteLogo) els.siteLogo.src = logo;
-                if (els.authLogo) els.authLogo.src = logo;
+                if ($("site-logo")) $("site-logo").src = logo;
+                if ($("auth-logo")) $("auth-logo").src = logo;
             }
 
             function applyLang() {
-                const isAr = state.lang === "ar";
-                els.html.lang = isAr ? "ar" : "en";
-                els.html.dir = isAr ? "rtl" : "ltr";
-                if (els.langBtnText) els.langBtnText.textContent = isAr ? "EN" : "AR";
+                document.documentElement.lang = state.lang;
+                document.documentElement.dir = state.lang === "ar" ? "rtl" : "ltr";
+
+                if ($("lang-toggle-text")) $("lang-toggle-text").textContent = state.lang === "ar" ? "EN" : "AR";
+
+                $("points-label").textContent = t("points");
+                $("my-bookings-text").textContent = t("myBookings");
+                $("my-favorites-text").textContent = t("myFavorites");
+                $("support-chat-text").textContent = t("supportChat");
+                $("logout-text").textContent = t("signOut");
+                $("back-home-text").textContent = t("backToListings");
+                $("share-btn-text").textContent = t("share");
+                $("contact-host-text").textContent = t("contactHost");
+                $("wifi-label").textContent = t("fastWifi");
+                $("description-title").textContent = t("description");
+                $("amenities-title").textContent = t("amenities");
+                $("location-title").textContent = t("location");
+                $("open-map-text").textContent = t("openMaps");
+                $("per-night-text").textContent = t("night");
+                $("book-now-text").textContent = t("bookNow");
+                $("ask-property-text").textContent = t("askProperty");
+                $("host-role").textContent = t("verifiedHost");
+                $("message-host-text").textContent = t("messageHost");
+                $("login-title").textContent = t("welcomeBack");
+                $("login-subtitle").textContent = t("loginSubtitle");
+                $("email-label").textContent = t("email");
+                $("password-label").textContent = t("password");
+                $("login-btn-text").textContent = t("signIn");
+                $("no-account-text").textContent = t("noAccount");
+                $("register-link-text").textContent = t("register");
+                $("register-title").textContent = t("createAccount");
+                $("register-subtitle").textContent = t("registerSubtitle");
+                $("full-name-label").textContent = t("fullName");
+                $("register-email-label").textContent = t("email");
+                $("register-password-label").textContent = t("password");
+                $("confirm-password-label").textContent = t("confirmPassword");
+                $("register-btn-text").textContent = t("register");
+                $("have-account-text").textContent = t("haveAccount");
+                $("signin-link-text").textContent = t("signIn");
+                $("bookings-modal-title").textContent = t("myBookings");
+                $("favorites-modal-title").textContent = t("myFavorites");
+                $("chat-title").textContent = t("chatTitle");
+                $("chat-subtitle").textContent = t("chatSubtitle");
+                $("chat-empty-title").textContent = t("noMessages");
+                $("chat-empty-subtitle").textContent = t("startConversation");
+                $("chat-note").textContent = t("chatNote");
+                $("send-text").textContent = t("send");
+                $("chat-input").placeholder = t("chatPlaceholder");
+
+                updateAuthTexts();
+                updateFavoriteButton();
+                renderFavorites();
+                renderBookings();
+                if (!state.property) {
+                    $("property-title").textContent = t("loadingProperty");
+                    $("property-description").textContent = t("loadingDescription");
+                } else {
+                    renderProperty(state.property);
+                }
+            }
+
+            function updateAuthTexts() {
+                if (!state.currentUser) {
+                    $("nav-sign-in-text").textContent = t("signIn");
+                    $("dropdown-user-name").textContent = t("guestUser");
+                    $("dropdown-user-email").textContent = t("signInToContinue");
+                }
             }
 
             function toggleTheme() {
@@ -1989,34 +1928,51 @@
                 applyLang();
             }
 
-            function openModal(el) {
-                if (!el) return;
-                el.classList.add("active");
-                el.setAttribute("aria-hidden", "false");
-                els.body.classList.add("modal-open");
-            }
-
-            function closeModal(el) {
-                if (!el) return;
-                el.classList.remove("active");
-                el.setAttribute("aria-hidden", "true");
-                if (!document.querySelector(".modal-overlay.active, .bookings-modal.active, .chat-modal.active")) {
-                    els.body.classList.remove("modal-open");
-                }
-            }
-
             function openProfileDropdown() {
-                if (!els.profileDropdown || !els.profileMenu) return;
-                els.profileDropdown.classList.add("active");
-                els.profileDropdown.setAttribute("aria-hidden", "false");
-                els.profileMenu.setAttribute("aria-expanded", "true");
+                $("profile-dropdown").classList.add("active");
+                $("profile-dropdown").setAttribute("aria-hidden", "false");
+                $("open-auth-btn").setAttribute("aria-expanded", "true");
             }
 
             function closeProfileDropdown() {
-                if (!els.profileDropdown || !els.profileMenu) return;
-                els.profileDropdown.classList.remove("active");
-                els.profileDropdown.setAttribute("aria-hidden", "true");
-                els.profileMenu.setAttribute("aria-expanded", "false");
+                $("profile-dropdown").classList.remove("active");
+                $("profile-dropdown").setAttribute("aria-hidden", "true");
+                $("open-auth-btn").setAttribute("aria-expanded", "false");
+            }
+
+            function getPropertyTitle(p) {
+                return state.lang === "ar"
+                    ? (p.titleAr || p.title || p.titleEn || "عقار")
+                    : (p.titleEn || p.title || p.titleAr || "Property");
+            }
+
+            function getPropertyDescription(p) {
+                return state.lang === "ar"
+                    ? (p.descriptionAr || p.description || p.descriptionEn || "")
+                    : (p.descriptionEn || p.description || p.descriptionAr || "");
+            }
+
+            function getPropertyLocation(p) {
+                return state.lang === "ar"
+                    ? (p.locationAr || p.location || p.locationEn || "")
+                    : (p.locationEn || p.location || p.locationAr || "");
+            }
+
+            function getPropertyType(p) {
+                return state.lang === "ar"
+                    ? (p.typeAr || p.type || p.typeEn || "")
+                    : (p.typeEn || p.type || p.typeAr || "");
+            }
+
+            function getPropertyImages(p) {
+                if (Array.isArray(p.images) && p.images.length) return p.images;
+                if (p.imageUrl) return [p.imageUrl];
+                if (p.mainImage) return [p.mainImage];
+                return ["images/placeholder.jpg"];
+            }
+
+            function getPropertyPrice(p) {
+                return Number(p.price || p.pricePerNight || p.basePrice || 0);
             }
 
             function isFav(id) {
@@ -2024,18 +1980,22 @@
             }
 
             function updateFavoriteButton() {
-                if (!els.favPropertyBtn || !state.propertyId) return;
+                const btn = $("fav-property-btn");
+                if (!btn || !state.propertyId) return;
+
                 const active = isFav(state.propertyId);
-                els.favPropertyBtn.classList.toggle("active", active);
-                els.favPropertyBtn.innerHTML = `
-                    <i class="ph ${active ? "ph-heart-fill" : "ph-heart"}"></i>
-                    <span>${active ? "Favorited" : "Favorite"}</span>
-                `;
+                btn.classList.toggle("active", active);
+
+                const icon = btn.querySelector("i");
+                const text = $("fav-btn-text");
+
+                if (icon) icon.className = active ? "ph ph-heart-fill" : "ph ph-heart";
+                if (text) text.textContent = active ? t("favorited") : t("favorite");
             }
 
             function toggleFavorite() {
                 if (!state.currentUser) {
-                    openModal(els.authModal);
+                    openModal($("auth-modal"));
                     return;
                 }
 
@@ -2045,16 +2005,21 @@
 
                 safeJsonSet("ore_favorites", state.favorites);
                 updateFavoriteButton();
+                renderFavorites();
             }
 
             function renderGallery() {
-                if (!els.sliderTrack || !els.sliderDots || !els.galleryThumbs || !els.sliderCountBadge) return;
+                $("slider-track").innerHTML = galleryImages.map(src => `
+                    <img src="${escapeHtml(src)}" alt="Property image" onerror="this.src='images/placeholder.jpg'">
+                `).join("");
 
-                els.sliderTrack.innerHTML = images.map(src => `<img src="${src}" alt="Property image" onerror="this.src='images/placeholder.jpg'">`).join("");
-                els.sliderDots.innerHTML = images.map((_, i) => `<button class="slider-dot ${i === currentSlide ? "active" : ""}" data-index="${i}"></button>`).join("");
-                els.galleryThumbs.innerHTML = images.map((src, i) => `
-                    <button class="gallery-thumb ${i === currentSlide ? "active" : ""}" data-index="${i}" type="button">
-                        <img src="${src}" alt="Thumbnail ${i + 1}" onerror="this.src='images/placeholder.jpg'">
+                $("slider-dots").innerHTML = galleryImages.map((_, i) => `
+                    <button class="slider-dot ${i === currentSlide ? "active" : ""}" data-index="${i}"></button>
+                `).join("");
+
+                $("gallery-thumbs").innerHTML = galleryImages.map((src, i) => `
+                    <button type="button" class="gallery-thumb ${i === currentSlide ? "active" : ""}" data-index="${i}">
+                        <img src="${escapeHtml(src)}" alt="thumb ${i + 1}" onerror="this.src='images/placeholder.jpg'">
                     </button>
                 `).join("");
 
@@ -2062,79 +2027,68 @@
             }
 
             function updateSlider() {
-                if (!els.sliderTrack || !els.sliderCountBadge) return;
-                els.sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
-                els.sliderCountBadge.textContent = `${currentSlide + 1} / ${images.length}`;
+                $("slider-track").style.transform = `translateX(-${currentSlide * 100}%)`;
+                $("slider-count-badge").textContent = `${currentSlide + 1} / ${galleryImages.length}`;
 
-                els.sliderDots.querySelectorAll(".slider-dot").forEach((dot, i) => {
+                document.querySelectorAll(".slider-dot").forEach((dot, i) => {
                     dot.classList.toggle("active", i === currentSlide);
                 });
 
-                els.galleryThumbs.querySelectorAll(".gallery-thumb").forEach((thumb, i) => {
+                document.querySelectorAll(".gallery-thumb").forEach((thumb, i) => {
                     thumb.classList.toggle("active", i === currentSlide);
                 });
             }
 
             function nextSlide() {
-                currentSlide = (currentSlide + 1) % images.length;
+                currentSlide = (currentSlide + 1) % galleryImages.length;
                 updateSlider();
             }
 
             function prevSlide() {
-                currentSlide = (currentSlide - 1 + images.length) % images.length;
+                currentSlide = (currentSlide - 1 + galleryImages.length) % galleryImages.length;
                 updateSlider();
             }
 
-            function renderProperty(p) {
-                state.property = p;
-                images = Array.isArray(p.images) && p.images.length ? p.images : [p.imageUrl || p.mainImage || "images/placeholder.jpg"];
+            function renderProperty(property) {
+                state.property = property;
+                galleryImages = getPropertyImages(property);
                 currentSlide = 0;
 
-                if (els.propertyTitle) els.propertyTitle.textContent = p.titleEn || p.title || p.titleAr || "Property";
-                if (els.propertyLocation) els.propertyLocation.textContent = p.locationEn || p.location || p.locationAr || "Algeria";
-                if (els.propertyPrice) els.propertyPrice.textContent = `${p.price || p.pricePerNight || p.basePrice || 0} DZD`;
-                if (els.propertyDescription) els.propertyDescription.textContent = p.descriptionEn || p.description || p.descriptionAr || "No description available.";
-                if (els.propertyRating) els.propertyRating.textContent = (p.rating || 4.9).toString();
-                if (els.propertyGuests) els.propertyGuests.textContent = `${p.guests || p.maxGuests || 4} guests`;
-                if (els.propertyType) els.propertyType.textContent = p.typeEn || p.type || p.typeAr || "Stay";
-                if (els.propertyBedrooms) els.propertyBedrooms.textContent = `${p.bedrooms || 2} bedrooms`;
-                if (els.propertyBathrooms) els.propertyBathrooms.textContent = `${p.bathrooms || 1} bathrooms`;
+                $("property-title").textContent = getPropertyTitle(property) || t("propertyNotFound");
+                $("property-rating").textContent = Number(property.rating || 4.9).toFixed(1);
+                $("property-location").textContent = getPropertyLocation(property);
+                $("property-guests").textContent = `${property.guests || property.maxGuests || 1} ${state.lang === "ar" ? "ضيف" : "guests"}`;
+                $("property-type").textContent = getPropertyType(property) || (state.lang === "ar" ? "إقامة" : "Stay");
+                $("property-bedrooms").textContent = `${property.bedrooms || 1} ${state.lang === "ar" ? "غرف نوم" : "bedrooms"}`;
+                $("property-bathrooms").textContent = `${property.bathrooms || 1} ${state.lang === "ar" ? "حمامات" : "bathrooms"}`;
+                $("property-price").textContent = `${getPropertyPrice(property)} ${state.lang === "ar" ? "د.ج" : "DZD"}`;
+                $("property-description").textContent = getPropertyDescription(property) || t("loadingDescription");
+                $("host-name").textContent = property.hostName || property.ownerName || "OreBooking Host";
 
-                if (els.propertyFeatures) {
-                    const features = Array.isArray(p.features) && p.features.length ? p.features : ["Wi‑Fi", "Air Conditioning", "Parking", "Kitchen"];
-                    els.propertyFeatures.innerHTML = features.map(item => `
-                        <li><i class="ph ph-check-circle"></i><span>${item}</span></li>
-                    `).join("");
-                }
+                const features = Array.isArray(property.features) ? property.features : [];
+                $("property-features").innerHTML = (features.length ? features : [
+                    state.lang === "ar" ? "واي فاي" : "Wi‑Fi",
+                    state.lang === "ar" ? "تكييف" : "Air Conditioning",
+                    state.lang === "ar" ? "موقف سيارات" : "Parking",
+                    state.lang === "ar" ? "مطبخ" : "Kitchen"
+                ]).map(item => `
+                    <li><i class="ph ph-check-circle"></i><span>${escapeHtml(item)}</span></li>
+                `).join("");
 
                 renderGallery();
                 updateFavoriteButton();
-                initMap(p);
-            }
-
-            async function loadProperty() {
-                if (!db || !state.propertyId) return;
-
-                try {
-                    const doc = await db.collection("properties").doc(state.propertyId).get();
-                    if (!doc.exists) return;
-                    renderProperty({ id: doc.id, ...doc.data() });
-                } catch (err) {
-                    console.error("loadProperty error:", err);
-                }
+                initMap(property);
             }
 
             function initMap(property) {
-                if (!els.propertyMap || typeof L === "undefined") return;
-
                 const lat = Number(property.latitude || property.lat || 0);
                 const lng = Number(property.longitude || property.lng || 0);
 
-                if (!lat || !lng) {
-                    els.propertyMap.outerHTML = `
+                if (!lat || !lng || typeof L === "undefined") {
+                    $("property-map").outerHTML = `
                         <div class="map-no-location">
                             <i class="ph ph-map-pin"></i>
-                            <span>Location is not available for this property.</span>
+                            <span>${escapeHtml(t("locationUnavailable"))}</span>
                         </div>
                     `;
                     return;
@@ -2148,182 +2102,540 @@
                 }).addTo(map);
 
                 L.marker([lat, lng]).addTo(map);
-
-                if (els.openMapLink) {
-                    els.openMapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
-                }
+                $("open-map-link").href = `https://www.google.com/maps?q=${lat},${lng}`;
             }
 
-            function updateGuestUI() {
-                if (els.navSignInText) els.navSignInText.textContent = "Sign In";
-                if (els.dropdownUserName) els.dropdownUserName.textContent = "Guest User";
-                if (els.dropdownUserEmail) els.dropdownUserEmail.textContent = "Sign in to continue";
-                if (els.logoutBtn) els.logoutBtn.style.display = "none";
-                if (els.myBookingsBtn) els.myBookingsBtn.style.display = "none";
-                if (els.myFavoritesBtn) els.myFavoritesBtn.style.display = "none";
-                if (els.userPoints) els.userPoints.textContent = "0";
-            }
-
-            async function updateUserUI(user) {
-                state.currentUser = user || null;
-
-                if (!user) {
-                    updateGuestUI();
+            async function loadProperty() {
+                if (!db || !state.propertyId) {
+                    $("property-title").textContent = t("propertyNotFound");
                     return;
                 }
 
-                let profile = null;
                 try {
-                    if (db) {
+                    const doc = await db.collection("properties").doc(state.propertyId).get();
+                    if (!doc.exists) {
+                        $("property-title").textContent = t("propertyNotFound");
+                        return;
+                    }
+                    renderProperty({ id: doc.id, ...doc.data() });
+                } catch (err) {
+                    console.error("loadProperty error:", err);
+                    $("property-title").textContent = t("propertyNotFound");
+                }
+            }
+
+            async function renderFavorites() {
+                const wrap = $("favorites-list");
+                if (!wrap) return;
+
+                const ids = Array.isArray(state.favorites) ? state.favorites : [];
+                if (!ids.length) {
+                    wrap.innerHTML = `
+                        <div class="booking-entry">
+                            <div class="booking-entry-head">
+                                <div>
+                                    <h4 class="booking-entry-title">${escapeHtml(t("noFavorites"))}</h4>
+                                    <div class="booking-entry-meta">
+                                        <span>${escapeHtml(t("favoritesDesc"))}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (!db) {
+                    wrap.innerHTML = `
+                        <div class="booking-entry">
+                            <div class="booking-entry-head">
+                                <div>
+                                    <h4 class="booking-entry-title">${escapeHtml(t("noFavorites"))}</h4>
+                                    <div class="booking-entry-meta">
+                                        <span>${escapeHtml(t("favoritesDesc"))}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const docs = await Promise.all(ids.map(async (id) => {
+                    try {
+                        const doc = await db.collection("properties").doc(id).get();
+                        return doc.exists ? { id: doc.id, ...doc.data() } : null;
+                    } catch {
+                        return null;
+                    }
+                }));
+
+                const list = docs.filter(Boolean);
+
+                if (!list.length) {
+                    wrap.innerHTML = `
+                        <div class="booking-entry">
+                            <div class="booking-entry-head">
+                                <div>
+                                    <h4 class="booking-entry-title">${escapeHtml(t("noFavorites"))}</h4>
+                                    <div class="booking-entry-meta">
+                                        <span>${escapeHtml(t("favoritesDesc"))}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                wrap.innerHTML = list.map((p) => {
+                    const img = getPropertyImages(p)[0];
+                    return `
+                        <div class="booking-entry">
+                            <div class="favorite-entry-row">
+                                <img class="favorite-entry-thumb" src="${escapeHtml(img)}" alt="${escapeHtml(getPropertyTitle(p))}" onerror="this.src='images/placeholder.jpg'">
+                                <div class="favorite-entry-content">
+                                    <h4 class="booking-entry-title">${escapeHtml(getPropertyTitle(p))}</h4>
+                                    <div class="booking-entry-meta">
+                                        <span><i class="ph ph-map-pin"></i> ${escapeHtml(getPropertyLocation(p))}</span>
+                                        <span><i class="ph ph-currency-circle-dollar"></i> ${escapeHtml(String(getPropertyPrice(p)))} ${state.lang === "ar" ? "د.ج" : "DZD"}</span>
+                                    </div>
+
+                                    <div class="favorite-entry-actions">
+                                        <a class="primary" href="property.html?id=${encodeURIComponent(p.id)}">
+                                            <i class="ph ph-arrow-square-out"></i>
+                                            <span>${escapeHtml(t("viewDetails"))}</span>
+                                        </a>
+                                        <button type="button" class="remove-fav-btn" data-id="${escapeHtml(p.id)}">
+                                            <i class="ph ph-trash"></i>
+                                            <span>${escapeHtml(t("remove"))}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+
+                wrap.querySelectorAll(".remove-fav-btn").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        const id = btn.dataset.id;
+                        state.favorites = state.favorites.filter((x) => x !== id);
+                        safeJsonSet("ore_favorites", state.favorites);
+                        updateFavoriteButton();
+                        renderFavorites();
+                    });
+                });
+            }
+
+            function statusLabel(status) {
+                const s = String(status || "pending").toLowerCase();
+                if (s === "confirmed") return t("confirmed");
+                if (s === "cancelled") return t("cancelled");
+                if (s === "rejected") return t("rejected");
+                return t("pending");
+            }
+
+            async function loadBookings() {
+                state.bookings = [];
+                if (!db || !state.currentUser?.uid) {
+                    renderBookings();
+                    return;
+                }
+
+                try {
+                    const snap = await db.collection("bookings")
+                        .where("userId", "==", state.currentUser.uid)
+                        .get();
+
+                    const data = [];
+                    snap.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+                    state.bookings = data;
+                } catch (err) {
+                    console.error("loadBookings error:", err);
+                }
+
+                renderBookings();
+            }
+
+            async function renderBookings() {
+                const wrap = $("bookings-list");
+                if (!wrap) return;
+
+                if (!state.currentUser) {
+                    wrap.innerHTML = `
+                        <div class="booking-entry">
+                            <div class="booking-entry-head">
+                                <div>
+                                    <h4 class="booking-entry-title">${escapeHtml(t("loginRequired"))}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (!state.bookings.length) {
+                    wrap.innerHTML = `
+                        <div class="booking-entry">
+                            <div class="booking-entry-head">
+                                <div>
+                                    <h4 class="booking-entry-title">${escapeHtml(t("noBookings"))}</h4>
+                                    <div class="booking-entry-meta">
+                                        <span>${escapeHtml(t("noBookingsDesc"))}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const htmlList = await Promise.all(state.bookings.map(async (b) => {
+                    let propertyTitle = b.propertyTitle || "";
+                    if (!propertyTitle && b.propertyId && db) {
+                        try {
+                            const p = await db.collection("properties").doc(b.propertyId).get();
+                            if (p.exists) {
+                                const data = p.data();
+                                propertyTitle = state.lang === "ar"
+                                    ? (data.titleAr || data.title || data.titleEn || "")
+                                    : (data.titleEn || data.title || data.titleAr || "");
+                            }
+                        } catch {}
+                    }
+
+                    const status = String(b.status || "pending").toLowerCase();
+                    return `
+                        <div class="booking-entry">
+                            <div class="booking-entry-head">
+                                <div>
+                                    <h4 class="booking-entry-title">${escapeHtml(propertyTitle || t("bookingProperty"))}</h4>
+                                    <div class="booking-entry-meta">
+                                        <span>${escapeHtml(t("bookingDates"))}: ${escapeHtml(b.checkIn || "-")} → ${escapeHtml(b.checkOut || "-")}</span>
+                                        <span>${escapeHtml(t("bookingGuests"))}: ${escapeHtml(String(b.guests || 1))}</span>
+                                    </div>
+                                </div>
+                                <span class="booking-status-badge ${escapeHtml(status)}">
+                                    <i class="ph ph-clock"></i>
+                                    <span>${escapeHtml(statusLabel(status))}</span>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }));
+
+                wrap.innerHTML = htmlList.join("");
+            }
+
+            function applyGuestUI() {
+                state.currentUser = null;
+                state.currentUserProfile = null;
+                $("nav-sign-in-text").textContent = t("signIn");
+                $("dropdown-user-name").textContent = t("guestUser");
+                $("dropdown-user-email").textContent = t("signInToContinue");
+                $("logout-btn").style.display = "none";
+                $("my-bookings-btn").style.display = "none";
+                $("my-favorites-btn").style.display = "none";
+                $("user-points").textContent = "0";
+                renderBookings();
+                renderFavorites();
+            }
+
+            async function updateAuthUI(user) {
+                if (!user) {
+                    applyGuestUI();
+                    return;
+                }
+
+                state.currentUser = user;
+
+                let profile = null;
+                if (db) {
+                    try {
                         const doc = await db.collection("users").doc(user.uid).get();
                         if (doc.exists) profile = doc.data();
+                    } catch {}
+                }
+
+                state.currentUserProfile = profile || null;
+
+                $("nav-sign-in-text").textContent = profile?.name || user.displayName || user.email || t("signIn");
+                $("dropdown-user-name").textContent = profile?.name || user.displayName || t("guestUser");
+                $("dropdown-user-email").textContent = user.email || "";
+                $("logout-btn").style.display = "flex";
+                $("my-bookings-btn").style.display = "flex";
+                $("my-favorites-btn").style.display = "flex";
+                $("user-points").textContent = String(profile?.points || 0);
+
+                renderFavorites();
+                await loadBookings();
+            }
+
+            function showAuthForm(tab) {
+                document.querySelectorAll(".auth-form").forEach((form) => {
+                    form.classList.toggle("active", form.id === `${tab}-form`);
+                });
+            }
+
+            function showAuthMessage(msg, type = "error") {
+                const box = $("auth-message");
+                box.className = `auth-message ${type}`;
+                box.textContent = msg;
+            }
+
+            function clearAuthMessage() {
+                const box = $("auth-message");
+                box.className = "auth-message";
+                box.textContent = "";
+            }
+
+            function getAuthError(err) {
+                const ar = state.lang === "ar";
+                const map = {
+                    "auth/user-not-found": ar ? "لا يوجد حساب بهذا البريد" : "No account with this email",
+                    "auth/wrong-password": ar ? "كلمة المرور غير صحيحة" : "Incorrect password",
+                    "auth/email-already-in-use": ar ? "البريد الإلكتروني مستخدم بالفعل" : "Email already in use",
+                    "auth/invalid-email": ar ? "بريد إلكتروني غير صالح" : "Invalid email address",
+                    "auth/too-many-requests": ar ? "محاولات كثيرة، حاول لاحقاً" : "Too many attempts, try later",
+                    "auth/weak-password": ar ? "كلمة المرور ضعيفة جداً" : "Password is too weak",
+                    "auth/invalid-credential": ar ? "بيانات الدخول غير صحيحة" : "Invalid credentials"
+                };
+                return map[err?.code] || (ar ? "حدث خطأ، حاول مرة أخرى" : "An error occurred, try again");
+            }
+
+            function handleLogin(e) {
+                e.preventDefault();
+                if (!auth) return;
+
+                const email = $("login-email").value.trim();
+                const pass = $("login-password").value;
+
+                if (!email || !pass) {
+                    showAuthMessage(t("fillAllFields"));
+                    return;
+                }
+
+                clearAuthMessage();
+
+                auth.signInWithEmailAndPassword(email, pass)
+                    .then(() => {
+                        closeModal($("auth-modal"));
+                    })
+                    .catch((err) => showAuthMessage(getAuthError(err)));
+            }
+
+            function handleRegister(e) {
+                e.preventDefault();
+                if (!auth) return;
+
+                const name = $("reg-name").value.trim();
+                const email = $("reg-email").value.trim();
+                const pass = $("reg-password").value;
+                const confirm = $("reg-confirm").value;
+
+                if (!name || !email || !pass || !confirm) {
+                    showAuthMessage(t("fillAllFields"));
+                    return;
+                }
+
+                if (pass.length < 6) {
+                    showAuthMessage(t("passwordShort"));
+                    return;
+                }
+
+                if (pass !== confirm) {
+                    showAuthMessage(t("passwordsDontMatch"));
+                    return;
+                }
+
+                clearAuthMessage();
+
+                auth.createUserWithEmailAndPassword(email, pass)
+                    .then(async (cred) => {
+                        await cred.user.updateProfile({ displayName: name });
+                        if (db) {
+                            await db.collection("users").doc(cred.user.uid).set({
+                                name,
+                                email,
+                                role: "user",
+                                points: 0,
+                                createdAt: new Date()
+                            }, { merge: true });
+                        }
+                        closeModal($("auth-modal"));
+                    })
+                    .catch((err) => showAuthMessage(getAuthError(err)));
+            }
+
+            async function handleBookNow() {
+                if (!state.currentUser) {
+                    openModal($("auth-modal"));
+                    return;
+                }
+
+                if (!db || !state.property) return;
+
+                const bookingData = {
+                    userId: state.currentUser.uid,
+                    userEmail: state.currentUser.email || "",
+                    propertyId: state.property.id,
+                    propertyTitle: getPropertyTitle(state.property),
+                    guests: state.property.guests || state.property.maxGuests || 1,
+                    checkIn: "",
+                    checkOut: "",
+                    status: "pending",
+                    createdAt: new Date()
+                };
+
+                try {
+                    await db.collection("bookings").add(bookingData);
+                    await loadBookings();
+                    openModal($("bookings-modal"));
+                } catch (err) {
+                    console.error("bookNow error:", err);
+                }
+            }
+
+            async function handleShare() {
+                try {
+                    const shareData = {
+                        title: document.title,
+                        text: $("property-title").textContent,
+                        url: location.href
+                    };
+
+                    if (navigator.share) {
+                        await navigator.share(shareData);
+                    } else if (navigator.clipboard) {
+                        await navigator.clipboard.writeText(location.href);
+                        alert(t("linkCopied"));
                     }
-                } catch (_) { }
-
-                if (els.navSignInText) els.navSignInText.textContent = profile?.name || user.displayName || user.email || "Account";
-                if (els.dropdownUserName) els.dropdownUserName.textContent = profile?.name || user.displayName || "User";
-                if (els.dropdownUserEmail) els.dropdownUserEmail.textContent = user.email || "";
-                if (els.logoutBtn) els.logoutBtn.style.display = "flex";
-                if (els.myBookingsBtn) els.myBookingsBtn.style.display = "flex";
-                if (els.myFavoritesBtn) els.myFavoritesBtn.style.display = "flex";
-                if (els.userPoints) els.userPoints.textContent = String(profile?.points || 0);
-
-                updateFavoriteButton();
+                } catch {
+                    alert(t("shareFailed"));
+                }
             }
 
             function bindEvents() {
-                els.themeBtn?.addEventListener("click", toggleTheme);
-                els.langBtn?.addEventListener("click", toggleLang);
+                $("theme-toggle")?.addEventListener("click", toggleTheme);
+                $("lang-toggle")?.addEventListener("click", toggleLang);
 
-                els.profileMenu?.addEventListener("click", () => {
+                $("open-auth-btn")?.addEventListener("click", () => {
                     if (state.currentUser) {
-                        const open = els.profileDropdown.classList.contains("active");
-                        if (open) closeProfileDropdown();
+                        const isOpen = $("profile-dropdown").classList.contains("active");
+                        if (isOpen) closeProfileDropdown();
                         else openProfileDropdown();
                     } else {
-                        openModal(els.authModal);
+                        openModal($("auth-modal"));
                     }
                 });
 
                 document.addEventListener("click", (e) => {
                     if (!e.target.closest(".profile-container")) closeProfileDropdown();
-                    if (e.target === els.authModal) closeModal(els.authModal);
-                    if (e.target === els.bookingsModal) closeModal(els.bookingsModal);
-                    if (e.target === els.favoritesModal) closeModal(els.favoritesModal);
-                    if (e.target === els.chatModal) closeModal(els.chatModal);
+                    if (e.target === $("auth-modal")) closeModal($("auth-modal"));
+                    if (e.target === $("bookings-modal")) closeModal($("bookings-modal"));
+                    if (e.target === $("favorites-modal")) closeModal($("favorites-modal"));
+                    if (e.target === $("chat-modal")) closeModal($("chat-modal"));
                 });
 
                 document.addEventListener("keydown", (e) => {
                     if (e.key === "Escape") {
                         closeProfileDropdown();
-                        closeModal(els.authModal);
-                        closeModal(els.bookingsModal);
-                        closeModal(els.favoritesModal);
-                        closeModal(els.chatModal);
+                        closeModal($("auth-modal"));
+                        closeModal($("bookings-modal"));
+                        closeModal($("favorites-modal"));
+                        closeModal($("chat-modal"));
                     }
                 });
 
-                els.logoutBtn?.addEventListener("click", async () => {
+                $("close-auth-modal-btn")?.addEventListener("click", () => closeModal($("auth-modal")));
+                $("close-bookings-btn")?.addEventListener("click", () => closeModal($("bookings-modal")));
+                $("close-favorites-btn")?.addEventListener("click", () => closeModal($("favorites-modal")));
+                $("close-chat-btn")?.addEventListener("click", () => closeModal($("chat-modal")));
+
+                $("my-bookings-btn")?.addEventListener("click", () => {
+                    closeProfileDropdown();
+                    openModal($("bookings-modal"));
+                });
+
+                $("my-favorites-btn")?.addEventListener("click", () => {
+                    closeProfileDropdown();
+                    renderFavorites();
+                    openModal($("favorites-modal"));
+                });
+
+                $("open-chat-btn")?.addEventListener("click", () => {
+                    closeProfileDropdown();
+                    openModal($("chat-modal"));
+                });
+
+                $("chat-open-btn")?.addEventListener("click", () => openModal($("chat-modal")));
+                $("open-chat-from-card")?.addEventListener("click", () => openModal($("chat-modal")));
+                $("contact-host-btn")?.addEventListener("click", () => openModal($("chat-modal")));
+                $("contact-host-btn-inline")?.addEventListener("click", () => openModal($("chat-modal")));
+
+                $("logout-btn")?.addEventListener("click", async () => {
                     try {
-                        if (auth) await auth.signOut();
+                        await auth.signOut();
                         closeProfileDropdown();
-                    } catch (_) { }
+                    } catch {}
                 });
 
-                els.myBookingsBtn?.addEventListener("click", () => {
-                    closeProfileDropdown();
-                    openModal(els.bookingsModal);
-                });
+                $("fav-property-btn")?.addEventListener("click", toggleFavorite);
+                $("book-now-btn")?.addEventListener("click", handleBookNow);
+                $("share-property-btn")?.addEventListener("click", handleShare);
 
-                els.myFavoritesBtn?.addEventListener("click", () => {
-                    closeProfileDropdown();
-                    openModal(els.favoritesModal);
-                });
+                $("prev-slide-btn")?.addEventListener("click", prevSlide);
+                $("next-slide-btn")?.addEventListener("click", nextSlide);
 
-                els.openChatBtn?.addEventListener("click", () => {
-                    closeProfileDropdown();
-                    openModal(els.chatModal);
-                });
-
-                els.chatOpenBtn?.addEventListener("click", () => openModal(els.chatModal));
-                $("open-chat-from-card")?.addEventListener("click", () => openModal(els.chatModal));
-                $("contact-host-btn")?.addEventListener("click", () => openModal(els.chatModal));
-                $("contact-host-btn-inline")?.addEventListener("click", () => openModal(els.chatModal));
-
-                els.favPropertyBtn?.addEventListener("click", toggleFavorite);
-
-                els.prevSlideBtn?.addEventListener("click", prevSlide);
-                els.nextSlideBtn?.addEventListener("click", nextSlide);
-
-                els.sliderDots?.addEventListener("click", (e) => {
+                $("slider-dots")?.addEventListener("click", (e) => {
                     const btn = e.target.closest(".slider-dot");
                     if (!btn) return;
                     currentSlide = Number(btn.dataset.index || 0);
                     updateSlider();
                 });
 
-                els.galleryThumbs?.addEventListener("click", (e) => {
+                $("gallery-thumbs")?.addEventListener("click", (e) => {
                     const btn = e.target.closest(".gallery-thumb");
                     if (!btn) return;
                     currentSlide = Number(btn.dataset.index || 0);
                     updateSlider();
                 });
 
-                els.sharePropertyBtn?.addEventListener("click", async () => {
-                    const shareData = {
-                        title: document.title,
-                        text: els.propertyTitle?.textContent || "OreBooking Property",
-                        url: location.href
-                    };
-
-                    try {
-                        if (navigator.share) await navigator.share(shareData);
-                        else {
-                            await navigator.clipboard.writeText(location.href);
-                            alert("Link copied");
-                        }
-                    } catch (_) { }
-                });
-
-                els.bookNowBtn?.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    if (!state.currentUser) {
-                        openModal(els.authModal);
-                        return;
-                    }
-                    alert("Booking flow ready. Link this button to your booking form or checkout page.");
-                });
-
                 document.querySelectorAll("[data-auth-tab]").forEach((link) => {
                     link.addEventListener("click", (e) => {
                         e.preventDefault();
-                        document.querySelectorAll(".auth-form").forEach(f => f.classList.remove("active"));
-                        const form = document.getElementById(`${link.dataset.authTab}-form`);
-                        if (form) form.classList.add("active");
+                        clearAuthMessage();
+                        showAuthForm(link.dataset.authTab);
                     });
                 });
 
                 document.querySelectorAll(".toggle-pass-btn").forEach((btn) => {
                     btn.addEventListener("click", () => {
-                        const input = document.getElementById(btn.dataset.target);
+                        const input = $(btn.dataset.target);
                         if (!input) return;
                         input.type = input.type === "password" ? "text" : "password";
                         const icon = btn.querySelector("i");
                         if (icon) icon.className = input.type === "password" ? "ph ph-eye" : "ph ph-eye-slash";
                     });
                 });
+
+                $("login-form")?.addEventListener("submit", handleLogin);
+                $("register-form")?.addEventListener("submit", handleRegister);
             }
 
             async function init() {
                 applyTheme();
                 applyLang();
                 bindEvents();
-                loadProperty();
+                await loadProperty();
+                await renderFavorites();
+                renderBookings();
 
                 if (auth) {
-                    auth.onAuthStateChanged(updateUserUI);
+                    auth.onAuthStateChanged(updateAuthUI);
                 } else {
-                    updateGuestUI();
+                    applyGuestUI();
                 }
             }
 
@@ -2331,5 +2643,4 @@
         })();
     </script>
 </body>
-
 </html>
