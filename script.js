@@ -1,5 +1,5 @@
 // =========================================
-// script.js — OreBooking Index Page v4.2
+// script.js — OreBooking Index Page v4.3
 // Full Firebase + Auth + Real-time Chat + Listings + Favorites Modal
 // Compatible with current index.html IDs
 // =========================================
@@ -34,6 +34,10 @@ try {
 } catch (e) {
   console.error("Firebase init:", e);
 }
+
+// expose for other pages if needed
+window.__frontDb = db;
+window.__frontAuth = auth;
 
 // ──────────────────────────────────────────
 // Safe Storage Helpers
@@ -96,7 +100,8 @@ const state = {
   authTab: "login",
   currentChatId: safeGet("ore_current_chat_id", ""),
   currentChatUnsub: null,
-  chatInitializedForUser: ""
+  chatInitializedForUser: "",
+  allBookings: []
 };
 
 // ──────────────────────────────────────────
@@ -393,7 +398,7 @@ const els = {
   chatInput: firstById("chat-input", "chat-textarea"),
   chatSendBtn: firstById("chat-send-btn"),
   chatSendForm: firstById("chat-send-form"),
-  chatOpenBtn: firstById("chat-open-btn"),
+  chatOpenBtn: firstById("chat-open-btn", "open-chat-btn"),
   chatUnreadBadge: firstById("chat-unread-badge"),
   chatTitle: firstById("chat-title"),
   chatSubtitle: firstById("chat-subtitle"),
@@ -489,12 +494,29 @@ function cleanText(v) {
 }
 
 function toNumber(v, fallback = 0) {
+  if (v === null || v === undefined || v === "") return fallback;
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
 
+function pickFirst(...values) {
+  for (const value of values) {
+    if (value === 0 || value === false) return value;
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return "";
+}
+
+function normalizeEmail(value) {
+  return cleanText(value).toLowerCase();
+}
+
 function getServerTimestamp() {
   return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date();
+}
+
+function formatPrice(value) {
+  return `${toNumber(value, 0).toLocaleString("en-US")} دج`;
 }
 
 function formatChatTime(value) {
@@ -511,6 +533,21 @@ function formatChatTime(value) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return "";
+  }
+}
+
+function formatDate(value) {
+  try {
+    if (!value) return "—";
+    if (typeof value?.toDate === "function") return value.toDate().toLocaleString(state.lang === "ar" ? "ar-DZ" : "en-US");
+    if (typeof value === "object" && typeof value.seconds === "number") {
+      return new Date(value.seconds * 1000).toLocaleString(state.lang === "ar" ? "ar-DZ" : "en-US");
+    }
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString(state.lang === "ar" ? "ar-DZ" : "en-US");
+  } catch {
+    return String(value ?? "—");
   }
 }
 
@@ -532,6 +569,21 @@ function normalizeRole(value) {
 function isBackofficeRole(role) {
   const r = normalizeRole(role);
   return r === "admin" || r === "owner" || r === "property_admin";
+}
+
+function getBookingStatus(status) {
+  const s = cleanText(status || "pending").toLowerCase();
+  if (["confirmed", "approved", "accept", "accepted"].includes(s)) return "confirmed";
+  if (["rejected", "cancelled", "canceled", "declined"].includes(s)) return "rejected";
+  return "pending";
+}
+
+function getStatusLabel(status) {
+  const s = getBookingStatus(status);
+  if (s === "confirmed") return t("status_confirmed");
+  if (s === "rejected") return t("status_rejected");
+  if (s === "cancelled") return t("status_cancelled");
+  return t("status_pending");
 }
 
 async function getUserProfile(uid) {
@@ -602,6 +654,7 @@ function resetFrontendUserState() {
   state.chatMessages = [];
   state.chatUnread = 0;
   state.currentChatId = "";
+  state.chatInitializedForUser = "";
   safeRemove("ore_current_chat_id");
   stopChatSubscription();
   setUnreadBadge();
@@ -852,6 +905,7 @@ async function updateAuthUI(user) {
     applyGuestAuthUI();
     resetFrontendUserState();
     renderFavorites();
+    renderBookings();
     return;
   }
 
@@ -869,6 +923,10 @@ async function updateAuthUI(user) {
     closeProfileDropdown();
 
     if (els.loginEmail) els.loginEmail.value = user.email || "";
+    try {
+      await auth.signOut();
+    } catch {}
+    showToast(t("adminFrontendBlocked"), "warning");
     return;
   }
 
@@ -910,11 +968,14 @@ async function updateAuthUI(user) {
   if (prevUid !== user.uid) {
     state.chatMessages = [];
     state.chatUnread = 0;
+    state.currentChatId = "";
+    safeRemove("ore_current_chat_id");
     setUnreadBadge();
-    ensureSupportChat(false).catch((err) => console.warn("ensureSupportChat after auth:", err));
+    await ensureSupportChat(false);
   }
 
   renderFavorites();
+  renderBookings();
 }
 
 function showAuthModal(tab = "login") {
@@ -961,8 +1022,8 @@ function handleLogin(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const email = els.loginEmail?.value?.trim();
-  const pass = els.loginPassword?.value;
+  const email = cleanText(els.loginEmail?.value);
+  const pass = cleanText(els.loginPassword?.value);
 
   if (!email || !pass) {
     return showAuthMessage(t("fillAllFields"));
@@ -1008,10 +1069,10 @@ function handleRegister(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const name = els.regName?.value?.trim();
-  const email = els.regEmail?.value?.trim();
-  const pass = els.regPassword?.value;
-  const confirm = els.regConfirm?.value;
+  const name = cleanText(els.regName?.value);
+  const email = cleanText(els.regEmail?.value);
+  const pass = cleanText(els.regPassword?.value);
+  const confirm = cleanText(els.regConfirm?.value);
 
   if (!name || !email || !pass) {
     return showAuthMessage(t("fillAllFields"));
@@ -1064,7 +1125,7 @@ function handleForgot(e) {
   if (e) e.preventDefault();
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
-  const email = els.forgotEmail?.value?.trim();
+  const email = cleanText(els.forgotEmail?.value);
   if (!email) {
     return showAuthMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني" : "Enter your email");
   }
@@ -1080,6 +1141,16 @@ function handleForgot(e) {
     .finally(() => {
       if (btn) btn.disabled = false;
     });
+}
+
+function handleLogout() {
+  if (!auth) return;
+  auth.signOut()
+    .then(() => {
+      closeProfileDropdown();
+      showToast(t("signedOut"), "info");
+    })
+    .catch(() => showToast(t("chatError"), "error"));
 }
 
 function getAuthError(err) {
@@ -1134,7 +1205,7 @@ async function loadProperties() {
     const snap = await db.collection("properties").get();
     snap.forEach((doc) => loaded.push({ id: doc.id, ...doc.data() }));
 
-    loaded = loaded.filter((p) => p?.isActive !== false);
+    loaded = loaded.filter((p) => p?.isActive !== false && p?.visible !== false);
 
     state.allProperties = loaded;
     applyFilters();
@@ -1234,7 +1305,6 @@ function propertyDetailsUrl(p) {
   return `property.html?id=${id}`;
 }
 
-
 function isFav(id) {
   return state.favorites.includes(id);
 }
@@ -1283,333 +1353,228 @@ function renderListings() {
   }
 
   els.listingsGrid.innerHTML = list.map((p, i) => {
-    const price = getPrice(p);
+    const id = cleanText(p.id);
     const title = getTitle(p);
-    const loc = getLocation(p);
-    const img = getImage(p);
-    const rating = Number(p.rating || 4.8).toFixed(1);
-    const fav = isFav(p.id);
-    const currency = state.lang === "ar" ? "د.ج" : "DZD";
-    const delay = Math.min(i * 60, 400);
+    const location = getLocation(p);
     const type = getType(p);
-    const guests = p.guests || p.maxGuests;
-    const detailsUrl = propertyDetailsUrl(p);
+    const image = getImage(p);
+    const price = getPrice(p);
+    const rating = toNumber(p.rating, 4.8);
+    const fav = isFav(id);
 
     return `
-      <article class="property-card ore-reveal" style="--ore-delay:${delay}ms;" tabindex="0" data-id="${escapeHtml(p.id)}">
-        <div class="property-card-media">
-          <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-          <button class="favorite-btn ${fav ? "active" : ""}" data-id="${escapeHtml(p.id)}" aria-label="Favorite">
+      <article class="listing-card" data-id="${escapeHtml(id)}" style="animation-delay:${i * 0.03}s;">
+        <div class="listing-image-wrap" onclick="window.location.href='${escapeHtml(propertyDetailsUrl(p))}'">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" class="listing-image" loading="lazy" onerror="this.src='images/placeholder.jpg'">
+          <span class="listing-badge">${escapeHtml(t("newBadge"))}</span>
+          <button type="button" class="favorite-btn ${fav ? "active" : ""}" data-id="${escapeHtml(id)}" aria-label="favorite">
             <i class="ph ${fav ? "ph-heart-fill" : "ph-heart"}"></i>
           </button>
-          ${(p.isNew || p.badge) ? `
-            <span class="property-urgency">
-              <i class="ph ph-fire"></i>
-              ${escapeHtml(t("newBadge"))}
-            </span>
-          ` : ""}
         </div>
 
-        <div class="property-card-body">
-          <div class="property-card-top">
-            <h3 class="property-card-title">${escapeHtml(title)}</h3>
-            <span class="property-card-rating"><i class="ph ph-star-fill"></i>${rating}</span>
+        <div class="listing-content">
+          <div class="listing-topline">
+            <span class="listing-type">${escapeHtml(type)}</span>
+            <span class="listing-rating"><i class="ph ph-star-fill"></i> ${escapeHtml(String(rating))}</span>
           </div>
 
-          ${loc ? `<p class="property-card-location"><i class="ph ph-map-pin"></i>${escapeHtml(loc)}</p>` : ""}
+          <h3 class="listing-title">${escapeHtml(title)}</h3>
+          <p class="listing-location"><i class="ph ph-map-pin"></i> ${escapeHtml(location)}</p>
 
-          <p class="property-card-meta">
-            ${type ? `<span><i class="ph ph-house"></i> ${escapeHtml(type)}</span>` : ""}
-            ${guests ? `<span><i class="ph ph-users"></i> ${escapeHtml(String(guests))} ${escapeHtml(t("guests"))}</span>` : ""}
-          </p>
+          <div class="listing-footer">
+            <div class="listing-price">
+              <strong>${escapeHtml(formatPrice(price))}</strong>
+              <span> / ${escapeHtml(t("night"))}</span>
+            </div>
 
-          <div class="property-card-price">
-            ${escapeHtml(String(price))} ${escapeHtml(currency)}
-            <span>/ ${escapeHtml(t("night"))}</span>
-          </div>
-
-          <div class="property-card-actions">
-            <a href="${detailsUrl}">
-              <i class="ph ph-eye"></i>
-              <span>${escapeHtml(t("viewDetails"))}</span>
-            </a>
-            <a href="${detailsUrl}" class="primary">
-              <i class="ph ph-calendar-plus"></i>
-              <span>${escapeHtml(t("bookNow"))}</span>
-            </a>
+            <div class="listing-actions">
+              <a class="btn btn-light" href="${escapeHtml(propertyDetailsUrl(p))}">
+                <span>${escapeHtml(t("viewDetails"))}</span>
+              </a>
+              <a class="btn btn-primary" href="${escapeHtml(propertyDetailsUrl(p))}">
+                <span>${escapeHtml(t("bookNow"))}</span>
+              </a>
+            </div>
           </div>
         </div>
       </article>
     `;
   }).join("");
-
-  bindListingEvents();
-  revealAnimatedCards();
 }
 
-function revealAnimatedCards() {
-  const cards = document.querySelectorAll(".ore-reveal");
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("ore-reveal-in");
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12 });
+// ──────────────────────────────────────────
+// Favorites
+// ──────────────────────────────────────────
+function renderFavorites() {
+  if (!els.favoritesList) return;
 
-  cards.forEach((card) => observer.observe(card));
-}
+  if (!state.currentUser) {
+    els.favoritesList.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-heart"></i>
+        <p>${escapeHtml(t("loginRequired"))}</p>
+      </div>
+    `;
+    return;
+  }
 
-function bindListingEvents() {
-  document.querySelectorAll(".favorite-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => toggleFav(btn.dataset.id, e));
-  });
+  const items = state.allProperties.filter((p) => state.favorites.includes(p.id));
+  if (!items.length) {
+    els.favoritesList.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-heart-break"></i>
+        <p>${escapeHtml(t("noFavorites"))}</p>
+        <small>${escapeHtml(t("noFavoritesDesc"))}</small>
+      </div>
+    `;
+    return;
+  }
 
-  document.querySelectorAll(".property-card").forEach((card) => {
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const id = card.dataset.id;
-        window.location.href = `property.html?id=${encodeURIComponent(id)}`;
-
-      }
-    });
-  });
+  els.favoritesList.innerHTML = items.map((p) => `
+    <div class="favorite-item">
+      <img src="${escapeHtml(getImage(p))}" alt="${escapeHtml(getTitle(p))}" onerror="this.src='images/placeholder.jpg'">
+      <div class="favorite-info">
+        <strong>${escapeHtml(getTitle(p))}</strong>
+        <span>${escapeHtml(getLocation(p))}</span>
+        <small>${escapeHtml(formatPrice(getPrice(p)))}</small>
+      </div>
+      <div class="favorite-actions">
+        <a href="${escapeHtml(propertyDetailsUrl(p))}" class="btn btn-light">${escapeHtml(t("viewDetails"))}</a>
+        <button type="button" class="btn btn-danger remove-favorite-btn" data-id="${escapeHtml(p.id)}">${escapeHtml(t("remove"))}</button>
+      </div>
+    </div>
+  `).join("");
 }
 
 // ──────────────────────────────────────────
 // Bookings
 // ──────────────────────────────────────────
-async function renderBookings() {
-  if (!els.bookingsList) return;
-
-  if (!state.currentUser || !db) {
-    els.bookingsList.innerHTML = `
-      <div class="booking-entry">
-        <div class="booking-entry-head">
-          <div>
-            <h4 class="booking-entry-title">${escapeHtml(t("noBookings"))}</h4>
-            <div class="booking-entry-meta">
-              <span>${escapeHtml(t("noBookingsDesc"))}</span>
-            </div>
-          </div>
-          <span class="booking-status-badge pending">${escapeHtml(t("status_pending"))}</span>
-        </div>
-      </div>
-    `;
+async function loadBookings() {
+  if (!db || !state.currentUser?.uid) {
+    state.allBookings = [];
+    renderBookings();
     return;
   }
 
   try {
-    const snap = await db
-      .collection("bookings")
-      .where("userId", "==", state.currentUser.uid)
-      .orderBy("createdAt", "desc")
-      .get();
+    let list = [];
+    const directSnap = await db.collection("bookings").where("userId", "==", state.currentUser.uid).get();
+    directSnap.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
 
-    if (snap.empty) {
-      els.bookingsList.innerHTML = `
-        <div class="booking-entry">
-          <div class="booking-entry-head">
-            <div>
-              <h4 class="booking-entry-title">${escapeHtml(t("noBookings"))}</h4>
-              <div class="booking-entry-meta">
-                <span>${escapeHtml(t("noBookingsDesc"))}</span>
-              </div>
-            </div>
-            <span class="booking-status-badge pending">${escapeHtml(t("status_pending"))}</span>
-          </div>
-        </div>
-      `;
-      return;
+    if (!list.length && state.currentUser.email) {
+      const emailSnap = await db.collection("bookings").where("guestEmail", "==", state.currentUser.email).get();
+      emailSnap.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
     }
 
-    const bookings = [];
-    snap.forEach((doc) => bookings.push({ id: doc.id, ...doc.data() }));
+    const dedup = new Map();
+    list.forEach((b) => dedup.set(b.id, b));
+    state.allBookings = Array.from(dedup.values()).sort((a, b) => {
+      const at = a?.createdAt?.toMillis?.() || new Date(a?.createdAt || 0).getTime() || 0;
+      const bt = b?.createdAt?.toMillis?.() || new Date(b?.createdAt || 0).getTime() || 0;
+      return bt - at;
+    });
 
-    els.bookingsList.innerHTML = bookings.map((b) => {
-      const status = cleanText(b.status || "pending").toLowerCase();
-      const title = cleanText(b.propertyTitle || b.propertyName || b.title || "Booking");
-      const checkIn = cleanText(b.checkIn || b.startDate || "");
-      const checkOut = cleanText(b.checkOut || b.endDate || "");
-      const guests = cleanText(b.guests || "");
-      const amount = cleanText(b.totalPrice || b.amount || "");
-      const badgeClass = ["confirmed", "cancelled", "pending"].includes(status) ? status : "pending";
-
-      return `
-        <div class="booking-entry">
-          <div class="booking-entry-head">
-            <div>
-              <h4 class="booking-entry-title">${escapeHtml(title)}</h4>
-              <div class="booking-entry-meta">
-                ${checkIn ? `<span><i class="ph ph-calendar-blank"></i> ${escapeHtml(checkIn)} ${checkOut ? `→ ${escapeHtml(checkOut)}` : ""}</span>` : ""}
-                ${guests ? `<span><i class="ph ph-users"></i> ${escapeHtml(String(guests))}</span>` : ""}
-                ${amount ? `<span><i class="ph ph-money"></i> ${escapeHtml(String(amount))}</span>` : ""}
-              </div>
-            </div>
-            <span class="booking-status-badge ${badgeClass}">
-              <i class="ph ph-clock"></i>
-              <span>${escapeHtml(t(`status_${status}`))}</span>
-            </span>
-          </div>
-        </div>
-      `;
-    }).join("");
+    renderBookings();
   } catch (err) {
-    console.warn("renderBookings error:", err);
-    els.bookingsList.innerHTML = `
-      <div class="booking-entry">
-        <div class="booking-entry-head">
-          <div>
-            <h4 class="booking-entry-title">${escapeHtml(t("noBookings"))}</h4>
-            <div class="booking-entry-meta">
-              <span>${escapeHtml(t("noBookingsDesc"))}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    console.error("loadBookings error:", err);
+    state.allBookings = [];
+    renderBookings();
   }
 }
 
-function openBookingsModal() {
+function renderBookings() {
+  if (!els.bookingsList) return;
+
   if (!state.currentUser) {
-    showToast(t("loginRequired"), "warning");
-    showAuthModal("login");
-    return;
-  }
-  renderBookings();
-  openModal(els.bookingsModal);
-  closeProfileDropdown();
-}
-
-// ──────────────────────────────────────────
-// Favorites Modal
-// ──────────────────────────────────────────
-function getFavoriteProperties() {
-  const favoriteIds = Array.isArray(state.favorites) ? state.favorites : [];
-  return favoriteIds
-    .map((id) => state.allProperties.find((p) => p.id === id))
-    .filter(Boolean);
-}
-
-function renderFavorites() {
-  if (!els.favoritesList) return;
-
-  const items = getFavoriteProperties();
-
-  if (!items.length) {
-    els.favoritesList.innerHTML = `
-      <div class="booking-entry">
-        <div class="booking-entry-head">
-          <div>
-            <h4 class="booking-entry-title">${escapeHtml(t("noFavorites"))}</h4>
-            <div class="booking-entry-meta">
-              <span>${escapeHtml(t("noFavoritesDesc"))}</span>
-            </div>
-          </div>
-          <span class="booking-status-badge pending">
-            <i class="ph ph-heart"></i>
-            <span>${escapeHtml(t("empty"))}</span>
-          </span>
-        </div>
+    els.bookingsList.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-calendar"></i>
+        <p>${escapeHtml(t("loginRequired"))}</p>
       </div>
     `;
     return;
   }
 
-  els.favoritesList.innerHTML = items.map((p) => {
-    const title = getTitle(p);
-    const loc = getLocation(p);
-    const img = getImage(p);
-    const price = getPrice(p);
-    const type = getType(p);
-    const detailsUrl = propertyDetailsUrl(p);
-    const currency = state.lang === "ar" ? "د.ج" : "DZD";
+  if (!state.allBookings.length) {
+    els.bookingsList.innerHTML = `
+      <div class="empty-state">
+        <i class="ph ph-calendar-x"></i>
+        <p>${escapeHtml(t("noBookings"))}</p>
+        <small>${escapeHtml(t("noBookingsDesc"))}</small>
+      </div>
+    `;
+    return;
+  }
+
+  els.bookingsList.innerHTML = state.allBookings.map((booking) => {
+    const propertyTitle = cleanText(
+      booking.propertyTitleAr ||
+      booking.propertyTitle ||
+      booking.propertyName ||
+      booking.property?.titleAr ||
+      booking.property?.title ||
+      "—"
+    );
+
+    const total = pickFirst(
+      booking.total,
+      booking.totalAmount,
+      booking.amount,
+      booking.price,
+      booking.pricing?.total,
+      0
+    );
 
     return `
-      <div class="booking-entry" data-favorite-entry="${escapeHtml(p.id)}">
-        <div class="favorite-entry-row">
-          <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" class="favorite-entry-thumb" onerror="this.src='images/placeholder.jpg'">
-
-          <div class="favorite-entry-content">
-            <h4 class="booking-entry-title">${escapeHtml(title)}</h4>
-            <div class="booking-entry-meta">
-              ${loc ? `<span><i class="ph ph-map-pin"></i> ${escapeHtml(loc)}</span>` : ""}
-              ${type ? `<span><i class="ph ph-house"></i> ${escapeHtml(type)}</span>` : ""}
-              <span><i class="ph ph-money"></i> ${escapeHtml(String(price))} ${escapeHtml(currency)} / ${escapeHtml(t("night"))}</span>
-            </div>
-
-            <div class="favorite-entry-actions">
-              <a href="${detailsUrl}" class="primary">
-                <i class="ph ph-eye"></i>
-                <span>${escapeHtml(t("viewDetails"))}</span>
-              </a>
-              <button type="button" class="remove-favorite-btn" data-id="${escapeHtml(p.id)}">
-                <i class="ph ph-trash"></i>
-                <span>${escapeHtml(t("remove"))}</span>
-              </button>
-            </div>
-          </div>
+      <div class="booking-item">
+        <div class="booking-item-head">
+          <strong>${escapeHtml(propertyTitle)}</strong>
+          <span class="booking-status ${escapeHtml(getBookingStatus(booking.status))}">
+            ${escapeHtml(getStatusLabel(booking.status))}
+          </span>
+        </div>
+        <div class="booking-item-body">
+          <p><strong>${escapeHtml(t("checkIn"))}:</strong> ${escapeHtml(cleanText(booking.checkIn || booking.arrivalDate || booking.stay?.checkIn || "—"))}</p>
+          <p><strong>${escapeHtml(t("checkOut"))}:</strong> ${escapeHtml(cleanText(booking.checkOut || booking.departureDate || booking.stay?.checkOut || "—"))}</p>
+          <p><strong>${escapeHtml(t("guests"))}:</strong> ${escapeHtml(String(pickFirst(booking.guests, booking.guestCount, booking.stay?.guests, "—")))}</p>
+          <p><strong>Total:</strong> ${escapeHtml(formatPrice(total))}</p>
+          <p><strong>ID:</strong> ${escapeHtml(booking.reference || booking.bookingReference || booking.id)}</p>
         </div>
       </div>
     `;
   }).join("");
-
-  els.favoritesList.querySelectorAll(".remove-favorite-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const id = btn.dataset.id;
-      const idx = state.favorites.indexOf(id);
-      if (idx !== -1) {
-        state.favorites.splice(idx, 1);
-        persistFavorites();
-        renderFavorites();
-        renderListings();
-        showToast(t("favRemoved"), "info");
-      }
-    });
-  });
-}
-
-function openFavoritesModal() {
-  if (!state.currentUser) {
-    showToast(t("loginRequired"), "warning");
-    showAuthModal("login");
-    return;
-  }
-  renderFavorites();
-  openModal(els.favoritesModal);
-  closeProfileDropdown();
 }
 
 // ──────────────────────────────────────────
-// Chat
+// Support Chat
 // ──────────────────────────────────────────
 function renderChatMessages() {
   if (!els.chatMessages) return;
 
-  const list = Array.isArray(state.chatMessages) ? state.chatMessages : [];
+  const messages = Array.isArray(state.chatMessages) ? state.chatMessages : [];
 
-  if (!list.length) {
-    if (els.chatEmptyState) els.chatEmptyState.style.display = "block";
+  if (!messages.length) {
     els.chatMessages.innerHTML = `
-      <div class="chat-empty-state" id="chat-empty-state">
-        <p id="chat-empty-title" style="font-weight:800;margin-bottom:8px;">${escapeHtml(t("noMessages"))}</p>
-        <p id="chat-empty-subtitle">${escapeHtml(t("startConversation"))}</p>
+      <div class="chat-empty-fallback">
+        <div class="chat-bubble system">
+          <div class="chat-bubble-text">${escapeHtml(t("chatWelcome"))}</div>
+        </div>
       </div>
     `;
+    if (els.chatEmptyState) els.chatEmptyState.style.display = "";
     return;
   }
 
   if (els.chatEmptyState) els.chatEmptyState.style.display = "none";
 
-  els.chatMessages.innerHTML = list.map((msg) => {
+  els.chatMessages.innerHTML = messages.map((msg) => {
     const m = normalizeMessage(msg);
     return `
-      <div class="chat-message ${m.role}">
-        <div>${escapeHtml(m.text)}</div>
-        ${m.time ? `<span class="chat-meta">${escapeHtml(m.time)}</span>` : ""}
+      <div class="chat-row ${m.role === "admin" ? "chat-row-admin" : "chat-row-user"}">
+        <div class="chat-bubble ${m.role === "admin" ? "admin" : "user"}">
+          <div class="chat-bubble-text">${escapeHtml(m.text)}</div>
+          <div class="chat-bubble-time">${escapeHtml(m.time)}</div>
+        </div>
       </div>
     `;
   }).join("");
@@ -1617,322 +1582,440 @@ function renderChatMessages() {
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
 }
 
-async function ensureSupportChat(openAfter = false) {
-  if (!state.currentUser || !db) return null;
+async function findExistingSupportChat(user) {
+  if (!db || !user?.uid) return null;
 
-  const uid = state.currentUser.uid;
-  if (state.chatInitializedForUser === uid && state.currentChatId) {
-    if (openAfter) openChatModal();
-    return state.currentChatId;
+  const cachedId = cleanText(state.currentChatId || safeGet("ore_current_chat_id", ""));
+  if (cachedId) {
+    try {
+      const doc = await db.collection("chats").doc(cachedId).get();
+      if (doc.exists) return { id: doc.id, ...doc.data() };
+    } catch (err) {
+      console.warn("cached chat lookup error:", err);
+    }
   }
 
   try {
-    setChatStatus("syncing", t("chatPreparing"));
+    const byUid = await db.collection("chats").where("userId", "==", user.uid).limit(1).get();
+    if (!byUid.empty) {
+      const doc = byUid.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+  } catch (err) {
+    console.warn("chat lookup by userId error:", err);
+  }
 
-    let foundId = "";
-    const snap = await db.collection("supportChats")
-      .where("userId", "==", uid)
-      .limit(1)
-      .get();
+  const email = normalizeEmail(user.email || state.currentUserProfile?.email || "");
+  if (email) {
+    try {
+      const byEmail = await db.collection("chats").where("userEmail", "==", email).limit(1).get();
+      if (!byEmail.empty) {
+        const doc = byEmail.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+    } catch (err) {
+      console.warn("chat lookup by email error:", err);
+    }
+  }
 
-    if (!snap.empty) {
-      foundId = snap.docs[0].id;
-    } else {
-      const ref = await db.collection("supportChats").add({
-        userId: uid,
-        userEmail: getCurrentUserEmail(),
-        userName: getCurrentUserName(),
-        createdAt: getServerTimestamp(),
-        updatedAt: getServerTimestamp(),
-        status: "open",
-        unreadForUser: 0
-      });
-      foundId = ref.id;
+  return null;
+}
 
-      await db.collection("supportChats").doc(foundId).collection("messages").add({
-        text: t("chatWelcome"),
-        senderRole: "admin",
-        createdAt: getServerTimestamp()
-      });
+async function ensureSupportChat(openAfterEnsure = false) {
+  try {
+    if (!db || !auth) {
+      setChatStatus("error", t("firebaseMissing"));
+      return "";
     }
 
-    state.currentChatId = foundId;
-    state.chatInitializedForUser = uid;
-    safeSet("ore_current_chat_id", foundId);
-    updateChatHiddenFields(foundId);
+    const user = auth.currentUser || state.currentUser;
+    if (!user?.uid) {
+      state.currentChatId = "";
+      safeRemove("ore_current_chat_id");
+      stopChatSubscription();
+      state.chatMessages = [];
+      renderChatMessages();
+      updateChatHiddenFields("");
+      setChatStatus("syncing", t("chatPreparing"));
+      return "";
+    }
+
+    const profile = state.currentUserProfile || await getUserProfile(user.uid);
+    const role = normalizeRole(profile?.role);
+
+    if (isBackofficeRole(role)) {
+      state.currentChatId = "";
+      safeRemove("ore_current_chat_id");
+      stopChatSubscription();
+      state.chatMessages = [];
+      renderChatMessages();
+      updateChatHiddenFields("");
+      setChatStatus("error", t("adminFrontendBlocked"));
+      return "";
+    }
+
+    state.currentUser = user;
+    state.currentUserProfile = profile || null;
+
+    const userEmail = cleanText(user.email || profile?.email || "");
+    const userName = cleanText(profile?.name || user.displayName || user.email || "Guest");
+
+    let chatId = cleanText(state.currentChatId || safeGet("ore_current_chat_id", ""));
+    setChatStatus("syncing", t("chatPreparing"));
+
+    if (chatId) {
+      try {
+        const existingDoc = await db.collection("chats").doc(chatId).get();
+        if (!existingDoc.exists) chatId = "";
+      } catch (err) {
+        console.warn("check existing chat error:", err);
+        chatId = "";
+      }
+    }
+
+    if (!chatId) {
+      const existingChat = await findExistingSupportChat(user);
+      if (existingChat?.id) {
+        chatId = existingChat.id;
+      } else {
+        const payload = {
+          userId: user.uid,
+          userEmail,
+          userName,
+          participants: [user.uid, userEmail].filter(Boolean),
+          participantIds: [user.uid, userEmail].filter(Boolean),
+          createdAt: getServerTimestamp(),
+          updatedAt: getServerTimestamp(),
+          lastMessage: "",
+          lastText: "",
+          lastMessageAt: getServerTimestamp(),
+          source: "frontend_support"
+        };
+
+        const ref = await db.collection("chats").add(payload);
+        chatId = ref.id;
+      }
+    }
+
+    if (!chatId) {
+      throw new Error("CHAT_ID_MISSING");
+    }
+
+    state.currentChatId = chatId;
+    state.chatInitializedForUser = user.uid;
+    safeSet("ore_current_chat_id", chatId);
+    updateChatHiddenFields(chatId);
 
     stopChatSubscription();
-    state.currentChatUnsub = db.collection("supportChats")
-      .doc(foundId)
-      .collection("messages")
-      .orderBy("createdAt", "asc")
-      .onSnapshot((snapshot) => {
-        const messages = [];
-        snapshot.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
-        state.chatMessages = messages;
 
-        if (!state.chatOpen) {
-          const unread = messages.filter((m) => normalizeMessage(m).role === "admin").length;
-          state.chatUnread = Math.max(0, unread - 1);
-        } else {
-          state.chatUnread = 0;
-        }
-
-        setUnreadBadge();
-        renderChatMessages();
-        setChatStatus("connected", t("chatConnected"));
-      }, (err) => {
-        console.warn("chat snapshot error:", err);
-        setChatStatus("error", t("chatError"));
-      });
-
-    if (openAfter) openChatModal();
-    return foundId;
-  } catch (err) {
-    console.warn("ensureSupportChat error:", err);
-    setChatStatus("error", t("chatError"));
-    return null;
-  }
-}
-
-function openChatModal() {
-  if (!state.currentUser) {
-    showToast(t("loginRequired"), "warning");
-    showAuthModal("login");
-    return;
-  }
-  state.chatOpen = true;
-  state.chatUnread = 0;
-  setUnreadBadge();
-  openModal(els.chatModal);
-  closeProfileDropdown();
-  ensureSupportChat(false);
-}
-
-function closeChatModal() {
-  state.chatOpen = false;
-  closeModal(els.chatModal);
-}
-
-async function handleChatSend(e) {
-  if (e) e.preventDefault();
-  if (!state.currentUser) {
-    showToast(t("loginRequired"), "warning");
-    showAuthModal("login");
-    return;
-  }
-
-  const text = cleanText(els.chatInput?.value);
-  if (!text) return;
-
-  try {
-    const chatId = await ensureSupportChat(false);
-    if (!chatId || !db) return;
-
-    if (els.chatSendBtn) els.chatSendBtn.disabled = true;
-
-    await db.collection("supportChats")
+    state.currentChatUnsub = db
+      .collection("chats")
       .doc(chatId)
       .collection("messages")
-      .add({
-        text,
-        senderRole: "customer",
-        userId: state.currentUser.uid,
-        userEmail: getCurrentUserEmail(),
-        userName: getCurrentUserName(),
-        createdAt: getServerTimestamp()
-      });
+      .orderBy("createdAt", "asc")
+      .onSnapshot(
+        async (snap) => {
+          const items = [];
+          snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
 
-    await db.collection("supportChats").doc(chatId).set({
-      updatedAt: getServerTimestamp(),
+          if (!items.length) {
+            try {
+              const fallback = await db.collection("messages").where("chatId", "==", chatId).get();
+              fallback.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+              items.sort((a, b) => {
+                const at = a?.createdAt?.toMillis?.() || new Date(a?.createdAt || 0).getTime() || 0;
+                const bt = b?.createdAt?.toMillis?.() || new Date(b?.createdAt || 0).getTime() || 0;
+                return at - bt;
+              });
+            } catch (err) {
+              console.warn("messages fallback error:", err);
+            }
+          }
+
+          state.chatMessages = items.map(normalizeMessage);
+
+          if (!state.chatOpen) {
+            state.chatUnread = state.chatMessages.filter((m) => m.role === "admin").length;
+          } else {
+            state.chatUnread = 0;
+          }
+
+          setUnreadBadge();
+          renderChatMessages();
+          setChatStatus("connected", t("supportReady"));
+        },
+        (err) => {
+          console.error("chat subscription error:", err);
+          setChatStatus("error", t("chatError"));
+        }
+      );
+
+    if (openAfterEnsure && els.chatModal) {
+      openModal(els.chatModal);
+      state.chatOpen = true;
+      state.chatUnread = 0;
+      setUnreadBadge();
+      renderChatMessages();
+    }
+
+    return chatId;
+  } catch (error) {
+    console.error("ensureSupportChat error:", error);
+    setChatStatus("error", t("chatError"));
+    return "";
+  }
+}
+
+async function handleSendChatMessage(e) {
+  if (e) e.preventDefault();
+
+  try {
+    if (!db || !auth) {
+      showToast(t("firebaseMissing"), "error");
+      return;
+    }
+
+    const user = auth.currentUser || state.currentUser;
+    if (!user?.uid) {
+      showToast(t("loginRequired"), "warning");
+      showAuthModal("login");
+      return;
+    }
+
+    const text = cleanText(els.chatInput?.value);
+    if (!text) return;
+
+    let chatId = cleanText(state.currentChatId);
+    if (!chatId) {
+      chatId = await ensureSupportChat(false);
+    }
+
+    if (!chatId) {
+      showToast(t("chatError"), "error");
+      return;
+    }
+
+    const payload = {
+      text,
+      message: text,
+      senderRole: "customer",
+      senderName: getCurrentUserName(user),
+      senderId: user.uid,
+      createdAt: getServerTimestamp()
+    };
+
+    await db
+      .collection("chats")
+      .doc(chatId)
+      .collection("messages")
+      .add(payload);
+
+    await db.collection("chats").doc(chatId).set({
+      userId: user.uid,
+      userEmail: getCurrentUserEmail(user),
+      userName: getCurrentUserName(user),
       lastMessage: text,
-      lastSenderRole: "customer"
+      lastText: text,
+      updatedAt: getServerTimestamp(),
+      lastMessageAt: getServerTimestamp()
     }, { merge: true });
 
     if (els.chatInput) els.chatInput.value = "";
-    setChatStatus("connected", t("supportReady"));
-  } catch (err) {
-    console.warn("handleChatSend error:", err);
+    setChatStatus("connected", t("chatConnected"));
+  } catch (error) {
+    console.error("handleSendChatMessage error:", error);
     showToast(t("chatError"), "error");
     setChatStatus("error", t("chatError"));
-  } finally {
-    if (els.chatSendBtn) els.chatSendBtn.disabled = false;
   }
 }
 
 // ──────────────────────────────────────────
-// Events
+// Search / UI Actions
 // ──────────────────────────────────────────
+function handleSearch() {
+  state.searchQuery = cleanText(els.searchInput?.value);
+  applyFilters();
+}
+
+function clearSearch() {
+  state.searchQuery = "";
+  if (els.searchInput) els.searchInput.value = "";
+  applyFilters();
+}
+
+function handleCategoryClick(category, btn) {
+  state.activeCategory = category || "all";
+  $$(".category-item").forEach((item) => item.classList.remove("active"));
+  btn?.classList.add("active");
+  applyFilters();
+}
+
+function handleSortChange() {
+  state.sortBy = cleanText(els.sortSelect?.value || "featured");
+  applyFilters();
+}
+
+function updateScrollTopVisibility() {
+  if (!els.scrollTopBtn) return;
+  els.scrollTopBtn.classList.toggle("visible", window.scrollY > 300);
+}
+
+// ──────────────────────────────────────────
+// Init + Events
+// ──────────────────────────────────────────
+function bindAuthState() {
+  if (!auth) return;
+  auth.onAuthStateChanged(async (user) => {
+    await updateAuthUI(user);
+    await loadBookings();
+  });
+}
+
 function bindEvents() {
   els.langBtn?.addEventListener("click", toggleLang);
   els.themeBtn?.addEventListener("click", toggleTheme);
 
   els.profileMenu?.addEventListener("click", (e) => {
     e.preventDefault();
-    if (state.currentUser) {
-      toggleProfileDropdown();
-    } else {
+    if (!state.currentUser) {
       showAuthModal("login");
+      return;
     }
+    toggleProfileDropdown();
   });
 
   document.addEventListener("click", (e) => {
     if (els.profileContainer && !els.profileContainer.contains(e.target)) {
       closeProfileDropdown();
     }
-
-    if (e.target === els.authModal) hideAuthModal();
-    if (e.target === els.bookingsModal) closeModal(els.bookingsModal);
-    if (e.target === els.favoritesModal) closeModal(els.favoritesModal);
-    if (e.target === els.chatModal) closeChatModal();
   });
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      hideAuthModal();
-      closeModal(els.bookingsModal);
-      closeModal(els.favoritesModal);
-      closeChatModal();
-      closeProfileDropdown();
+  els.navAuthBtn?.addEventListener("click", (e) => {
+    if (state.currentUser) return;
+    e.preventDefault();
+    showAuthModal("login");
+  });
+
+  els.logoutBtn?.addEventListener("click", handleLogout);
+  els.myBookingsBtn?.addEventListener("click", async () => {
+    closeProfileDropdown();
+    await loadBookings();
+    openModal(els.bookingsModal);
+  });
+
+  els.myFavoritesBtn?.addEventListener("click", () => {
+    closeProfileDropdown();
+    renderFavorites();
+    openModal(els.favoritesModal);
+  });
+
+  els.openChatBtn?.addEventListener("click", async () => {
+    closeProfileDropdown();
+    if (!state.currentUser) {
+      showToast(t("loginRequired"), "warning");
+      showAuthModal("login");
+      return;
     }
+    await ensureSupportChat(true);
   });
 
-  document.querySelectorAll("[data-auth-tab]").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      showAuthForm(link.dataset.authTab);
-      clearAuthMessage();
-    });
-  });
-
-  document.querySelectorAll(".toggle-pass-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const target = $(btn.dataset.target);
-      if (!target) return;
-      target.type = target.type === "password" ? "text" : "password";
-      const icon = btn.querySelector("i");
-      if (icon) icon.className = target.type === "password" ? "ph ph-eye" : "ph ph-eye-slash";
-    });
+  els.chatOpenBtn?.addEventListener("click", async () => {
+    if (!state.currentUser) {
+      showToast(t("loginRequired"), "warning");
+      showAuthModal("login");
+      return;
+    }
+    await ensureSupportChat(true);
   });
 
   els.loginForm?.addEventListener("submit", handleLogin);
   els.registerForm?.addEventListener("submit", handleRegister);
   els.forgotForm?.addEventListener("submit", handleForgot);
+  els.chatSendForm?.addEventListener("submit", handleSendChatMessage);
+  els.chatSendBtn?.addEventListener("click", handleSendChatMessage);
 
-  els.logoutBtn?.addEventListener("click", async () => {
-    try {
-      if (auth) await auth.signOut();
-      showToast(t("signedOut"), "info");
-      closeProfileDropdown();
-    } catch (err) {
-      console.warn("logout error:", err);
-    }
-  });
-
-  els.myBookingsBtn?.addEventListener("click", openBookingsModal);
-  els.myFavoritesBtn?.addEventListener("click", openFavoritesModal);
-  els.openChatBtn?.addEventListener("click", openChatModal);
-  els.chatOpenBtn?.addEventListener("click", openChatModal);
-  els.chatSendForm?.addEventListener("submit", handleChatSend);
-
-  els.searchBtn?.addEventListener("click", () => {
-    state.searchQuery = cleanText(els.searchInput?.value || "");
-    applyFilters();
-    if (els.clearSearchBtn) {
-      els.clearSearchBtn.style.display = state.searchQuery ? "inline-flex" : "none";
-    }
-  });
-
-  els.searchInput?.addEventListener("input", () => {
-    state.searchQuery = cleanText(els.searchInput.value);
-    applyFilters();
-    if (els.clearSearchBtn) {
-      els.clearSearchBtn.style.display = state.searchQuery ? "inline-flex" : "none";
-    }
-  });
-
-  els.clearSearchBtn?.addEventListener("click", () => {
-    if (els.searchInput) els.searchInput.value = "";
-    if (els.checkInInput) els.checkInInput.value = "";
-    if (els.checkOutInput) els.checkOutInput.value = "";
-    if (els.guestsInput) els.guestsInput.value = "";
-    state.searchQuery = "";
-    if (els.clearSearchBtn) els.clearSearchBtn.style.display = "none";
-    applyFilters();
+  els.searchBtn?.addEventListener("click", handleSearch);
+  els.clearSearchBtn?.addEventListener("click", clearSearch);
+  els.searchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") handleSearch();
   });
 
   els.checkInInput?.addEventListener("change", applyFilters);
   els.checkOutInput?.addEventListener("change", applyFilters);
   els.guestsInput?.addEventListener("change", applyFilters);
-
-  els.sortSelect?.addEventListener("change", () => {
-    state.sortBy = els.sortSelect.value;
-    applyFilters();
-  });
+  els.sortSelect?.addEventListener("change", handleSortChange);
 
   $$(".category-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      $$(".category-item").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      const cat = cleanText(btn.dataset.category || "all").toLowerCase();
-      state.activeCategory =
-        cat === "hotels" ? "hotel" :
-        cat === "villas" ? "villa" :
-        cat === "apartments" ? "apartment" :
-        cat;
-
-      applyFilters();
-    });
+    btn.addEventListener("click", () => handleCategoryClick(cleanText(btn.dataset.category || "all"), btn));
   });
 
-  window.addEventListener("scroll", () => {
-    if (!els.scrollTopBtn) return;
-    if (window.scrollY > 400) {
-      els.scrollTopBtn.classList.add("visible");
-    } else {
-      els.scrollTopBtn.classList.remove("visible");
+  document.addEventListener("click", (e) => {
+    const favBtn = e.target.closest(".favorite-btn");
+    if (favBtn) {
+      toggleFav(favBtn.dataset.id, e);
+      return;
+    }
+
+    const removeFavBtn = e.target.closest(".remove-favorite-btn");
+    if (removeFavBtn) {
+      toggleFav(removeFavBtn.dataset.id, e);
+      return;
+    }
+
+    const closeBtn = e.target.closest("[data-close-modal], .modal-close, .close-modal");
+    if (closeBtn) {
+      closeModal(closeBtn.closest(".modal-overlay, .bookings-modal, .chat-modal"));
+      return;
+    }
+
+    if (
+      e.target.classList?.contains("modal-overlay") ||
+      e.target.classList?.contains("bookings-modal") ||
+      e.target.classList?.contains("chat-modal")
+    ) {
+      closeModal(e.target);
     }
   });
 
-  els.scrollTopBtn?.addEventListener("click", () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      document.querySelectorAll(".modal-overlay.active, .bookings-modal.active, .chat-modal.active").forEach((m) => closeModal(m));
+      closeProfileDropdown();
+    }
   });
-}
 
-// ──────────────────────────────────────────
-// Firebase Auth Watcher
-// ──────────────────────────────────────────
-function watchAuthState() {
-  if (!auth) {
-    applyGuestAuthUI();
-    return;
+  window.addEventListener("scroll", updateScrollTopVisibility);
+  els.scrollTopBtn?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+  if (els.chatModal) {
+    const observer = new MutationObserver(() => {
+      state.chatOpen = els.chatModal.classList.contains("active");
+      if (state.chatOpen) {
+        state.chatUnread = 0;
+        setUnreadBadge();
+      }
+    });
+    observer.observe(els.chatModal, { attributes: true, attributeFilter: ["class"] });
   }
-
-  auth.onAuthStateChanged(async (user) => {
-    await updateAuthUI(user);
-  });
 }
 
-// ──────────────────────────────────────────
-// Init
-// ──────────────────────────────────────────
 async function init() {
   applyTheme();
   applyLang();
-  bindEvents();
-  watchAuthState();
-  showLoadingState();
-  await loadProperties();
+  applyGuestAuthUI();
+  renderListings();
   renderFavorites();
+  renderBookings();
   renderChatMessages();
-  updateChatHiddenFields();
+  bindEvents();
+  bindAuthState();
+  await loadProperties();
+
+  if (auth?.currentUser) {
+    await updateAuthUI(auth.currentUser);
+    await loadBookings();
+    await ensureSupportChat(false);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
-
-// expose for inline handlers if needed
-window.toggleFav = toggleFav;
-window.openFavoritesModal = openFavoritesModal;
-window.openBookingsModal = openBookingsModal;
-window.openChatModal = openChatModal;
