@@ -483,31 +483,98 @@
     return state.adminRole === "owner";
   }
 
-  function canManageProperty(property) {
+  function getCurrentOwnerIdentity() {
+    return {
+      uid: cleanText(state.currentAuthUser?.uid),
+      email: normalizeEmail(state.currentAuthUser?.email),
+      ownerDocId: cleanText(state.ownerAccountDocId),
+      role: cleanText(state.adminRole)
+    };
+  }
+
+  function propertyBelongsToCurrentOwner(property) {
     if (isSuperAdmin()) return true;
     if (!isOwnerAdmin()) return false;
 
-    const uid = cleanText(state.currentAuthUser?.uid);
-    const email = normalizeEmail(state.currentAuthUser?.email);
+    const current = getCurrentOwnerIdentity();
 
-    return cleanText(property?.ownerUid) === uid || normalizeEmail(property?.ownerEmail) === email;
+    const propertyOwnerUid = cleanText(
+      pickFirst(
+        property?.ownerUid,
+        property?.ownerId,
+        property?.hostUid,
+        property?.ownerUserId,
+        property?.userId
+      )
+    );
+
+    const propertyOwnerEmail = normalizeEmail(
+      pickFirst(
+        property?.ownerEmail,
+        property?.hostEmail,
+        property?.email
+      )
+    );
+
+    const propertyOwnerDocId = cleanText(
+      pickFirst(
+        property?.ownerAccountDocId,
+        property?.ownerDocId,
+        property?.ownerAccountId
+      )
+    );
+
+    return (
+      (current.uid && propertyOwnerUid && current.uid === propertyOwnerUid) ||
+      (current.email && propertyOwnerEmail && current.email === propertyOwnerEmail) ||
+      (current.ownerDocId && propertyOwnerDocId && current.ownerDocId === propertyOwnerDocId)
+    );
+  }
+
+  function canManageProperty(property) {
+    return propertyBelongsToCurrentOwner(property);
   }
 
   function canAccessBooking(booking) {
     if (isSuperAdmin()) return true;
     if (!isOwnerAdmin()) return false;
 
+    const current = getCurrentOwnerIdentity();
+
     const bookingPropertyId = cleanText(booking?.propertyId);
-    if (!bookingPropertyId) return false;
+    const bookingOwnerUid = cleanText(
+      pickFirst(
+        booking?.ownerUid,
+        booking?.ownerId,
+        booking?.hostUid,
+        booking?.propertyOwnerUid
+      )
+    );
 
-    const prop = state.properties.find((p) => cleanText(p.id) === bookingPropertyId);
-    if (prop) return canManageProperty(prop);
+    const bookingOwnerEmail = normalizeEmail(
+      pickFirst(
+        booking?.ownerEmail,
+        booking?.hostEmail,
+        booking?.propertyOwnerEmail
+      )
+    );
 
-    const bookingOwnerUid = cleanText(booking?.ownerUid || booking?.hostUid);
-    const bookingOwnerEmail = normalizeEmail(booking?.ownerEmail || booking?.hostEmail);
+    const bookingOwnerDocId = cleanText(
+      pickFirst(
+        booking?.ownerAccountDocId,
+        booking?.ownerDocId
+      )
+    );
+
+    if (bookingPropertyId) {
+      const prop = state.properties.find((p) => cleanText(p.id) === bookingPropertyId);
+      if (prop && propertyBelongsToCurrentOwner(prop)) return true;
+    }
+
     return (
-      bookingOwnerUid === cleanText(state.currentAuthUser?.uid) ||
-      (bookingOwnerEmail && bookingOwnerEmail === normalizeEmail(state.currentAuthUser?.email))
+      (current.uid && bookingOwnerUid && current.uid === bookingOwnerUid) ||
+      (current.email && bookingOwnerEmail && current.email === bookingOwnerEmail) ||
+      (current.ownerDocId && bookingOwnerDocId && current.ownerDocId === bookingOwnerDocId)
     );
   }
 
@@ -515,9 +582,37 @@
     if (isSuperAdmin()) return true;
     if (!isOwnerAdmin()) return false;
 
-    if (cleanText(chat?.ownerId) === cleanText(state.currentAuthUser?.uid)) return true;
+    const current = getCurrentOwnerIdentity();
+
+    const chatOwnerUid = cleanText(
+      pickFirst(
+        chat?.ownerId,
+        chat?.ownerUid,
+        chat?.hostUid,
+        chat?.adminId
+      )
+    );
+
+    const chatOwnerEmail = normalizeEmail(
+      pickFirst(
+        chat?.ownerEmail,
+        chat?.hostEmail
+      )
+    );
+
+    const chatOwnerDocId = cleanText(
+      pickFirst(
+        chat?.ownerAccountDocId,
+        chat?.ownerDocId
+      )
+    );
+
+    if (current.uid && chatOwnerUid && current.uid === chatOwnerUid) return true;
+    if (current.email && chatOwnerEmail && current.email === chatOwnerEmail) return true;
+    if (current.ownerDocId && chatOwnerDocId && current.ownerDocId === chatOwnerDocId) return true;
+
     const prop = state.properties.find((p) => cleanText(p.id) === cleanText(chat?.propertyId));
-    return !!prop && canManageProperty(prop);
+    return !!prop && propertyBelongsToCurrentOwner(prop);
   }
 
   function normalizeBooking(raw) {
@@ -586,6 +681,9 @@
       roomNumber: cleanText(pickFirst(raw?.roomNumber, raw?.roomNo, raw?.room)),
       approvalReply: cleanText(pickFirst(raw?.approvalReply, raw?.ownerReply, raw?.replyMessage)),
       rejectReason: cleanText(pickFirst(raw?.rejectReason, raw?.rejectionReason, raw?.declineReason)),
+      ownerUid: cleanText(pickFirst(raw?.ownerUid, raw?.ownerId, raw?.hostUid, property?.ownerUid, property?.ownerId)),
+      ownerEmail: cleanText(pickFirst(raw?.ownerEmail, raw?.hostEmail, property?.ownerEmail, property?.hostEmail)),
+      ownerAccountDocId: cleanText(pickFirst(raw?.ownerAccountDocId, raw?.ownerDocId, property?.ownerAccountDocId)),
       status: getBookingStatus(raw?.status)
     };
   }
@@ -597,7 +695,9 @@
       participants: Array.isArray(raw?.participants) ? raw.participants : [],
       participantIds: normalizeArray(raw?.participantIds),
       userId: cleanText(pickFirst(raw?.userId, raw?.customerId, raw?.clientId)),
-      ownerId: cleanText(pickFirst(raw?.ownerId, raw?.hostId, raw?.adminId)),
+      ownerId: cleanText(pickFirst(raw?.ownerId, raw?.ownerUid, raw?.hostId, raw?.hostUid, raw?.adminId)),
+      ownerEmail: cleanText(pickFirst(raw?.ownerEmail, raw?.hostEmail)),
+      ownerAccountDocId: cleanText(pickFirst(raw?.ownerAccountDocId, raw?.ownerDocId)),
       bookingId: cleanText(pickFirst(raw?.bookingId, raw?.reservationId)),
       propertyId: cleanText(pickFirst(raw?.propertyId, raw?.listingId)),
       propertyTitle: cleanText(pickFirst(raw?.propertyTitle, raw?.propertyName)),
@@ -1041,19 +1141,47 @@
 
     try {
       const items = [];
-      let snap;
+      let snap = null;
 
       if (isSuperAdmin()) {
         snap = await db.collection("properties").get();
+        snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
       } else {
-        try {
-          snap = await db.collection("properties").where("ownerUid", "==", cleanText(state.currentAuthUser?.uid)).get();
-        } catch {
-          snap = await db.collection("properties").get();
+        const current = getCurrentOwnerIdentity();
+        const candidateQueries = [
+          ["ownerUid", current.uid],
+          ["ownerId", current.uid],
+          ["hostUid", current.uid],
+          ["ownerEmail", current.email],
+          ["hostEmail", current.email],
+          ["ownerAccountDocId", current.ownerDocId]
+        ].filter(([, value]) => cleanText(value));
+
+        const seen = new Set();
+
+        for (const [field, value] of candidateQueries) {
+          try {
+            const part = await db.collection("properties").where(field, "==", value).get();
+            part.forEach((doc) => {
+              if (!seen.has(doc.id)) {
+                seen.add(doc.id);
+                items.push({ id: doc.id, ...doc.data() });
+              }
+            });
+          } catch (error) {
+            logLookupWarning(`properties ${field} lookup failed:`, error);
+          }
+        }
+
+        if (!items.length) {
+          try {
+            snap = await db.collection("properties").get();
+            snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+          } catch (error) {
+            console.warn("properties fallback full scan failed:", error);
+          }
         }
       }
-
-      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
 
       let filtered = items;
       if (isOwnerAdmin()) filtered = items.filter(canManageProperty);
@@ -1092,7 +1220,10 @@
           getPropertyType(prop),
           cleanText(prop.ownerName),
           cleanText(prop.ownerEmail),
-          cleanText(prop.ownerUid)
+          cleanText(prop.ownerUid),
+          cleanText(prop.ownerId),
+          cleanText(prop.hostUid),
+          cleanText(prop.ownerAccountDocId)
         ].join(" ").toLowerCase().includes(query)
       );
     }
@@ -1194,6 +1325,7 @@
       ownerEmail,
       ownerPhone,
       hostName: ownerName,
+      hostEmail: ownerEmail,
       imageUrl: imageUrl || allImages[0] || "images/placeholder.jpg",
       mainImage: imageUrl || allImages[0] || "images/placeholder.jpg",
       images: allImages.length ? allImages : ["images/placeholder.jpg"],
@@ -1218,7 +1350,15 @@
       updatedAt: getServerTimestamp()
     };
 
-    if (isOwnerAdmin()) payload.ownerUid = cleanText(state.currentAuthUser?.uid);
+    if (isOwnerAdmin()) {
+      payload.ownerUid = cleanText(state.currentAuthUser?.uid);
+      payload.ownerId = cleanText(state.currentAuthUser?.uid);
+      payload.hostUid = cleanText(state.currentAuthUser?.uid);
+      payload.ownerEmail = normalizeEmail(state.currentAuthUser?.email) || normalizeEmail(ownerEmail);
+      payload.hostEmail = normalizeEmail(state.currentAuthUser?.email) || normalizeEmail(ownerEmail);
+      payload.ownerAccountDocId = cleanText(state.ownerAccountDocId);
+    }
+
     return payload;
   }
 
@@ -1325,7 +1465,7 @@
     setValue(prop.descriptionAr || prop.description || "", "edit-description-ar", "edit-description", "edit-property-description-ar", "edit-property-description");
     setValue(prop.descriptionEn || "", "edit-description-en", "edit-property-description-en");
     setValue(prop.ownerName || prop.hostName || "", "edit-owner-name", "edit-host-name");
-    setValue(prop.ownerEmail || "", "edit-owner-email", "edit-host-email");
+    setValue(prop.ownerEmail || prop.hostEmail || "", "edit-owner-email", "edit-host-email");
     setValue(prop.ownerPhone || "", "edit-owner-phone", "edit-host-phone");
     setValue(prop.imageUrl || prop.mainImage || "", "edit-image-url", "edit-main-image", "edit-photo-url");
     setValue(normalizeArray(prop.images || prop.gallery).join(", "), "edit-gallery", "edit-images", "edit-gallery-urls");
@@ -1371,7 +1511,14 @@
     const validation = validatePropertyData(data);
     if (validation) return showToast(validation, "warning");
 
-    if (isOwnerAdmin()) data.ownerUid = cleanText(state.currentAuthUser?.uid);
+    if (isOwnerAdmin()) {
+      data.ownerUid = cleanText(state.currentAuthUser?.uid);
+      data.ownerId = cleanText(state.currentAuthUser?.uid);
+      data.hostUid = cleanText(state.currentAuthUser?.uid);
+      data.ownerEmail = normalizeEmail(state.currentAuthUser?.email);
+      data.hostEmail = normalizeEmail(state.currentAuthUser?.email);
+      data.ownerAccountDocId = cleanText(state.ownerAccountDocId);
+    }
 
     setButtonLoading(btn, true, "جارٍ حفظ التعديلات...");
     try {
@@ -1403,28 +1550,52 @@
         } catch {
           snap = await db.collection("bookings").get();
         }
+
+        snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
       } else {
+        const current = getCurrentOwnerIdentity();
+        const seen = new Set();
         const propertyIds = state.properties.map((p) => p.id).filter(Boolean);
-        if (!propertyIds.length) {
-          state.bookings = [];
-          renderBookings();
-          renderDashboardStats();
-          return;
+
+        for (const propertyId of propertyIds) {
+          try {
+            const part = await db.collection("bookings").where("propertyId", "==", propertyId).get();
+            part.forEach((doc) => {
+              if (!seen.has(doc.id)) {
+                seen.add(doc.id);
+                items.push(normalizeBooking({ id: doc.id, ...doc.data() }));
+              }
+            });
+          } catch (error) {
+            logLookupWarning("bookings by propertyId lookup failed:", error);
+          }
         }
 
-        const all = [];
-        for (const propertyId of propertyIds) {
-          const part = await db.collection("bookings").where("propertyId", "==", propertyId).get();
-          part.forEach((doc) => all.push(normalizeBooking({ id: doc.id, ...doc.data() })));
+        const ownerQueries = [
+          ["ownerUid", current.uid],
+          ["ownerId", current.uid],
+          ["hostUid", current.uid],
+          ["ownerEmail", current.email],
+          ["hostEmail", current.email],
+          ["ownerAccountDocId", current.ownerDocId]
+        ].filter(([, value]) => cleanText(value));
+
+        for (const [field, value] of ownerQueries) {
+          try {
+            const part = await db.collection("bookings").where(field, "==", value).get();
+            part.forEach((doc) => {
+              if (!seen.has(doc.id)) {
+                seen.add(doc.id);
+                items.push(normalizeBooking({ id: doc.id, ...doc.data() }));
+              }
+            });
+          } catch (error) {
+            logLookupWarning(`bookings ${field} lookup failed:`, error);
+          }
         }
-        state.bookings = sortByCreatedDesc(all);
-        renderBookings();
-        renderDashboardStats();
-        return;
       }
 
-      snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
-      state.bookings = sortByCreatedDesc(items);
+      state.bookings = sortByCreatedDesc(items.filter((b) => isSuperAdmin() || canAccessBooking(b)));
       renderBookings();
       renderDashboardStats();
     } catch (error) {
@@ -1469,6 +1640,9 @@
           b.propertyTitle,
           b.guestPhone,
           b.userId,
+          b.ownerUid,
+          b.ownerEmail,
+          b.ownerAccountDocId,
           deepGet(b, "guest.fullName"),
           deepGet(b, "guest.email"),
           deepGet(b, "guest.phone"),
@@ -1830,6 +2004,9 @@
       userName: booking.guestName,
       propertyId: booking.propertyId,
       propertyTitle: booking.propertyTitle,
+      ownerId: booking.ownerUid,
+      ownerEmail: booking.ownerEmail,
+      ownerAccountDocId: booking.ownerAccountDocId,
       lastMessage: booking.reference,
       updatedAt: booking.createdAt,
       booking
@@ -1864,46 +2041,71 @@
     }
 
     try {
-      let queryRef = db.collection("chats");
+      let items = [];
 
-      if (!isSuperAdmin()) {
-        const ownerPropertyIds = state.properties.map((p) => p.id).filter(Boolean).slice(0, 10);
-        if (ownerPropertyIds.length) {
+      if (isSuperAdmin()) {
+        const snap = await db.collection("chats").get();
+        snap.forEach((doc) => items.push(normalizeChat({ id: doc.id, ...doc.data() }, doc.id)));
+      } else {
+        const current = getCurrentOwnerIdentity();
+        const propertyIds = state.properties.map((p) => p.id).filter(Boolean);
+        const seen = new Set();
+
+        const chatQueries = [
+          ["ownerId", current.uid],
+          ["ownerUid", current.uid],
+          ["hostUid", current.uid],
+          ["ownerEmail", current.email],
+          ["hostEmail", current.email],
+          ["ownerAccountDocId", current.ownerDocId]
+        ].filter(([, value]) => cleanText(value));
+
+        for (const [field, value] of chatQueries) {
           try {
-            queryRef = queryRef.where("propertyId", "in", ownerPropertyIds);
-          } catch {}
+            const part = await db.collection("chats").where(field, "==", value).get();
+            part.forEach((doc) => {
+              if (!seen.has(doc.id)) {
+                seen.add(doc.id);
+                items.push(normalizeChat({ id: doc.id, ...doc.data() }, doc.id));
+              }
+            });
+          } catch (error) {
+            logLookupWarning(`chats ${field} lookup failed:`, error);
+          }
+        }
+
+        for (const propertyId of propertyIds.slice(0, 20)) {
+          try {
+            const part = await db.collection("chats").where("propertyId", "==", propertyId).get();
+            part.forEach((doc) => {
+              if (!seen.has(doc.id)) {
+                seen.add(doc.id);
+                items.push(normalizeChat({ id: doc.id, ...doc.data() }, doc.id));
+              }
+            });
+          } catch (error) {
+            logLookupWarning("chats propertyId lookup failed:", error);
+          }
         }
       }
 
-      state.listeners.chats = queryRef.onSnapshot(
-        (snap) => {
-          const items = [];
-          snap.forEach((doc) => items.push(normalizeChat({ id: doc.id, ...doc.data() }, doc.id)));
+      const bookingDerivedThreads = derivePseudoChatsFromBookings();
+      const merged = mergeChats(items, bookingDerivedThreads);
+      state.chats = sortByUpdatedDesc(merged).filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
 
-          const bookingDerivedThreads = derivePseudoChatsFromBookings();
-          const merged = mergeChats(items, bookingDerivedThreads);
-          state.chats = sortByUpdatedDesc(merged).filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
+      renderChatThreads();
 
-          renderChatThreads();
+      if (state.currentChatId && !state.chats.find((x) => x.id === state.currentChatId)) {
+        state.currentChatId = null;
+        state.currentChatMessages = [];
+      }
 
-          if (state.currentChatId && !state.chats.find((x) => x.id === state.currentChatId)) {
-            state.currentChatId = null;
-            state.currentChatMessages = [];
-          }
+      if (state.currentChatId) {
+        if (state.currentChatId.startsWith("booking-thread-")) loadPseudoChatMessages(state.currentChatId);
+        else subscribeToChatMessages(state.currentChatId);
+      }
 
-          if (state.currentChatId) {
-            if (state.currentChatId.startsWith("booking-thread-")) loadPseudoChatMessages(state.currentChatId);
-            else subscribeToChatMessages(state.currentChatId);
-          }
-
-          renderDashboardStats();
-        },
-        (error) => {
-          console.error("loadChats listener error:", error);
-          state.chats = derivePseudoChatsFromBookings().filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
-          renderChatThreads();
-        }
-      );
+      renderDashboardStats();
     } catch (error) {
       console.error("loadChats error:", error);
       state.chats = derivePseudoChatsFromBookings().filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
@@ -1928,7 +2130,9 @@
           chat.lastMessage,
           chat.bookingId,
           chat.propertyTitle,
-          chat.userId
+          chat.userId,
+          chat.ownerId,
+          chat.ownerEmail
         ].join(" ").toLowerCase().includes(query)
       );
     }
@@ -2171,6 +2375,9 @@
       propertyTitle: booking.propertyTitle || "",
       userId: booking.userId || "",
       ownerId: cleanText(state.currentAuthUser?.uid),
+      ownerUid: cleanText(state.currentAuthUser?.uid),
+      ownerEmail: normalizeEmail(state.currentAuthUser?.email),
+      ownerAccountDocId: cleanText(state.ownerAccountDocId),
       userName: booking.guestName || "",
       userEmail: booking.guestEmail || "",
       participants: [booking.userId, booking.guestEmail, cleanText(state.currentAuthUser?.uid)].filter(Boolean),
@@ -2226,166 +2433,13 @@
     }
   }
 
-  async function sendMessageToChat(chatId, text, senderRole = "admin", senderName = "الإدارة") {
-    const cleanMsg = cleanText(text);
-    if (!chatId || !cleanMsg || !firebaseReady) return false;
-
-    try {
-      const chatRef = db.collection("chats").doc(chatId);
-      const payload = {
-        text: cleanMsg,
-        message: cleanMsg,
-        senderRole,
-        senderName,
-        createdAt: getServerTimestamp()
-      };
-
-      try {
-        await chatRef.collection("messages").add(payload);
-      } catch {
-        await db.collection("messages").add({
-          ...payload,
-          chatId
-        });
-      }
-
-      await chatRef.set(
-        {
-          lastMessage: cleanMsg,
-          lastText: cleanMsg,
-          lastMessageAt: getServerTimestamp(),
-          updatedAt: getServerTimestamp()
-        },
-        { merge: true }
-      );
-
-      return true;
-    } catch (error) {
-      console.error("sendMessageToChat error:", error);
-      return false;
-    }
-  }
-
-  async function sendApprovalMessageForBooking(bookingId, roomNumber) {
-    const booking = state.bookings.find((b) => b.id === bookingId);
-    if (!booking) return false;
-
-    const chatId = await createRealChatFromBooking(bookingId);
-    if (!chatId) return false;
-
-    const text = getAutoApprovalMessage(roomNumber);
-    return sendMessageToChat(
-      chatId,
-      text,
-      isSuperAdmin() ? "admin" : "owner",
-      isSuperAdmin() ? "الإدارة" : "المالك"
-    );
-  }
-
-  async function sendRejectionMessageForBooking(bookingId, reason) {
-    const booking = state.bookings.find((b) => b.id === bookingId);
-    if (!booking) return false;
-
-    const chatId = await createRealChatFromBooking(bookingId);
-    if (!chatId) return false;
-
-    const text = getAutoRejectionMessage(reason);
-    return sendMessageToChat(
-      chatId,
-      text,
-      isSuperAdmin() ? "admin" : "owner",
-      isSuperAdmin() ? "الإدارة" : "المالك"
-    );
-  }
-
-  async function approveBookingWithAutoMessage(bookingId) {
-    const booking = state.bookings.find((b) => b.id === bookingId);
-    if (!booking) return showToast("الحجز غير موجود.", "error");
-
-    const roomNumber = booking.roomNumber || getRandomRoomNumber();
-    const approvalReply = getAutoApprovalMessage(roomNumber);
-
-    const updated = await updateBookingStatus(bookingId, "confirmed", {
-      roomNumber,
-      approvalReply
-    });
-
-    if (!updated) return;
-
-    await sendApprovalMessageForBooking(bookingId, roomNumber);
-    await loadChats();
-
-    if (state.currentChatId && state.currentChatId === `booking-thread-${bookingId}`) {
-      const chat = await findExistingChatForBooking({ ...booking, id: bookingId });
-      if (chat?.id) openChat(chat.id);
-    }
-
-    showToast(`تم قبول الحجز وإرسال رقم الغرفة ${roomNumber}.`, "success");
-  }
-
-  function openRejectBookingModal(bookingId) {
-    const booking = state.bookings.find((b) => b.id === bookingId);
-    if (!booking) return showToast("الحجز غير موجود.", "error");
-    if (!canAccessBooking(booking)) return showToast("لا تملك صلاحية رفض هذا الحجز.", "error");
-
-    const modal = byId("reject-booking-modal");
-    if (!modal) return showToast("نافذة رفض الحجز غير موجودة.", "error");
-
-    state.pendingRejectBookingId = bookingId;
-    setValue(bookingId, "reject-booking-id");
-    setValue("", "reject-reason-select");
-    setValue("", "reject-reason-custom");
-
-    const custom = byId("reject-reason-custom");
-    if (custom) custom.style.display = "none";
-
-    modal.classList.add("active");
-    document.body.classList.add("modal-open");
-  }
-
-  async function confirmRejectBooking() {
-    const bookingId = cleanText(getValue("reject-booking-id")) || state.pendingRejectBookingId;
-    if (!bookingId) return showToast("تعذر تحديد الحجز.", "error");
-
-    const selectedReason = cleanText(getValue("reject-reason-select"));
-    const customReason = cleanText(getValue("reject-reason-custom"));
-    const finalReason = selectedReason === "سبب آخر" ? customReason : selectedReason;
-
-    if (!finalReason) return showToast("يرجى تحديد سبب الرفض.", "warning");
-
-    const btn = byId("confirm-reject-booking-btn");
-    setButtonLoading(btn, true, "جارٍ رفض الحجز...");
-
-    try {
-      const updated = await updateBookingStatus(bookingId, "rejected", {
-        rejectReason: finalReason
-      });
-
-      if (!updated) return;
-
-      await sendRejectionMessageForBooking(bookingId, finalReason);
-      await loadChats();
-
-      const modal = byId("reject-booking-modal");
-      closeModal(modal);
-      state.pendingRejectBookingId = "";
-
-      showToast("تم رفض الحجز وإرسال السبب للعميل.", "success");
-    } catch (error) {
-      console.error("confirmRejectBooking error:", error);
-      showToast("تعذر رفض الحجز.", "error");
-    } finally {
-      setButtonLoading(btn, false);
-    }
-  }
-
   async function sendAdminMessage(e) {
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
-    if (!state.currentChatId) return showToast("يرجى اختيار محادثة أولاً.", "warning");
+    if (!state.currentChatId) return showToast("اختر محادثة أولاً.", "warning");
 
     const form = e.currentTarget;
-    const input = form.querySelector("textarea, input[type='text']");
+    const input = form.querySelector('textarea, input[type="text"]');
     const text = cleanText(input?.value);
     if (!text) return;
 
@@ -2410,24 +2464,44 @@
 
       const chat = state.chats.find((c) => c.id === actualChatId);
       if (chat && !chat.pseudo && !canAccessChat(chat)) {
-        showToast("لا تملك صلاحية الإرسال في هذه المحادثة.", "error");
+        showToast("لا تملك صلاحية الإرسال داخل هذه المحادثة.", "error");
         return;
       }
 
-      const sent = await sendMessageToChat(
-        actualChatId,
+      const chatRef = db.collection("chats").doc(actualChatId);
+      const payload = {
         text,
-        isSuperAdmin() ? "admin" : "owner",
-        isSuperAdmin() ? "الإدارة" : "المالك"
-      );
+        message: text,
+        senderRole: isSuperAdmin() ? "admin" : "owner",
+        senderName: isSuperAdmin() ? "الإدارة" : "المالك",
+        createdAt: getServerTimestamp()
+      };
 
-      if (!sent) {
-        showToast("تعذر إرسال الرسالة.", "error");
-        return;
+      try {
+        await chatRef.collection("messages").add(payload);
+      } catch {
+        await db.collection("messages").add({
+          ...payload,
+          chatId: actualChatId,
+          propertyId: cleanText(chat?.propertyId || ""),
+          userId: cleanText(chat?.userId || "")
+        });
       }
+
+      await chatRef.set({
+        lastMessage: text,
+        lastText: text,
+        lastMessageAt: getServerTimestamp(),
+        updatedAt: getServerTimestamp()
+      }, { merge: true });
 
       if (input) input.value = "";
-      showToast("تم إرسال الرسالة.", "success");
+      showToast("تم إرسال الرسالة بنجاح.", "success");
+
+      if (actualChatId.startsWith("booking-thread-")) loadPseudoChatMessages(actualChatId);
+      else subscribeToChatMessages(actualChatId);
+
+      await loadChats();
     } catch (error) {
       console.error("sendAdminMessage error:", error);
       showToast("تعذر إرسال الرسالة.", "error");
@@ -2469,7 +2543,7 @@
     };
 
     if (wrapper) wrapper.classList.add("visible");
-    if (name) name.textContent = "الصورة الحالية";
+    if (name) name.textContent = cleanUrl.split("/").pop() || "image";
     if (meta) meta.textContent = cleanUrl;
   }
 
@@ -2505,21 +2579,22 @@
   function clearMapCoords(prefix) {
     setValue("", `${prefix}-lat`, `${prefix}-latitude`);
     setValue("", `${prefix}-lng`, `${prefix}-longitude`);
-
     const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
-    if (state.maps[markerKey]) {
+    if (state.maps[markerKey]?.remove) {
       try {
         state.maps[markerKey].remove();
       } catch {}
-      state.maps[markerKey] = null;
     }
+    state.maps[markerKey] = null;
   }
 
   function updateMapMarkerFromInputs(prefix) {
-    const lat = toNumber(getValue(`${prefix}-lat`, `${prefix}-latitude`), null);
-    const lng = toNumber(getValue(`${prefix}-lng`, `${prefix}-longitude`), null);
+    const latRaw = getValue(`${prefix}-lat`, `${prefix}-latitude`);
+    const lngRaw = getValue(`${prefix}-lng`, `${prefix}-longitude`);
+    const lat = latRaw === "" ? null : Number(latRaw);
+    const lng = lngRaw === "" ? null : Number(lngRaw);
 
-    if (lat === null || lng === null || typeof L === "undefined") return;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || typeof L === "undefined") return;
 
     const mapKey = prefix === "edit" ? "edit" : "add";
     const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
@@ -2527,11 +2602,9 @@
     if (!map) return;
 
     try {
-      if (state.maps[markerKey]) {
-        state.maps[markerKey].setLatLng([lat, lng]);
-      } else {
-        state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
-      }
+      if (state.maps[markerKey]) state.maps[markerKey].setLatLng([lat, lng]);
+      else state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
+
       map.setView([lat, lng], 13);
       showMapPickedBadge(prefix);
     } catch (error) {
@@ -2542,14 +2615,12 @@
   async function searchLocationOnMap(prefix) {
     const qInput = byId(`${prefix}-map-search`);
     const query = cleanText(qInput?.value);
-    if (!query) return showToast("يرجى كتابة موقع للبحث.", "warning");
+    if (!query) return showToast("اكتب موقعًا للبحث.", "warning");
 
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
       const res = await fetch(url, {
-        headers: {
-          Accept: "application/json"
-        }
+        headers: { Accept: "application/json" }
       });
       const data = await res.json();
 
@@ -2588,21 +2659,17 @@
 
     try {
       const map = L.map(el).setView([31.95, 5.33], 6);
-
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap"
       }).addTo(map);
 
-      map.on("click", function (ev) {
+      map.on("click", (ev) => {
         const { lat, lng } = ev.latlng;
         setValue(String(lat.toFixed(6)), `${prefix}-lat`, `${prefix}-latitude`);
         setValue(String(lng.toFixed(6)), `${prefix}-lng`, `${prefix}-longitude`);
 
-        if (state.maps[markerKey]) {
-          state.maps[markerKey].setLatLng([lat, lng]);
-        } else {
-          state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
-        }
+        if (state.maps[markerKey]) state.maps[markerKey].setLatLng([lat, lng]);
+        else state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
 
         showMapPickedBadge(prefix);
       });
@@ -2620,8 +2687,8 @@
 
   async function handleLoginSubmit(e) {
     if (e?.preventDefault) e.preventDefault();
-    const username = getValue("admin-login-email", "admin-username", "admin-user", "login-username", "username", "email");
-    const password = getValue("admin-login-password", "admin-password", "admin-pass", "login-password", "password");
+    const username = getValue("admin-username", "admin-user", "login-username", "username", "email");
+    const password = getValue("admin-password", "admin-pass", "login-password", "password");
     await login(username, password);
   }
 
@@ -2629,6 +2696,19 @@
     getLoginForm()?.addEventListener("submit", handleLoginSubmit);
     byId("admin-login-btn")?.addEventListener("click", handleLoginSubmit);
     byId("login-btn")?.addEventListener("click", handleLoginSubmit);
+
+    byId("admin-username")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-password")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-user")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-pass")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
 
     byId("admin-logout-btn")?.addEventListener("click", logout);
     byId("logout-btn")?.addEventListener("click", logout);
@@ -2641,26 +2721,17 @@
     byId("admin-property-form")?.addEventListener("submit", handleAddPropertySubmit);
     byId("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
     byId("property-edit-form")?.addEventListener("submit", handleEditPropertySubmit);
+
     byId("owner-account-form")?.addEventListener("submit", handleOwnerFormSubmit);
     byId("owner-form")?.addEventListener("submit", handleOwnerFormSubmit);
+
     byId("admin-chat-send-form")?.addEventListener("submit", sendAdminMessage);
     byId("chat-send-form")?.addEventListener("submit", sendAdminMessage);
 
-    ["properties-search", "property-search"].forEach((id) => {
-      byId(id)?.addEventListener("input", renderPropertiesTable);
-    });
-
-    ["bookings-search", "booking-search"].forEach((id) => {
-      byId(id)?.addEventListener("input", renderBookings);
-    });
-
-    ["owners-search", "owner-search"].forEach((id) => {
-      byId(id)?.addEventListener("input", renderOwnerAccounts);
-    });
-
-    ["chats-search", "chat-search"].forEach((id) => {
-      byId(id)?.addEventListener("input", renderChatThreads);
-    });
+    ["properties-search", "property-search"].forEach((id) => byId(id)?.addEventListener("input", renderPropertiesTable));
+    ["bookings-search", "booking-search"].forEach((id) => byId(id)?.addEventListener("input", renderBookings));
+    ["owners-search", "owner-search"].forEach((id) => byId(id)?.addEventListener("input", renderOwnerAccounts));
+    ["chats-search", "chat-search"].forEach((id) => byId(id)?.addEventListener("input", renderChatThreads));
 
     qa("[data-booking-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2710,15 +2781,13 @@
       });
     });
 
-    byId("confirm-reject-booking-btn")?.addEventListener("click", confirmRejectBooking);
-
-    byId("reject-reason-select")?.addEventListener("change", (e) => {
-      const custom = byId("reject-reason-custom");
-      if (!custom) return;
-      custom.style.display = e.target.value === "سبب آخر" ? "block" : "none";
-    });
-
     document.addEventListener("click", async (e) => {
+      const editPropBtn = e.target.closest(".edit-property-btn");
+      if (editPropBtn) {
+        openEditPropertyModal(editPropBtn.dataset.id);
+        return;
+      }
+
       const toggleBtn = e.target.closest(".toggle-property-btn");
       if (toggleBtn) {
         const id = toggleBtn.dataset.id;
@@ -2733,21 +2802,15 @@
         return;
       }
 
-      const editPropBtn = e.target.closest(".edit-property-btn");
-      if (editPropBtn) {
-        openEditPropertyModal(editPropBtn.dataset.id);
-        return;
-      }
-
       const approveBtn = e.target.closest(".btn-approve");
       if (approveBtn) {
-        await approveBookingWithAutoMessage(approveBtn.dataset.bookingId);
+        await updateBookingStatus(approveBtn.dataset.bookingId, "confirmed");
         return;
       }
 
       const rejectBtn = e.target.closest(".btn-reject");
       if (rejectBtn) {
-        openRejectBookingModal(rejectBtn.dataset.bookingId);
+        await updateBookingStatus(rejectBtn.dataset.bookingId, "rejected");
         return;
       }
 
@@ -2791,19 +2854,6 @@
         qa(".modal-overlay.active, .modal.active").forEach((modal) => closeModal(modal));
       }
     });
-
-    byId("admin-login-email")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-login-password")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-username")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-password")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
   }
 
   function bindAuthState() {
@@ -2822,6 +2872,7 @@
       const roleResult = await getAdminRoleFromFirestore(user);
       if (roleResult.ok) {
         state.adminRole = roleResult.role;
+        state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
         safeSet(ADMIN_ROLE_KEY, roleResult.role);
 
         if (roleResult.ownerDocId) {
@@ -2829,11 +2880,8 @@
           safeSet(ADMIN_OWNER_DOC_KEY, roleResult.ownerDocId);
         }
 
-        state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
         state.isLoggedIn = true;
         ensureLoggedInUI();
-        updateProfileUI();
-        updateRoleBasedUI();
       }
     });
   }
@@ -2844,11 +2892,7 @@
 
     if (state.isLoggedIn && auth?.currentUser) {
       state.currentAuthUser = auth.currentUser;
-    }
-
-    activateTab(state.activeTab || "dashboard", { silentAuth: true });
-
-    if (state.isLoggedIn && auth?.currentUser) {
+      activateTab(state.activeTab || "dashboard", { silentAuth: true });
       loadAllData();
     }
   }
@@ -2876,9 +2920,6 @@
     loadOwnerAccounts,
     loadChats,
     openChat,
-    ensureChatForBooking,
-    openRejectBookingModal,
-    confirmRejectBooking,
-    approveBookingWithAutoMessage
+    ensureChatForBooking
   };
 })();
