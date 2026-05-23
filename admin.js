@@ -204,6 +204,10 @@
     return `تم قبول حجزك بنجاح. رقم الغرفة: ${roomNumber}`;
   }
 
+  function getAutoRejectionMessage(reason) {
+    return `تم رفض الحجز. السبب: ${cleanText(reason || "لم يتم تحديد السبب")}`;
+  }
+
   function isPermissionDenied(error) {
     const code = String(error?.code || "");
     const message = String(error?.message || "");
@@ -581,6 +585,7 @@
       createdAt,
       roomNumber: cleanText(pickFirst(raw?.roomNumber, raw?.roomNo, raw?.room)),
       approvalReply: cleanText(pickFirst(raw?.approvalReply, raw?.ownerReply, raw?.replyMessage)),
+      rejectReason: cleanText(pickFirst(raw?.rejectReason, raw?.rejectionReason, raw?.declineReason)),
       status: getBookingStatus(raw?.status)
     };
   }
@@ -595,6 +600,7 @@
       ownerId: cleanText(pickFirst(raw?.ownerId, raw?.hostId, raw?.adminId)),
       bookingId: cleanText(pickFirst(raw?.bookingId, raw?.reservationId)),
       propertyId: cleanText(pickFirst(raw?.propertyId, raw?.listingId)),
+      propertyTitle: cleanText(pickFirst(raw?.propertyTitle, raw?.propertyName)),
       userName: cleanText(pickFirst(raw?.userName, raw?.customerName, raw?.clientName, raw?.name)),
       userEmail: cleanText(pickFirst(raw?.userEmail, raw?.customerEmail, raw?.email)),
       lastMessage: cleanText(pickFirst(raw?.lastMessage, raw?.lastText, raw?.lastMessageText)),
@@ -937,16 +943,16 @@
       "dashboard-pane": "dashboard",
       properties: "properties",
       "properties-pane": "properties",
+      "add-property": "add-property",
+      "add-property-pane": "add-property",
       bookings: "bookings",
       "bookings-pane": "bookings",
       owners: "owners",
       "owners-pane": "owners",
-      messages: "messages",
-      "messages-pane": "messages",
-      chats: "messages",
-      "chats-pane": "messages",
-      "add-property": "properties",
-      "add-property-pane": "properties"
+      messages: "chats",
+      "messages-pane": "chats",
+      chats: "chats",
+      "chats-pane": "chats"
     };
     return map[raw] || raw || "dashboard";
   }
@@ -967,6 +973,7 @@
     });
 
     qa(".tab-pane").forEach((pane) => pane.classList.remove("active"));
+
     const explicit =
       byId(`${state.activeTab}-pane`) ||
       byId(state.activeTab) ||
@@ -974,7 +981,7 @@
 
     if (explicit && explicit.classList.contains("tab-pane")) explicit.classList.add("active");
 
-    if (state.activeTab === "messages" && state.currentChatId) {
+    if (state.activeTab === "chats" && state.currentChatId) {
       renderChatThreads();
       renderCurrentChatMessages();
     }
@@ -1009,11 +1016,11 @@
     setText(String(state.bookings.length), "dashboard-bookings-count", "mini-bookings-count", "stat-bookings-count", "total-bookings-count");
     setText(String(state.ownerAccounts.length), "stat-owners-count", "owners-count");
     setText(String(state.chats.length), "stat-chats-count");
-    setText(String(pending), "pending-bookings-count", "bookings-count-pending", "booking-count-pending");
-    setText(String(confirmed), "confirmed-bookings-count", "bookings-count-confirmed", "booking-count-confirmed");
-    setText(String(rejected), "rejected-bookings-count", "bookings-count-rejected", "booking-count-rejected");
+    setText(String(pending), "pending-bookings-count", "bookings-count-pending", "booking-count-pending", "pending-bookings-filter-count");
+    setText(String(confirmed), "confirmed-bookings-count", "bookings-count-confirmed", "booking-count-confirmed", "confirmed-bookings-filter-count");
+    setText(String(rejected), "rejected-bookings-count", "bookings-count-rejected", "booking-count-rejected", "rejected-bookings-filter-count");
     setText(String(state.users.length), "dashboard-users-count", "users-count");
-    setText(String(state.bookings.length), "bookings-count-all", "booking-count-all");
+    setText(String(state.bookings.length), "bookings-count-all", "booking-count-all", "all-bookings-count");
 
     const visibleCount = state.properties.filter((p) => p.isActive !== false && p.visible !== false).length;
     const hiddenCount = Math.max(0, state.properties.length - visibleCount);
@@ -1211,19 +1218,45 @@
       updatedAt: getServerTimestamp()
     };
 
-    if (isOwnerAdmin()) {
-      payload.ownerUid = cleanText(state.currentAuthUser?.uid);
-      payload.ownerEmail = payload.ownerEmail || cleanText(state.currentAuthUser?.email);
-    }
-
+    if (isOwnerAdmin()) payload.ownerUid = cleanText(state.currentAuthUser?.uid);
     return payload;
   }
 
   function validatePropertyData(data) {
-    if (!cleanText(data.titleAr || data.title)) return "أدخل عنوان العقار.";
-    if (!cleanText(data.locationAr || data.location)) return "أدخل موقع العقار.";
-    if (!toNumber(data.price, 0)) return "أدخل سعر العقار.";
+    if (!cleanText(data.titleAr || data.title)) return "يرجى إدخال اسم العقار.";
+    if (!cleanText(data.locationAr || data.location)) return "يرجى إدخال موقع العقار.";
+    if (!toNumber(data.price, 0)) return "يرجى إدخال السعر.";
     return "";
+  }
+
+  async function handleAddPropertySubmit(e) {
+    e.preventDefault();
+    if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
+    if (!requireAuth()) return;
+
+    const form = e.currentTarget;
+    const btn = form.querySelector('button[type="submit"]');
+    const data = collectPropertyFormData("admin");
+    const validation = validatePropertyData(data);
+    if (validation) return showToast(validation, "warning");
+
+    setButtonLoading(btn, true, "جارٍ إضافة العقار...");
+    try {
+      data.createdAt = getServerTimestamp();
+      await db.collection("properties").add(data);
+      form.reset();
+      resetUploadPreview("admin");
+      clearMapCoords("admin");
+      hideMapPickedBadge("admin");
+      await loadProperties();
+      showToast("تمت إضافة العقار بنجاح.", "success");
+      activateTab("properties");
+    } catch (error) {
+      console.error("add property error:", error);
+      showToast("تعذر إضافة العقار.", "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
   }
 
   async function togglePropertyVisibility(id, visibleNow) {
@@ -1264,7 +1297,7 @@
       state.properties = state.properties.filter((p) => p.id !== id);
       renderPropertiesTable();
       renderDashboardStats();
-      showToast("تم حذف العقار.", "success");
+      showToast("تم حذف العقار بنجاح.", "success");
     } catch (error) {
       console.error("deleteProperty error:", error);
       showToast("تعذر حذف العقار.", "error");
@@ -1305,14 +1338,11 @@
     setValue(normalizeArray(prop.amenities || prop.features).join(", "), "edit-amenities", "edit-features");
     setValue(normalizeArray(prop.extras).join(", "), "edit-extras", "edit-property-extras");
 
-    setUploadPreviewFromUrl("edit", prop.imageUrl || prop.mainImage || "");
+    setUploadPreviewFromUrl("edit", prop.imageUrl || prop.mainImage);
     updateMapMarkerFromInputs("edit");
 
-    if ((prop.lat ?? prop.latitude) && (prop.lng ?? prop.longitude)) {
-      showMapPickedBadge("edit");
-    } else {
-      hideMapPickedBadge("edit");
-    }
+    if ((prop.lat ?? prop.latitude) && (prop.lng ?? prop.longitude)) showMapPickedBadge("edit");
+    else hideMapPickedBadge("edit");
 
     setTimeout(() => state.maps.edit?.invalidateSize?.(), 250);
   }
@@ -1331,7 +1361,7 @@
     const form = e.currentTarget;
     const modal = form.closest(".modal-overlay") || byId("edit-modal") || byId("edit-property-modal");
     const docId = modal?.dataset.editId;
-    if (!docId) return showToast("تعذر تحديد العقار.", "error");
+    if (!docId) return showToast("تعذر تحديد العقار المراد تعديله.", "error");
 
     const prop = state.properties.find((p) => p.id === docId);
     if (!prop || !canManageProperty(prop)) return showToast("لا تملك صلاحية تعديل هذا العقار.", "error");
@@ -1344,12 +1374,8 @@
     if (isOwnerAdmin()) data.ownerUid = cleanText(state.currentAuthUser?.uid);
 
     setButtonLoading(btn, true, "جارٍ حفظ التعديلات...");
-
     try {
-      await db.collection("properties").doc(docId).update({
-        ...data,
-        updatedAt: getServerTimestamp()
-      });
+      await db.collection("properties").doc(docId).update(data);
       closeModal(modal);
       await loadProperties();
       showToast("تم تحديث العقار بنجاح.", "success");
@@ -1364,12 +1390,7 @@
   async function loadBookings() {
     const container = byId("bookings-container");
     if (container) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-spinner-gap ph-spin"></i>
-          <div>جارٍ تحميل الحجوزات...</div>
-        </div>
-      `;
+      container.innerHTML = `<div class="empty-state"><i class="ph ph-spinner-gap ph-spin"></i><div>جارٍ تحميل الحجوزات...</div></div>`;
     }
 
     try {
@@ -1382,7 +1403,6 @@
         } catch {
           snap = await db.collection("bookings").get();
         }
-        snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
       } else {
         const propertyIds = state.properties.map((p) => p.id).filter(Boolean);
         if (!propertyIds.length) {
@@ -1392,27 +1412,25 @@
           return;
         }
 
+        const all = [];
         for (const propertyId of propertyIds) {
           const part = await db.collection("bookings").where("propertyId", "==", propertyId).get();
-          part.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
+          part.forEach((doc) => all.push(normalizeBooking({ id: doc.id, ...doc.data() })));
         }
+        state.bookings = sortByCreatedDesc(all);
+        renderBookings();
+        renderDashboardStats();
+        return;
       }
 
-      const dedup = new Map();
-      items.forEach((item) => dedup.set(item.id, item));
-      state.bookings = sortByCreatedDesc(Array.from(dedup.values()));
-
+      snap.forEach((doc) => items.push(normalizeBooking({ id: doc.id, ...doc.data() })));
+      state.bookings = sortByCreatedDesc(items);
       renderBookings();
       renderDashboardStats();
     } catch (error) {
       console.error("loadBookings error:", error);
       if (container) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <i class="ph ph-warning-circle"></i>
-            <div>تعذر تحميل الحجوزات.</div>
-          </div>
-        `;
+        container.innerHTML = `<div class="empty-state"><i class="ph ph-warning-circle"></i><div>تعذر تحميل الحجوزات.</div></div>`;
       }
       showToast("تعذر تحميل الحجوزات.", "error");
     }
@@ -1429,12 +1447,13 @@
       rejected: state.bookings.filter((b) => getBookingStatus(b.status) === "rejected").length
     };
 
-    setText(String(counts.all), "booking-count-all", "bookings-count-all", "all-bookings-count");
-    setText(String(counts.pending), "booking-count-pending", "bookings-count-pending", "pending-bookings-filter-count");
-    setText(String(counts.confirmed), "booking-count-confirmed", "bookings-count-confirmed", "confirmed-bookings-filter-count");
-    setText(String(counts.rejected), "booking-count-rejected", "bookings-count-rejected", "rejected-bookings-filter-count");
+    setText(String(counts.all), "booking-count-all", "all-bookings-count");
+    setText(String(counts.pending), "booking-count-pending", "pending-bookings-filter-count");
+    setText(String(counts.confirmed), "booking-count-confirmed", "confirmed-bookings-filter-count");
+    setText(String(counts.rejected), "booking-count-rejected", "rejected-bookings-filter-count");
 
     let rows = [...state.bookings];
+
     if (state.bookingFilter !== "all") {
       rows = rows.filter((b) => getBookingStatus(b.status) === state.bookingFilter);
     }
@@ -1445,15 +1464,9 @@
         const hay = [
           b.id,
           b.reference,
-          b.bookingReference,
-          b.userName,
           b.guestName,
-          b.userEmail,
           b.guestEmail,
           b.propertyTitle,
-          b.propertyTitleAr,
-          b.propertyName,
-          b.phone,
           b.guestPhone,
           b.userId,
           deepGet(b, "guest.fullName"),
@@ -1461,20 +1474,15 @@
           deepGet(b, "guest.phone"),
           deepGet(b, "stay.checkIn"),
           deepGet(b, "stay.checkOut"),
-          b.roomNumber,
-          b.approvalReply
+          b.rejectReason,
+          b.roomNumber
         ].join(" ").toLowerCase();
         return hay.includes(query);
       });
     }
 
     if (!rows.length) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-calendar-x"></i>
-          <div>لا توجد حجوزات مطابقة حالياً.</div>
-        </div>
-      `;
+      container.innerHTML = `<div class="empty-state"><i class="ph ph-calendar-x"></i><div>لا توجد حجوزات مطابقة.</div></div>`;
       return;
     }
 
@@ -1491,53 +1499,63 @@
       const total = booking.total || 0;
       const reference = cleanText(booking.reference || booking.id);
       const canOpenChat = !!(booking.userId || booking.guestEmail);
-      const roomNumber = cleanText(booking.roomNumber) || "—";
-      const reply = cleanText(booking.approvalReply) || "—";
 
       return `
         <div class="booking-card" data-status="${escapeHtml(status)}">
           <div class="booking-head">
             <div class="booking-title">
               <strong>${escapeHtml(title)}</strong>
-              <span>${escapeHtml(reference)}</span>
+              <span>المرجع: ${escapeHtml(reference)}</span>
             </div>
             ${statusBadge(status)}
           </div>
 
           <div class="booking-meta-grid">
             <div class="booking-meta-item">
-              <label>الضيف</label>
+              <label>العميل</label>
               <strong>${escapeHtml(guest)}</strong>
             </div>
+
             <div class="booking-meta-item">
               <label>البريد</label>
               <span>${escapeHtml(email)}</span>
             </div>
+
             <div class="booking-meta-item">
               <label>الهاتف</label>
               <span>${escapeHtml(phone)}</span>
             </div>
+
             <div class="booking-meta-item">
-              <label>الإجمالي</label>
-              <strong>${escapeHtml(formatPrice(total))}</strong>
+              <label>السعر</label>
+              <strong>${formatPrice(total)}</strong>
             </div>
+
             <div class="booking-meta-item">
-              <label>تسجيل الدخول</label>
+              <label>تاريخ الوصول</label>
               <span>${escapeHtml(checkIn)}</span>
             </div>
+
             <div class="booking-meta-item">
-              <label>تسجيل الخروج</label>
+              <label>تاريخ المغادرة</label>
               <span>${escapeHtml(checkOut)}</span>
             </div>
-            <div class="booking-meta-item">
-              <label>رقم الغرفة</label>
-              <strong>${escapeHtml(roomNumber)}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>رد الإدارة</label>
-              <span>${escapeHtml(reply)}</span>
-            </div>
-            <div class="booking-meta-item" style="grid-column:1/-1;">
+
+            ${booking.roomNumber ? `
+              <div class="booking-meta-item">
+                <label>رقم الغرفة</label>
+                <strong>${escapeHtml(booking.roomNumber)}</strong>
+              </div>
+            ` : ``}
+
+            ${booking.rejectReason ? `
+              <div class="booking-meta-item">
+                <label>سبب الرفض</label>
+                <strong>${escapeHtml(booking.rejectReason)}</strong>
+              </div>
+            ` : ``}
+
+            <div class="booking-meta-item" style="grid-column:1 / -1;">
               <label>تاريخ الإنشاء</label>
               <span>${escapeHtml(formatDate(booking.createdAt || booking.timestamp || booking.dateCreated))}</span>
             </div>
@@ -1556,7 +1574,7 @@
 
             <button type="button" class="btn-open-chat" data-booking-id="${escapeHtml(booking.id)}" ${canOpenChat ? "" : "disabled"}>
               <i class="ph ph-chat-centered-text"></i>
-              <span>محادثة</span>
+              <span>فتح المحادثة</span>
             </button>
           </div>
         </div>
@@ -1567,11 +1585,11 @@
     container.appendChild(grid);
   }
 
-  async function updateBookingStatus(id, status) {
+  async function updateBookingStatus(id, status, extras = {}) {
     const booking = state.bookings.find((b) => b.id === id);
     if (!booking || !canAccessBooking(booking)) {
       showToast("لا تملك صلاحية تعديل هذا الحجز.", "error");
-      return;
+      return false;
     }
 
     try {
@@ -1581,35 +1599,31 @@
       };
 
       if (status === "confirmed") {
-        const roomNumber = booking.roomNumber || getRandomRoomNumber();
-        const approvalReply = getAutoApprovalMessage(roomNumber);
-        payload.roomNumber = roomNumber;
-        payload.approvalReply = approvalReply;
-        payload.ownerReply = approvalReply;
-        payload.replyMessage = approvalReply;
+        if (extras.roomNumber) payload.roomNumber = cleanText(extras.roomNumber);
+        if (extras.approvalReply) payload.approvalReply = cleanText(extras.approvalReply);
       }
 
       if (status === "rejected") {
-        const reply = "تم رفض الحجز من طرف الإدارة.";
-        payload.approvalReply = reply;
-        payload.ownerReply = reply;
-        payload.replyMessage = reply;
+        if (extras.rejectReason) {
+          payload.rejectReason = cleanText(extras.rejectReason);
+          payload.rejectionReason = cleanText(extras.rejectReason);
+        }
       }
 
       await db.collection("bookings").doc(id).update(payload);
-      showToast(`تم تحديث حالة الحجز إلى ${statusLabel(status)}.`, "success");
       await loadBookings();
+      showToast(`تم تحديث حالة الحجز إلى: ${statusLabel(status)}`, "success");
+      return true;
     } catch (error) {
       console.error("updateBookingStatus error:", error);
       showToast("تعذر تحديث حالة الحجز.", "error");
+      return false;
     }
   }
 
   async function loadOwnerAccounts() {
     const tbody = byId("owner-accounts-tbody") || byId("owners-tbody") || byId("owner-table-body") || byId("accounts-tbody");
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;">جارٍ تحميل حسابات المُلّاك...</td></tr>`;
-    }
+    if (tbody) tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;">جارٍ تحميل الحسابات...</td></tr>`;
 
     try {
       let items = [];
@@ -1620,8 +1634,6 @@
       } else if (state.ownerAccountDocId) {
         const doc = await db.collection("ownerAccounts").doc(state.ownerAccountDocId).get();
         if (doc.exists) items.push({ id: doc.id, ...doc.data(), collection: "ownerAccounts" });
-      } else if (state.currentOwnerRecord) {
-        items = [{ id: cleanText(state.currentAuthUser?.uid), ...state.currentOwnerRecord, collection: "ownerAccounts" }];
       }
 
       items = items.filter((item) => {
@@ -1634,9 +1646,7 @@
       renderDashboardStats();
     } catch (error) {
       console.error("loadOwnerAccounts error:", error);
-      if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;color:#ef4444;">فشل تحميل حسابات المُلّاك.</td></tr>`;
-      }
+      if (tbody) tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:22px;color:#ef4444;">تعذر تحميل الحسابات.</td></tr>`;
       showToast("تعذر تحميل حسابات المُلّاك.", "error");
     }
   }
@@ -1665,15 +1675,15 @@
     }
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:24px;">لا توجد حسابات ملاك حالياً.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="99" style="text-align:center;padding:24px;">لا توجد حسابات حالياً.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = rows.map((item) => {
-      const name = cleanText(item.name || item.fullName || item.ownerName || "—");
-      const email = cleanText(item.email || "—");
-      const phone = cleanText(item.phone || "—");
-      const username = cleanText(item.username || "—");
+      const name = cleanText(item.name || item.fullName || item.ownerName);
+      const email = cleanText(item.email);
+      const phone = cleanText(item.phone);
+      const username = cleanText(item.username);
       const active = item.isActive !== false && item.active !== false;
 
       return `
@@ -1682,7 +1692,7 @@
           <td>${escapeHtml(email)}</td>
           <td>${escapeHtml(phone)}</td>
           <td>${escapeHtml(username)}</td>
-          <td>${active ? `<span class="status-badge visible">نشط</span>` : `<span class="status-badge hidden">معطّل</span>`}</td>
+          <td>${active ? `<span class="status-badge visible">نشط</span>` : `<span class="status-badge hidden">غير نشط</span>`}</td>
           <td>
             <div class="table-actions">
               <button type="button" class="edit-owner-btn" data-id="${escapeHtml(item.id)}">
@@ -1719,34 +1729,31 @@
   async function handleOwnerFormSubmit(e) {
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
-    if (!isSuperAdmin() && !isOwnerAdmin()) return showToast("لا تملك صلاحية هذا الإجراء.", "error");
+    if (!isSuperAdmin() && !isOwnerAdmin()) return showToast("غير مصرح لك بهذا الإجراء.", "error");
 
     const form = e.currentTarget;
     const btn = form.querySelector('button[type="submit"]');
-    const editId = cleanText(form.dataset.editId);
+    const editId = form.dataset.editId;
     const data = collectOwnerFormData("owner");
 
-    if (!data.name || !data.email) return showToast("أدخل اسم المالك وبريده الإلكتروني.", "warning");
-    if (!isSuperAdmin() && editId && editId !== state.ownerAccountDocId) {
-      return showToast("لا تملك صلاحية تعديل هذا الحساب.", "error");
-    }
+    if (!data.name || !data.email) return showToast("يرجى إدخال الاسم والبريد الإلكتروني.", "warning");
+    if (!isSuperAdmin() && editId && editId !== state.ownerAccountDocId) return showToast("لا تملك صلاحية تعديل هذا الحساب.", "error");
 
-    setButtonLoading(btn, true, editId ? "جارٍ تحديث الحساب..." : "جارٍ حفظ الحساب...");
-
+    setButtonLoading(btn, true, editId ? "جارٍ تحديث الحساب..." : "جارٍ إضافة الحساب...");
     try {
       const collectionName = "ownerAccounts";
 
       if (editId) {
         await db.collection(collectionName).doc(editId).update(data);
-        showToast("تم تحديث حساب المالك.", "success");
+        showToast("تم تحديث الحساب بنجاح.", "success");
       } else {
         if (!isSuperAdmin()) {
-          showToast("إضافة مالك جديد متاحة للأدمن فقط.", "error");
+          showToast("إضافة حساب جديد متاحة فقط للأدمن العام.", "error");
           return;
         }
         data.createdAt = getServerTimestamp();
         await db.collection(collectionName).add(data);
-        showToast("تم إنشاء حساب المالك.", "success");
+        showToast("تمت إضافة الحساب بنجاح.", "success");
       }
 
       form.reset();
@@ -1754,7 +1761,7 @@
       await loadOwnerAccounts();
     } catch (error) {
       console.error("owner form error:", error);
-      showToast("تعذر حفظ بيانات المالك.", "error");
+      showToast("تعذر حفظ الحساب.", "error");
     } finally {
       setButtonLoading(btn, false);
     }
@@ -1769,7 +1776,6 @@
     }
 
     setValue(item.name || item.fullName || "", "owner-name", "owner-full-name");
-    setValue(item.fullName || item.name || "", "owner-full-name", "owner-name");
     setValue(item.email || "", "owner-email");
     setValue(item.phone || "", "owner-phone");
     setValue(item.username || "", "owner-username");
@@ -1778,24 +1784,25 @@
     const form = byId("owner-account-form") || byId("owner-form");
     if (form) form.dataset.editId = id;
 
-    activateTab("owners", { silentAuth: true });
-    showToast("تم تحميل بيانات المالك في النموذج.", "info");
+    activateTab("owners");
+    showToast("تم تحميل بيانات الحساب للتعديل.", "info");
   }
 
   async function deleteOwnerAccount(id) {
     if (!isSuperAdmin()) {
-      showToast("حذف حسابات المُلّاك متاح للأدمن فقط.", "error");
+      showToast("حذف الحسابات متاح فقط للأدمن العام.", "error");
       return;
     }
+
     if (!window.confirm("هل أنت متأكد من حذف هذا الحساب؟")) return;
 
     try {
       await db.collection("ownerAccounts").doc(id).delete();
-      showToast("تم حذف حساب المالك.", "success");
+      showToast("تم حذف الحساب بنجاح.", "success");
       await loadOwnerAccounts();
     } catch (error) {
       console.error("deleteOwnerAccount error:", error);
-      showToast("تعذر حذف حساب المالك.", "error");
+      showToast("تعذر حذف الحساب.", "error");
     }
   }
 
@@ -1804,7 +1811,7 @@
       let items = [];
       if (isSuperAdmin()) {
         const snap = await db.collection("users").get();
-        snap.forEach((doc) => items.push(normalizeUser({ collection: "users", ...doc.data() }, doc.id)));
+        snap.forEach((doc) => items.push(normalizeUser({ ...doc.data() }, doc.id)));
       }
       state.users = sortByCreatedDesc(items);
     } catch (error) {
@@ -1834,11 +1841,13 @@
     realChats.forEach((chat) => map.set(chat.id, chat));
 
     derivedChats.forEach((chat) => {
-      const exists = realChats.some((real) =>
-        (chat.bookingId && real.bookingId && chat.bookingId === real.bookingId) ||
-        (chat.userId && real.userId && chat.userId === real.userId) ||
-        (chat.userEmail && real.userEmail && chat.userEmail === real.userEmail)
-      );
+      const exists = realChats.some((real) => {
+        return (
+          (chat.bookingId && real.bookingId && chat.bookingId === real.bookingId) ||
+          (chat.userId && real.userId && chat.userId === real.userId) ||
+          (chat.userEmail && real.userEmail && normalizeEmail(chat.userEmail) === normalizeEmail(real.userEmail))
+        );
+      });
       if (!exists) map.set(chat.id, chat);
     });
 
@@ -1847,14 +1856,7 @@
 
   async function loadChats() {
     const list = byId("admin-chat-list") || byId("chats-list") || byId("chat-threads-list");
-    if (list) {
-      list.innerHTML = `
-        <div class="empty-state" style="padding:24px;">
-          <i class="ph ph-spinner-gap ph-spin"></i>
-          <div>جارٍ تحميل المحادثات...</div>
-        </div>
-      `;
-    }
+    if (list) list.innerHTML = `<div class="empty-state" style="padding:24px;"><i class="ph ph-spinner-gap ph-spin"></i><div>جارٍ تحميل المحادثات...</div></div>`;
 
     if (state.listeners.chats) {
       state.listeners.chats();
@@ -1865,14 +1867,11 @@
       let queryRef = db.collection("chats");
 
       if (!isSuperAdmin()) {
-        const propertyIds = state.properties.map((p) => p.id).filter(Boolean).slice(0, 10);
-        if (propertyIds.length) {
-          queryRef = queryRef.where("propertyId", "in", propertyIds);
-        } else {
-          state.chats = derivePseudoChatsFromBookings().filter((chat) => canAccessChat(chat) || chat.pseudo);
-          renderChatThreads();
-          renderDashboardStats();
-          return;
+        const ownerPropertyIds = state.properties.map((p) => p.id).filter(Boolean).slice(0, 10);
+        if (ownerPropertyIds.length) {
+          try {
+            queryRef = queryRef.where("propertyId", "in", ownerPropertyIds);
+          } catch {}
         }
       }
 
@@ -1883,10 +1882,7 @@
 
           const bookingDerivedThreads = derivePseudoChatsFromBookings();
           const merged = mergeChats(items, bookingDerivedThreads);
-
-          state.chats = sortByUpdatedDesc(
-            merged.filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo)
-          );
+          state.chats = sortByUpdatedDesc(merged).filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
 
           renderChatThreads();
 
@@ -1902,10 +1898,9 @@
 
           renderDashboardStats();
         },
-        async (error) => {
+        (error) => {
           console.error("loadChats listener error:", error);
-          const fallback = derivePseudoChatsFromBookings();
-          state.chats = fallback.filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
+          state.chats = derivePseudoChatsFromBookings().filter((chat) => isSuperAdmin() || canAccessChat(chat) || chat.pseudo);
           renderChatThreads();
         }
       );
@@ -1939,12 +1934,7 @@
     }
 
     if (!rows.length) {
-      list.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-chat-centered-dots"></i>
-          <div>لا توجد محادثات حالياً.</div>
-        </div>
-      `;
+      list.innerHTML = `<div class="empty-state"><i class="ph ph-chat-centered-dots"></i><div>لا توجد محادثات حالياً.</div></div>`;
       return;
     }
 
@@ -1974,7 +1964,7 @@
         >
           <strong style="font-size:.95rem;color:var(--text-main,#0f172a);">${escapeHtml(name)}</strong>
           <span style="font-size:.82rem;color:var(--text-muted,#64748b);line-height:1.6;">${escapeHtml(subtitle)}</span>
-          ${smallMeta ? `<small style="color:#94a3b8;">${escapeHtml(smallMeta)}</small>` : ``}
+          ${smallMeta ? `<small style="color:#94a3b8;">${escapeHtml(smallMeta)}</small>` : ""}
         </button>
       `;
     }).join("");
@@ -1990,13 +1980,10 @@
     const chat = state.chats.find((c) => c.id === chatId);
 
     if (titleEl) titleEl.textContent = cleanText(chat?.userName || chat?.customerName || chat?.userEmail || chatId);
-    if (subEl) subEl.textContent = cleanText(chat?.propertyTitle || chat?.bookingId || chat?.lastMessage || "المحادثة الحالية");
+    if (subEl) subEl.textContent = cleanText(chat?.propertyTitle || chat?.bookingId || chat?.lastMessage || "—");
 
-    if (chatId.startsWith("booking-thread-")) {
-      loadPseudoChatMessages(chatId);
-    } else {
-      subscribeToChatMessages(chatId);
-    }
+    if (chatId.startsWith("booking-thread-")) loadPseudoChatMessages(chatId);
+    else subscribeToChatMessages(chatId);
   }
 
   function subscribeToChatMessages(chatId) {
@@ -2006,14 +1993,7 @@
     }
 
     const list = byId("admin-chat-messages") || byId("chat-messages-list") || byId("chat-messages");
-    if (list) {
-      list.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-spinner-gap ph-spin"></i>
-          <div>جارٍ تحميل الرسائل...</div>
-        </div>
-      `;
-    }
+    if (list) list.innerHTML = `<div class="empty-state"><i class="ph ph-spinner-gap ph-spin"></i><div>جارٍ تحميل الرسائل...</div></div>`;
 
     try {
       state.listeners.chatMessages = db
@@ -2022,7 +2002,7 @@
         .collection("messages")
         .orderBy("createdAt", "asc")
         .onSnapshot(
-          (snap) => {
+          async (snap) => {
             const messages = [];
             snap.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
             state.currentChatMessages = messages;
@@ -2064,24 +2044,37 @@
       return;
     }
 
-    const lines = [
-      `الحجز: ${booking.reference || booking.id}`,
-      `الضيف: ${booking.guestName}`,
-      `من ${booking.checkIn} إلى ${booking.checkOut}`
-    ];
-    if (booking.approvalReply) lines.push(`الرد: ${booking.approvalReply}`);
-    if (booking.roomNumber) lines.push(`رقم الغرفة: ${booking.roomNumber}`);
-
-    state.currentChatMessages = [
+    const systemMessages = [
       {
         id: `pseudo-booking-${booking.id}`,
         system: true,
-        text: lines.join(" — "),
+        text: `تم إنشاء هذا الخيط من الحجز ${booking.reference || booking.id}.`,
         senderRole: "system",
-        senderName: "النظام",
         createdAt: booking.createdAt || new Date().toISOString()
       }
     ];
+
+    if (booking.status === "confirmed" && booking.roomNumber) {
+      systemMessages.push({
+        id: `pseudo-approved-${booking.id}`,
+        system: true,
+        text: getAutoApprovalMessage(booking.roomNumber),
+        senderRole: "system",
+        createdAt: booking.updatedAt || booking.createdAt || new Date().toISOString()
+      });
+    }
+
+    if (booking.status === "rejected" && booking.rejectReason) {
+      systemMessages.push({
+        id: `pseudo-rejected-${booking.id}`,
+        system: true,
+        text: getAutoRejectionMessage(booking.rejectReason),
+        senderRole: "system",
+        createdAt: booking.updatedAt || booking.createdAt || new Date().toISOString()
+      });
+    }
+
+    state.currentChatMessages = systemMessages;
     renderCurrentChatMessages();
   }
 
@@ -2090,29 +2083,19 @@
     if (!list) return;
 
     if (!state.currentChatId) {
-      list.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-chat-circle"></i>
-          <div>اختر محادثة لعرض الرسائل.</div>
-        </div>
-      `;
+      list.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle"></i><div>لا توجد محادثة محددة بعد.</div></div>`;
       return;
     }
 
     if (!state.currentChatMessages.length) {
-      list.innerHTML = `
-        <div class="empty-state">
-          <i class="ph ph-chat-centered-dots"></i>
-          <div>لا توجد رسائل في هذه المحادثة بعد.</div>
-        </div>
-      `;
+      list.innerHTML = `<div class="empty-state"><i class="ph ph-chat-centered-dots"></i><div>لا توجد رسائل بعد.</div></div>`;
       return;
     }
 
     list.innerHTML = state.currentChatMessages.map((msg) => {
       const mine = ["admin", "owner", "host", "support"].includes(cleanText(msg.senderRole).toLowerCase());
       const text = cleanText(pickFirst(msg.text, msg.message, msg.body, msg.content, ""));
-      const sender = cleanText(pickFirst(msg.senderName, msg.name, msg.senderRole, mine ? "الإدارة" : "المستخدم"));
+      const sender = cleanText(pickFirst(msg.senderName, msg.name, msg.senderRole, mine ? "الإدارة" : "العميل"));
       const date = formatDate(pickFirst(msg.createdAt, msg.timestamp, msg.sentAt));
 
       return `
@@ -2173,7 +2156,7 @@
       return null;
     }
     if (!canAccessBooking(booking)) {
-      showToast("لا تملك صلاحية الوصول لهذا الحجز.", "error");
+      showToast("لا تملك صلاحية الوصول إلى هذا الحجز.", "error");
       return null;
     }
 
@@ -2187,9 +2170,9 @@
       propertyId: booking.propertyId || "",
       propertyTitle: booking.propertyTitle || "",
       userId: booking.userId || "",
+      ownerId: cleanText(state.currentAuthUser?.uid),
       userName: booking.guestName || "",
       userEmail: booking.guestEmail || "",
-      ownerId: cleanText(state.currentAuthUser?.uid),
       participants: [booking.userId, booking.guestEmail, cleanText(state.currentAuthUser?.uid)].filter(Boolean),
       participantIds: [booking.userId, booking.guestEmail, cleanText(state.currentAuthUser?.uid)].filter(Boolean),
       lastMessage: "",
@@ -2207,24 +2190,18 @@
     if (!requireAuth()) return;
 
     const booking = state.bookings.find((b) => b.id === bookingId);
-    if (!booking) {
-      showToast("الحجز غير موجود.", "error");
-      return;
-    }
-    if (!canAccessBooking(booking)) {
-      showToast("لا تملك صلاحية الوصول لهذا الحجز.", "error");
-      return;
-    }
+    if (!booking) return showToast("الحجز غير موجود.", "error");
+    if (!canAccessBooking(booking)) return showToast("لا تملك صلاحية الوصول إلى هذا الحجز.", "error");
 
     const existing = await findExistingChatForBooking(booking);
     if (existing) {
-      activateTab("messages");
+      activateTab("chats");
       openChat(existing.id);
       return;
     }
 
     if (!firebaseReady) {
-      activateTab("messages");
+      activateTab("chats");
       openChat(`booking-thread-${bookingId}`);
       return;
     }
@@ -2232,24 +2209,180 @@
     try {
       const chatId = await createRealChatFromBooking(bookingId);
       if (chatId) {
-        activateTab("messages");
+        activateTab("chats");
         openChat(chatId);
         showToast("تم فتح المحادثة.", "success");
         return;
       }
+
+      activateTab("chats");
+      openChat(`booking-thread-${bookingId}`);
+      showToast("تم فتح خيط محادثة مؤقت.", "info");
     } catch (error) {
       console.error("ensureChatForBooking error:", error);
+      activateTab("chats");
+      openChat(`booking-thread-${bookingId}`);
+      showToast("تم فتح خيط محادثة مؤقت.", "info");
+    }
+  }
+
+  async function sendMessageToChat(chatId, text, senderRole = "admin", senderName = "الإدارة") {
+    const cleanMsg = cleanText(text);
+    if (!chatId || !cleanMsg || !firebaseReady) return false;
+
+    try {
+      const chatRef = db.collection("chats").doc(chatId);
+      const payload = {
+        text: cleanMsg,
+        message: cleanMsg,
+        senderRole,
+        senderName,
+        createdAt: getServerTimestamp()
+      };
+
+      try {
+        await chatRef.collection("messages").add(payload);
+      } catch {
+        await db.collection("messages").add({
+          ...payload,
+          chatId
+        });
+      }
+
+      await chatRef.set(
+        {
+          lastMessage: cleanMsg,
+          lastText: cleanMsg,
+          lastMessageAt: getServerTimestamp(),
+          updatedAt: getServerTimestamp()
+        },
+        { merge: true }
+      );
+
+      return true;
+    } catch (error) {
+      console.error("sendMessageToChat error:", error);
+      return false;
+    }
+  }
+
+  async function sendApprovalMessageForBooking(bookingId, roomNumber) {
+    const booking = state.bookings.find((b) => b.id === bookingId);
+    if (!booking) return false;
+
+    const chatId = await createRealChatFromBooking(bookingId);
+    if (!chatId) return false;
+
+    const text = getAutoApprovalMessage(roomNumber);
+    return sendMessageToChat(
+      chatId,
+      text,
+      isSuperAdmin() ? "admin" : "owner",
+      isSuperAdmin() ? "الإدارة" : "المالك"
+    );
+  }
+
+  async function sendRejectionMessageForBooking(bookingId, reason) {
+    const booking = state.bookings.find((b) => b.id === bookingId);
+    if (!booking) return false;
+
+    const chatId = await createRealChatFromBooking(bookingId);
+    if (!chatId) return false;
+
+    const text = getAutoRejectionMessage(reason);
+    return sendMessageToChat(
+      chatId,
+      text,
+      isSuperAdmin() ? "admin" : "owner",
+      isSuperAdmin() ? "الإدارة" : "المالك"
+    );
+  }
+
+  async function approveBookingWithAutoMessage(bookingId) {
+    const booking = state.bookings.find((b) => b.id === bookingId);
+    if (!booking) return showToast("الحجز غير موجود.", "error");
+
+    const roomNumber = booking.roomNumber || getRandomRoomNumber();
+    const approvalReply = getAutoApprovalMessage(roomNumber);
+
+    const updated = await updateBookingStatus(bookingId, "confirmed", {
+      roomNumber,
+      approvalReply
+    });
+
+    if (!updated) return;
+
+    await sendApprovalMessageForBooking(bookingId, roomNumber);
+    await loadChats();
+
+    if (state.currentChatId && state.currentChatId === `booking-thread-${bookingId}`) {
+      const chat = await findExistingChatForBooking({ ...booking, id: bookingId });
+      if (chat?.id) openChat(chat.id);
     }
 
-    activateTab("messages");
-    openChat(`booking-thread-${bookingId}`);
-    showToast("تم فتح محادثة مؤقتة.", "info");
+    showToast(`تم قبول الحجز وإرسال رقم الغرفة ${roomNumber}.`, "success");
+  }
+
+  function openRejectBookingModal(bookingId) {
+    const booking = state.bookings.find((b) => b.id === bookingId);
+    if (!booking) return showToast("الحجز غير موجود.", "error");
+    if (!canAccessBooking(booking)) return showToast("لا تملك صلاحية رفض هذا الحجز.", "error");
+
+    const modal = byId("reject-booking-modal");
+    if (!modal) return showToast("نافذة رفض الحجز غير موجودة.", "error");
+
+    state.pendingRejectBookingId = bookingId;
+    setValue(bookingId, "reject-booking-id");
+    setValue("", "reject-reason-select");
+    setValue("", "reject-reason-custom");
+
+    const custom = byId("reject-reason-custom");
+    if (custom) custom.style.display = "none";
+
+    modal.classList.add("active");
+    document.body.classList.add("modal-open");
+  }
+
+  async function confirmRejectBooking() {
+    const bookingId = cleanText(getValue("reject-booking-id")) || state.pendingRejectBookingId;
+    if (!bookingId) return showToast("تعذر تحديد الحجز.", "error");
+
+    const selectedReason = cleanText(getValue("reject-reason-select"));
+    const customReason = cleanText(getValue("reject-reason-custom"));
+    const finalReason = selectedReason === "سبب آخر" ? customReason : selectedReason;
+
+    if (!finalReason) return showToast("يرجى تحديد سبب الرفض.", "warning");
+
+    const btn = byId("confirm-reject-booking-btn");
+    setButtonLoading(btn, true, "جارٍ رفض الحجز...");
+
+    try {
+      const updated = await updateBookingStatus(bookingId, "rejected", {
+        rejectReason: finalReason
+      });
+
+      if (!updated) return;
+
+      await sendRejectionMessageForBooking(bookingId, finalReason);
+      await loadChats();
+
+      const modal = byId("reject-booking-modal");
+      closeModal(modal);
+      state.pendingRejectBookingId = "";
+
+      showToast("تم رفض الحجز وإرسال السبب للعميل.", "success");
+    } catch (error) {
+      console.error("confirmRejectBooking error:", error);
+      showToast("تعذر رفض الحجز.", "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
   }
 
   async function sendAdminMessage(e) {
     e.preventDefault();
     if (!firebaseReady) return showToast("Firebase غير جاهز.", "error");
-    if (!state.currentChatId) return showToast("اختر محادثة أولاً.", "warning");
+    if (!state.currentChatId) return showToast("يرجى اختيار محادثة أولاً.", "warning");
 
     const form = e.currentTarget;
     const input = form.querySelector("textarea, input[type='text']");
@@ -2271,42 +2404,27 @@
         }
         actualChatId = createdChatId;
         state.currentChatId = actualChatId;
-        activateTab("messages", { silentAuth: true });
+        activateTab("chats");
         openChat(actualChatId);
       }
 
       const chat = state.chats.find((c) => c.id === actualChatId);
       if (chat && !chat.pseudo && !canAccessChat(chat)) {
-        showToast("لا تملك صلاحية إرسال رسالة في هذه المحادثة.", "error");
+        showToast("لا تملك صلاحية الإرسال في هذه المحادثة.", "error");
         return;
       }
 
-      const chatRef = db.collection("chats").doc(actualChatId);
-      const payload = {
+      const sent = await sendMessageToChat(
+        actualChatId,
         text,
-        message: text,
-        senderRole: isSuperAdmin() ? "admin" : "owner",
-        senderName: isSuperAdmin() ? "الإدارة" : "المالك",
-        createdAt: getServerTimestamp()
-      };
+        isSuperAdmin() ? "admin" : "owner",
+        isSuperAdmin() ? "الإدارة" : "المالك"
+      );
 
-      try {
-        await chatRef.collection("messages").add(payload);
-      } catch {
-        await db.collection("messages").add({
-          ...payload,
-          chatId: actualChatId,
-          propertyId: cleanText(chat?.propertyId || ""),
-          userId: cleanText(chat?.userId || "")
-        });
+      if (!sent) {
+        showToast("تعذر إرسال الرسالة.", "error");
+        return;
       }
-
-      await chatRef.set({
-        lastMessage: text,
-        lastText: text,
-        lastMessageAt: getServerTimestamp(),
-        updatedAt: getServerTimestamp()
-      }, { merge: true });
 
       if (input) input.value = "";
       showToast("تم إرسال الرسالة.", "success");
@@ -2338,8 +2456,8 @@
   function setUploadPreviewFromUrl(prefix, url) {
     const cleanUrl = cleanText(url);
     const { wrapper, img, name, meta } = getPreviewElements(prefix);
-
     if (!img) return;
+
     if (!cleanUrl) {
       resetUploadPreview(prefix);
       return;
@@ -2351,7 +2469,7 @@
     };
 
     if (wrapper) wrapper.classList.add("visible");
-    if (name) name.textContent = "معاينة الصورة";
+    if (name) name.textContent = "الصورة الحالية";
     if (meta) meta.textContent = cleanUrl;
   }
 
@@ -2389,26 +2507,19 @@
     setValue("", `${prefix}-lng`, `${prefix}-longitude`);
 
     const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
-    if (state.maps[markerKey]?.remove) {
+    if (state.maps[markerKey]) {
       try {
         state.maps[markerKey].remove();
       } catch {}
+      state.maps[markerKey] = null;
     }
-    state.maps[markerKey] = null;
   }
 
   function updateMapMarkerFromInputs(prefix) {
-    const latRaw = getValue(`${prefix}-lat`, `${prefix}-latitude`);
-    const lngRaw = getValue(`${prefix}-lng`, `${prefix}-longitude`);
+    const lat = toNumber(getValue(`${prefix}-lat`, `${prefix}-latitude`), null);
+    const lng = toNumber(getValue(`${prefix}-lng`, `${prefix}-longitude`), null);
 
-    if (latRaw === "" || lngRaw === "") {
-      hideMapPickedBadge(prefix);
-      return;
-    }
-
-    const lat = Number(latRaw);
-    const lng = Number(lngRaw);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || typeof L === "undefined") return;
+    if (lat === null || lng === null || typeof L === "undefined") return;
 
     const mapKey = prefix === "edit" ? "edit" : "add";
     const markerKey = prefix === "edit" ? "editMarker" : "addMarker";
@@ -2416,9 +2527,11 @@
     if (!map) return;
 
     try {
-      if (state.maps[markerKey]) state.maps[markerKey].setLatLng([lat, lng]);
-      else state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
-
+      if (state.maps[markerKey]) {
+        state.maps[markerKey].setLatLng([lat, lng]);
+      } else {
+        state.maps[markerKey] = L.marker([lat, lng]).addTo(map);
+      }
       map.setView([lat, lng], 13);
       showMapPickedBadge(prefix);
     } catch (error) {
@@ -2429,12 +2542,14 @@
   async function searchLocationOnMap(prefix) {
     const qInput = byId(`${prefix}-map-search`);
     const query = cleanText(qInput?.value);
-    if (!query) return showToast("أدخل موقعاً للبحث.", "warning");
+    if (!query) return showToast("يرجى كتابة موقع للبحث.", "warning");
 
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
       const res = await fetch(url, {
-        headers: { Accept: "application/json" }
+        headers: {
+          Accept: "application/json"
+        }
       });
       const data = await res.json();
 
@@ -2510,34 +2625,10 @@
     await login(username, password);
   }
 
-  function bindBookingFilterButtons() {
-    qa("[data-booking-filter]").forEach((btn) => {
-      btn.addEventListener("click", function () {
-        state.bookingFilter = cleanText(btn.dataset.bookingFilter || "all");
-        qa("[data-booking-filter]").forEach((x) => x.classList.remove("active"));
-        btn.classList.add("active");
-        renderBookings();
-      });
-    });
-  }
-
   function bindStaticEvents() {
     getLoginForm()?.addEventListener("submit", handleLoginSubmit);
     byId("admin-login-btn")?.addEventListener("click", handleLoginSubmit);
     byId("login-btn")?.addEventListener("click", handleLoginSubmit);
-
-    byId("admin-login-email")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-login-password")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-username")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
-    byId("admin-password")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLoginSubmit(e);
-    });
 
     byId("admin-logout-btn")?.addEventListener("click", logout);
     byId("logout-btn")?.addEventListener("click", logout);
@@ -2546,6 +2637,8 @@
       btn.addEventListener("click", () => activateTab(btn.dataset.tabTarget));
     });
 
+    byId("add-property-form")?.addEventListener("submit", handleAddPropertySubmit);
+    byId("admin-property-form")?.addEventListener("submit", handleAddPropertySubmit);
     byId("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
     byId("property-edit-form")?.addEventListener("submit", handleEditPropertySubmit);
     byId("owner-account-form")?.addEventListener("submit", handleOwnerFormSubmit);
@@ -2553,12 +2646,30 @@
     byId("admin-chat-send-form")?.addEventListener("submit", sendAdminMessage);
     byId("chat-send-form")?.addEventListener("submit", sendAdminMessage);
 
-    ["properties-search", "property-search"].forEach((id) => byId(id)?.addEventListener("input", renderPropertiesTable));
-    ["bookings-search", "booking-search"].forEach((id) => byId(id)?.addEventListener("input", renderBookings));
-    ["owners-search", "owner-search"].forEach((id) => byId(id)?.addEventListener("input", renderOwnerAccounts));
-    ["chats-search", "chat-search"].forEach((id) => byId(id)?.addEventListener("input", renderChatThreads));
+    ["properties-search", "property-search"].forEach((id) => {
+      byId(id)?.addEventListener("input", renderPropertiesTable);
+    });
 
-    bindBookingFilterButtons();
+    ["bookings-search", "booking-search"].forEach((id) => {
+      byId(id)?.addEventListener("input", renderBookings);
+    });
+
+    ["owners-search", "owner-search"].forEach((id) => {
+      byId(id)?.addEventListener("input", renderOwnerAccounts);
+    });
+
+    ["chats-search", "chat-search"].forEach((id) => {
+      byId(id)?.addEventListener("input", renderChatThreads);
+    });
+
+    qa("[data-booking-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.bookingFilter = cleanText(btn.dataset.bookingFilter || "all");
+        qa("[data-booking-filter]").forEach((x) => x.classList.remove("active"));
+        btn.classList.add("active");
+        renderBookings();
+      });
+    });
 
     ["admin-image-file", "edit-image-file"].forEach((id) => {
       byId(id)?.addEventListener("change", (e) => {
@@ -2599,19 +2710,15 @@
       });
     });
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        qa(".modal-overlay.active, .modal.active").forEach((modal) => closeModal(modal));
-      }
+    byId("confirm-reject-booking-btn")?.addEventListener("click", confirmRejectBooking);
+
+    byId("reject-reason-select")?.addEventListener("change", (e) => {
+      const custom = byId("reject-reason-custom");
+      if (!custom) return;
+      custom.style.display = e.target.value === "سبب آخر" ? "block" : "none";
     });
 
     document.addEventListener("click", async (e) => {
-      const editPropBtn = e.target.closest(".edit-property-btn");
-      if (editPropBtn) {
-        openEditPropertyModal(editPropBtn.dataset.id);
-        return;
-      }
-
       const toggleBtn = e.target.closest(".toggle-property-btn");
       if (toggleBtn) {
         const id = toggleBtn.dataset.id;
@@ -2626,15 +2733,21 @@
         return;
       }
 
+      const editPropBtn = e.target.closest(".edit-property-btn");
+      if (editPropBtn) {
+        openEditPropertyModal(editPropBtn.dataset.id);
+        return;
+      }
+
       const approveBtn = e.target.closest(".btn-approve");
       if (approveBtn) {
-        await updateBookingStatus(approveBtn.dataset.bookingId, "confirmed");
+        await approveBookingWithAutoMessage(approveBtn.dataset.bookingId);
         return;
       }
 
       const rejectBtn = e.target.closest(".btn-reject");
       if (rejectBtn) {
-        await updateBookingStatus(rejectBtn.dataset.bookingId, "rejected");
+        openRejectBookingModal(rejectBtn.dataset.bookingId);
         return;
       }
 
@@ -2672,10 +2785,30 @@
         closeModal(e.target);
       }
     });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        qa(".modal-overlay.active, .modal.active").forEach((modal) => closeModal(modal));
+      }
+    });
+
+    byId("admin-login-email")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-login-password")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-username")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
+    byId("admin-password")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLoginSubmit(e);
+    });
   }
 
   function bindAuthState() {
     if (!auth) return;
+
     state.listeners.auth = auth.onAuthStateChanged(async (user) => {
       state.authReady = true;
       state.currentAuthUser = user || null;
@@ -2683,17 +2816,20 @@
       if (!user) {
         state.isLoggedIn = false;
         ensureLoggedInUI();
-        updateProfileUI();
         return;
       }
 
       const roleResult = await getAdminRoleFromFirestore(user);
       if (roleResult.ok) {
         state.adminRole = roleResult.role;
-        state.ownerAccountDocId = roleResult.ownerDocId || "";
-        state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
         safeSet(ADMIN_ROLE_KEY, roleResult.role);
-        if (roleResult.ownerDocId) safeSet(ADMIN_OWNER_DOC_KEY, roleResult.ownerDocId);
+
+        if (roleResult.ownerDocId) {
+          state.ownerAccountDocId = roleResult.ownerDocId;
+          safeSet(ADMIN_OWNER_DOC_KEY, roleResult.ownerDocId);
+        }
+
+        state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
         state.isLoggedIn = true;
         ensureLoggedInUI();
         updateProfileUI();
@@ -2708,7 +2844,11 @@
 
     if (state.isLoggedIn && auth?.currentUser) {
       state.currentAuthUser = auth.currentUser;
-      activateTab(state.activeTab || "dashboard", { silentAuth: true });
+    }
+
+    activateTab(state.activeTab || "dashboard", { silentAuth: true });
+
+    if (state.isLoggedIn && auth?.currentUser) {
       loadAllData();
     }
   }
@@ -2721,22 +2861,24 @@
     initMap("admin", "admin-map-picker");
     initMap("edit", "edit-map-picker");
     renderCurrentChatMessages();
-    ensureAdminLogosVisible();
-
-    window.adminApp = {
-      state,
-      login,
-      logout,
-      activateTab,
-      loadAllData,
-      loadProperties,
-      loadBookings,
-      loadOwnerAccounts,
-      loadChats,
-      openChat,
-      ensureChatForBooking
-    };
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+  window.adminApp = {
+    state,
+    login,
+    logout,
+    activateTab,
+    loadAllData,
+    loadProperties,
+    loadBookings,
+    loadOwnerAccounts,
+    loadChats,
+    openChat,
+    ensureChatForBooking,
+    openRejectBookingModal,
+    confirmRejectBooking,
+    approveBookingWithAutoMessage
+  };
 })();
