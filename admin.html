@@ -304,17 +304,9 @@
       color: var(--text-muted);
     }
 
-    .login-status-text.success {
-      color: var(--success-text);
-    }
-
-    .login-status-text.error {
-      color: var(--danger-text);
-    }
-
-    .login-status-text.loading {
-      color: var(--primary);
-    }
+    .login-status-text.success { color: var(--success-text); }
+    .login-status-text.error { color: var(--danger-text); }
+    .login-status-text.loading { color: var(--primary); }
 
     .input-group {
       display: grid;
@@ -825,6 +817,26 @@
       font-weight: 800;
     }
 
+    .filter-tab-btn.all .filter-count-badge {
+      background: rgba(67,90,191,.10);
+      color: var(--primary);
+    }
+
+    .filter-tab-btn.pending .filter-count-badge {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+    }
+
+    .filter-tab-btn.confirmed .filter-count-badge {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .filter-tab-btn.rejected .filter-count-badge {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
     .empty-state {
       text-align: center;
       padding: 54px 24px;
@@ -891,17 +903,41 @@
     .bookings-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      gap: 18px;
+      align-items: stretch;
     }
 
     .booking-card {
-      background: rgba(255,255,255,0.92);
-      border: 1px solid var(--border-color);
-      border-radius: 22px;
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      border: 1px solid rgba(226,232,240,0.95);
+      border-radius: 24px;
       padding: 18px;
-      box-shadow: var(--shadow-card);
-      display: grid;
+      box-shadow: 0 14px 34px rgba(15,23,42,.06);
+      display: flex;
+      flex-direction: column;
       gap: 16px;
+      min-height: 100%;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .booking-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 20px 40px rgba(67,90,191,.10);
+      border-color: rgba(67,90,191,.18);
+    }
+
+    .booking-card[data-status="pending"] {
+      border-inline-start: 5px solid var(--warning);
+    }
+
+    .booking-card[data-status="confirmed"] {
+      border-inline-start: 5px solid var(--success);
+    }
+
+    .booking-card[data-status="rejected"] {
+      border-inline-start: 5px solid var(--error);
     }
 
     .booking-head {
@@ -909,11 +945,29 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px dashed rgba(148,163,184,.28);
     }
 
     .booking-title {
       display: grid;
-      gap: 4px;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .booking-title strong {
+      font-size: 1rem;
+      color: var(--text-main);
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .booking-title span {
+      font-size: .82rem;
+      color: var(--text-muted);
+      direction: ltr;
+      unicode-bidi: plaintext;
     }
 
     .booking-meta-grid {
@@ -923,40 +977,149 @@
     }
 
     .booking-meta-item {
-      background: rgba(248,250,252,0.9);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 12px;
+      background: rgba(248,250,252,0.95);
+      border: 1px solid rgba(226,232,240,0.95);
+      border-radius: 18px;
+      padding: 12px 13px;
+      display: grid;
+      gap: 6px;
+      min-height: 86px;
+      align-content: start;
+    }
+
+    .booking-meta-item.wide {
+      grid-column: 1 / -1;
+      min-height: auto;
+    }
+
+    .booking-meta-item label {
+      font-size: .76rem;
+      color: var(--text-muted);
+      font-weight: 800;
+      line-height: 1.4;
+    }
+
+    .booking-meta-item strong,
+    .booking-meta-item span {
+      font-size: .92rem;
+      color: var(--text-main);
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .booking-meta-item .mono {
+      direction: ltr;
+      unicode-bidi: plaintext;
+      font-family: "Outfit", sans-serif;
+    }
+
+    .booking-extra-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: -4px;
+    }
+
+    .booking-info-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(67,90,191,0.07);
+      color: var(--primary);
+      border: 1px solid rgba(67,90,191,0.10);
+      font-size: .8rem;
+      font-weight: 800;
+    }
+
+    .booking-info-pill.room {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border-color: var(--success-border);
+    }
+
+    .booking-info-pill.reject {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    .booking-reply-box {
+      border-radius: 18px;
+      padding: 12px 14px;
+      border: 1px dashed rgba(148,163,184,.35);
+      background: rgba(255,255,255,.72);
       display: grid;
       gap: 6px;
     }
 
-    .booking-meta-item label {
+    .booking-reply-box label {
       font-size: .78rem;
+      font-weight: 800;
       color: var(--text-muted);
-      font-weight: 700;
+    }
+
+    .booking-reply-box p {
+      margin: 0;
+      color: var(--text-main);
+      line-height: 1.8;
+      font-size: .9rem;
+      word-break: break-word;
     }
 
     .booking-actions-row {
-      display: flex;
-      align-items: center;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      flex-wrap: wrap;
+      margin-top: auto;
+      padding-top: 4px;
     }
 
     .booking-actions-row button {
-      min-height: 42px;
+      min-height: 44px;
       padding: 0 14px;
       border-radius: 14px;
       border: 1px solid var(--border-color);
       background: #fff;
       color: var(--text-main);
       font-family: inherit;
+      font-size: .86rem;
       font-weight: 800;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
+      transition: var(--transition);
+    }
+
+    .booking-actions-row button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .booking-actions-row button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .booking-actions-row .btn-approve {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border-color: var(--success-border);
+    }
+
+    .booking-actions-row .btn-reject {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    .booking-actions-row .btn-open-chat {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+      border-color: rgba(67,90,191,0.14);
     }
 
     .messages-layout {
@@ -1072,6 +1235,16 @@
       color: var(--text-muted);
       line-height: 1.8;
       font-size: .92rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .full-span {
+      grid-column: 1 / -1;
     }
 
     .modal-overlay {
@@ -1202,6 +1375,7 @@
       .quick-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .bookings-grid { grid-template-columns: 1fr; }
       .messages-layout { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 768px) {
@@ -1213,6 +1387,12 @@
       .logo-img { max-width: 180px; height: 54px; }
       .chat-send-form { flex-direction: column; }
       .chat-send-form .primary-btn { width: 100%; }
+      .booking-card { padding: 16px; border-radius: 20px; }
+      .booking-head { flex-direction: column; align-items: stretch; }
+      .booking-meta-item,
+      .booking-meta-item.wide { grid-column: auto; min-height: auto; }
+      .booking-actions-row { grid-template-columns: 1fr; }
+      .booking-actions-row button { width: 100%; }
     }
   </style>
 </head>
@@ -1449,6 +1629,13 @@
               </div>
             </div>
 
+            <div class="stats-chip-row">
+              <div class="stats-chip"><i class="ph ph-stack"></i> إجمالي الحجوزات: <strong id="all-bookings-count">0</strong></div>
+              <div class="stats-chip"><i class="ph ph-hourglass-medium"></i> المعلقة: <strong id="pending-bookings-filter-count">0</strong></div>
+              <div class="stats-chip"><i class="ph ph-check-circle"></i> المؤكدة: <strong id="confirmed-bookings-filter-count">0</strong></div>
+              <div class="stats-chip"><i class="ph ph-x-circle"></i> المرفوضة: <strong id="rejected-bookings-filter-count">0</strong></div>
+            </div>
+
             <div class="bookings-filter-bar">
               <button class="filter-tab-btn active all" data-booking-filter="all" type="button">
                 الكل <span id="booking-count-all" class="filter-count-badge">0</span>
@@ -1479,34 +1666,38 @@
               <h3><i class="ph ph-user-plus"></i> حسابات المُلّاك</h3>
             </div>
 
-            <form id="owner-account-form">
-              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
-                <div class="input-group">
-                  <label for="owner-name">الاسم</label>
-                  <input id="owner-name" type="text" />
-                </div>
-                <div class="input-group">
-                  <label for="owner-email">البريد الإلكتروني</label>
-                  <input id="owner-email" type="email" dir="ltr" />
-                </div>
-                <div class="input-group">
-                  <label for="owner-phone">الهاتف</label>
-                  <input id="owner-phone" type="text" dir="ltr" />
-                </div>
-                <div class="input-group">
-                  <label for="owner-username">اسم المستخدم</label>
-                  <input id="owner-username" type="text" dir="ltr" />
-                </div>
-                <div class="input-group" style="grid-column:1/-1;">
-                  <label for="owner-password">كلمة المرور</label>
-                  <input id="owner-password" type="text" dir="ltr" />
-                </div>
+            <form id="owner-account-form" class="form-grid">
+              <div class="input-group">
+                <label for="owner-name">الاسم</label>
+                <input id="owner-name" type="text" placeholder="اسم المالك" />
               </div>
 
-              <button type="submit" class="primary-btn mt-4">
-                <i class="ph ph-floppy-disk"></i>
-                <span>حفظ الحساب</span>
-              </button>
+              <div class="input-group">
+                <label for="owner-email">البريد الإلكتروني</label>
+                <input id="owner-email" type="email" placeholder="owner@example.com" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-phone">رقم الهاتف</label>
+                <input id="owner-phone" type="text" placeholder="رقم الهاتف" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="owner-username">اسم المستخدم</label>
+                <input id="owner-username" type="text" placeholder="username" dir="ltr" />
+              </div>
+
+              <div class="input-group full-span">
+                <label for="owner-password">كلمة المرور</label>
+                <input id="owner-password" type="text" placeholder="كلمة المرور" dir="ltr" />
+              </div>
+
+              <div class="full-span" style="display:flex;justify-content:flex-start;">
+                <button type="submit" class="primary-btn">
+                  <i class="ph ph-floppy-disk"></i>
+                  <span>حفظ الحساب</span>
+                </button>
+              </div>
             </form>
           </div>
 
@@ -1550,7 +1741,7 @@
               <div class="pane-tools">
                 <div class="search-inline">
                   <i class="ph ph-magnifying-glass"></i>
-                  <input id="chats-search" type="text" placeholder="ابحث في الرسائل..." />
+                  <input id="chats-search" type="text" placeholder="ابحث في المحادثات..." />
                 </div>
               </div>
             </div>
@@ -1558,7 +1749,7 @@
             <div class="messages-layout">
               <aside class="chat-sidebar">
                 <div id="admin-chat-list" class="chat-thread-list">
-                  <div class="empty-state">
+                  <div class="empty-state" style="padding:24px;">
                     <i class="ph ph-chat-centered-dots"></i>
                     <div>لا توجد محادثات حالياً.</div>
                   </div>
@@ -1568,7 +1759,7 @@
               <section class="chat-main">
                 <div class="chat-main-head">
                   <h4 id="admin-chat-title">اختر محادثة</h4>
-                  <p id="admin-chat-subtitle">سيظهر هنا اسم العميل أو العقار.</p>
+                  <p id="admin-chat-subtitle">سيظهر هنا تفاصيل الطرف الآخر أو الحجز المرتبط.</p>
                 </div>
 
                 <div id="admin-chat-messages" class="chat-messages">
@@ -1580,7 +1771,7 @@
 
                 <div class="chat-send-box">
                   <form id="admin-chat-send-form" class="chat-send-form">
-                    <textarea placeholder="اكتب رسالتك هنا..."></textarea>
+                    <textarea placeholder="اكتب رسالة..." aria-label="اكتب رسالة"></textarea>
                     <button type="submit" class="primary-btn">
                       <i class="ph ph-paper-plane-tilt"></i>
                       <span>إرسال</span>
@@ -1591,125 +1782,297 @@
             </div>
           </div>
         </div>
+
+        <div id="add-property-pane" class="tab-pane">
+          <div class="admin-card">
+            <div class="pane-head">
+              <h3><i class="ph ph-house-line"></i> إضافة عقار</h3>
+            </div>
+
+            <form id="add-property-form" class="form-grid">
+              <div class="input-group">
+                <label for="admin-title-ar">اسم العقار بالعربية</label>
+                <input id="admin-title-ar" type="text" placeholder="مثال: إقامة الورود" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-title-en">اسم العقار بالإنجليزية</label>
+                <input id="admin-title-en" type="text" placeholder="Property title in English" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-location-ar">الموقع بالعربية</label>
+                <input id="admin-location-ar" type="text" placeholder="مثال: قسنطينة" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-location-en">الموقع بالإنجليزية</label>
+                <input id="admin-location-en" type="text" placeholder="Location in English" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-type-ar">النوع</label>
+                <input id="admin-type-ar" type="text" placeholder="شقة / فندق / إقامة" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-price">السعر</label>
+                <input id="admin-price" type="number" placeholder="السعر بالدينار" />
+              </div>
+
+              <div class="input-group full-span">
+                <label for="admin-description-ar">الوصف</label>
+                <textarea id="admin-description-ar" placeholder="وصف العقار"></textarea>
+              </div>
+
+              <div class="input-group">
+                <label for="admin-owner-name">اسم المالك</label>
+                <input id="admin-owner-name" type="text" placeholder="اسم المالك" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-owner-email">بريد المالك</label>
+                <input id="admin-owner-email" type="email" placeholder="owner@example.com" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-owner-phone">هاتف المالك</label>
+                <input id="admin-owner-phone" type="text" placeholder="رقم الهاتف" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-image-url">رابط الصورة الرئيسية</label>
+                <input id="admin-image-url" type="text" placeholder="https://..." dir="ltr" />
+              </div>
+
+              <div class="input-group full-span">
+                <label for="admin-gallery">معرض الصور</label>
+                <input id="admin-gallery" type="text" placeholder="ضع الروابط مفصولة بفواصل" dir="ltr" />
+              </div>
+
+              <div class="full-span upload-preview" id="admin-upload-preview">
+                <img id="admin-upload-preview-img" src="" alt="Preview" />
+                <div>
+                  <strong id="admin-upload-preview-name">—</strong>
+                  <div id="admin-upload-preview-meta" style="color:var(--text-muted);font-size:.85rem;">—</div>
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label for="admin-guests">عدد الضيوف</label>
+                <input id="admin-guests" type="number" placeholder="مثال: 4" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-bedrooms">عدد الغرف</label>
+                <input id="admin-bedrooms" type="number" placeholder="مثال: 2" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-bathrooms">عدد الحمامات</label>
+                <input id="admin-bathrooms" type="number" placeholder="مثال: 1" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-amenities">المزايا</label>
+                <input id="admin-amenities" type="text" placeholder="WiFi, Parking, AC" />
+              </div>
+
+              <div class="input-group full-span">
+                <label for="admin-extras">إضافات</label>
+                <input id="admin-extras" type="text" placeholder="إضافات مفصولة بفواصل" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-map-search">ابحث عن موقع</label>
+                <input id="admin-map-search" type="text" placeholder="ابحث عن الولاية أو العنوان" />
+              </div>
+
+              <div style="display:flex;align-items:end;">
+                <button id="admin-map-search-btn" type="button" class="primary-btn">
+                  <i class="ph ph-map-pin"></i>
+                  <span>تحديد الموقع</span>
+                </button>
+              </div>
+
+              <div class="input-group">
+                <label for="admin-lat">Latitude</label>
+                <input id="admin-lat" type="text" dir="ltr" />
+              </div>
+
+              <div class="input-group">
+                <label for="admin-lng">Longitude</label>
+                <input id="admin-lng" type="text" dir="ltr" />
+              </div>
+
+              <div class="full-span">
+                <div class="map-box">
+                  <div id="admin-map-picker" class="leaflet-map"></div>
+                </div>
+                <div id="admin-map-picked-badge" class="map-picked-badge">
+                  <i class="ph ph-check-circle"></i>
+                  <span>تم تحديد الموقع على الخريطة</span>
+                </div>
+              </div>
+
+              <div class="full-span" style="display:flex;justify-content:flex-start;">
+                <button type="submit" class="primary-btn">
+                  <i class="ph ph-plus-circle"></i>
+                  <span>إضافة العقار</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </section>
     </main>
   </div>
 
-  <div id="edit-modal" class="modal-overlay">
+  <div id="edit-property-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-head">
-        <h3><i class="ph ph-pencil-simple"></i> تعديل العقار</h3>
+        <h3 style="margin:0;">تعديل العقار</h3>
         <button type="button" class="modal-close" data-close-modal>
           <i class="ph ph-x"></i>
         </button>
       </div>
 
-      <form id="edit-property-form">
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
-          <div class="input-group">
-            <label for="edit-title-ar">اسم العقار</label>
-            <input id="edit-title-ar" type="text" />
-          </div>
-          <div class="input-group">
-            <label for="edit-location-ar">الموقع</label>
-            <input id="edit-location-ar" type="text" />
-          </div>
-          <div class="input-group">
-            <label for="edit-type-ar">النوع</label>
-            <input id="edit-type-ar" type="text" />
-          </div>
-          <div class="input-group">
-            <label for="edit-price">السعر</label>
-            <input id="edit-price" type="number" />
-          </div>
-          <div class="input-group" style="grid-column:1/-1;">
-            <label for="edit-description-ar">الوصف</label>
-            <textarea id="edit-description-ar"></textarea>
+      <form id="edit-property-form" class="form-grid">
+        <div class="input-group">
+          <label for="edit-title-ar">اسم العقار بالعربية</label>
+          <input id="edit-title-ar" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-title-en">اسم العقار بالإنجليزية</label>
+          <input id="edit-title-en" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-location-ar">الموقع بالعربية</label>
+          <input id="edit-location-ar" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-location-en">الموقع بالإنجليزية</label>
+          <input id="edit-location-en" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-type-ar">النوع</label>
+          <input id="edit-type-ar" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-price">السعر</label>
+          <input id="edit-price" type="number" />
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-description-ar">الوصف</label>
+          <textarea id="edit-description-ar"></textarea>
+        </div>
+
+        <div class="input-group">
+          <label for="edit-owner-name">اسم المالك</label>
+          <input id="edit-owner-name" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-owner-email">بريد المالك</label>
+          <input id="edit-owner-email" type="email" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-owner-phone">هاتف المالك</label>
+          <input id="edit-owner-phone" type="text" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-image-url">رابط الصورة الرئيسية</label>
+          <input id="edit-image-url" type="text" dir="ltr" />
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-gallery">معرض الصور</label>
+          <input id="edit-gallery" type="text" dir="ltr" />
+        </div>
+
+        <div class="full-span upload-preview" id="edit-upload-preview">
+          <img id="edit-upload-preview-img" src="" alt="Preview" />
+          <div>
+            <strong id="edit-upload-preview-name">—</strong>
+            <div id="edit-upload-preview-meta" style="color:var(--text-muted);font-size:.85rem;">—</div>
           </div>
         </div>
 
-        <button type="submit" class="primary-btn mt-4">
-          <i class="ph ph-floppy-disk"></i>
-          <span>حفظ التعديلات</span>
-        </button>
+        <div class="input-group">
+          <label for="edit-guests">عدد الضيوف</label>
+          <input id="edit-guests" type="number" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-bedrooms">عدد الغرف</label>
+          <input id="edit-bedrooms" type="number" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-bathrooms">عدد الحمامات</label>
+          <input id="edit-bathrooms" type="number" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-amenities">المزايا</label>
+          <input id="edit-amenities" type="text" />
+        </div>
+
+        <div class="input-group full-span">
+          <label for="edit-extras">إضافات</label>
+          <input id="edit-extras" type="text" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-map-search">ابحث عن موقع</label>
+          <input id="edit-map-search" type="text" />
+        </div>
+
+        <div style="display:flex;align-items:end;">
+          <button id="edit-map-search-btn" type="button" class="primary-btn">
+            <i class="ph ph-map-pin"></i>
+            <span>تحديد الموقع</span>
+          </button>
+        </div>
+
+        <div class="input-group">
+          <label for="edit-lat">Latitude</label>
+          <input id="edit-lat" type="text" dir="ltr" />
+        </div>
+
+        <div class="input-group">
+          <label for="edit-lng">Longitude</label>
+          <input id="edit-lng" type="text" dir="ltr" />
+        </div>
+
+        <div class="full-span">
+          <div class="map-box">
+            <div id="edit-map-picker" class="leaflet-map"></div>
+          </div>
+          <div id="edit-map-picked-badge" class="map-picked-badge">
+            <i class="ph ph-check-circle"></i>
+            <span>تم تحديد الموقع على الخريطة</span>
+          </div>
+        </div>
+
+        <div class="full-span" style="display:flex;justify-content:flex-start;">
+          <button type="submit" class="primary-btn">
+            <i class="ph ph-floppy-disk"></i>
+            <span>حفظ التعديلات</span>
+          </button>
+        </div>
       </form>
     </div>
   </div>
 
-  <script>
-    (function () {
-      function byId(id) {
-        return document.getElementById(id);
-      }
-
-      function setLocalLoginLoading(isLoading, text, type) {
-        var btn = byId("admin-login-btn");
-        var user = byId("admin-login-email");
-        var pass = byId("admin-login-password");
-        var status = byId("admin-login-status");
-
-        if (user) user.disabled = !!isLoading;
-        if (pass) pass.disabled = !!isLoading;
-
-        if (btn) {
-          if (isLoading) {
-            if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.classList.add("is-loading");
-            btn.innerHTML = '<span class="login-submit-text"><i class="ph ph-spinner-gap"></i><span>' + (text || "جارٍ تسجيل الدخول...") + '</span></span>';
-          } else {
-            btn.disabled = false;
-            btn.classList.remove("is-loading");
-            if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
-          }
-        }
-
-        if (status) {
-          status.className = "login-status-text" + (type ? " " + type : "");
-          status.textContent = text || "";
-        }
-      }
-
-      window.__setAdminLoginLoading = setLocalLoginLoading;
-
-      document.addEventListener("DOMContentLoaded", function () {
-        var loginForm = byId("admin-login-form");
-        var emailInput = byId("admin-login-email");
-        var passwordInput = byId("admin-login-password");
-
-        if (emailInput && !emailInput.getAttribute("id")) emailInput.id = "admin-username";
-        if (passwordInput && !passwordInput.getAttribute("id")) passwordInput.id = "admin-password";
-
-        if (loginForm) {
-          loginForm.addEventListener("submit", function () {
-            setLocalLoginLoading(true, "جارٍ تسجيل الدخول...", "loading");
-          });
-        }
-
-        [emailInput, passwordInput].forEach(function (input) {
-          if (!input) return;
-          input.addEventListener("input", function () {
-            var status = byId("admin-login-status");
-            if (status && status.classList.contains("error")) {
-              status.className = "login-status-text";
-              status.textContent = "";
-            }
-          });
-        });
-
-        window.addEventListener("error", function () {
-          setTimeout(function () {
-            var layout = byId("admin-layout");
-            var screen = byId("admin-login-screen");
-            if (screen && !screen.classList.contains("hidden") && layout && layout.classList.contains("hidden")) {
-              setLocalLoginLoading(false, "", "");
-            }
-          }, 1200);
-        });
-      });
-    })();
-  </script>
-
-  <script src="admin.js"></script>
+  <script src="admin.js?v=20260524-2"></script>
 </body>
 </html>
