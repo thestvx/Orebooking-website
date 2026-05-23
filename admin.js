@@ -4,17 +4,20 @@
   const ADMIN_SESSION_KEY = "ore_admin_logged_in";
   const ADMIN_ROLE_KEY = "ore_admin_role";
   const ADMIN_OWNER_DOC_KEY = "ore_admin_owner_doc";
+  const ADMIN_LOGIN_HINT_KEY = "ore_admin_login_hint";
   const ADMIN_EMAIL_DOMAIN = "@orebooking.com";
 
   const db =
     window.__db ||
-    (typeof firebase !== "undefined" && firebase.firestore
+    window.__frontDb ||
+    (typeof firebase !== "undefined" && typeof firebase.firestore === "function"
       ? firebase.firestore()
       : null);
 
   const auth =
     window.__auth ||
-    (typeof firebase !== "undefined" && firebase.auth
+    window.__frontAuth ||
+    (typeof firebase !== "undefined" && typeof firebase.auth === "function"
       ? firebase.auth()
       : null);
 
@@ -45,6 +48,7 @@
     bookingFilter: "all",
     pendingRejectBookingId: "",
     listeners: {
+      auth: null,
       chats: null,
       chatMessages: null
     },
@@ -112,6 +116,12 @@
 
   function normalizeAdminEmail(value) {
     const raw = normalizeEmail(value).replace(/\s+/g, "");
+    if (!raw) return "";
+    return raw;
+  }
+
+  function maybeBuildDomainEmail(value) {
+    const raw = normalizeAdminEmail(value);
     if (!raw) return "";
     if (raw.includes("@")) return raw;
     return `${raw}${ADMIN_EMAIL_DOMAIN}`;
@@ -545,6 +555,78 @@
     });
   }
 
+  async function setAdminSessionPersistence() {
+    if (!auth || typeof auth.setPersistence !== "function") return;
+    try {
+      if (typeof firebase !== "undefined" && firebase.auth?.Auth?.Persistence?.SESSION) {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+      }
+    } catch (error) {
+      console.warn("setPersistence SESSION failed:", error);
+    }
+  }
+
+  async function findPossibleLoginEmails(identifier) {
+    const input = cleanText(identifier);
+    const normalized = normalizeAdminEmail(input);
+    const candidates = new Set();
+
+    if (!normalized) return [];
+
+    if (normalized.includes("@")) {
+      candidates.add(normalized);
+    } else {
+      candidates.add(normalized);
+      candidates.add(maybeBuildDomainEmail(normalized));
+    }
+
+    try {
+      const usersByUsername = await db.collection("users").where("username", "==", input).limit(1).get();
+      if (!usersByUsername.empty) {
+        const data = usersByUsername.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("users username lookup failed:", error);
+    }
+
+    try {
+      const usersByHandle = await db.collection("users").where("handle", "==", input).limit(1).get();
+      if (!usersByHandle.empty) {
+        const data = usersByHandle.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("users handle lookup failed:", error);
+    }
+
+    try {
+      const ownerByUsername = await db.collection("ownerAccounts").where("username", "==", input).limit(1).get();
+      if (!ownerByUsername.empty) {
+        const data = ownerByUsername.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("ownerAccounts username lookup failed:", error);
+    }
+
+    try {
+      const ownerByEmail = await db.collection("ownerAccounts").where("email", "==", normalized).limit(1).get();
+      if (!ownerByEmail.empty) {
+        const data = ownerByEmail.docs[0].data() || {};
+        const email = normalizeEmail(data.email);
+        if (email) candidates.add(email);
+      }
+    } catch (error) {
+      console.warn("ownerAccounts email lookup failed:", error);
+    }
+
+    return Array.from(candidates).filter(Boolean);
+  }
+
   async function getAdminRoleFromFirestore(user) {
     if (!user || !db) return { ok: false, role: "" };
 
@@ -560,6 +642,20 @@
       }
     } catch (error) {
       console.warn("users role lookup failed:", error);
+    }
+
+    try {
+      const usersByEmail = await db.collection("users").where("email", "==", normalizeEmail(user.email)).limit(1).get();
+      if (!usersByEmail.empty) {
+        const data = usersByEmail.docs[0].data() || {};
+        const role = cleanText(data.role).toLowerCase();
+        if (role === "admin") return { ok: true, role: "admin", userData: data };
+        if (role === "owner" || role === "property_admin") {
+          return { ok: true, role: "owner", userData: data };
+        }
+      }
+    } catch (error) {
+      console.warn("users email role lookup failed:", error);
     }
 
     try {
@@ -603,11 +699,51 @@
     return { ok: false, role: "" };
   }
 
+  async function applyAuthorizedSession(user, roleResult) {
+    state.currentAuthUser = user;
+    state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
+    state.adminRole = roleResult.role;
+    state.ownerAccountDocId = roleResult.ownerDocId || "";
+    state.isLoggedIn = true;
+    state.activeTab = "dashboard";
+
+    safeSet(ADMIN_SESSION_KEY, "1");
+    safeSet(ADMIN_ROLE_KEY, state.adminRole);
+    if (state.ownerAccountDocId) safeSet(ADMIN_OWNER_DOC_KEY, state.ownerAccountDocId);
+    else safeRemove(ADMIN_OWNER_DOC_KEY);
+
+    ensureLoggedInUI();
+    updateProfileUI();
+    updateRoleBasedUI();
+    activateTab("dashboard", { silentAuth: true });
+    await loadAllData();
+  }
+
+  function clearAdminSessionState() {
+    state.isLoggedIn = false;
+    state.adminRole = "";
+    state.ownerAccountDocId = "";
+    state.currentAuthUser = null;
+    state.currentOwnerRecord = null;
+    state.properties = [];
+    state.bookings = [];
+    state.ownerAccounts = [];
+    state.chats = [];
+    state.users = [];
+    state.currentChatId = null;
+    state.currentChatMessages = [];
+    state.pendingRejectBookingId = "";
+
+    safeRemove(ADMIN_SESSION_KEY);
+    safeRemove(ADMIN_ROLE_KEY);
+    safeRemove(ADMIN_OWNER_DOC_KEY);
+  }
+
   async function login(email, password) {
-    email = normalizeAdminEmail(email);
+    const rawLogin = cleanText(email);
     password = cleanText(password);
 
-    if (!email || !password) {
+    if (!rawLogin || !password) {
       showToast("أدخل البريد الإلكتروني وكلمة المرور.", "warning");
       return false;
     }
@@ -618,13 +754,37 @@
     }
 
     try {
-      if (typeof auth.setPersistence === "function" && typeof firebase !== "undefined" && firebase.auth?.Auth?.Persistence?.SESSION) {
-        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+      await setAdminSessionPersistence();
+
+      const candidates = await findPossibleLoginEmails(rawLogin);
+      if (!candidates.length) {
+        candidates.push(normalizeAdminEmail(rawLogin));
+        const withDomain = maybeBuildDomainEmail(rawLogin);
+        if (withDomain) candidates.push(withDomain);
       }
 
-      const cred = await auth.signInWithEmailAndPassword(email, password);
-      const user = cred?.user;
-      if (!user) throw new Error("AUTH_USER_NOT_FOUND");
+      let signedUser = null;
+      let lastError = null;
+
+      for (const candidateEmail of Array.from(new Set(candidates)).filter(Boolean)) {
+        try {
+          const cred = await auth.signInWithEmailAndPassword(candidateEmail, password);
+          if (cred?.user) {
+            signedUser = cred.user;
+            safeSet(ADMIN_LOGIN_HINT_KEY, candidateEmail);
+            break;
+          }
+        } catch (error) {
+          lastError = error;
+          const code = String(error?.code || "");
+          if (!code.includes("user-not-found") && !code.includes("invalid-email")) {
+            if (code.includes("wrong-password") || code.includes("invalid-credential")) break;
+          }
+        }
+      }
+
+      const user = signedUser || auth.currentUser;
+      if (!user) throw lastError || new Error("AUTH_USER_NOT_FOUND");
 
       const roleResult = await getAdminRoleFromFirestore(user);
       if (!roleResult.ok) {
@@ -632,35 +792,12 @@
         throw new Error("NOT_AUTHORIZED");
       }
 
-      state.currentAuthUser = user;
-      state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
-      state.adminRole = roleResult.role;
-      state.ownerAccountDocId = roleResult.ownerDocId || "";
-      state.isLoggedIn = true;
-      state.activeTab = "dashboard";
-
-      safeSet(ADMIN_SESSION_KEY, "1");
-      safeSet(ADMIN_ROLE_KEY, state.adminRole);
-      if (state.ownerAccountDocId) safeSet(ADMIN_OWNER_DOC_KEY, state.ownerAccountDocId);
-      else safeRemove(ADMIN_OWNER_DOC_KEY);
-
-      ensureLoggedInUI();
-      updateProfileUI();
-      updateRoleBasedUI();
-      activateTab("dashboard", { silentAuth: true });
-      await loadAllData();
+      await applyAuthorizedSession(user, roleResult);
       showToast("تم تسجيل الدخول بنجاح.", "success");
       return true;
     } catch (error) {
       console.error("admin login error:", error);
-      state.isLoggedIn = false;
-      state.currentAuthUser = null;
-      state.currentOwnerRecord = null;
-      state.adminRole = "";
-      state.ownerAccountDocId = "";
-      safeRemove(ADMIN_SESSION_KEY);
-      safeRemove(ADMIN_ROLE_KEY);
-      safeRemove(ADMIN_OWNER_DOC_KEY);
+      clearAdminSessionState();
       ensureLoggedInUI();
       updateProfileUI();
 
@@ -678,6 +815,8 @@
         message = "البريد الإلكتروني غير صالح.";
       } else if (code.includes("too-many-requests")) {
         message = "تمت محاولات كثيرة. حاول مرة أخرى لاحقًا.";
+      } else if (code.includes("invalid-credential")) {
+        message = "بيانات الدخول غير صحيحة.";
       }
 
       showToast(message, "error");
@@ -686,24 +825,7 @@
   }
 
   async function logout() {
-    state.isLoggedIn = false;
-    state.activeTab = "dashboard";
-    state.adminRole = "";
-    state.ownerAccountDocId = "";
-    state.currentAuthUser = null;
-    state.currentOwnerRecord = null;
-    state.properties = [];
-    state.bookings = [];
-    state.ownerAccounts = [];
-    state.chats = [];
-    state.users = [];
-    state.currentChatId = null;
-    state.currentChatMessages = [];
-    state.pendingRejectBookingId = "";
-
-    safeRemove(ADMIN_SESSION_KEY);
-    safeRemove(ADMIN_ROLE_KEY);
-    safeRemove(ADMIN_OWNER_DOC_KEY);
+    clearAdminSessionState();
 
     if (state.listeners.chats) {
       state.listeners.chats();
@@ -818,7 +940,6 @@
     setText(String(confirmed), "confirmed-bookings-count", "bookings-count-confirmed");
     setText(String(rejected), "rejected-bookings-count", "bookings-count-rejected");
     setText(String(state.users.length), "dashboard-users-count", "users-count");
-
     setText(String(state.bookings.length), "bookings-count-all");
 
     const visibleCount = state.properties.filter((p) => p.isActive !== false && p.visible !== false).length;
@@ -1651,10 +1772,6 @@
       lastMessage: cleanText(text),
       updatedAt: getServerTimestamp()
     }, { merge: true });
-
-    if (state.currentChatId === chatId) {
-      await openChat(chatId);
-    }
   }
 
   function getRejectModal() {
@@ -1746,7 +1863,7 @@
       return;
     }
 
-    const booking = state.bookings.find((b) => cleanText(b.id) === bookingId);
+    const booking = state.bookings.find((b) => cleanText(b.id) === cleanText(bookingId));
     if (!booking) return showToast("الحجز غير موجود.", "error");
     if (!canAccessBooking(booking)) return showToast("ليست لديك صلاحية تعديل هذا الحجز.", "error");
 
@@ -1873,203 +1990,207 @@
 
     if (state.maps[prefix]) return;
 
-    const map = L.map(mapEl).setView([33.37, 6.86], 12);
-    state.maps[prefix] = map;
+    const defaultLat = 33.3678;
+    const defaultLng = 6.8517;
+
+    state.maps[prefix] = L.map(mapEl).setView([defaultLat, defaultLng], 7);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors"
-    }).addTo(map);
+    }).addTo(state.maps[prefix]);
 
-    map.on("click", (e) => {
-      const { lat, lng } = e.latlng;
-      setValue(String(lat.toFixed(6)), `${prefix}-lat`);
-      setValue(String(lng.toFixed(6)), `${prefix}-lng`);
+    state.maps[prefix].on("click", (e) => {
+      const { lat, lng } = e.latlng || {};
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      setValue(String(lat), `${prefix}-lat`);
+      setValue(String(lng), `${prefix}-lng`);
       updateMapMarkerFromInputs(prefix);
       showMapPickedBadge(prefix);
     });
   }
 
-  function bindPropertySearch() {
-    const search = byId("properties-search-input") || byId("properties-search") || byId("property-search");
-    if (!search) return;
-    search.addEventListener("input", renderPropertiesTable);
+  function wireTabs() {
+    qa("[data-tab-target], .sidebar-nav .nav-item[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.tabTarget || btn.dataset.tab;
+        activateTab(target);
+      });
+    });
   }
 
-  function bindBookingFilterButtons() {
+  function wirePropertyActions() {
+    document.addEventListener("click", async (e) => {
+      const editBtn = e.target.closest(".edit-property-btn");
+      if (editBtn) {
+        openEditPropertyModal(editBtn.dataset.id);
+        return;
+      }
+
+      const toggleBtn = e.target.closest(".toggle-property-btn");
+      if (toggleBtn) {
+        await togglePropertyVisibility(toggleBtn.dataset.id, toggleBtn.dataset.visible === "1");
+        return;
+      }
+
+      const deleteBtn = e.target.closest(".delete-property-btn");
+      if (deleteBtn) {
+        await deleteProperty(deleteBtn.dataset.id);
+        return;
+      }
+
+      const approveBtn = e.target.closest(".approve-booking-btn");
+      if (approveBtn) {
+        await approveBooking(approveBtn.dataset.id);
+        return;
+      }
+
+      const rejectBtn = e.target.closest(".reject-booking-btn");
+      if (rejectBtn) {
+        openRejectBookingModal(rejectBtn.dataset.id);
+        return;
+      }
+
+      const openChatBtn = e.target.closest(".open-booking-chat-btn");
+      if (openChatBtn) {
+        await openChatFromBooking(openChatBtn.dataset.id);
+        return;
+      }
+
+      const threadBtn = e.target.closest(".chat-thread-btn");
+      if (threadBtn) {
+        await openChat(threadBtn.dataset.chatId);
+        return;
+      }
+
+      const ownerPropsBtn = e.target.closest(".open-owner-properties-btn");
+      if (ownerPropsBtn) {
+        activateTab("properties", { silentAuth: true });
+        const search = byId("properties-search") || byId("property-search") || byId("properties-search-input");
+        if (search) {
+          search.value = ownerPropsBtn.dataset.email || "";
+          renderPropertiesTable();
+        }
+      }
+    });
+  }
+
+  function wireBookingFilters() {
     qa("[data-bookings-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        state.bookingFilter = cleanText(btn.dataset.bookingsFilter || "all") || "all";
+        state.bookingFilter = cleanText(btn.dataset.bookingsFilter || "all");
         renderBookings();
       });
     });
   }
 
-  function bindSidebarTabs() {
-    qa(".sidebar-nav .nav-item[data-tab], [data-tab-target]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const key = btn.dataset.tabTarget || btn.dataset.tab;
-        activateTab(key);
-      });
-    });
+  function wireSearches() {
+    const propSearch = byId("properties-search") || byId("property-search") || byId("properties-search-input");
+    if (propSearch) {
+      propSearch.addEventListener("input", renderPropertiesTable);
+    }
   }
 
-  function bindGeneralEvents() {
-    showFirebaseStatus();
-    bindSidebarTabs();
-    bindPropertySearch();
-    bindBookingFilterButtons();
-
-    const loginForm = byId("admin-login-form");
+  function wireForms() {
+    const loginForm = byId("admin-login-form") || byId("login-form");
     if (loginForm) {
       loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const userInput = getValue("admin-user", "admin-email", "login-email");
-        const password = getValue("admin-pass", "admin-password", "login-password");
-        const btn = byId("admin-login-btn") || loginForm.querySelector('button[type="submit"]');
+        const btn = loginForm.querySelector('button[type="submit"]');
+        const email = getValue("admin-login-email", "login-email", "admin-email");
+        const password = getValue("admin-login-password", "login-password", "admin-password");
 
         setButtonLoading(btn, true, "جارٍ تسجيل الدخول...");
         try {
-          await login(userInput, password);
+          await login(email, password);
         } finally {
           setButtonLoading(btn, false);
         }
       });
     }
 
-    byId("admin-logout-btn")?.addEventListener("click", logout);
+    const addForm = byId("add-property-form") || byId("admin-property-form");
+    if (addForm) addForm.addEventListener("submit", handleAddPropertySubmit);
 
-    byId("add-property-form")?.addEventListener("submit", handleAddPropertySubmit);
-    byId("admin-property-form")?.addEventListener("submit", handleAddPropertySubmit);
-    byId("edit-property-form")?.addEventListener("submit", handleEditPropertySubmit);
-    byId("edit-form")?.addEventListener("submit", handleEditPropertySubmit);
+    const editForm = byId("edit-property-form") || byId("edit-form");
+    if (editForm) editForm.addEventListener("submit", handleEditPropertySubmit);
 
-    document.addEventListener("click", async (e) => {
-      const editBtn = e.target.closest(".edit-property-btn");
-      if (editBtn) return openEditPropertyModal(editBtn.dataset.id);
+    const logoutBtn = byId("admin-logout-btn") || byId("logout-btn");
+    if (logoutBtn) logoutBtn.addEventListener("click", logout);
 
-      const toggleBtn = e.target.closest(".toggle-property-btn");
-      if (toggleBtn) {
-        return togglePropertyVisibility(toggleBtn.dataset.id, toggleBtn.dataset.visible === "1");
-      }
+    const sendChatBtn = byId("send-chat-message-btn");
+    if (sendChatBtn) sendChatBtn.addEventListener("click", sendCurrentChatMessage);
 
-      const deleteBtn = e.target.closest(".delete-property-btn");
-      if (deleteBtn) return deleteProperty(deleteBtn.dataset.id);
-
-      const approveBtn = e.target.closest(".approve-booking-btn");
-      if (approveBtn) return approveBooking(approveBtn.dataset.id);
-
-      const rejectBtn = e.target.closest(".reject-booking-btn");
-      if (rejectBtn) return openRejectBookingModal(rejectBtn.dataset.id);
-
-      const openBookingChatBtn = e.target.closest(".open-booking-chat-btn");
-      if (openBookingChatBtn) return openChatFromBooking(openBookingChatBtn.dataset.id);
-
-      const threadBtn = e.target.closest(".chat-thread-btn");
-      if (threadBtn) return openChat(threadBtn.dataset.chatId);
-
-      const ownerPropsBtn = e.target.closest(".open-owner-properties-btn");
-      if (ownerPropsBtn) {
-        activateTab("properties");
-        const input = byId("properties-search-input") || byId("properties-search") || byId("property-search");
-        if (input) {
-          input.value = ownerPropsBtn.dataset.email || "";
-          renderPropertiesTable();
+    const chatInput = byId("chat-message-input");
+    if (chatInput) {
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendCurrentChatMessage();
         }
-      }
+      });
+    }
+
+    const confirmRejectBtn = byId("confirm-reject-booking-btn");
+    if (confirmRejectBtn) confirmRejectBtn.addEventListener("click", confirmRejectBooking);
+
+    const cancelRejectBtn = byId("cancel-reject-booking-btn");
+    if (cancelRejectBtn) cancelRejectBtn.addEventListener("click", closeRejectBookingModal);
+
+    qa("[data-close-modal], .modal-close").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const modal = btn.closest(".modal-overlay");
+        if (modal?.id === "reject-booking-modal") closeRejectBookingModal();
+        else closeModal(modal);
+      });
     });
 
-    byId("send-chat-message-btn")?.addEventListener("click", sendCurrentChatMessage);
-    byId("chat-message-input")?.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        e.preventDefault();
-        sendCurrentChatMessage();
-      }
-    });
-
-    byId("close-reject-booking-modal")?.addEventListener("click", closeRejectBookingModal);
-    byId("cancel-reject-booking-btn")?.addEventListener("click", closeRejectBookingModal);
-    byId("confirm-reject-booking-btn")?.addEventListener("click", confirmRejectBooking);
-
-    getRejectModal()?.addEventListener("click", (e) => {
-      if (e.target === getRejectModal()) closeRejectBookingModal();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        closeRejectBookingModal();
-        closeModal(byId("edit-modal"));
-      }
-    });
-
-    byId("admin-mobile-toggle")?.addEventListener("click", () => {
-      byId("admin-sidebar")?.classList.toggle("show");
-      byId("sidebar-backdrop")?.classList.toggle("show");
-    });
-
-    byId("sidebar-backdrop")?.addEventListener("click", () => {
-      byId("admin-sidebar")?.classList.remove("show");
-      byId("sidebar-backdrop")?.classList.remove("show");
+    qa(".modal-overlay").forEach((modal) => {
+      modal.addEventListener("click", (e) => {
+        if (e.target !== modal) return;
+        if (modal.id === "reject-booking-modal") closeRejectBookingModal();
+        else closeModal(modal);
+      });
     });
   }
 
-  function restoreSessionFlags() {
-    state.isLoggedIn = safeGet(ADMIN_SESSION_KEY) === "1";
-    state.adminRole = safeGet(ADMIN_ROLE_KEY, "");
-    state.ownerAccountDocId = safeGet(ADMIN_OWNER_DOC_KEY, "");
-    ensureLoggedInUI();
-    updateProfileUI();
-    updateRoleBasedUI();
-  }
-
-  function bindAuthState() {
+  function setupAuthObserver() {
     if (!auth || typeof auth.onAuthStateChanged !== "function") {
       state.authReady = true;
+      ensureLoggedInUI();
       return;
     }
 
-    auth.onAuthStateChanged(async (user) => {
+    if (state.listeners.auth) {
+      try { state.listeners.auth(); } catch {}
+      state.listeners.auth = null;
+    }
+
+    state.listeners.auth = auth.onAuthStateChanged(async (user) => {
       state.authReady = true;
 
-      if (user) {
-        state.currentAuthUser = user;
-        const roleResult = await getAdminRoleFromFirestore(user);
-
-        if (!roleResult.ok) {
-          state.isLoggedIn = false;
-          state.adminRole = "";
-          state.currentOwnerRecord = null;
-          state.ownerAccountDocId = "";
-          safeRemove(ADMIN_SESSION_KEY);
-          safeRemove(ADMIN_ROLE_KEY);
-          safeRemove(ADMIN_OWNER_DOC_KEY);
-          ensureLoggedInUI();
-          updateProfileUI();
-          return;
-        }
-
-        state.isLoggedIn = true;
-        state.adminRole = roleResult.role;
-        state.currentOwnerRecord = roleResult.ownerData || roleResult.userData || null;
-        state.ownerAccountDocId = roleResult.ownerDocId || "";
-
-        safeSet(ADMIN_SESSION_KEY, "1");
-        safeSet(ADMIN_ROLE_KEY, state.adminRole);
-        if (state.ownerAccountDocId) safeSet(ADMIN_OWNER_DOC_KEY, state.ownerAccountDocId);
-        else safeRemove(ADMIN_OWNER_DOC_KEY);
-
+      if (!user) {
+        clearAdminSessionState();
         ensureLoggedInUI();
         updateProfileUI();
         updateRoleBasedUI();
-        await loadAllData();
-      } else {
-        state.currentAuthUser = null;
-        state.currentOwnerRecord = null;
-        state.isLoggedIn = false;
-        state.adminRole = "";
-        state.ownerAccountDocId = "";
-        safeRemove(ADMIN_SESSION_KEY);
-        safeRemove(ADMIN_ROLE_KEY);
-        safeRemove(ADMIN_OWNER_DOC_KEY);
+        return;
+      }
+
+      try {
+        const roleResult = await getAdminRoleFromFirestore(user);
+        if (!roleResult.ok) {
+          clearAdminSessionState();
+          ensureLoggedInUI();
+          updateProfileUI();
+          updateRoleBasedUI();
+          return;
+        }
+
+        await applyAuthorizedSession(user, roleResult);
+      } catch (error) {
+        console.error("auth observer restore failed:", error);
+        clearAdminSessionState();
         ensureLoggedInUI();
         updateProfileUI();
         updateRoleBasedUI();
@@ -2077,25 +2198,32 @@
     });
   }
 
-  async function init() {
-    restoreSessionFlags();
-    bindGeneralEvents();
-    bindAuthState();
+  function preloadRememberedLogin() {
+    const remembered = safeGet(ADMIN_LOGIN_HINT_KEY, "");
+    if (!remembered) return;
+    const input = byId("admin-login-email") || byId("login-email") || byId("admin-email");
+    if (input && !cleanText(input.value)) input.value = remembered;
+  }
 
-    initMap("admin");
-    initMap("edit");
-
+  function boot() {
+    showFirebaseStatus();
     ensureLoggedInUI();
     updateProfileUI();
     updateRoleBasedUI();
-
-    if (auth?.currentUser) {
-      state.currentAuthUser = auth.currentUser;
-      state.isLoggedIn = true;
-      ensureLoggedInUI();
-      await loadAllData();
-    }
+    preloadRememberedLogin();
+    initMap("add");
+    initMap("edit");
+    wireTabs();
+    wirePropertyActions();
+    wireBookingFilters();
+    wireSearches();
+    wireForms();
+    setupAuthObserver();
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
 })();
