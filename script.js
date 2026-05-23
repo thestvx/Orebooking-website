@@ -1231,8 +1231,9 @@ function getImage(p) {
 
 function propertyDetailsUrl(p) {
   const id = encodeURIComponent(p.id || "");
-  return `property-details.html?id=${id}`;
+  return `property.html?id=${id}`;
 }
+
 
 function isFav(id) {
   return state.favorites.includes(id);
