@@ -614,7 +614,7 @@
     }
 
     try {
-      const ownerByEmail = await db.collection("ownerAccounts").where("email", "==", normalized).limit(1).get();
+      const ownerByEmail = await db.collection("ownerAccounts").where("email", "d", normalized).limit(1).get();
       if (!ownerByEmail.empty) {
         const data = ownerByEmail.docs[0].data() || {};
         const email = normalizeEmail(data.email);
