@@ -1,6 +1,5 @@
 // =========================================
 // script.js — OreBooking Index Page v5.0
-// Frontend Firebase isolated from Admin app
 // Full Firebase + Auth + Real-time Chat + Listings
 // Compatible with current index.html IDs
 // =========================================
