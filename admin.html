@@ -302,6 +302,7 @@
       top: 0;
       height: 100vh;
       box-shadow: 10px 0 40px rgba(15,23,42,0.03);
+      z-index: 3001;
     }
 
     .sidebar-logo {
@@ -425,6 +426,18 @@
       color: var(--text-main);
       cursor: pointer;
       box-shadow: var(--shadow-sm);
+    }
+
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.45);
+      z-index: 2999;
+      display: none;
+    }
+
+    .sidebar-backdrop.show {
+      display: block;
     }
 
     .admin-header {
@@ -1308,10 +1321,12 @@
       margin-top: 2px;
       padding-top: 16px;
       border-top: 1px solid var(--border-color);
+      flex-wrap: wrap;
     }
 
     .btn-approve,
-    .btn-reject {
+    .btn-reject,
+    .btn-open-chat {
       flex: 1;
       display: flex;
       align-items: center;
@@ -1323,9 +1338,9 @@
       font-weight: 800;
       font-size: 0.9rem;
       font-family: inherit;
-      border: none;
       cursor: pointer;
       transition: var(--transition);
+      border: none;
     }
 
     .btn-approve {
@@ -1352,8 +1367,21 @@
       transform: translateY(-1px);
     }
 
+    .btn-open-chat {
+      background: rgba(67,90,191,0.08);
+      color: var(--primary);
+      border: 1px solid rgba(67,90,191,0.24);
+    }
+
+    .btn-open-chat:hover:not(:disabled) {
+      background: var(--primary);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
     .btn-approve:disabled,
-    .btn-reject:disabled {
+    .btn-reject:disabled,
+    .btn-open-chat:disabled {
       opacity: 0.55;
       cursor: not-allowed;
       transform: none !important;
@@ -1503,6 +1531,9 @@
       padding: 14px;
       overflow: auto;
       max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .chat-main {
@@ -1561,38 +1592,6 @@
       display: block;
       margin-bottom: 10px;
       color: var(--primary);
-    }
-
-    .chat-message {
-      max-width: 82%;
-      padding: 12px 14px;
-      border-radius: 16px;
-      line-height: 1.7;
-      font-size: 0.93rem;
-      box-shadow: var(--shadow-sm);
-      word-break: break-word;
-    }
-
-    .chat-message.admin {
-      align-self: flex-start;
-      background: var(--surface-color);
-      color: var(--text-main);
-      border: 1px solid var(--border-color);
-      border-top-left-radius: 6px;
-    }
-
-    .chat-message.customer {
-      align-self: flex-end;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: #fff;
-      border-top-right-radius: 6px;
-    }
-
-    .chat-meta {
-      display: block;
-      margin-top: 6px;
-      font-size: 0.75rem;
-      opacity: .8;
     }
 
     .chat-composer {
@@ -1955,7 +1954,6 @@
       </header>
 
       <section class="admin-content">
-
         <div id="dashboard-pane" class="tab-pane active">
           <div class="dashboard-strip">
             <div class="stat-mini-card">
@@ -2287,25 +2285,25 @@
             </div>
 
             <div class="bookings-filter-bar">
-              <button type="button" class="filter-tab-btn all active" data-filter="all">
+              <button type="button" class="filter-tab-btn all active" data-booking-filter="all">
                 <i class="ph ph-list"></i>
                 <span>الكل</span>
                 <span id="booking-count-all" class="filter-count-badge">0</span>
               </button>
 
-              <button type="button" class="filter-tab-btn pending" data-filter="pending">
+              <button type="button" class="filter-tab-btn pending" data-booking-filter="pending">
                 <i class="ph ph-hourglass-medium"></i>
                 <span>قيد الانتظار</span>
                 <span id="booking-count-pending" class="filter-count-badge">0</span>
               </button>
 
-              <button type="button" class="filter-tab-btn confirmed" data-filter="confirmed">
+              <button type="button" class="filter-tab-btn confirmed" data-booking-filter="confirmed">
                 <i class="ph ph-check-circle"></i>
                 <span>مؤكدة</span>
                 <span id="booking-count-confirmed" class="filter-count-badge">0</span>
               </button>
 
-              <button type="button" class="filter-tab-btn rejected" data-filter="rejected">
+              <button type="button" class="filter-tab-btn rejected" data-booking-filter="rejected">
                 <i class="ph ph-x-circle"></i>
                 <span>مرفوضة</span>
                 <span id="booking-count-rejected" class="filter-count-badge">0</span>
@@ -2404,6 +2402,10 @@
             <div class="pane-head">
               <h3><i class="ph ph-chat-centered-dots"></i> الرسائل والدعم</h3>
               <div class="pane-tools">
+                <div class="search-inline">
+                  <i class="ph ph-magnifying-glass"></i>
+                  <input id="chats-search" type="text" placeholder="ابحث باسم العميل أو البريد أو آخر رسالة..." />
+                </div>
                 <button id="refresh-chats-btn" type="button" class="ghost-action">
                   <i class="ph ph-arrows-clockwise"></i>
                   <span>تحديث</span>
@@ -2440,16 +2442,16 @@
                   </div>
                 </div>
 
-                <div class="chat-composer">
-                  <textarea id="admin-chat-input" placeholder="اكتب ردّك هنا..."></textarea>
+                <form id="admin-chat-send-form" class="chat-composer">
+                  <textarea id="admin-chat-input" name="message" placeholder="اكتب ردّك هنا..."></textarea>
                   <div class="chat-actions">
                     <small>سيتم إرسال الرسالة داخل المحادثة الحالية مباشرة.</small>
-                    <button id="admin-chat-send-btn" type="button" class="primary-btn">
+                    <button id="admin-chat-send-btn" type="submit" class="primary-btn">
                       <i class="ph ph-paper-plane-tilt"></i>
                       <span>إرسال</span>
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
             </div>
           </div>
@@ -2628,6 +2630,41 @@
     </div>
   </div>
 
-  <script src="admin.js?v=3.0" defer></script>
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+  <script>
+    (function () {
+      const toggleBtn = document.getElementById("admin-mobile-toggle");
+      const sidebar = document.querySelector(".admin-sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+
+      function openSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.add("open");
+        backdrop?.classList.add("show");
+      }
+
+      function closeSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove("open");
+        backdrop?.classList.remove("show");
+      }
+
+      toggleBtn?.addEventListener("click", openSidebar);
+      backdrop?.addEventListener("click", closeSidebar);
+
+      document.querySelectorAll("[data-tab-target]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (window.innerWidth <= 1100) closeSidebar();
+        });
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 1100) closeSidebar();
+      });
+    })();
+  </script>
+
+  <script src="admin.js?v=3.1" defer></script>
 </body>
 </html>
