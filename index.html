@@ -1374,6 +1374,36 @@
             color: var(--text-muted);
         }
 
+        .chat-status-line {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .chat-status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            display: inline-block;
+        }
+
+        .chat-status-line.connected .chat-status-dot {
+            background: var(--success);
+        }
+
+        .chat-status-line.syncing .chat-status-dot {
+            background: var(--warning);
+        }
+
+        .chat-status-line.error .chat-status-dot {
+            background: var(--error);
+        }
+
         .chat-modal-body,
         #chat-messages {
             flex: 1;
@@ -1434,6 +1464,16 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+        }
+
+        .chat-send-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-hidden-inputs {
+            display: none;
         }
 
         .chat-actions {
@@ -2050,6 +2090,10 @@
                     <div class="chat-title-text">
                         <h3 id="chat-title" data-i18n="chat_title">Support chat</h3>
                         <p id="chat-subtitle" data-i18n="chat_subtitle">We usually reply quickly</p>
+                        <div id="chat-connection-status" class="chat-status-line syncing" aria-live="polite">
+                            <span class="chat-status-dot"></span>
+                            <span id="chat-connection-text">Preparing secure connection...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -2062,22 +2106,32 @@
                 <div class="chat-empty-state" id="chat-empty-state">
                     <i class="ph ph-chat-circle-dots"></i>
                     <div id="chat-empty-title">No messages yet.</div>
-                    <p id="chat-empty-subtitle">Start the conversation and mention this property to contact support.</p>
+                    <p id="chat-empty-subtitle">Start the conversation to contact support and receive replies here directly.</p>
                 </div>
             </div>
 
             <div class="chat-input-area">
-                <input type="hidden" id="chat-property-id" value="global">
-                <textarea id="chat-textarea" placeholder="Type your message"></textarea>
+                <form id="chat-send-form" class="chat-send-form">
+                    <div class="chat-hidden-inputs">
+                        <input type="hidden" id="chat-property-id" value="global">
+                        <input type="hidden" id="chat-current-id" value="">
+                        <input type="hidden" id="chat-current-booking-id" value="">
+                        <input type="hidden" id="chat-current-user-id" value="">
+                        <input type="hidden" id="chat-current-user-email" value="">
+                        <input type="hidden" id="chat-current-user-name" value="">
+                    </div>
 
-                <div class="chat-actions">
-                    <div class="chat-note" id="chat-note">This chat works now and can also be connected to Firestore later.</div>
+                    <textarea id="chat-textarea" name="message" placeholder="Type your message"></textarea>
 
-                    <button class="primary-btn chat-send-btn" id="chat-send-btn" type="button">
-                        <i class="ph ph-paper-plane-tilt"></i>
-                        <span id="send-chat-text" data-i18n="send_message">Send message</span>
-                    </button>
-                </div>
+                    <div class="chat-actions">
+                        <div class="chat-note" id="chat-note">Messages in this chat are synced with support through Firebase.</div>
+
+                        <button class="primary-btn chat-send-btn" id="chat-send-btn" type="submit">
+                            <i class="ph ph-paper-plane-tilt"></i>
+                            <span id="send-chat-text" data-i18n="send_message">Send message</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -2109,7 +2163,7 @@
         })();
     </script>
 
-    <script src="script.js?v=2.6" defer></script>
+    <script src="script.js?v=2.7" defer></script>
 </body>
 
 </html>
