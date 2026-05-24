@@ -1985,6 +1985,18 @@ function initAuthListener() {
         await loadBookings();
         // ابدأ مراقبة تغييرات الحجوزات لإرسال إشعارات البريد
         startBookingStatusListener(user.uid);
+
+        // إذا كان عنده chat سابق مخزّن، اشترك فيه لاستقبال الإشعارات تلقائياً
+        const savedChatId = safeGet("ore_current_chat_id", "");
+        if (savedChatId && savedChatId !== state.currentChatId) {
+          state.currentChatId = savedChatId;
+          state.chatInitializedForUser = user.uid;
+          updateChatHiddenFields(savedChatId);
+          subscribeToCurrentChat(savedChatId);
+        } else if (!savedChatId) {
+          // ابدأ chat جديد في الخلفية بدون فتح النافذة
+          ensureSupportChat(false).catch(() => {});
+        }
       } else {
         stopBookingStatusListener();
         resetFrontendUserState();
@@ -2091,6 +2103,18 @@ async function sendBookingNotificationToChat(booking, newStatus) {
       }
     }
 
+    // تأكد من وجود document الـ chat أولاً قبل إضافة الرسالة
+    await chatRef.set({
+      chatId,
+      userId: uid,
+      userEmail: getCurrentUserEmail(),
+      userName: getCurrentUserName(),
+      status: "open",
+      channel: "support",
+      createdAt: now,
+      updatedAt: now
+    }, { merge: true });
+
     // أضف رسالة من الـ admin/support في chat الزبون
     await messagesRef.add({
       text: message,
@@ -2159,34 +2183,54 @@ function startBookingStatusListener(uid) {
   stopBookingStatusListener();
   if (!db || !uid) return;
 
-  // نخزّن الـ statuses السابقة لنكتشف التغيير
-  const previousStatuses = {};
+  // نخزّن الـ statuses المعروفة — يُملأ في أول snapshot (added)
+  // ويُقارن عند كل تعديل (modified)
+  const knownStatuses = {};
+  let isFirstSnapshot = true;
 
   bookingStatusUnsub = db
     .collection("bookings")
     .where("userId", "==", uid)
-    .onSnapshot((snap) => {
-      snap.docChanges().forEach(async (change) => {
-        if (change.type === "modified" || change.type === "added") {
+    .onSnapshot(async (snap) => {
+      try {
+        if (isFirstSnapshot) {
+          // الـ snapshot الأول: نسجّل الـ statuses الحالية فقط بدون إشعار
+          snap.forEach((doc) => {
+            const status = cleanText((doc.data().status || "")).toLowerCase();
+            knownStatuses[doc.id] = status;
+          });
+          isFirstSnapshot = false;
+          return; // لا نرسل إشعارات للبيانات الأولية
+        }
+
+        // الـ snapshots اللاحقة: نعالج التعديلات فقط
+        for (const change of snap.docChanges()) {
+          if (change.type !== "modified") continue;
+
           const booking = { id: change.doc.id, ...change.doc.data() };
           const newStatus = cleanText(booking.status || "").toLowerCase();
-          const prevStatus = previousStatuses[booking.id];
+          const prevStatus = knownStatuses[booking.id];
 
-          // حدّث الـ status المخزّن
-          previousStatuses[booking.id] = newStatus;
+          // حدّث القيمة المخزّنة
+          knownStatuses[booking.id] = newStatus;
 
-          // أرسل إشعار فقط لو تغيّر الـ status إلى confirmed أو rejected
-          if (
-            prevStatus !== undefined &&
-            prevStatus !== newStatus &&
-            (newStatus === "confirmed" || newStatus === "rejected")
-          ) {
+          // أرسل إشعار فقط إذا تغيّر الـ status فعلاً إلى confirmed أو rejected
+          const isTargetStatus = newStatus === "confirmed" || newStatus === "rejected";
+          const statusChanged = prevStatus !== newStatus;
+
+          if (isTargetStatus && statusChanged) {
+            // تأكد أنه ما أُرسل إشعار لهذا الحجز بهذا الـ status من قبل
+            const notifKey = `ore_notif_${booking.id}_${newStatus}`;
+            if (safeGet(notifKey)) continue; // سبق إرسال إشعار لهذا التغيير
+            safeSet(notifKey, "1");
+
             await sendBookingNotificationToChat(booking, newStatus);
-            // أعد تحميل الحجوزات لتحديث العرض
             await loadBookings();
           }
         }
-      });
+      } catch (err) {
+        console.warn("bookingStatusListener snapshot handler error:", err);
+      }
     }, (err) => {
       console.warn("bookingStatusListener error:", err);
     });
