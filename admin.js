@@ -1700,13 +1700,12 @@
     }
 
     if (!rows.length) {
-      container.innerHTML = `<div class="empty-state"><i class="ph ph-calendar-x"></i><div>لا توجد حجوزات مطابقة.</div></div>`;
+      container.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="ph ph-calendar-x"></i><div>لا توجد حجوزات مطابقة.</div></div>`;
       return;
     }
 
-    const grid = document.createElement("div");
-    grid.className = "bookings-grid";
-    grid.innerHTML = rows
+    container.className = "bookings-grid";
+    container.innerHTML = rows
       .map((booking) => {
         const status = getBookingStatus(booking.status);
         const canOpenChat = !!(booking.userId || booking.guestEmail);
@@ -1762,8 +1761,6 @@
       })
       .join("");
 
-    container.innerHTML = "";
-    container.appendChild(grid);
   }
 
   async function updateBookingStatus(id, status) {
