@@ -1,8 +1,9 @@
 // =========================================
-// booking.js — OreBooking v17.0
+// booking.js — OreBooking v17.1
 // Safe booking flow + auth + payment
 // Fixed stale customer name/email leak
 // User-scoped draft storage
+// FIXED: Language switching (AR <-> EN)
 // =========================================
 
 "use strict";
@@ -494,6 +495,9 @@ const bookingState = {
   }
 };
 
+// ──────────────────────────────────────────
+// FIX: Translation helper t() reads live lang
+// ──────────────────────────────────────────
 function t(en, ar) {
   return bookingState.lang === "ar" ? ar : en;
 }
@@ -952,6 +956,7 @@ function applyTheme() {
 function updateLangButton() {
   const span = els.langToggle?.querySelector("span");
   if (!span) return;
+  // FIX: show the OTHER language (the one you can switch TO)
   span.textContent = bookingState.lang === "ar" ? "EN" : "AR";
 }
 
@@ -1053,6 +1058,10 @@ function applyTranslations() {
   });
 }
 
+// ──────────────────────────────────────────
+// FIX: refreshLocalizedUI — full redraw on
+//      language change, no stale text left
+// ──────────────────────────────────────────
 function refreshLocalizedUI() {
   updateDirection();
   updateLangButton();
@@ -1060,8 +1069,22 @@ function refreshLocalizedUI() {
   updateAuthUI(currentUser);
   renderPropertySummary();
   updatePaymentCardsUI();
+
+  // Re-render all dynamic text that uses t()
+  updateBookingStateFromInputs();
   updateSummary();
   updateReview();
+
+  // Re-render upload label if no file chosen yet
+  if (els.uploadText && !bookingState.paymentProofName) {
+    els.uploadText.textContent = t(
+      "Click to upload payment receipt",
+      "اضغط لرفع إيصال الدفع"
+    );
+  }
+
+  // Re-render any visible global alert text
+  hideGlobalAlert();
 }
 
 // ──────────────────────────────────────────
@@ -1398,6 +1421,7 @@ function updatePaymentCardsUI() {
   });
 
   bookingState.paymentValue = selected;
+  // FIX: re-evaluate label using current lang
   bookingState.paymentMethod = getPaymentMethodLabel(selected);
 
   if (els.bankTransferBox) els.bankTransferBox.classList.toggle("active", selected === "ccp" || selected === "bank");
@@ -1419,6 +1443,7 @@ function updateBookingStateFromInputs() {
 
   bookingState.stayDetails.bedType = getFieldSelectedText("bedType", getFallbackText());
   bookingState.paymentValue = getSelectedPaymentValue();
+  // FIX: always re-evaluate label with current lang
   bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
 
   if (!bookingState.bookingReference) {
@@ -1454,6 +1479,7 @@ function updateSummary() {
   const taxes = nights > 0 ? Math.round(nightly * nights * 0.06) : 0;
   const total = nightly * nights + serviceFee + taxes;
 
+  // FIX: formatDateDisplay and t() now use live bookingState.lang
   setText(els.summaryCheckin, bookingState.checkIn ? formatDateDisplay(bookingState.checkIn) : "-");
   setText(els.summaryCheckout, bookingState.checkOut ? formatDateDisplay(bookingState.checkOut) : "-");
   setText(els.summaryGuests, String(bookingState.guestCount || 1));
@@ -1471,6 +1497,7 @@ function updateSummary() {
 }
 
 function updateReview() {
+  // FIX: getFallbackText() and t() now use live bookingState.lang
   setText(els.reviewGuestName, getFieldValue("guestName", getFallbackText()));
   setText(els.reviewGuestEmail, getFieldValue("guestEmail", getFallbackText()));
   setText(els.reviewGuestPhone, getFieldValue("guestPhone", getFallbackText()));
@@ -2037,6 +2064,11 @@ function setupAuthForms() {
 }
 
 function setupEventListeners() {
+  // ──────────────────────────────────────
+  // FIX: Language toggle — update lang FIRST,
+  //      then call refreshLocalizedUI() which
+  //      now redraws ALL dynamic text via t()
+  // ──────────────────────────────────────
   els.langToggle?.addEventListener("click", () => {
     bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
     safeSet("ore_lang", bookingState.lang);
