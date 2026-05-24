@@ -539,7 +539,8 @@
             width: 100%;
         }
 
-        .search-field input::placeholder {
+        .search-field input::placeholder,
+        .chat-input-area textarea::placeholder {
             color: var(--text-muted);
             opacity: 1;
         }
@@ -1005,7 +1006,8 @@
 
         .modal-overlay,
         .bookings-modal,
-        .chat-modal {
+        .chat-modal,
+        .favorites-modal {
             position: fixed;
             inset: 0;
             background: rgba(2, 6, 23, 0.58);
@@ -1018,12 +1020,14 @@
 
         .modal-overlay.active,
         .bookings-modal.active,
-        .chat-modal.active {
+        .chat-modal.active,
+        .favorites-modal.active {
             display: flex;
         }
 
         .modal-content,
-        .bookings-modal-dialog {
+        .bookings-modal-dialog,
+        .favorites-modal-dialog {
             width: min(960px, 100%);
             max-height: 90vh;
             overflow: hidden;
@@ -1103,6 +1107,7 @@
 
         .close-modal-btn,
         .bookings-modal-header button,
+        .favorites-modal-header button,
         .chat-close-btn {
             width: 42px;
             height: 42px;
@@ -1251,7 +1256,8 @@
             font-weight: 800;
         }
 
-        .bookings-modal-header {
+        .bookings-modal-header,
+        .favorites-modal-header {
             padding: 22px 24px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
@@ -1260,7 +1266,8 @@
             gap: 12px;
         }
 
-        .bookings-modal-header h3 {
+        .bookings-modal-header h3,
+        .favorites-modal-header h3 {
             margin: 0;
             font-size: 1.25rem;
             display: flex;
@@ -1268,7 +1275,8 @@
             gap: 10px;
         }
 
-        .bookings-modal-body {
+        .bookings-modal-body,
+        .favorites-modal-body {
             padding: 24px;
             max-height: min(72vh, 700px);
             overflow: auto;
@@ -1331,7 +1339,8 @@
             color: #047857;
         }
 
-        .booking-status-badge.cancelled {
+        .booking-status-badge.cancelled,
+        .booking-status-badge.rejected {
             background: rgba(239, 68, 68, .12);
             color: #b91c1c;
         }
@@ -1503,167 +1512,250 @@
             min-height: 46px;
         }
 
-        .favorite-entry-thumb {
-            width: 84px;
-            height: 64px;
-            border-radius: 12px;
-            object-fit: cover;
-            border: 1px solid var(--border-color);
-            flex-shrink: 0;
-            background: #e2e8f0;
-        }
-
-        .favorite-entry-row {
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            inset-inline-end: 20px;
+            z-index: 12000;
             display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            flex-wrap: wrap;
-        }
-
-        .favorite-entry-content {
-            flex: 1;
-            min-width: 220px;
-        }
-
-        .favorite-entry-actions {
-            display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-top: 14px;
-            flex-wrap: wrap;
+            max-width: min(92vw, 360px);
         }
 
-        .favorite-entry-actions a,
-        .favorite-entry-actions button {
-            min-height: 42px;
-            padding: 0 14px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            background: var(--surface-color);
-            color: var(--text-main);
-            font-weight: 800;
-            display: inline-flex;
+        .mobile-bottom-nav {
+            position: sticky;
+            bottom: 0;
+            z-index: 999;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+
+        .dark .mobile-bottom-nav,
+        html.dark .mobile-bottom-nav {
+            background: rgba(15, 23, 42, 0.92);
+            border-top-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .mobile-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+
+        .mob-nav-btn {
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
             cursor: pointer;
+            padding: 6px 10px;
+            min-width: 68px;
+            transition: var(--transition-fast);
         }
 
-        .favorite-entry-actions .primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            color: #fff;
-            border-color: transparent;
+        .mob-nav-btn i {
+            font-size: 1.25rem;
         }
 
-        @media (max-width: 900px) {
+        .mob-nav-btn span {
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .mob-nav-btn.active,
+        .mob-nav-btn:hover {
+            color: var(--primary);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        @media (max-width: 1024px) {
             .search-bar {
-                flex-direction: column;
-                border-radius: 24px;
+                border-radius: 28px;
+                padding: 14px;
+                gap: 10px;
             }
 
             .search-divider {
+                display: none;
+            }
+
+            .search-field {
+                min-width: calc(50% - 10px);
+                padding: 10px 12px;
+                border: 1px solid var(--border-color);
+                border-radius: 16px;
+                background: var(--bg-color);
+            }
+
+            .search-dropdown {
                 width: 100%;
-                height: 1px;
-                margin: 0;
             }
 
             .search-btn {
                 width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 14px 18px;
+                gap: 12px;
             }
 
             .nav-actions {
                 gap: 10px;
             }
 
-            #listings-grid {
-                grid-template-columns: 1fr;
+            .rewards-badge {
+                display: none;
             }
-        }
 
-        @media (max-width: 640px) {
-            .navbar {
-                padding: 14px 16px;
+            .hero {
+                padding: 64px 0 28px;
+            }
+
+            .hero p {
+                margin-bottom: 24px;
             }
 
             .container {
                 padding: 0 16px;
             }
 
-            .hero {
-                padding-top: 64px;
+            .mobile-bottom-nav {
+                display: block;
             }
 
-            .hero h1,
-            #hero-title {
-                font-size: clamp(2rem, 9vw, 2.8rem);
+            #chat-open-btn,
+            #scroll-top-btn {
+                inset-inline-end: 16px;
             }
 
-            .hero p,
-            #hero-desc {
-                font-size: 1rem;
+            #chat-open-btn {
+                bottom: 134px;
+            }
+
+            #scroll-top-btn {
+                bottom: 72px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .logo-img {
+                height: 36px;
+            }
+
+            .lang-btn,
+            .auth-link-btn,
+            .secondary-btn {
+                padding: 0 14px;
+                font-size: 0.9rem;
+            }
+
+            .search-field {
+                min-width: 100%;
+            }
+
+            .section-header-wrapper h2 {
+                font-size: 1.45rem;
+            }
+
+            #listings-grid {
+                grid-template-columns: 1fr;
             }
 
             .property-card-actions {
                 flex-direction: column;
             }
 
-            .rewards-badge {
-                display: none;
+            .chat-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chat-send-btn {
+                width: 100%;
             }
         }
     </style>
 </head>
 
-<body>
-    <header class="navbar">
-        <a href="index.html" class="logo" aria-label="OreBooking home">
-            <img id="site-logo" src="logos/orebooking.png" alt="OreBooking Logo" class="logo-img">
+<body data-view="home">
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <header class="navbar" role="navigation" aria-label="Main navigation">
+        <a id="home-logo-btn" class="logo" href="index.html" aria-label="OreBooking Home">
+            <img id="main-logo" src="logos/orebooking.png" alt="OreBooking" class="logo-img">
         </a>
 
         <div class="nav-actions">
-            <div class="rewards-badge" id="rewards-badge">
-                <i class="ph ph-gift"></i>
-                <span id="user-points">0</span>
-                <span>pts</span>
+            <div class="rewards-badge" id="nav-rewards-badge">
+                <i class="ph-fill ph-gift"></i>
+                <span>Loyalty Rewards</span>
             </div>
 
-            <button type="button" class="lang-btn" id="lang-toggle" aria-label="Change language">
+            <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
+                <i class="ph ph-moon"></i>
+            </button>
+
+            <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
                 <i class="ph ph-translate"></i>
                 <span id="lang-toggle-text">AR</span>
             </button>
 
-            <button type="button" class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
-                <i class="ph ph-moon"></i>
-            </button>
+            <a id="auth-cta" class="auth-link-btn" href="#" role="button">
+                <i class="ph ph-sign-in"></i>
+                <span>Sign In</span>
+            </a>
 
             <div class="profile-container">
-                <button type="button" class="auth-link-btn" id="open-auth-btn" aria-label="Open account menu"
-                    aria-haspopup="menu" aria-expanded="false">
+                <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button" aria-label="Account"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="profile-dropdown">
                     <i class="ph ph-user"></i>
-                    <span id="nav-sign-in-text">Sign In</span>
                 </button>
 
                 <div id="profile-dropdown" role="menu" aria-hidden="true">
                     <div class="dropdown-header">
-                        <strong id="dropdown-user-name">Guest User</strong>
-                        <span id="dropdown-user-email" class="text-muted text-sm">Sign in to continue</span>
+                        <span id="dropdown-user-name">Guest User</span>
+                        <span id="dropdown-user-email" class="text-muted">Sign in to continue</span>
+                        <span class="text-sm text-muted">
+                            <span id="user-points">0</span>
+                        </span>
                     </div>
+
                     <div class="dropdown-body">
-                        <button type="button" class="dropdown-item" id="my-bookings-btn" style="display:none;">
+                        <button class="dropdown-item" id="my-bookings-btn" type="button" role="menuitem">
                             <i class="ph ph-calendar-check"></i>
                             <span>My Bookings</span>
                         </button>
 
-                        <button type="button" class="dropdown-item" id="my-favorites-btn" style="display:none;">
+                        <button class="dropdown-item" id="my-favorites-btn" type="button" role="menuitem">
                             <i class="ph ph-heart"></i>
                             <span>Favorites</span>
                         </button>
 
-                        <button type="button" class="dropdown-item" id="open-chat-btn">
-                            <i class="ph ph-chat-centered-dots"></i>
+                        <button class="dropdown-item" id="open-chat-btn" type="button" role="menuitem">
+                            <i class="ph ph-chat-centered-text"></i>
                             <span>Support Chat</span>
                         </button>
 
-                        <button type="button" class="dropdown-item text-danger" id="logout-btn" style="display:none;">
+                        <button class="dropdown-item text-danger" id="logout-btn" type="button" role="menuitem">
                             <i class="ph ph-sign-out"></i>
                             <span>Sign Out</span>
                         </button>
@@ -1677,118 +1769,110 @@
         <section class="hero">
             <div class="container">
                 <div class="hero-copy">
-                    <div class="hero-badges">
-                        <span class="hero-badge animate-up delay-1">
-                            <i class="ph ph-shield-check"></i>
-                            Verified stays
-                        </span>
-                        <span class="hero-badge animate-up delay-2">
-                            <i class="ph ph-lightning"></i>
-                            Fast booking
-                        </span>
-                        <span class="hero-badge animate-up delay-3">
-                            <i class="ph ph-headset"></i>
-                            24/7 support
-                        </span>
+                    <div class="hero-badges ore-reveal ore-reveal-in">
+                        <div class="hero-badge">
+                            <i class="ph-fill ph-crown-simple"></i>
+                            <span>Premium stays</span>
+                        </div>
+                        <div class="hero-badge">
+                            <i class="ph-fill ph-shield-check"></i>
+                            <span>Trusted booking flow</span>
+                        </div>
+                        <div class="hero-badge">
+                            <i class="ph-fill ph-map-pin"></i>
+                            <span>Across Algeria</span>
+                        </div>
                     </div>
 
-                    <h1 id="hero-title" class="animate-up delay-2">Discover Your Perfect Stay</h1>
-                    <p id="hero-desc" class="animate-up delay-3">
-                        Explore hand-picked hotels, apartments, and villas across Algeria.
+                    <h1 id="hero-title" class="animate-up">Find your ideal stay in Algeria</h1>
+                    <p id="hero-desc" class="animate-up delay-1">
+                        Carefully selected hotels, apartments, and villas with a smooth booking experience.
                     </p>
+                </div>
 
-                    <div class="search-bar animate-up delay-4">
-                        <div class="search-field">
-                            <label for="destination-input">Destination</label>
-                            <input id="destination-input" type="text" placeholder="Search by name or location..."
-                                autocomplete="off">
-                            <div class="search-dropdown" id="search-dropdown"></div>
-                        </div>
-
-                        <div class="search-divider"></div>
-
-                        <div class="search-field">
-                            <label for="search-checkin">Check-in</label>
-                            <input id="search-checkin" type="date">
-                        </div>
-
-                        <div class="search-divider"></div>
-
-                        <div class="search-field">
-                            <label for="search-checkout">Check-out</label>
-                            <input id="search-checkout" type="date">
-                        </div>
-
-                        <div class="search-divider"></div>
-
-                        <div class="search-field">
-                            <label for="search-guests">Guests</label>
-                            <select id="search-guests">
-                                <option value="">Any</option>
-                                <option value="1">1 Guest</option>
-                                <option value="2">2 Guests</option>
-                                <option value="3">3 Guests</option>
-                                <option value="4">4 Guests</option>
-                                <option value="5">5+ Guests</option>
-                            </select>
-                        </div>
-
-                        <button type="button" class="search-btn" id="search-btn">
-                            <i class="ph ph-magnifying-glass"></i>
-                            <span>Search</span>
-                        </button>
+                <div class="search-bar animate-up delay-2">
+                    <div class="search-field">
+                        <label for="destination-input">Search by city, wilaya, or property name</label>
+                        <input id="destination-input" type="text" placeholder="Search city or property"
+                            autocomplete="off">
+                        <div class="search-dropdown" id="search-dropdown"></div>
                     </div>
+
+                    <div class="search-divider" aria-hidden="true"></div>
+
+                    <div class="search-field">
+                        <label for="search-checkin">Check-in</label>
+                        <input id="search-checkin" type="date" name="checkin">
+                    </div>
+
+                    <div class="search-divider" aria-hidden="true"></div>
+
+                    <div class="search-field">
+                        <label for="search-checkout">Check-out</label>
+                        <input id="search-checkout" type="date" name="checkout">
+                    </div>
+
+                    <div class="search-divider" aria-hidden="true"></div>
+
+                    <div class="search-field">
+                        <label for="search-guests">Guests</label>
+                        <input id="search-guests" type="number" name="guests" min="1" max="20" value="2"
+                            placeholder="2">
+                    </div>
+
+                    <button id="search-btn" class="search-btn" type="button">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <span>Search</span>
+                    </button>
                 </div>
             </div>
         </section>
 
         <section class="categories">
-            <button type="button" class="category-item active" data-category="all">
-                <i class="ph ph-squares-four"></i>
-                <span>All Stays</span>
-            </button>
-            <button type="button" class="category-item" data-category="hotels">
+            <button class="category-item active" type="button" data-category="all">
                 <i class="ph ph-buildings"></i>
+                <span>All stays</span>
+            </button>
+
+            <button class="category-item" type="button" data-category="hotels">
+                <i class="ph ph-bed"></i>
                 <span>Hotels</span>
             </button>
-            <button type="button" class="category-item" data-category="villas">
+
+            <button class="category-item" type="button" data-category="apartments">
                 <i class="ph ph-house-line"></i>
-                <span>Villas</span>
-            </button>
-            <button type="button" class="category-item" data-category="apartments">
-                <i class="ph ph-building-apartment"></i>
                 <span>Apartments</span>
+            </button>
+
+            <button class="category-item" type="button" data-category="villas">
+                <i class="ph ph-house"></i>
+                <span>Villas</span>
             </button>
         </section>
 
         <section class="container">
-            <div class="section-header-wrapper">
+            <div class="section-header-wrapper ore-reveal">
                 <div class="section-header-main">
-                    <h2 id="section-title">Available Properties</h2>
-                    <p id="section-desc">Browse our curated selection of premium stays.</p>
+                    <h2 id="section-main-title" data-section-title>Featured properties</h2>
+                    <p>Explore handpicked stays with comfort, style, and fast booking.</p>
                 </div>
 
                 <div class="section-header-controls">
-                    <select id="sort-select" class="sort-select">
-                        <option value="featured">Sort: Featured</option>
-                        <option value="price_low">Price: Low to High</option>
-                        <option value="price_high">Price: High to Low</option>
-                        <option value="rating">Top Rated</option>
+                    <select id="sort-select" class="sort-select" data-sort-select>
+                        <option value="featured">Featured</option>
+                        <option value="rating">Top rated</option>
+                        <option value="pricelow">Price low to high</option>
+                        <option value="pricehigh">Price high to low</option>
                     </select>
 
-                    <button type="button" id="clear-search-btn" class="clear-search-btn">
+                    <button id="clear-search-btn" class="clear-search-btn" type="button">
                         <i class="ph ph-x"></i>
-                        <span>Clear Search</span>
+                        <span>Clear search</span>
                     </button>
                 </div>
             </div>
 
-            <div id="listings-grid">
-                <div class="listings-empty-state">
-                    <i class="ph ph-spinner-gap ph-spin"></i>
-                    <p>Loading properties...</p>
-                </div>
-            </div>
+            <div id="listings-grid" aria-live="polite"></div>
         </section>
     </main>
 
@@ -1801,72 +1885,102 @@
         <i class="ph ph-arrow-up"></i>
     </button>
 
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Mobile navigation">
+        <div class="mobile-nav-inner">
+            <button id="mob-stays-btn" class="mob-nav-btn active" type="button" data-target="stays">
+                <i class="ph ph-house-line"></i>
+                <span>Stays</span>
+            </button>
+
+            <button id="mob-fav-btn" class="mob-nav-btn" type="button" data-target="favorites">
+                <i class="ph ph-heart"></i>
+                <span>Favorites</span>
+            </button>
+
+            <button id="mob-profile-btn" class="mob-nav-btn" type="button" data-target="profile">
+                <i class="ph ph-user-circle"></i>
+                <span>Profile</span>
+            </button>
+        </div>
+    </nav>
+
     <div class="modal-overlay" id="auth-modal" aria-hidden="true">
         <div class="modal-content auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
-            <button type="button" class="close-modal-btn"
-                onclick="document.getElementById('auth-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('auth-modal').setAttribute('aria-hidden','true');">
+            <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
                 <i class="ph ph-x"></i>
             </button>
 
             <div class="auth-header">
-                <img id="auth-logo" src="logos/orebooking.png" alt="OreBooking">
+                <img src="logos/orebooking.png" alt="OreBooking" class="logo-img" id="modal-logo">
             </div>
 
             <div class="auth-content">
                 <div id="auth-message" class="auth-message"></div>
 
-                <form id="login-form" class="auth-form active">
-                    <h2 class="auth-title" id="auth-dialog-title">Welcome Back</h2>
-                    <p class="auth-subtitle">Sign in to access your bookings and favorites.</p>
+                <form id="login-form" class="auth-form active" novalidate>
+                    <h2 class="auth-title" id="auth-dialog-title">Welcome back</h2>
+                    <p class="auth-subtitle">Enter your details to access your account.</p>
 
                     <div class="input-group">
-                        <label for="login-email">Email</label>
-                        <input id="login-email" type="email" autocomplete="email">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" placeholder="name@example.com" required>
                     </div>
 
                     <div class="input-group">
                         <label for="login-password">Password</label>
                         <div class="pass-wrapper">
-                            <input id="login-password" type="password" autocomplete="current-password">
-                            <button type="button" class="toggle-pass-btn" data-target="login-password">
+                            <input type="password" id="login-password" placeholder="Password" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
                                 <i class="ph ph-eye"></i>
                             </button>
                         </div>
                     </div>
 
                     <div class="auth-options">
-                        <a href="#" class="forgot-link" data-auth-tab="forgot">Forgot Password?</a>
+                        <label class="auth-check">
+                            <input type="checkbox" checked>
+                            <span class="auth-checkmark"></span>
+                            <span>Remember me</span>
+                        </label>
+                        <a href="#" class="forgot-link" id="go-to-forgot">Forgot password?</a>
                     </div>
 
                     <button type="submit" class="primary-btn" id="login-submit-btn">
                         <span>Sign In</span>
                     </button>
 
+                    <div class="social-logins">
+                        <button type="button" class="social-btn" id="google-login-btn">
+                            <i class="ph ph-google-logo"></i>
+                            <span>Google</span>
+                        </button>
+                    </div>
+
                     <p class="switch-form-text">
-                        Don't have an account?
-                        <a href="#" data-auth-tab="register">Register</a>
+                        <span>Don't have an account?</span>
+                        <a href="#" id="go-to-register">Sign up</a>
                     </p>
                 </form>
 
-                <form id="register-form" class="auth-form">
-                    <h2 class="auth-title">Create Account</h2>
-                    <p class="auth-subtitle">Join OreBooking for the best deals.</p>
+                <form id="register-form" class="auth-form" novalidate>
+                    <h2 class="auth-title">Create an account</h2>
+                    <p class="auth-subtitle">Join OreBooking to unlock premium features.</p>
 
                     <div class="input-group">
                         <label for="reg-name">Full Name</label>
-                        <input id="reg-name" type="text" autocomplete="name">
+                        <input type="text" id="reg-name" placeholder="John Doe" required>
                     </div>
 
                     <div class="input-group">
-                        <label for="reg-email">Email</label>
-                        <input id="reg-email" type="email" autocomplete="email">
+                        <label for="reg-email">Email Address</label>
+                        <input type="email" id="reg-email" placeholder="name@example.com" required>
                     </div>
 
                     <div class="input-group">
                         <label for="reg-password">Password</label>
                         <div class="pass-wrapper">
-                            <input id="reg-password" type="password" autocomplete="new-password">
-                            <button type="button" class="toggle-pass-btn" data-target="reg-password">
+                            <input type="password" id="reg-password" placeholder="Create password" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
                                 <i class="ph ph-eye"></i>
                             </button>
                         </div>
@@ -1875,38 +1989,55 @@
                     <div class="input-group">
                         <label for="reg-confirm">Confirm Password</label>
                         <div class="pass-wrapper">
-                            <input id="reg-confirm" type="password" autocomplete="new-password">
-                            <button type="button" class="toggle-pass-btn" data-target="reg-confirm">
+                            <input type="password" id="reg-confirm" placeholder="Confirm password" required>
+                            <button type="button" class="toggle-pass-btn" aria-label="Toggle password visibility">
                                 <i class="ph ph-eye"></i>
                             </button>
                         </div>
                     </div>
 
+                    <div class="password-strength" id="password-strength">
+                        <div class="strength-bars">
+                            <div class="str-bar"></div>
+                            <div class="str-bar"></div>
+                            <div class="str-bar"></div>
+                            <div class="str-bar"></div>
+                        </div>
+                        <div class="strength-label" id="strength-label"></div>
+                    </div>
+
                     <button type="submit" class="primary-btn" id="register-submit-btn">
-                        <span>Register</span>
+                        <span>Create Account</span>
                     </button>
 
+                    <div class="social-logins">
+                        <button type="button" class="social-btn" id="google-register-btn">
+                            <i class="ph ph-google-logo"></i>
+                            <span>Google</span>
+                        </button>
+                    </div>
+
                     <p class="switch-form-text">
-                        Already have an account?
-                        <a href="#" data-auth-tab="login">Sign In</a>
+                        <span>Already have an account?</span>
+                        <a href="#" id="go-to-login">Sign in</a>
                     </p>
                 </form>
 
-                <form id="forgot-form" class="auth-form">
+                <form id="forgot-form" class="auth-form" novalidate>
                     <h2 class="auth-title">Reset Password</h2>
-                    <p class="auth-subtitle">Enter your email to receive a reset link.</p>
+                    <p class="auth-subtitle">Enter your email and we'll send you a reset link.</p>
 
                     <div class="input-group">
-                        <label for="forgot-email">Email</label>
-                        <input id="forgot-email" type="email" autocomplete="email">
+                        <label for="forgot-email">Email Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@example.com" required>
                     </div>
 
                     <button type="submit" class="primary-btn" id="forgot-submit-btn">
-                        <span>Send Reset Link</span>
+                        <span>Send reset link</span>
                     </button>
 
                     <p class="switch-form-text">
-                        <a href="#" data-auth-tab="login">Back to login</a>
+                        <a href="#" id="back-to-login">Back to login</a>
                     </p>
                 </form>
             </div>
@@ -1914,48 +2045,37 @@
     </div>
 
     <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-dialog-title">
+        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-modal-title">
             <div class="bookings-modal-header">
-                <h3 id="bookings-dialog-title">
+                <h3 id="bookings-modal-title">
                     <i class="ph ph-calendar-check"></i>
                     <span>My Bookings</span>
                 </h3>
-                <button type="button"
-                    onclick="document.getElementById('bookings-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('bookings-modal').setAttribute('aria-hidden','true');">
+                <button id="close-bookings-btn" type="button" aria-label="Close">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-            <div class="bookings-modal-body" id="bookings-list"></div>
+
+            <div class="bookings-modal-body">
+                <div id="bookings-list"></div>
+            </div>
         </div>
     </div>
 
-    <div class="bookings-modal" id="favorites-modal" aria-hidden="true">
-        <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="favorites-dialog-title">
-            <div class="bookings-modal-header">
-                <h3 id="favorites-dialog-title">
-                    <i class="ph ph-heart-straight"></i>
-                    <span>My Favorites</span>
+    <div class="favorites-modal" id="favorites-modal" aria-hidden="true">
+        <div class="favorites-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="favorites-modal-title">
+            <div class="favorites-modal-header">
+                <h3 id="favorites-modal-title">
+                    <i class="ph ph-heart"></i>
+                    <span>Favorites</span>
                 </h3>
-                <button type="button"
-                    onclick="document.getElementById('favorites-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('favorites-modal').setAttribute('aria-hidden','true');">
+                <button id="close-favorites-btn" type="button" aria-label="Close">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-            <div class="bookings-modal-body" id="favorites-list">
-                <div class="booking-entry">
-                    <div class="booking-entry-head">
-                        <div>
-                            <h4 class="booking-entry-title">No favorites yet.</h4>
-                            <div class="booking-entry-meta">
-                                <span>Properties you save will appear here.</span>
-                            </div>
-                        </div>
-                        <span class="booking-status-badge pending">
-                            <i class="ph ph-heart"></i>
-                            <span>Empty</span>
-                        </span>
-                    </div>
-                </div>
+
+            <div class="favorites-modal-body">
+                <div id="favorites-list"></div>
             </div>
         </div>
     </div>
@@ -1968,44 +2088,48 @@
                         <i class="ph ph-headset"></i>
                     </div>
                     <div class="chat-title-text">
-                        <h3 id="chat-title">OreBooking Support</h3>
-                        <p id="chat-subtitle">Typically replies in minutes</p>
-                        <div class="chat-status-line syncing" id="chat-connection-status">
+                        <h3 id="chat-title">Support chat</h3>
+                        <p id="chat-subtitle">We usually reply quickly</p>
+
+                        <div id="chat-connection-status" class="chat-status-line syncing">
                             <span class="chat-status-dot"></span>
                             <span id="chat-connection-text">Preparing secure connection...</span>
                         </div>
                     </div>
                 </div>
 
-                <button type="button" class="chat-close-btn"
-                    onclick="document.getElementById('chat-modal').classList.remove('active'); document.body.classList.remove('modal-open'); document.getElementById('chat-modal').setAttribute('aria-hidden','true');">
+                <button class="chat-close-btn" id="chat-close-btn" type="button" aria-label="Close chat">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
 
-            <div id="chat-messages">
+            <div id="chat-messages" class="chat-modal-body">
                 <div class="chat-empty-state" id="chat-empty-state">
-                    <p id="chat-empty-title" style="font-weight:800;margin-bottom:8px;">No messages yet.</p>
-                    <p id="chat-empty-subtitle">Start the conversation to contact support and receive replies here directly.</p>
+                    <i class="ph ph-chat-circle-dots" style="font-size:2rem;display:block;margin-bottom:10px;color:var(--primary)"></i>
+                    <div id="chat-empty-title">No messages yet.</div>
+                    <p id="chat-empty-subtitle">Start the conversation and mention this property to contact support.</p>
                 </div>
             </div>
 
             <div class="chat-input-area">
                 <form id="chat-send-form" class="chat-send-form">
-                    <textarea id="chat-input" rows="3" placeholder="Type a message..."></textarea>
+                    <input type="hidden" id="chat-current-id" value="">
+                    <input type="hidden" id="chat-current-booking-id" value="">
+                    <input type="hidden" id="chat-current-user-id" value="">
+                    <input type="hidden" id="chat-current-user-email" value="">
+                    <input type="hidden" id="chat-current-user-name" value="">
+                    <input type="hidden" id="chat-property-id" value="global">
 
-                    <input type="hidden" id="chat-current-id">
-                    <input type="hidden" id="chat-current-booking-id">
-                    <input type="hidden" id="chat-current-user-id">
-                    <input type="hidden" id="chat-current-user-email">
-                    <input type="hidden" id="chat-current-user-name">
-                    <input type="hidden" id="chat-property-id">
+                    <textarea id="chat-textarea" placeholder="Type your message..."></textarea>
 
                     <div class="chat-actions">
-                        <span class="chat-note" id="chat-note">Messages in this chat are synced with support through Firebase.</span>
-                        <button type="submit" class="primary-btn chat-send-btn" id="chat-send-btn">
+                        <div class="chat-note" id="chat-note">
+                            This chat works now and can also be connected to Firestore later.
+                        </div>
+
+                        <button class="primary-btn chat-send-btn" id="chat-send-btn" type="submit">
                             <i class="ph ph-paper-plane-tilt"></i>
-                            <span>Send</span>
+                            <span id="send-chat-text">Send message</span>
                         </button>
                     </div>
                 </form>
@@ -2013,7 +2137,32 @@
         </div>
     </div>
 
-    <script src="script.js?v=4.2.3" defer></script>
+    <script>
+        (function () {
+            try {
+                const savedLang = localStorage.getItem("ore_lang") || localStorage.getItem("orelang") || "en";
+                const label = document.getElementById("lang-toggle-text");
+                if (label) label.textContent = savedLang === "ar" ? "EN" : "AR";
+            } catch (_) { }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const btn = document.getElementById("scroll-top-btn");
+            if (!btn) return;
+
+            function onScroll() {
+                if (window.scrollY > 280) btn.classList.add("visible");
+                else btn.classList.remove("visible");
+            }
+
+            window.addEventListener("scroll", onScroll, { passive: true });
+            onScroll();
+        })();
+    </script>
+
+    <script src="script.js?v=4.3" defer></script>
 </body>
 
 </html>
