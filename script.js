@@ -668,6 +668,9 @@ function applyGuestAuthUI() {
   if (els.profileMenu) {
     const icon = els.profileMenu.querySelector("i");
     if (icon) icon.className = "ph ph-user";
+    // أزل class تسجيل الدخول
+    els.profileMenu.classList.remove("auth-btn-logged");
+    els.profileMenu.classList.add("auth-btn-guest");
   }
 
   if (els.dropdownUserName) els.dropdownUserName.textContent = t("guestUser");
@@ -936,6 +939,9 @@ async function updateAuthUI(user) {
   if (els.profileMenu) {
     const icon = els.profileMenu.querySelector("i");
     if (icon) icon.className = "ph ph-user-circle-check";
+    // أضف class تدل على أن المستخدم مسجل دخوله (مهمة للـ inline script في index.html)
+    els.profileMenu.classList.add("auth-btn-logged");
+    els.profileMenu.classList.remove("auth-btn-guest");
   }
 
   if (els.dropdownUserName) {
@@ -1772,8 +1778,14 @@ function bindUIEvents() {
 
   els.profileMenu?.addEventListener("click", (e) => {
     e.preventDefault();
-    if (state.currentUser) toggleProfileDropdown();
-    else showAuthModal("login");
+    e.stopPropagation();
+    if (state.currentUser) {
+      // المستخدم مسجل دخوله — نفتح/نغلق الـ dropdown فقط
+      toggleProfileDropdown();
+    } else {
+      // المستخدم غير مسجل — نفتح نافذة تسجيل الدخول
+      showAuthModal("login");
+    }
   });
 
   document.addEventListener("click", (e) => {
@@ -1835,6 +1847,12 @@ function bindUIEvents() {
 
   els.chatCloseBtn?.addEventListener("click", closeSupportChat);
   els.closeBookingsBtn?.addEventListener("click", () => closeModal(els.bookingsModal));
+
+  // FIX: ربط زر X في نافذة المفضلة
+  const closeFavoritesBtn = document.getElementById("close-favorites-btn");
+  if (closeFavoritesBtn) {
+    closeFavoritesBtn.addEventListener("click", () => closeModal(els.favoritesModal));
+  }
 
   els.favoritesModal?.addEventListener("click", (e) => {
     if (e.target === els.favoritesModal) closeModal(els.favoritesModal);
@@ -1965,13 +1983,213 @@ function initAuthListener() {
 
       if (user?.uid) {
         await loadBookings();
+        // ابدأ مراقبة تغييرات الحجوزات لإرسال إشعارات البريد
+        startBookingStatusListener(user.uid);
       } else {
+        stopBookingStatusListener();
         resetFrontendUserState();
       }
     } catch (err) {
       console.error("onAuthStateChanged error:", err);
     }
   });
+}
+
+
+// ──────────────────────────────────────────
+// Booking Status Notifications (إشعارات البريد المراسلة)
+// ──────────────────────────────────────────
+let bookingStatusUnsub = null;
+
+function stopBookingStatusListener() {
+  if (typeof bookingStatusUnsub === "function") {
+    try { bookingStatusUnsub(); } catch {}
+  }
+  bookingStatusUnsub = null;
+}
+
+function generateRoomNumber() {
+  // رقم غرفة عشوائي مكون من رقمين (10-99)
+  return String(Math.floor(Math.random() * 90) + 10);
+}
+
+function renderBookingNotification(booking, newStatus, roomNumber) {
+  const lang = state.lang;
+  const propertyName = cleanText(booking.propertyTitle || booking.propertyName || (lang === "ar" ? "الفندق" : "the property"));
+  const refId = cleanText(booking.id || "");
+  const checkIn = cleanText(booking.checkIn || booking.startDate || "");
+  const checkOut = cleanText(booking.checkOut || booking.endDate || "");
+  const rejectionReason = cleanText(booking.rejectionReason || booking.cancelReason || "");
+
+  if (newStatus === "confirmed") {
+    if (lang === "ar") {
+      return `✅ تم تأكيد حجزك في ${propertyName}!
+` +
+             `رقم المرجع: ${refId}
+` +
+             (roomNumber ? `رقم الغرفة: ${roomNumber}
+` : "") +
+             (checkIn ? `تاريخ الدخول: ${checkIn}
+` : "") +
+             (checkOut ? `تاريخ الخروج: ${checkOut}` : "");
+    } else {
+      return `✅ Your booking at ${propertyName} has been confirmed!
+` +
+             `Reference #: ${refId}
+` +
+             (roomNumber ? `Room Number: ${roomNumber}
+` : "") +
+             (checkIn ? `Check-in: ${checkIn}
+` : "") +
+             (checkOut ? `Check-out: ${checkOut}` : "");
+    }
+  }
+
+  if (newStatus === "rejected" || newStatus === "cancelled") {
+    if (lang === "ar") {
+      return `❌ تم رفض حجزك في ${propertyName}.
+` +
+             `رقم المرجع: ${refId}
+` +
+             (rejectionReason ? `السبب: ${rejectionReason}` : "");
+    } else {
+      return `❌ Your booking at ${propertyName} has been rejected.
+` +
+             `Reference #: ${refId}
+` +
+             (rejectionReason ? `Reason: ${rejectionReason}` : "");
+    }
+  }
+
+  return "";
+}
+
+async function sendBookingNotificationToChat(booking, newStatus) {
+  if (!db || !state.currentUser?.uid) return;
+
+  const roomNumber = newStatus === "confirmed" ? generateRoomNumber() : null;
+  const message = renderBookingNotification(booking, newStatus, roomNumber);
+  if (!message) return;
+
+  try {
+    // تأكد من وجود محادثة الدعم
+    const uid = state.currentUser.uid;
+    const chatId = `support_${uid}`;
+    const chatRef = db.collection("supportChats").doc(chatId);
+    const messagesRef = chatRef.collection("messages");
+    const now = new Date();
+
+    // احفظ رقم الغرفة في الحجز إذا كان تأكيداً
+    if (newStatus === "confirmed" && roomNumber && booking.id) {
+      try {
+        await db.collection("bookings").doc(booking.id).update({
+          roomNumber,
+          roomAssignedAt: now
+        });
+      } catch (e) {
+        console.warn("Could not save room number:", e);
+      }
+    }
+
+    // أضف رسالة من الـ admin/support في chat الزبون
+    await messagesRef.add({
+      text: message,
+      role: "admin",
+      senderRole: "admin",
+      senderId: "system",
+      senderEmail: "support@orebooking.com",
+      senderName: "OreBooking Support",
+      userId: uid,
+      userEmail: getCurrentUserEmail(),
+      userName: getCurrentUserName(),
+      bookingId: cleanText(booking.id || ""),
+      notificationType: "booking_status",
+      bookingStatus: newStatus,
+      roomNumber: roomNumber || null,
+      createdAt: now,
+      createdAtServer: firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : now,
+      readByAdmin: true,
+      readByCustomer: false,
+      source: "system_notification"
+    });
+
+    // حدّث metadata الـ chat
+    await chatRef.set({
+      chatId,
+      userId: uid,
+      userEmail: getCurrentUserEmail(),
+      userName: getCurrentUserName(),
+      status: "open",
+      channel: "support",
+      lastMessage: message.split("\n")[0],
+      lastMessageRole: "admin",
+      lastMessageAt: now,
+      updatedAt: now
+    }, { merge: true });
+
+    // حدّث الـ unread badge إذا الـ chat مغلق
+    if (!state.chatOpen) {
+      state.chatUnread += 1;
+      setUnreadBadge();
+    }
+
+    // أظهر toast إشعار
+    if (newStatus === "confirmed") {
+      showToast(
+        state.lang === "ar"
+          ? `تم تأكيد حجزك في ${cleanText(booking.propertyTitle || booking.propertyName || "")} 🎉`
+          : `Booking confirmed at ${cleanText(booking.propertyTitle || booking.propertyName || "")} 🎉`,
+        "success"
+      );
+    } else {
+      showToast(
+        state.lang === "ar"
+          ? `تم رفض حجزك في ${cleanText(booking.propertyTitle || booking.propertyName || "")}`
+          : `Booking rejected at ${cleanText(booking.propertyTitle || booking.propertyName || "")}`,
+        "error"
+      );
+    }
+
+  } catch (err) {
+    console.warn("sendBookingNotificationToChat error:", err);
+  }
+}
+
+function startBookingStatusListener(uid) {
+  stopBookingStatusListener();
+  if (!db || !uid) return;
+
+  // نخزّن الـ statuses السابقة لنكتشف التغيير
+  const previousStatuses = {};
+
+  bookingStatusUnsub = db
+    .collection("bookings")
+    .where("userId", "==", uid)
+    .onSnapshot((snap) => {
+      snap.docChanges().forEach(async (change) => {
+        if (change.type === "modified" || change.type === "added") {
+          const booking = { id: change.doc.id, ...change.doc.data() };
+          const newStatus = cleanText(booking.status || "").toLowerCase();
+          const prevStatus = previousStatuses[booking.id];
+
+          // حدّث الـ status المخزّن
+          previousStatuses[booking.id] = newStatus;
+
+          // أرسل إشعار فقط لو تغيّر الـ status إلى confirmed أو rejected
+          if (
+            prevStatus !== undefined &&
+            prevStatus !== newStatus &&
+            (newStatus === "confirmed" || newStatus === "rejected")
+          ) {
+            await sendBookingNotificationToChat(booking, newStatus);
+            // أعد تحميل الحجوزات لتحديث العرض
+            await loadBookings();
+          }
+        }
+      });
+    }, (err) => {
+      console.warn("bookingStatusListener error:", err);
+    });
 }
 
 // ──────────────────────────────────────────
