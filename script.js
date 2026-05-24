@@ -1,7 +1,7 @@
 // =========================================
-// script.js — OreBooking Index Page v4.5
+// script.js — OreBooking Index Page v4.6
 // Full Firebase + Auth + Real-time Chat + Listings + Favorites Modal
-// Stable support chat + race-condition fixes
+// Final chat stabilization update
 // Compatible with current index.html IDs
 // =========================================
 "use strict";
@@ -98,7 +98,6 @@ const state = {
   currentChatId: safeGet("ore_current_chat_id", ""),
   currentChatUnsub: null,
   chatInitializedForUser: "",
-  chatRetryTimer: null,
   bookings: []
 };
 
@@ -509,24 +508,6 @@ function getServerTimestamp() {
   return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date();
 }
 
-function clearChatRetryTimer() {
-  if (state.chatRetryTimer) {
-    clearTimeout(state.chatRetryTimer);
-    state.chatRetryTimer = null;
-  }
-}
-
-function scheduleChatRetry(uid) {
-  clearChatRetryTimer();
-  state.chatRetryTimer = setTimeout(() => {
-    if (state.currentUser?.uid === uid) {
-      ensureSupportChat(false).catch((err) => {
-        console.warn("chat retry failed:", err);
-      });
-    }
-  }, 1500);
-}
-
 function formatCurrency(amount) {
   const n = Number(amount || 0);
   return state.lang === "ar"
@@ -551,6 +532,21 @@ function formatChatTime(value) {
   }
 }
 
+function getMessageTimeValue(msg = {}) {
+  const value = msg.createdAt || msg.createdAtServer || msg.timestamp || msg.sentAt || msg.time || null;
+  try {
+    if (!value) return 0;
+    if (typeof value?.toDate === "function") return value.toDate().getTime();
+    if (typeof value === "object" && typeof value.seconds === "number") {
+      return (value.seconds * 1000) + Math.floor((value.nanoseconds || 0) / 1000000);
+    }
+    const d = new Date(value);
+    return Number.isFinite(d.getTime()) ? d.getTime() : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function normalizeMessage(msg = {}) {
   const roleRaw = cleanText(msg.senderRole || msg.role || msg.sender || "customer").toLowerCase();
   const role = ["admin", "owner", "host", "support"].includes(roleRaw) ? "admin" : "customer";
@@ -558,8 +554,16 @@ function normalizeMessage(msg = {}) {
     ...msg,
     role,
     text: cleanText(msg.text || msg.message || msg.body || msg.content || ""),
-    time: formatChatTime(msg.createdAt || msg.timestamp || msg.sentAt || msg.time)
+    time: formatChatTime(msg.createdAt || msg.createdAtServer || msg.timestamp || msg.sentAt || msg.time)
   };
+}
+
+function sortChatMessages(list = []) {
+  return [...list].sort((a, b) => {
+    const diff = getMessageTimeValue(a) - getMessageTimeValue(b);
+    if (diff !== 0) return diff;
+    return cleanText(a.id).localeCompare(cleanText(b.id));
+  });
 }
 
 function normalizeRole(value) {
@@ -641,7 +645,6 @@ function resetFrontendUserState() {
   state.currentChatId = "";
   state.chatInitializedForUser = "";
   safeRemove("ore_current_chat_id");
-  clearChatRetryTimer();
   stopChatSubscription();
   setUnreadBadge();
   setChatStatus("syncing", t("chatPreparing"));
@@ -692,9 +695,7 @@ function applyLang() {
   html.dir = state.lang === "ar" ? "rtl" : "ltr";
 
   const langLabel = els.langBtnText || els.langBtn?.querySelector("span");
-  if (langLabel) {
-    langLabel.textContent = state.lang === "ar" ? "EN" : "AR";
-  }
+  if (langLabel) langLabel.textContent = state.lang === "ar" ? "EN" : "AR";
 
   if (els.heroTitle) els.heroTitle.textContent = t("heroTitle");
   if (els.heroDesc) els.heroDesc.textContent = t("heroDesc");
@@ -804,10 +805,6 @@ function applyLang() {
     if (span) span.textContent = t(key);
   });
 
-  if (state.currentChatId) {
-    setChatStatus(state.currentChatUnsub ? "connected" : "syncing");
-  }
-
   renderListings();
   renderBookings();
   renderFavorites();
@@ -886,11 +883,7 @@ function closeProfileDropdown() {
 
 function toggleProfileDropdown(force) {
   if (!els.profileDropdown) return;
-  const shouldOpen =
-    typeof force === "boolean"
-      ? force
-      : !els.profileDropdown.classList.contains("active");
-
+  const shouldOpen = typeof force === "boolean" ? force : !els.profileDropdown.classList.contains("active");
   if (shouldOpen) openProfileDropdown();
   else closeProfileDropdown();
 }
@@ -933,15 +926,8 @@ async function updateAuthUI(user) {
   if (navAuthBtn) {
     const icon = navAuthBtn.querySelector("i");
     if (icon) icon.className = "ph ph-user-circle-check";
-
     const span = navAuthBtn.querySelector("span");
-    if (span) {
-      span.textContent =
-        profile?.name ||
-        user.displayName ||
-        user.email ||
-        t("myBookings");
-    }
+    if (span) span.textContent = profile?.name || user.displayName || user.email || t("myBookings");
   }
 
   if (els.profileMenu) {
@@ -950,11 +936,7 @@ async function updateAuthUI(user) {
   }
 
   if (els.dropdownUserName) {
-    els.dropdownUserName.textContent =
-      profile?.name ||
-      user.displayName ||
-      user.email ||
-      t("guestUser");
+    els.dropdownUserName.textContent = profile?.name || user.displayName || user.email || t("guestUser");
   }
 
   if (els.dropdownUserEmail) {
@@ -970,7 +952,6 @@ async function updateAuthUI(user) {
   updateChatHiddenFields();
 
   if (prevUid !== user.uid) {
-    clearChatRetryTimer();
     stopChatSubscription();
     state.chatMessages = [];
     state.chatUnread = 0;
@@ -978,6 +959,7 @@ async function updateAuthUI(user) {
     state.chatInitializedForUser = "";
     setUnreadBadge();
     renderChatMessages();
+    setChatStatus("syncing", t("chatPreparing"));
   }
 
   renderFavorites();
@@ -1382,9 +1364,7 @@ function renderListings() {
     btn.addEventListener("click", () => toggleFavorite(btn.dataset.favId));
   });
 
-  if (els.listingsCount) {
-    els.listingsCount.textContent = String(state.filteredProperties.length);
-  }
+  if (els.listingsCount) els.listingsCount.textContent = String(state.filteredProperties.length);
 }
 
 // ──────────────────────────────────────────
@@ -1544,9 +1524,9 @@ async function ensureSupportChat(openAfterEnsure = false) {
       channel: "support",
       lastMessage: cleanText(existingData.lastMessage || ""),
       lastMessageRole: cleanText(existingData.lastMessageRole || ""),
-      lastMessageAt: existingData.lastMessageAt || getServerTimestamp(),
-      createdAt: existingData.createdAt || getServerTimestamp(),
-      updatedAt: getServerTimestamp()
+      lastMessageAt: existingData.lastMessageAt || new Date(),
+      createdAt: existingData.createdAt || new Date(),
+      updatedAt: new Date()
     }, { merge: true });
 
     state.currentChatId = chatId;
@@ -1561,7 +1541,6 @@ async function ensureSupportChat(openAfterEnsure = false) {
   } catch (err) {
     console.error("ensureSupportChat error:", err);
     setChatStatus("error", t("chatError"));
-    scheduleChatRetry(uid);
     throw err;
   }
 }
@@ -1582,16 +1561,14 @@ function subscribeToCurrentChat(chatId = state.currentChatId) {
     .collection("supportChats")
     .doc(chatId)
     .collection("messages")
-    .orderBy("createdAt", "asc")
     .onSnapshot(
       (snap) => {
         if (!state.currentUser?.uid || state.currentUser.uid !== activeUid) return;
 
-        clearChatRetryTimer();
-
         const items = [];
         snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-        state.chatMessages = items.map(normalizeMessage);
+
+        state.chatMessages = sortChatMessages(items).map(normalizeMessage);
 
         if (!state.chatOpen) {
           state.chatUnread = state.chatMessages.filter((m) => m.role === "admin" && !m.readByCustomer).length;
@@ -1612,7 +1589,6 @@ function subscribeToCurrentChat(chatId = state.currentChatId) {
         stopChatSubscription();
         state.chatInitializedForUser = "";
         setChatStatus("error", t("chatError"));
-        scheduleChatRetry(activeUid);
       }
     );
 }
@@ -1635,7 +1611,8 @@ async function markAdminMessagesAsRead(chatId = state.currentChatId) {
     snap.forEach((doc) => {
       batch.update(doc.ref, {
         readByCustomer: true,
-        customerReadAt: getServerTimestamp()
+        customerReadAt: new Date(),
+        customerReadAtServer: getServerTimestamp()
       });
     });
     await batch.commit();
@@ -1660,6 +1637,7 @@ async function sendChatMessage(rawText) {
   }
 
   const sendBtn = els.chatSendBtn;
+
   try {
     if (sendBtn) {
       sendBtn.disabled = true;
@@ -1670,8 +1648,9 @@ async function sendChatMessage(rawText) {
     const chatId = state.currentChatId || await ensureSupportChat(false);
     const chatRef = db.collection("supportChats").doc(chatId);
     const messagesRef = chatRef.collection("messages");
+    const now = new Date();
 
-    const payload = {
+    await messagesRef.add({
       text,
       role: "customer",
       senderRole: "customer",
@@ -1682,21 +1661,21 @@ async function sendChatMessage(rawText) {
       userEmail: getCurrentUserEmail(),
       userName: getCurrentUserName(),
       propertyId: cleanText(els.chatPropertyId?.value || ""),
-      createdAt: getServerTimestamp(),
+      createdAt: now,
+      createdAtServer: getServerTimestamp(),
       readByAdmin: false,
       readByCustomer: true,
       source: "website"
-    };
-
-    await messagesRef.add(payload);
+    });
 
     await chatRef.set({
       ...getSupportChatMeta(),
       status: "open",
       lastMessage: text,
       lastMessageRole: "customer",
-      lastMessageAt: getServerTimestamp(),
-      updatedAt: getServerTimestamp()
+      lastMessageAt: now,
+      lastMessageAtServer: getServerTimestamp(),
+      updatedAt: now
     }, { merge: true });
 
     if (els.chatInput) els.chatInput.value = "";
@@ -1704,7 +1683,6 @@ async function sendChatMessage(rawText) {
   } catch (err) {
     console.error("sendChatMessage error:", err);
     setChatStatus("error", t("chatError"));
-    scheduleChatRetry(state.currentUser?.uid || "");
     showToast(t("chatError"), "error");
   } finally {
     if (sendBtn) {
@@ -1925,7 +1903,6 @@ function initAuthListener() {
 
       if (user?.uid) {
         await loadBookings();
-        await ensureSupportChat(false);
       } else {
         resetFrontendUserState();
       }
