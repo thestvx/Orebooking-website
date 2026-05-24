@@ -421,7 +421,10 @@ const els = {
   siteLogo: firstById("main-logo", "site-logo"),
   authLogo: firstById("modal-logo", "auth-logo"),
 
-  closeAuthBtn: firstById("close-auth-btn"),
+  // ── FIX: البحث عن زر الإغلاق بطرق متعددة لضمان إيجاده ──
+  closeAuthBtn: firstById("close-auth-btn") ||
+                firstQuery(".auth-modal .close-btn, .auth-modal [data-close], .auth-modal .modal-close, #auth-modal .close-btn, #auth-modal [data-close], #auth-modal .modal-close"),
+
   closeBookingsBtn: firstById("close-bookings-btn"),
   chatCloseBtn: firstById("chat-close-btn"),
 
@@ -975,11 +978,24 @@ function showAuthModal(tab = "login") {
   }
 }
 
+// ── FIX: دالة إغلاق النافذة المحسّنة ──
 function hideAuthModal() {
+  // إغلاق النافذة الأساسية
   if (els.authModal) {
     closeModal(els.authModal);
     clearAuthMessage();
+    return;
   }
+  // fallback: البحث عن أي modal مفتوح وإغلاقه
+  const openModal = document.querySelector(".modal-overlay.active, [class*='auth'][class*='modal'].active, #auth-modal.active");
+  if (openModal) {
+    openModal.classList.remove("active");
+    openModal.setAttribute("aria-hidden", "true");
+    if (!document.querySelector(".modal-overlay.active, .bookings-modal.active, .chat-modal.active")) {
+      document.body.classList.remove("modal-open");
+    }
+  }
+  clearAuthMessage();
 }
 
 function showAuthForm(tab) {
@@ -1766,16 +1782,62 @@ function bindUIEvents() {
     }
   });
 
-  els.closeAuthBtn?.addEventListener("click", hideAuthModal);
+  // ── FIX: ربط زر الإغلاق بكل الطرق الممكنة ──
+  // 1. عبر els.closeAuthBtn إذا وُجد
+  if (els.closeAuthBtn) {
+    els.closeAuthBtn.addEventListener("click", hideAuthModal);
+  }
+
+  // 2. ربط أي زر إغلاق داخل auth-modal بشكل مباشر بعد تحميل الـ DOM
+  const authModalEl = els.authModal || $("auth-modal");
+  if (authModalEl) {
+    // ربط كل أزرار الإغلاق المحتملة داخل النافذة
+    const closeBtns = authModalEl.querySelectorAll(
+      ".close-btn, [data-close], .modal-close, .close-modal, [aria-label='Close'], [aria-label='إغلاق']"
+    );
+    closeBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        hideAuthModal();
+      });
+    });
+
+    // 3. إغلاق عند النقر على الخلفية (backdrop) — التأكد من أن النقرة على النافذة نفسها وليس داخلها
+    authModalEl.addEventListener("click", (e) => {
+      // إذا كانت النقرة على عنصر النافذة مباشرة (الـ overlay) وليس على المحتوى الداخلي
+      if (e.target === authModalEl) {
+        hideAuthModal();
+      }
+    });
+  }
+
+  // 4. إغلاق بمفتاح Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const authModal = els.authModal || $("auth-modal");
+      if (authModal && authModal.classList.contains("active")) {
+        hideAuthModal();
+        return;
+      }
+      if (els.bookingsModal && els.bookingsModal.classList.contains("active")) {
+        closeModal(els.bookingsModal);
+        return;
+      }
+      if (els.favoritesModal && els.favoritesModal.classList.contains("active")) {
+        closeModal(els.favoritesModal);
+        return;
+      }
+      if (els.chatModal && els.chatModal.classList.contains("active")) {
+        closeSupportChat();
+      }
+    }
+  });
+
   els.chatCloseBtn?.addEventListener("click", closeSupportChat);
   els.closeBookingsBtn?.addEventListener("click", () => closeModal(els.bookingsModal));
 
   els.favoritesModal?.addEventListener("click", (e) => {
     if (e.target === els.favoritesModal) closeModal(els.favoritesModal);
-  });
-
-  els.authModal?.addEventListener("click", (e) => {
-    if (e.target === els.authModal) hideAuthModal();
   });
 
   els.chatModal?.addEventListener("click", (e) => {
