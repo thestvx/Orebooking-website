@@ -940,7 +940,7 @@
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
       gap: 20px !important;
       width: 100%;
-      align-items: stretch !important;
+      align-items: start !important;
       align-content: start;
     }
 
@@ -951,18 +951,16 @@
       border-radius: 24px;
       padding: 20px;
       box-shadow: 0 14px 34px rgba(15,23,42,.06);
-      display: grid;
-      grid-template-rows: auto auto 1fr auto auto;
+      display: flex;
+      flex-direction: column;
       gap: 14px;
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      height: auto;
-      min-height: unset;
       overflow: hidden;
       transition: var(--transition);
       box-sizing: border-box;
-      align-self: stretch;
+      align-self: start;
     }
 
     .booking-card:hover {
@@ -1132,7 +1130,7 @@
 
     .booking-actions-row {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
       margin-top: auto;
       padding-top: 4px;
