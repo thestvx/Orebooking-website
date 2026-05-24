@@ -900,12 +900,12 @@
       background-color: #fff;
     }
 
-    /* ✅ التعديل: 3 بطاقات في السطر */
+    /* ===== BOOKINGS GRID - FIXED ===== */
     .bookings-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 18px;
-      align-items: stretch;
+      gap: 20px;
+      align-items: start; /* ← تغيير من stretch إلى start لمنع التمدد العمودي المتداخل */
     }
 
     .booking-card {
@@ -913,14 +913,15 @@
       background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
       border: 1px solid rgba(226,232,240,0.95);
       border-radius: 24px;
-      padding: 18px;
+      padding: 20px;
       box-shadow: 0 14px 34px rgba(15,23,42,.06);
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      min-height: 100%;
+      gap: 14px;
+      width: 100%;           /* ← عرض كامل داخل الخلية */
       overflow: hidden;
       transition: var(--transition);
+      /* لا نستخدم min-height أو height لأنها تسبب التداخل */
     }
 
     .booking-card:hover {
@@ -948,64 +949,77 @@
       gap: 12px;
       padding-bottom: 14px;
       border-bottom: 1px dashed rgba(148,163,184,.28);
+      flex-wrap: nowrap;    /* ← منع التفاف العناصر داخل الرأس */
     }
 
     .booking-title {
-      display: grid;
-      gap: 6px;
-      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;         /* ← مهم لمنع overflow النصوص الطويلة */
       flex: 1;
     }
 
     .booking-title strong {
-      font-size: 1rem;
+      font-size: 0.97rem;
       color: var(--text-main);
-      line-height: 1.7;
+      line-height: 1.5;
       word-break: break-word;
+      overflow-wrap: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;  /* ← تحديد الاسم بسطرين كحد أقصى */
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .booking-title span {
-      font-size: .82rem;
+      font-size: .8rem;
       color: var(--text-muted);
       direction: ltr;
       unicode-bidi: plaintext;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
+    /* ===== BOOKING META GRID - FIXED ===== */
     .booking-meta-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
+      align-items: start;   /* ← منع تمدد الخلايا عمودياً */
     }
 
     .booking-meta-item {
       background: rgba(248,250,252,0.95);
       border: 1px solid rgba(226,232,240,0.95);
-      border-radius: 18px;
-      padding: 12px 13px;
-      display: grid;
-      gap: 6px;
-      min-height: 86px;
-      align-content: start;
+      border-radius: 14px;  /* ← تقليل طفيف للـ radius */
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-self: start;    /* ← كل خلية تأخذ حجمها الطبيعي فقط */
     }
 
     .booking-meta-item.wide {
       grid-column: 1 / -1;
-      min-height: auto;
     }
 
     .booking-meta-item label {
-      font-size: .76rem;
+      font-size: .74rem;
       color: var(--text-muted);
       font-weight: 800;
-      line-height: 1.4;
+      line-height: 1.3;
+      white-space: nowrap;
     }
 
     .booking-meta-item strong,
     .booking-meta-item span {
-      font-size: .92rem;
+      font-size: .88rem;
       color: var(--text-main);
-      line-height: 1.7;
+      line-height: 1.6;
       word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .booking-meta-item .mono {
@@ -1017,22 +1031,22 @@
     .booking-extra-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: -4px;
+      gap: 8px;
     }
 
     .booking-info-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      min-height: 38px;
-      padding: 0 12px;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 10px;
       border-radius: 999px;
       background: rgba(67,90,191,0.07);
       color: var(--primary);
       border: 1px solid rgba(67,90,191,0.10);
-      font-size: .8rem;
+      font-size: .78rem;
       font-weight: 800;
+      white-space: nowrap;
     }
 
     .booking-info-pill.room {
@@ -1048,16 +1062,17 @@
     }
 
     .booking-reply-box {
-      border-radius: 18px;
-      padding: 12px 14px;
+      border-radius: 14px;
+      padding: 10px 12px;
       border: 1px dashed rgba(148,163,184,.35);
       background: rgba(255,255,255,.72);
-      display: grid;
-      gap: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
 
     .booking-reply-box label {
-      font-size: .78rem;
+      font-size: .76rem;
       font-weight: 800;
       color: var(--text-muted);
     }
@@ -1065,35 +1080,38 @@
     .booking-reply-box p {
       margin: 0;
       color: var(--text-main);
-      line-height: 1.8;
-      font-size: .9rem;
+      line-height: 1.7;
+      font-size: .88rem;
       word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .booking-actions-row {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      gap: 8px;
       margin-top: auto;
       padding-top: 4px;
     }
 
     .booking-actions-row button {
-      min-height: 44px;
-      padding: 0 14px;
-      border-radius: 14px;
+      min-height: 42px;
+      padding: 0 8px;
+      border-radius: 12px;
       border: 1px solid var(--border-color);
       background: #fff;
       color: var(--text-main);
       font-family: inherit;
-      font-size: .86rem;
+      font-size: .82rem;
       font-weight: 800;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       transition: var(--transition);
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     .booking-actions-row button:hover:not(:disabled) {
@@ -1122,6 +1140,7 @@
       color: var(--primary);
       border-color: rgba(67,90,191,0.14);
     }
+    /* ===== END BOOKINGS FIX ===== */
 
     .messages-layout {
       display: grid;
@@ -1371,16 +1390,20 @@
       to { transform: rotate(360deg); }
     }
 
-    /* ✅ عند شاشات ≤ 1100px: ينزل لـ 2 بطاقات */
+    /* شاشات ≤ 1200px: بطاقتان */
+    @media (max-width: 1200px) {
+      .bookings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* شاشات ≤ 1100px */
     @media (max-width: 1100px) {
       .dashboard-strip,
       .quick-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .bookings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .messages-layout { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
     }
 
-    /* ✅ عند شاشات ≤ 768px: بطاقة واحدة */
+    /* شاشات ≤ 768px: بطاقة واحدة */
     @media (max-width: 768px) {
       .admin-main { padding: 16px; }
       .admin-login-card { padding: 24px; }
@@ -1394,7 +1417,7 @@
       .booking-card { padding: 16px; border-radius: 20px; }
       .booking-head { flex-direction: column; align-items: stretch; }
       .booking-meta-item,
-      .booking-meta-item.wide { grid-column: auto; min-height: auto; }
+      .booking-meta-item.wide { grid-column: auto; }
       .booking-actions-row { grid-template-columns: 1fr; }
       .booking-actions-row button { width: 100%; }
     }
