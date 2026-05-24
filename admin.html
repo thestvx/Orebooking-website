@@ -900,10 +900,13 @@
       background-color: #fff;
     }
 
+    /* ============================================
+       ✅ التعديل الوحيد: 3 بطاقات في السطر الواحد
+       ============================================ */
     .bookings-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 20px;
+      gap: 18px;
       align-items: stretch;
     }
 
@@ -1370,13 +1373,10 @@
       to { transform: rotate(360deg); }
     }
 
-    @media (max-width: 1280px) {
-      .bookings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
     @media (max-width: 1100px) {
       .dashboard-strip,
       .quick-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bookings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .messages-layout { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
     }
@@ -1386,7 +1386,7 @@
       .admin-login-card { padding: 24px; }
       .dashboard-strip,
       .quick-stats-grid,
-      .booking-meta-grid,
+      .booking-meta-grid { grid-template-columns: 1fr; }
       .bookings-grid { grid-template-columns: 1fr; }
       .logo-img { max-width: 180px; height: 54px; }
       .chat-send-form { flex-direction: column; }
@@ -1533,4 +1533,16 @@
           <div class="dashboard-strip">
             <div class="stat-mini-card">
               <div class="stat-mini-icon"><i class="ph ph-buildings"></i></div>
-              <div c
+              <div class="stat-mini-meta">
+                <span>العقارات</span>
+                <strong id="dashboard-properties">0</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</body>
+</html>
