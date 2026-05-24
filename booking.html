@@ -1,1037 +1,2204 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+// =========================================
+// booking.js — OreBooking v17.0
+// Safe booking flow + auth + payment
+// Fixed stale customer name/email leak
+// User-scoped draft storage
+// =========================================
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="OreBooking - Complete your booking." />
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#435abf" />
-  <title>OreBooking</title>
-  <link rel="canonical" href="booking.html" />
-  <link rel="icon" href="./logos/favicon.ico" type="image/x-icon" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap"
-    rel="stylesheet" />
+"use strict";
 
-  <script>
+// ──────────────────────────────────────────
+// Safe Storage
+// ──────────────────────────────────────────
+function safeGet(key, fallback = null) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (_) {}
+}
+
+function safeRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (_) {}
+}
+
+function safeJsonGet(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeJsonSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (_) {}
+}
+
+// ──────────────────────────────────────────
+// Firebase
+// ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCA5iauXrIhozRw8MD7JTOLyeQ2v0GGncA",
+  authDomain: "orebooking-website.firebaseapp.com",
+  projectId: "orebooking-website",
+  storageBucket: "orebooking-website.firebasestorage.app",
+  messagingSenderId: "1012887567747",
+  appId: "1:1012887567747:web:153b57b60cb143d88acab6",
+  measurementId: "G-5GKMRMVHC3"
+};
+
+let db = null;
+let auth = null;
+let storage = null;
+
+try {
+  if (typeof firebase !== "undefined") {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    if (typeof firebase.firestore === "function") db = firebase.firestore();
+    if (typeof firebase.auth === "function") auth = firebase.auth();
+    if (typeof firebase.storage === "function") storage = firebase.storage();
+  }
+} catch (error) {
+  console.error("Firebase init error:", error);
+}
+
+// ──────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────
+function normalizeLang(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "ar" || raw === "arabic" || raw === "rtl") return "ar";
+  if (raw === "en" || raw === "english" || raw === "ltr") return "en";
+  return "ar";
+}
+
+function cleanText(value) {
+  return String(value ?? "").trim();
+}
+
+function escapeHtml(str = "") {
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanText(email));
+}
+
+function validatePhone(phone) {
+  const cleaned = cleanText(phone).replace(/[^\d+]/g, "");
+  return cleaned.length >= 8;
+}
+
+function parseDateParts(dateStr) {
+  const value = cleanText(dateStr);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (!year || !month || !day) return null;
+  return { year, month, day };
+}
+
+function parseDate(dateStr) {
+  const parts = parseDateParts(dateStr);
+  if (!parts) return null;
+
+  const d = new Date(parts.year, parts.month - 1, parts.day, 12, 0, 0, 0);
+  if (Number.isNaN(d.getTime())) return null;
+
+  if (
+    d.getFullYear() !== parts.year ||
+    d.getMonth() !== parts.month - 1 ||
+    d.getDate() !== parts.day
+  ) {
+    return null;
+  }
+
+  return d;
+}
+
+function formatDateInput(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function todayInputValue() {
+  return formatDateInput(new Date());
+}
+
+function addDays(dateStr, days) {
+  const d = parseDate(dateStr);
+  if (!d) return "";
+  d.setDate(d.getDate() + days);
+  return formatDateInput(d);
+}
+
+function isPastDate(dateStr) {
+  const d = parseDate(dateStr);
+  const today = parseDate(todayInputValue());
+  if (!d || !today) return false;
+  return d.getTime() < today.getTime();
+}
+
+function getSafeCheckIn(dateStr) {
+  const value = cleanText(dateStr);
+  if (!value) return "";
+  if (isPastDate(value)) return "";
+  return parseDate(value) ? value : "";
+}
+
+function getSafeCheckOut(checkIn, checkOut) {
+  const inDate = getSafeCheckIn(checkIn);
+  const out = cleanText(checkOut);
+
+  if (!inDate) return "";
+  if (!out) return "";
+  if (isPastDate(out)) return "";
+  if (!parseDate(out)) return "";
+
+  const nights = getDiffNights(inDate, out);
+  if (nights < 1) return "";
+
+  return out;
+}
+
+function clearLegacyDateStorage() {
+  [
+    "booking_check_in",
+    "booking_check_out",
+    "selectedCheckIn",
+    "selectedCheckOut",
+    "ore_booking_check_in",
+    "ore_booking_check_out",
+    "ore_guest_basics",
+    "ore_booking_draft_v4"
+  ].forEach((key) => safeRemove(key));
+}
+
+function getDiffNights(checkIn, checkOut) {
+  const inDate = parseDate(checkIn);
+  const outDate = parseDate(checkOut);
+  if (!inDate || !outDate) return 0;
+  const diff = Math.round((outDate - inDate) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : 0;
+}
+
+function parsePositiveInt(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? Math.floor(num) : fallback;
+}
+
+function setText(el, value) {
+  if (el) el.textContent = value;
+}
+
+function setValueIfEmpty(el, value) {
+  if (el && !cleanText(el.value) && cleanText(value)) {
+    el.value = value;
+  }
+}
+
+function safeCall(fn, label = "Unknown task") {
+  try {
+    return fn();
+  } catch (error) {
+    console.error(`${label} failed:`, error);
+    return null;
+  }
+}
+
+function generateReference(prefix = "ORE") {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
+  return `${prefix}-${y}${m}${d}-${rand}`;
+}
+
+function getCurrentUserScope() {
+  return currentUser?.uid ? `user_${currentUser.uid}` : "guest";
+}
+
+function getBookingDraftKey() {
+  return `ore_booking_draft_v6_${getCurrentUserScope()}`;
+}
+
+function getGuestBasicsKey() {
+  return `ore_guest_basics_v2_${getCurrentUserScope()}`;
+}
+
+function clearGuestIdentityFields() {
+  if (bookingFields.guestName) bookingFields.guestName.value = "";
+  if (bookingFields.guestEmail) bookingFields.guestEmail.value = "";
+}
+
+function clearAllBookingFields() {
+  Object.values(bookingFields).forEach((el) => {
+    if (!el) return;
+    if (el.tagName === "SELECT") {
+      el.selectedIndex = 0;
+    } else if (el.type === "number") {
+      if (el.id === "guest-adults") el.value = "1";
+      else if (el.id === "guest-children") el.value = "0";
+      else el.value = "";
+    } else if ("value" in el) {
+      el.value = "";
+    }
+  });
+
+  if (els.agreePolicy) els.agreePolicy.checked = false;
+  if (els.paymentProof) els.paymentProof.value = "";
+}
+
+function clearScopedDrafts(scope = getCurrentUserScope()) {
+  safeRemove(`ore_booking_draft_v6_${scope}`);
+  safeRemove(`ore_guest_basics_v2_${scope}`);
+}
+
+// ──────────────────────────────────────────
+// Date Input Enhancement
+// ──────────────────────────────────────────
+function sanitizeDateDigits(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function formatDateDigits(digits) {
+  const clean = sanitizeDateDigits(digits);
+  if (!clean) return "";
+  if (clean.length <= 4) return clean;
+  if (clean.length <= 6) return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+  return `${clean.slice(0, 4)}-${clean.slice(4, 6)}-${clean.slice(6, 8)}`;
+}
+
+function normalizeDateInputLoose(value) {
+  const raw = cleanText(value);
+  if (!raw) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  return formatDateDigits(raw);
+}
+
+function normalizeDateInputStrict(value) {
+  const formatted = normalizeDateInputLoose(value);
+  const parsed = parseDate(formatted);
+  if (!parsed) return formatted;
+  return formatDateInput(parsed);
+}
+
+function getCaretOffsetFromDigits(value, caretPos) {
+  const before = String(value || "").slice(0, caretPos);
+  return (before.match(/\d/g) || []).length;
+}
+
+function getCaretPositionFromDigitsCount(formattedValue, digitsCount) {
+  if (digitsCount <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < formattedValue.length; i += 1) {
+    if (/\d/.test(formattedValue[i])) {
+      seen += 1;
+      if (seen >= digitsCount) return i + 1;
+    }
+  }
+  return formattedValue.length;
+}
+
+function handleDateTypingInput(el) {
+  if (!el) return;
+
+  const rawValue = el.value;
+  const caret = typeof el.selectionStart === "number" ? el.selectionStart : rawValue.length;
+  const digitOffset = getCaretOffsetFromDigits(rawValue, caret);
+  const formatted = formatDateDigits(rawValue);
+
+  if (formatted !== rawValue) {
+    el.value = formatted;
+    const nextCaret = getCaretPositionFromDigitsCount(formatted, digitOffset);
     try {
-      const rawLang =
-        localStorage.getItem("ore_lang") ||
-        localStorage.getItem("orelang") ||
-        "ar";
-      const savedLang = rawLang === "en" ? "en" : "ar";
+      el.setSelectionRange(nextCaret, nextCaret);
+    } catch (_) {}
+  }
+}
 
-      const savedTheme =
-        localStorage.getItem("ore_theme") ||
-        localStorage.getItem("oretheme") ||
-        "light";
+function enhanceDateInput(el, options = {}) {
+  if (!el || el.dataset.dateEnhanced === "true") return;
 
-      document.documentElement.lang = savedLang;
-      document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
+  const { allowPast = false, onCommit = null } = options;
 
-      if (savedTheme === "dark") {
-        document.documentElement.classList.add("dark");
+  el.dataset.dateEnhanced = "true";
+  el.setAttribute("type", "text");
+  el.setAttribute("inputmode", "numeric");
+  el.setAttribute("autocomplete", "off");
+  el.setAttribute("autocapitalize", "off");
+  el.setAttribute("autocorrect", "off");
+  el.setAttribute("spellcheck", "false");
+  el.setAttribute("dir", "ltr");
+
+  if (!el.getAttribute("placeholder")) {
+    el.setAttribute("placeholder", "YYYY-MM-DD");
+  }
+
+  el.addEventListener("input", () => {
+    handleDateTypingInput(el);
+    markInvalid(el, false);
+  });
+
+  el.addEventListener("paste", () => {
+    requestAnimationFrame(() => {
+      handleDateTypingInput(el);
+    });
+  });
+
+  el.addEventListener("blur", () => {
+    const normalized = normalizeDateInputStrict(el.value);
+    if (!normalized) {
+      el.value = "";
+    } else if (!allowPast && isPastDate(normalized)) {
+      el.value = "";
+    } else {
+      el.value = normalized;
+    }
+
+    if (typeof onCommit === "function") onCommit();
+  });
+
+  el.addEventListener("change", () => {
+    const normalized = normalizeDateInputStrict(el.value);
+    if (!normalized) {
+      el.value = "";
+    } else if (!allowPast && isPastDate(normalized)) {
+      el.value = "";
+    } else {
+      el.value = normalized;
+    }
+
+    if (typeof onCommit === "function") onCommit();
+  });
+
+  el.addEventListener("keydown", (e) => {
+    const allowed = [
+      "Backspace",
+      "Delete",
+      "Tab",
+      "Escape",
+      "Enter",
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "Home",
+      "End"
+    ];
+
+    if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+    if (/^\d$/.test(e.key)) return;
+    if (e.key === "-") return;
+
+    e.preventDefault();
+  });
+}
+
+function setupDateInputs() {
+  enhanceDateInput(bookingFields.arrivalDate, {
+    allowPast: false,
+    onCommit: () => {
+      updateBookingStateFromInputs();
+      updateDateConstraints();
+      updateSummary();
+      updateReview();
+      saveDraft();
+    }
+  });
+
+  enhanceDateInput(bookingFields.departureDate, {
+    allowPast: false,
+    onCommit: () => {
+      updateBookingStateFromInputs();
+      updateDateConstraints();
+      updateSummary();
+      updateReview();
+      saveDraft();
+    }
+  });
+
+  enhanceDateInput(bookingFields.transferDate, {
+    allowPast: false,
+    onCommit: () => {
+      updateBookingStateFromInputs();
+      updateSummary();
+      updateReview();
+      saveDraft();
+    }
+  });
+}
+
+// ──────────────────────────────────────────
+// State
+// ──────────────────────────────────────────
+let currentUser = null;
+let isUpdatingUI = false;
+
+const LOCAL_BOOKINGS_KEY = "ore_bookings_local_v1";
+
+const bookingState = {
+  initialized: false,
+  currentStep: 1,
+  lang: normalizeLang(safeGet("ore_lang", "ar")),
+  theme: safeGet("ore_theme", "light") || "light",
+
+  propertyId: null,
+  property: null,
+
+  checkIn: "",
+  checkOut: "",
+  guestCount: 1,
+  nights: 0,
+
+  paymentMethod: "Bank Transfer",
+  paymentValue: "ccp",
+  paymentProofUrl: null,
+  paymentProofName: "",
+  paymentProofUploading: false,
+
+  rewardPoints: 0,
+  bookingReference: "",
+
+  stayDetails: {
+    bedType: ""
+  }
+};
+
+function t(en, ar) {
+  return bookingState.lang === "ar" ? ar : en;
+}
+
+function formatDateDisplay(dateStr) {
+  const parts = parseDateParts(dateStr);
+  if (!parts) return t("Not selected", "غير محدد");
+
+  const monthsAr = [
+    "جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان",
+    "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+  ];
+
+  const monthsEn = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const day = String(parts.day).padStart(2, "0");
+  const monthName = bookingState.lang === "ar"
+    ? monthsAr[parts.month - 1]
+    : monthsEn[parts.month - 1];
+
+  return `${day} ${monthName} ${parts.year}`;
+}
+
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  return bookingState.lang === "ar"
+    ? `${amount.toLocaleString("ar-DZ")} د.ج`
+    : `${amount.toLocaleString("en-US")} DZD`;
+}
+
+// ──────────────────────────────────────────
+// DOM Helpers
+// ──────────────────────────────────────────
+function getById(...ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) return el;
+  }
+  return null;
+}
+
+function qs(selector, root = document) {
+  return root.querySelector(selector);
+}
+
+function qsa(selector, root = document) {
+  return Array.from(root.querySelectorAll(selector));
+}
+
+// ──────────────────────────────────────────
+// DOM
+// ──────────────────────────────────────────
+const els = {
+  html: document.documentElement,
+  body: document.body,
+
+  langToggle: getById("lang-toggle"),
+  themeToggle: getById("theme-toggle"),
+
+  navLogoImg: qs(".navbar .logo img"),
+  authLogoImg: qs(".auth-header img"),
+
+  openAuthBtn: getById("open-auth-btn"),
+  closeAuthBtn: getById("close-auth-btn"),
+  authModal: getById("auth-modal"),
+  profileDropdown: getById("profile-dropdown"),
+  profileContainer: qs(".profile-container"),
+
+  loginForm: getById("login-form"),
+  registerForm: getById("register-form"),
+  forgotForm: getById("forgot-form"),
+  authMessage: getById("auth-message"),
+
+  loginEmail: getById("login-email"),
+  loginPassword: getById("login-password"),
+  regName: getById("reg-name"),
+  regEmail: getById("reg-email"),
+  regPassword: getById("reg-password"),
+  forgotEmail: getById("forgot-email"),
+
+  dropdownUserName: getById("dropdown-user-name"),
+  dropdownUserEmail: getById("dropdown-user-email"),
+  logoutBtn: getById("logout-btn"),
+  myBookingsBtn: getById("my-bookings-btn"),
+  myFavoritesBtn: getById("my-favorites-btn"),
+  userPoints: getById("user-points"),
+
+  globalAlert: getById("booking-global-alert"),
+
+  step1: getById("step-1"),
+  step2: getById("step-2"),
+  step3: getById("step-3"),
+  connector1: getById("connector-1"),
+  connector2: getById("connector-2"),
+  indicators: qsa(".step-indicator"),
+
+  btnNext1: getById("btn-next-1"),
+  btnNext2: getById("btn-next-2"),
+  btnPrev2: getById("btn-prev-2"),
+  btnPrev3: getById("btn-prev-3"),
+  btnConfirmBooking: getById("btn-confirm-booking"),
+
+  paymentCards: qsa(".payment-method-card"),
+  paymentRadios: qsa('input[name="paymentmethod"], input[name="payment-method"]'),
+  bankTransferBox: getById("ccp-details", "bank-transfer-box"),
+  cashBox: getById("cash-details", "cash-box"),
+  cardBox: getById("card-details", "card-box"),
+  paymentProof: getById("receipt-upload", "payment-proof"),
+  uploadText: getById("upload-text"),
+
+  checkInDate: getById("arrival-date", "check-in-date"),
+  checkOutDate: getById("departure-date", "check-out-date"),
+  adults: getById("guest-adults", "guest-count"),
+  children: getById("guest-children"),
+
+  agreePolicy: getById("agree-policy"),
+
+  copyIbanBtn: getById("copy-rib-btn", "copy-iban-btn"),
+  copyReferenceBtn: getById("copy-reference-btn"),
+  bankIban: getById("bank-iban"),
+  paymentReference: getById("payment-reference", "booking-reference-code"),
+
+  propMiniImg: getById("prop-mini-img", "summary-prop-img"),
+  propMiniTitle: getById("prop-mini-title", "summary-prop-title"),
+  propMiniLoc: getById("prop-mini-loc", "summary-prop-location"),
+  propMiniType: getById("prop-mini-type", "summary-prop-type"),
+
+  summaryPriceNight: getById("sb-night-price", "summary-price-night"),
+  summaryNights: getById("sb-nights-count", "summary-nights"),
+  summaryServiceFee: getById("sb-fee-amount", "summary-service-fee"),
+  summaryTaxes: getById("sb-addons-amount", "summary-taxes"),
+  summaryTotal: getById("sb-final-total", "summary-total"),
+  summaryCheckin: getById("summary-checkin"),
+  summaryCheckout: getById("summary-checkout"),
+  summaryGuests: getById("summary-guests"),
+  summaryBedType: getById("summary-bed-type"),
+
+  reviewGuestName: getById("rev-name", "review-guest-name"),
+  reviewGuestEmail: getById("rev-email", "review-guest-email"),
+  reviewGuestPhone: getById("rev-phone", "review-guest-phone"),
+  reviewNationalityGender: getById("rev-nationality-gender"),
+  reviewStayDates: getById("rev-dates", "review-stay-dates"),
+  reviewGuests: getById("rev-guests", "review-guests"),
+  reviewPurposeArrival: getById("rev-purpose-arrival"),
+  reviewAdditionalGuests: getById("rev-additional-guests"),
+  reviewDocuments: getById("rev-documents", "review-payment-proof"),
+  reviewBillings: getById("rev-billings", "review-billing-name"),
+  reviewSpecialRequests: getById("rev-special-requests", "review-special-notes"),
+  reviewPaymentMethod: getById("rev-payment-method"),
+  reviewPoints: getById("rev-points", "review-points"),
+  reviewPointsInline: getById("review-points-inline"),
+  reviewBedType: getById("rev-bed-type"),
+
+  editStep1Btns: [
+    getById("btn-edit-guest"),
+    getById("btn-edit-details"),
+    getById("btn-edit-dates")
+  ].filter(Boolean),
+
+  editStep2Btns: [getById("btn-edit-payment")].filter(Boolean)
+};
+
+// ──────────────────────────────────────────
+// Field Registry
+// ──────────────────────────────────────────
+const bookingFields = {
+  guestName: getById("guest-name"),
+  guestEmail: getById("guest-email"),
+  guestPhone: getById("guest-phone"),
+  guestCountry: getById("guest-country"),
+
+  guestAdults: getById("guest-adults"),
+  guestChildren: getById("guest-children"),
+  stayPurpose: getById("stay-purpose"),
+  bedType: getById("bed-type"),
+  arrivalDate: getById("arrival-date"),
+  departureDate: getById("departure-date"),
+  arrivalTime: getById("arrival-time"),
+  specialRequests: getById("special-requests"),
+
+  billingName: getById("billing-name"),
+  billingNote: getById("billing-note"),
+
+  senderName: getById("sender-name"),
+  transferAmount: getById("transfer-amount"),
+  transferDate: getById("transfer-date"),
+  transferTime: getById("transfer-time"),
+
+  cashPayerName: getById("cash-payer-name"),
+  cashCurrency: getById("cash-currency"),
+  cashPaymentNote: getById("cash-payment-note")
+};
+
+function getFieldValue(id, fallback = "") {
+  return cleanText(bookingFields[id]?.value) || fallback;
+}
+
+function getSelectedText(el, fallback = "") {
+  if (!el) return fallback;
+  if (el.tagName === "SELECT" && el.selectedOptions?.length) {
+    return cleanText(el.selectedOptions[0].textContent) || fallback;
+  }
+  return cleanText(el.value) || fallback;
+}
+
+function getFieldSelectedText(id, fallback = "") {
+  return getSelectedText(bookingFields[id], fallback);
+}
+
+// ──────────────────────────────────────────
+// UI Helpers
+// ──────────────────────────────────────────
+function setButtonLoading(btn, loading, text = null) {
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="ph ph-spinner-gap ph-spin"></i><span>${text || t("Processing...", "جارٍ المعالجة...")}</span>`;
+  } else {
+    btn.disabled = false;
+    if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+  }
+}
+
+function showToast(message, type = "info") {
+  let host = document.getElementById("booking-toast-host");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "booking-toast-host";
+    host.style.cssText = `
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(92vw,380px);
+    `;
+    document.body.appendChild(host);
+  }
+
+  const types = {
+    success: { bg: "#ecfdf5", border: "#10b981", color: "#047857", icon: "ph-check-circle" },
+    error: { bg: "#fef2f2", border: "#ef4444", color: "#b91c1c", icon: "ph-warning-circle" },
+    info: { bg: "#eff6ff", border: "#3b82f6", color: "#1d4ed8", icon: "ph-info" }
+  };
+
+  const cfg = types[type] || types.info;
+  const toast = document.createElement("div");
+  toast.style.cssText = `
+    background: ${cfg.bg};
+    border: 1px solid ${cfg.border};
+    color: ${cfg.color};
+    padding: 14px 16px;
+    border-radius: 16px;
+    box-shadow: 0 14px 28px rgba(15,23,42,.12);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-weight: 700;
+    line-height: 1.6;
+  `;
+  toast.innerHTML = `<i class="ph ${cfg.icon}" style="font-size:1.15rem;flex-shrink:0;margin-top:2px;"></i><span>${escapeHtml(message)}</span>`;
+  host.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "all .25s ease";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-6px)";
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
+}
+
+function showBookingSuccessPopup(reference = "") {
+  const old = document.getElementById("booking-success-popup-backdrop");
+  if (old) old.remove();
+
+  const backdrop = document.createElement("div");
+  backdrop.id = "booking-success-popup-backdrop";
+  backdrop.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.38);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    z-index: 8000;
+    animation: oreFadeIn .2s ease;
+  `;
+
+  const card = document.createElement("div");
+  card.style.cssText = `
+    width: min(92vw, 420px);
+    background: ${bookingState.theme === "dark" ? "#111827" : "#ffffff"};
+    color: ${bookingState.theme === "dark" ? "#f9fafb" : "#111827"};
+    border-radius: 24px;
+    padding: 24px 22px;
+    box-shadow: 0 28px 60px rgba(15,23,42,.22);
+    text-align: center;
+    border: 1px solid rgba(148,163,184,.18);
+    animation: oreScaleIn .22s ease;
+  `;
+
+  const title = t("Booking received", "تم استلام الحجز");
+  const message = t(
+    "We received your booking and it will be reviewed soon. We will contact you shortly.",
+    "وصلنا حجزك وسيتم النظر فيه والرد عليك قريبًا."
+  );
+  const refLabel = t("Reference", "رقم المرجع");
+  const closeText = t("Done", "تم");
+
+  card.innerHTML = `
+    <div style="width:72px;height:72px;border-radius:50%;margin:0 auto 16px;background:linear-gradient(135deg,#10b981,#34d399);display:flex;align-items:center;justify-content:center;color:#fff;">
+      <i class="ph ph-check" style="font-size:2rem;"></i>
+    </div>
+    <h3 style="margin:0 0 10px;font-size:1.35rem;font-weight:800;">${escapeHtml(title)}</h3>
+    <p style="margin:0 0 14px;line-height:1.8;color:${bookingState.theme === "dark" ? "#d1d5db" : "#4b5563"};">${escapeHtml(message)}</p>
+    ${reference ? `<div style="margin:0 0 18px;padding:12px 14px;border-radius:14px;background:${bookingState.theme === "dark" ? "rgba(31,41,55,.9)" : "#f8fafc"};font-weight:700;">${escapeHtml(refLabel)}: ${escapeHtml(reference)}</div>` : ""}
+    <button type="button" id="booking-success-popup-close" style="border:none;background:#10b981;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;cursor:pointer;min-width:120px;">
+      ${escapeHtml(closeText)}
+    </button>
+  `;
+
+  backdrop.appendChild(card);
+  document.body.appendChild(backdrop);
+  document.body.classList.add("modal-open");
+
+  if (!document.getElementById("booking-success-popup-styles")) {
+    const style = document.createElement("style");
+    style.id = "booking-success-popup-styles";
+    style.textContent = `
+      @keyframes oreFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
-    } catch (_) {}
-  </script>
+      @keyframes oreScaleIn {
+        from { opacity: 0; transform: scale(.96) translateY(6px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
-  <script>
-    try {
-      const legacyKeys = [
-        "ore_guest_basics",
-        "ore_booking_draft_v4",
-        "booking_check_in",
-        "booking_check_out",
-        "selectedCheckIn",
-        "selectedCheckOut",
-        "ore_booking_check_in",
-        "ore_booking_check_out"
-      ];
+  function closePopup() {
+    backdrop.remove();
+    document.body.classList.remove("modal-open");
+  }
 
-      legacyKeys.forEach((key) => {
-        if (localStorage.getItem(key)) {
-          localStorage.removeItem(key);
-        }
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closePopup();
+  });
+
+  card.querySelector("#booking-success-popup-close")?.addEventListener("click", closePopup);
+}
+
+function showAuthMessage(message, type = "error") {
+  if (!els.authMessage) return;
+  els.authMessage.className = `auth-message ${type}`;
+  els.authMessage.textContent = message;
+}
+
+function clearAuthMessage() {
+  if (!els.authMessage) return;
+  els.authMessage.className = "auth-message";
+  els.authMessage.textContent = "";
+}
+
+function showGlobalAlert(message) {
+  if (!els.globalAlert) {
+    alert(message);
+    return;
+  }
+  const span = els.globalAlert.querySelector("span");
+  if (span) span.textContent = message;
+  els.globalAlert.classList.remove("d-none");
+}
+
+function hideGlobalAlert() {
+  els.globalAlert?.classList.add("d-none");
+}
+
+function getFallbackText() {
+  return t("Not provided", "غير متوفر");
+}
+
+function markInvalid(el, invalid) {
+  if (!el) return;
+  el.classList.toggle("invalid", !!invalid);
+  el.setAttribute("aria-invalid", invalid ? "true" : "false");
+}
+
+function clearAllInvalidStates() {
+  Object.values(bookingFields).forEach((el) => {
+    if (!el) return;
+    markInvalid(el, false);
+  });
+  if (els.agreePolicy) markInvalid(els.agreePolicy, false);
+}
+
+function scrollToFirstInvalid() {
+  const target = document.querySelector(".invalid, [aria-invalid='true']");
+  if (target && typeof target.scrollIntoView === "function") {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (typeof target.focus === "function") {
+      setTimeout(() => target.focus(), 150);
+    }
+  }
+}
+
+// ──────────────────────────────────────────
+// Language / Theme / Direction
+// ──────────────────────────────────────────
+function updateDirection() {
+  if (!els.html) return;
+  els.html.lang = bookingState.lang;
+  els.html.dir = bookingState.lang === "ar" ? "rtl" : "ltr";
+}
+
+function updateThemeLogos() {
+  const isDark = bookingState.theme === "dark";
+  const lightLogo = "logos/orebooking.png";
+  const darkLogo = "logos/orebooking2.png";
+  const logoPath = isDark ? darkLogo : lightLogo;
+
+  if (els.navLogoImg) {
+    els.navLogoImg.src = logoPath;
+    els.navLogoImg.setAttribute("src", logoPath);
+    els.navLogoImg.setAttribute("alt", "OreBooking");
+  }
+
+  if (els.authLogoImg) {
+    els.authLogoImg.src = logoPath;
+    els.authLogoImg.setAttribute("src", logoPath);
+    els.authLogoImg.setAttribute("alt", "OreBooking");
+  }
+}
+
+function applyTheme() {
+  const isDark = bookingState.theme === "dark";
+  els.body?.classList.toggle("dark", isDark);
+  if (els.html) els.html.style.colorScheme = isDark ? "dark" : "light";
+
+  const icon = els.themeToggle?.querySelector("i");
+  if (icon) {
+    icon.className = isDark ? "ph ph-sun" : "ph ph-moon";
+  }
+
+  updateThemeLogos();
+}
+
+function updateLangButton() {
+  const span = els.langToggle?.querySelector("span");
+  if (!span) return;
+  span.textContent = bookingState.lang === "ar" ? "EN" : "AR";
+}
+
+function setTextPreservingIcon(el, text) {
+  if (!el) return;
+  const icon = Array.from(el.children).find((child) => child.tagName === "I");
+  if (!icon) {
+    el.textContent = text;
+    return;
+  }
+  const clone = icon.cloneNode(true);
+  el.innerHTML = "";
+  el.appendChild(clone);
+  el.appendChild(document.createTextNode(` ${text}`));
+}
+
+function cacheOriginalLocalizedContent() {
+  document.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-option], [data-i18n-title]").forEach((el) => {
+    if (el.hasAttribute("data-i18n") && !("i18nOriginalText" in el.dataset)) {
+      el.dataset.i18nOriginalText = el.textContent;
+    }
+    if (el.hasAttribute("data-i18n-placeholder") && !("i18nOriginalPlaceholder" in el.dataset)) {
+      el.dataset.i18nOriginalPlaceholder = el.getAttribute("placeholder") || "";
+    }
+    if (el.hasAttribute("data-i18n-option") && !("i18nOriginalOption" in el.dataset)) {
+      el.dataset.i18nOriginalOption = el.textContent;
+    }
+    if (el.hasAttribute("data-i18n-title") && !("i18nOriginalTitle" in el.dataset)) {
+      el.dataset.i18nOriginalTitle = el.getAttribute("title") || "";
+    }
+  });
+}
+
+function resetLocalizedContentToOriginal() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    if ("i18nOriginalText" in el.dataset) {
+      setTextPreservingIcon(el, el.dataset.i18nOriginalText);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    if ("i18nOriginalPlaceholder" in el.dataset) {
+      el.setAttribute("placeholder", el.dataset.i18nOriginalPlaceholder);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-option]").forEach((el) => {
+    if ("i18nOriginalOption" in el.dataset) {
+      el.textContent = el.dataset.i18nOriginalOption;
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    if ("i18nOriginalTitle" in el.dataset) {
+      el.setAttribute("title", el.dataset.i18nOriginalTitle);
+    }
+  });
+}
+
+function getTranslationDictionary() {
+  const dict = window.bookingI18n;
+  if (!dict || typeof dict !== "object") return null;
+  if (bookingState.lang === "ar") return dict.ar || dict.arabic || null;
+  return dict.en || dict.english || null;
+}
+
+function applyTranslations() {
+  resetLocalizedContentToOriginal();
+
+  const dict = getTranslationDictionary();
+  if (!dict) return;
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (key && dict[key] !== undefined) {
+      setTextPreservingIcon(el, dict[key]);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (key && dict[key] !== undefined) {
+      el.setAttribute("placeholder", dict[key]);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-option]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-option");
+    if (key && dict[key] !== undefined) {
+      el.textContent = dict[key];
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    if (key && dict[key] !== undefined) {
+      el.setAttribute("title", dict[key]);
+    }
+  });
+}
+
+function refreshLocalizedUI() {
+  updateDirection();
+  updateLangButton();
+  applyTranslations();
+  updateAuthUI(currentUser);
+  renderPropertySummary();
+  updatePaymentCardsUI();
+  updateSummary();
+  updateReview();
+}
+
+// ──────────────────────────────────────────
+// Auth Modal / Profile
+// ──────────────────────────────────────────
+function switchAuthForm(form) {
+  const forms = {
+    login: els.loginForm,
+    register: els.registerForm,
+    forgot: els.forgotForm
+  };
+
+  Object.entries(forms).forEach(([key, el]) => {
+    if (!el) return;
+    el.classList.toggle("active", key === form);
+  });
+}
+
+function openAuthModal(form = "login") {
+  switchAuthForm(form);
+  clearAuthMessage();
+  toggleProfileDropdown(false);
+  els.authModal?.classList.add("active");
+  document.body.classList.add("modal-open");
+}
+
+function closeAuthModal() {
+  els.authModal?.classList.remove("active");
+  document.body.classList.remove("modal-open");
+}
+
+function toggleProfileDropdown(force = null) {
+  if (!els.profileDropdown || !els.openAuthBtn) return;
+
+  const active = typeof force === "boolean"
+    ? force
+    : !els.profileDropdown.classList.contains("active");
+
+  els.profileDropdown.classList.toggle("active", active);
+  els.openAuthBtn.setAttribute("aria-expanded", active ? "true" : "false");
+}
+
+function handleProfileButtonClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (currentUser) {
+    toggleProfileDropdown();
+  } else {
+    toggleProfileDropdown(false);
+    openAuthModal("login");
+  }
+}
+
+function fillAuthenticatedGuestFields(user) {
+  if (!user) return;
+
+  setValueIfEmpty(bookingFields.guestName, cleanText(user.displayName));
+  setValueIfEmpty(bookingFields.guestEmail, cleanText(user.email));
+  setValueIfEmpty(bookingFields.billingName, cleanText(user.displayName));
+}
+
+function updateAuthUI(user) {
+  currentUser = user || null;
+
+  const name = cleanText(user?.displayName) || t("Guest User", "زائر");
+  const email = cleanText(user?.email) || t("Sign in to continue", "سجل الدخول للمتابعة");
+
+  setText(els.dropdownUserName, name);
+  setText(els.dropdownUserEmail, email);
+
+  const icon = els.openAuthBtn?.querySelector("i");
+  if (icon) {
+    icon.className = user ? "ph ph-user-circle-check" : "ph ph-user";
+  }
+
+  if (els.myBookingsBtn) {
+    els.myBookingsBtn.style.display = user ? "flex" : "none";
+  }
+
+  if (els.myFavoritesBtn) {
+    els.myFavoritesBtn.style.display = user ? "flex" : "none";
+  }
+
+  if (els.logoutBtn) {
+    els.logoutBtn.style.display = user ? "flex" : "none";
+  }
+
+  if (user) {
+    fillAuthenticatedGuestFields(user);
+  }
+
+  toggleProfileDropdown(false);
+}
+
+function getAuthErrorMessage(error, context = "login") {
+  const code = cleanText(error?.code || "");
+  const map = {
+    "auth/invalid-email": t("Invalid email address.", "عنوان البريد الإلكتروني غير صالح."),
+    "auth/missing-password": t("Please enter your password.", "يرجى إدخال كلمة المرور."),
+    "auth/user-not-found": t("No account found with this email.", "لا يوجد حساب بهذا البريد الإلكتروني."),
+    "auth/wrong-password": t("Incorrect password.", "كلمة المرور غير صحيحة."),
+    "auth/invalid-credential": t("Incorrect login credentials.", "بيانات تسجيل الدخول غير صحيحة."),
+    "auth/email-already-in-use": t("This email is already registered.", "هذا البريد مستخدم بالفعل."),
+    "auth/weak-password": t("Password is too weak.", "كلمة المرور ضعيفة."),
+    "auth/network-request-failed": t("Network error. Check your connection.", "خطأ في الشبكة. تحقق من الاتصال.")
+  };
+
+  if (map[code]) return map[code];
+  if (context === "register") return t("Registration failed. Try another email.", "فشل التسجيل. جرّب بريدًا آخر.");
+  if (context === "forgot") return t("Failed to send reset link.", "تعذر إرسال رابط الاستعادة.");
+  return t("Login failed. Please check your credentials.", "فشل تسجيل الدخول. تحقق من البيانات.");
+}
+
+async function loginWithEmail(email, password) {
+  if (!auth) {
+    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    setButtonLoading(getById("login-submit-btn"), true, t("Signing in...", "جارٍ تسجيل الدخول..."));
+    await auth.signInWithEmailAndPassword(email, password);
+    closeAuthModal();
+    showToast(t("Logged in successfully.", "تم تسجيل الدخول بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "login"), "error");
+  } finally {
+    setButtonLoading(getById("login-submit-btn"), false);
+  }
+}
+
+async function registerWithEmail(name, email, password) {
+  if (!auth) {
+    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    setButtonLoading(getById("register-submit-btn"), true, t("Creating account...", "جارٍ إنشاء الحساب..."));
+    const result = await auth.createUserWithEmailAndPassword(email, password);
+    if (result?.user && name) {
+      await result.user.updateProfile({ displayName: name });
+    }
+    closeAuthModal();
+    showToast(t("Account created successfully.", "تم إنشاء الحساب بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "register"), "error");
+  } finally {
+    setButtonLoading(getById("register-submit-btn"), false);
+  }
+}
+
+async function sendResetEmail(email) {
+  if (!auth) {
+    showAuthMessage(t("Authentication service is unavailable.", "خدمة المصادقة غير متاحة."));
+    return;
+  }
+
+  try {
+    clearAuthMessage();
+    await auth.sendPasswordResetEmail(email);
+    showAuthMessage(t("Reset link sent successfully.", "تم إرسال رابط الاستعادة بنجاح."), "success");
+  } catch (error) {
+    showAuthMessage(getAuthErrorMessage(error, "forgot"), "error");
+  }
+}
+
+async function logoutUser() {
+  try {
+    const oldScope = getCurrentUserScope();
+
+    clearScopedDrafts(oldScope);
+    clearAllBookingFields();
+    clearGuestIdentityFields();
+
+    if (auth) await auth.signOut();
+
+    toggleProfileDropdown(false);
+    updateSummary();
+    updateReview();
+    showToast(t("Logged out successfully.", "تم تسجيل الخروج بنجاح."), "success");
+  } catch (error) {
+    console.error("Logout error:", error);
+    showToast(t("Failed to log out.", "تعذر تسجيل الخروج."), "error");
+  }
+}
+
+// ──────────────────────────────────────────
+// Property / Query Context
+// ──────────────────────────────────────────
+function resolvePropertyId() {
+  const params = new URLSearchParams(window.location.search);
+  const id =
+    params.get("id") ||
+    params.get("propertyId") ||
+    params.get("listingId") ||
+    safeGet("selectedPropertyId");
+  return id ? String(id).trim() : null;
+}
+
+function buildFallbackProperty(id = null) {
+  return {
+    id,
+    title: "Selected Property",
+    titleEn: "Selected Property",
+    titleAr: "العقار المحدد",
+    location: "Location unavailable",
+    locationEn: "Location unavailable",
+    locationAr: "الموقع غير متوفر",
+    type: "Stay",
+    typeEn: "Stay",
+    typeAr: "إقامة",
+    imageUrl: "images/placeholder.jpg",
+    price: 0
+  };
+}
+
+async function loadPropertyData() {
+  bookingState.propertyId = resolvePropertyId();
+
+  if (!bookingState.propertyId) {
+    bookingState.property = buildFallbackProperty(null);
+    renderPropertySummary();
+    updateSummary();
+    return;
+  }
+
+  safeSet("selectedPropertyId", bookingState.propertyId);
+
+  if (!db) {
+    bookingState.property = buildFallbackProperty(bookingState.propertyId);
+    renderPropertySummary();
+    updateSummary();
+    return;
+  }
+
+  try {
+    const doc = await db.collection("properties").doc(String(bookingState.propertyId)).get();
+    if (!doc.exists) throw new Error("not-found");
+    bookingState.property = { id: doc.id, ...doc.data() };
+  } catch (error) {
+    console.error("Property load error:", error);
+    bookingState.property = buildFallbackProperty(bookingState.propertyId);
+  }
+
+  renderPropertySummary();
+  updateSummary();
+}
+
+function getPropertyTitle() {
+  const p = bookingState.property || {};
+  return bookingState.lang === "ar"
+    ? (p.titleAr || p.title || p.titleEn || "العقار المحدد")
+    : (p.titleEn || p.title || p.titleAr || "Selected Property");
+}
+
+function getPropertyLocation() {
+  const p = bookingState.property || {};
+  return bookingState.lang === "ar"
+    ? (p.locationAr || p.location || p.locationEn || "الموقع غير متوفر")
+    : (p.locationEn || p.location || p.locationAr || "Location unavailable");
+}
+
+function getPropertyType() {
+  const p = bookingState.property || {};
+  return bookingState.lang === "ar"
+    ? (p.typeAr || p.type || p.typeEn || "إقامة")
+    : (p.typeEn || p.type || p.typeAr || "Stay");
+}
+
+function getPropertyImage() {
+  const p = bookingState.property || {};
+  return p.imageUrl || p.mainImage || (Array.isArray(p.images) ? p.images[0] : "") || "images/placeholder.jpg";
+}
+
+function getPropertyPrice() {
+  const p = bookingState.property || {};
+  return Number(p.price || p.basePrice || p.pricePerNight || 0);
+}
+
+function renderPropertySummary() {
+  if (els.propMiniImg) {
+    els.propMiniImg.src = getPropertyImage();
+    els.propMiniImg.alt = getPropertyTitle();
+    els.propMiniImg.onerror = function () {
+      this.src = "images/placeholder.jpg";
+    };
+  }
+
+  setText(els.propMiniTitle, getPropertyTitle());
+  setText(els.propMiniType, getPropertyType());
+
+  if (els.propMiniLoc) {
+    const span = els.propMiniLoc.querySelector("span");
+    if (span) span.textContent = getPropertyLocation();
+    else els.propMiniLoc.textContent = getPropertyLocation();
+  }
+}
+
+// ──────────────────────────────────────────
+// Stay / Payment State
+// ──────────────────────────────────────────
+function getSelectedPaymentRadio() {
+  return document.querySelector('input[name="paymentmethod"]:checked, input[name="payment-method"]:checked');
+}
+
+function getSelectedPaymentValue() {
+  return getSelectedPaymentRadio()?.value || "ccp";
+}
+
+function getPaymentMethodLabel(value) {
+  switch (value) {
+    case "cash":
+      return t("Cash on Arrival", "الدفع عند الوصول");
+    case "card":
+      return t("Card Request", "طلب بطاقة");
+    case "ccp":
+    case "bank":
+    case "bank-transfer":
+    default:
+      return t("Bank Transfer", "تحويل بنكي");
+  }
+}
+
+function updatePaymentCardsUI() {
+  const selected = getSelectedPaymentValue();
+
+  els.paymentCards.forEach((card) => {
+    const radio = card.querySelector('input[type="radio"]');
+    card.classList.toggle("selected", !!radio && radio.value === selected);
+  });
+
+  bookingState.paymentValue = selected;
+  bookingState.paymentMethod = getPaymentMethodLabel(selected);
+
+  if (els.bankTransferBox) els.bankTransferBox.classList.toggle("active", selected === "ccp" || selected === "bank");
+  if (els.cashBox) els.cashBox.classList.toggle("active", selected === "cash");
+  if (els.cardBox) els.cardBox.classList.toggle("active", selected === "card");
+}
+
+function updateBookingStateFromInputs() {
+  const checkIn = getSafeCheckIn(getFieldValue("arrivalDate"));
+  const checkOut = getSafeCheckOut(checkIn, getFieldValue("departureDate"));
+
+  bookingState.checkIn = checkIn;
+  bookingState.checkOut = checkOut;
+  bookingState.nights = checkIn && checkOut ? getDiffNights(checkIn, checkOut) : 0;
+
+  const adults = parsePositiveInt(getFieldValue("guestAdults", "1"), 1);
+  const children = parsePositiveInt(getFieldValue("guestChildren", "0"), 0);
+  bookingState.guestCount = Math.max(1, adults + children);
+
+  bookingState.stayDetails.bedType = getFieldSelectedText("bedType", getFallbackText());
+  bookingState.paymentValue = getSelectedPaymentValue();
+  bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
+
+  if (!bookingState.bookingReference) {
+    bookingState.bookingReference = generateReference();
+  }
+
+  if (els.paymentReference) {
+    els.paymentReference.textContent = bookingState.bookingReference;
+  }
+}
+
+function updateDateConstraints() {
+  const today = todayInputValue();
+
+  if (bookingFields.arrivalDate && !cleanText(bookingFields.arrivalDate.value)) {
+    bookingFields.arrivalDate.placeholder = today;
+  }
+
+  if (bookingFields.departureDate && bookingState.checkIn) {
+    const nextDay = addDays(bookingState.checkIn, 1);
+    if (!cleanText(bookingFields.departureDate.value)) {
+      bookingFields.departureDate.placeholder = nextDay || "YYYY-MM-DD";
+    }
+  }
+}
+
+function updateSummary() {
+  updateBookingStateFromInputs();
+
+  const nightly = getPropertyPrice();
+  const nights = bookingState.nights;
+  const serviceFee = nights > 0 ? Math.round(nightly * nights * 0.08) : 0;
+  const taxes = nights > 0 ? Math.round(nightly * nights * 0.06) : 0;
+  const total = nightly * nights + serviceFee + taxes;
+
+  setText(els.summaryCheckin, bookingState.checkIn ? formatDateDisplay(bookingState.checkIn) : "-");
+  setText(els.summaryCheckout, bookingState.checkOut ? formatDateDisplay(bookingState.checkOut) : "-");
+  setText(els.summaryGuests, String(bookingState.guestCount || 1));
+  setText(els.summaryBedType, bookingState.stayDetails.bedType || "-");
+
+  setText(els.summaryPriceNight, formatCurrency(nightly));
+  setText(els.summaryNights, String(nights));
+  setText(els.summaryServiceFee, formatCurrency(serviceFee));
+  setText(els.summaryTaxes, formatCurrency(taxes));
+  setText(els.summaryTotal, formatCurrency(total));
+
+  bookingState.rewardPoints = total > 0 ? Math.max(10, Math.round(total / 1000)) : 0;
+  setText(els.reviewPoints, String(bookingState.rewardPoints));
+  setText(els.reviewPointsInline, String(bookingState.rewardPoints));
+}
+
+function updateReview() {
+  setText(els.reviewGuestName, getFieldValue("guestName", getFallbackText()));
+  setText(els.reviewGuestEmail, getFieldValue("guestEmail", getFallbackText()));
+  setText(els.reviewGuestPhone, getFieldValue("guestPhone", getFallbackText()));
+  setText(els.reviewNationalityGender, getFieldValue("guestCountry", getFallbackText()));
+
+  const datesText = bookingState.checkIn && bookingState.checkOut
+    ? `${formatDateDisplay(bookingState.checkIn)} — ${formatDateDisplay(bookingState.checkOut)}`
+    : getFallbackText();
+  setText(els.reviewStayDates, datesText);
+
+  const adults = parsePositiveInt(getFieldValue("guestAdults", "1"), 1);
+  const children = parsePositiveInt(getFieldValue("guestChildren", "0"), 0);
+  setText(els.reviewGuests, `${adults} + ${children}`);
+
+  const purpose = getFieldSelectedText("stayPurpose", getFallbackText());
+  const arrival = getFieldSelectedText("arrivalTime", getFallbackText());
+  setText(els.reviewPurposeArrival, `${purpose} / ${arrival}`);
+
+  setText(els.reviewBedType, getFieldSelectedText("bedType", getFallbackText()));
+  setText(els.reviewDocuments, bookingState.paymentProofName || t("Not uploaded", "لم يتم الرفع"));
+  setText(els.reviewBillings, getFieldValue("billingName", getFallbackText()));
+  setText(els.reviewSpecialRequests, getFieldValue("specialRequests", getFallbackText()));
+  setText(els.reviewPaymentMethod, bookingState.paymentMethod || getFallbackText());
+  setText(els.reviewPoints, String(bookingState.rewardPoints || 0));
+}
+
+function setCurrentStep(step) {
+  bookingState.currentStep = Math.max(1, Math.min(3, Number(step) || 1));
+
+  [els.step1, els.step2, els.step3].forEach((section, idx) => {
+    if (!section) return;
+    section.classList.toggle("active", idx + 1 === bookingState.currentStep);
+  });
+
+  els.indicators.forEach((indicator, idx) => {
+    indicator.classList.toggle("active", idx + 1 <= bookingState.currentStep);
+  });
+
+  if (els.connector1) els.connector1.classList.toggle("active", bookingState.currentStep >= 2);
+  if (els.connector2) els.connector2.classList.toggle("active", bookingState.currentStep >= 3);
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function validateStep1() {
+  clearAllInvalidStates();
+  hideGlobalAlert();
+
+  const required = [
+    bookingFields.guestName,
+    bookingFields.guestEmail,
+    bookingFields.guestPhone,
+    bookingFields.guestCountry,
+    bookingFields.arrivalDate,
+    bookingFields.departureDate,
+    bookingFields.guestAdults,
+    bookingFields.arrivalTime,
+    bookingFields.stayPurpose,
+    bookingFields.bedType
+  ];
+
+  let valid = true;
+
+  required.forEach((el) => {
+    if (!el) return;
+    const empty = !cleanText(el.value);
+    if (empty) {
+      markInvalid(el, true);
+      valid = false;
+    }
+  });
+
+  if (bookingFields.guestEmail && !validateEmail(bookingFields.guestEmail.value)) {
+    markInvalid(bookingFields.guestEmail, true);
+    valid = false;
+  }
+
+  if (bookingFields.guestPhone && !validatePhone(bookingFields.guestPhone.value)) {
+    markInvalid(bookingFields.guestPhone, true);
+    valid = false;
+  }
+
+  updateBookingStateFromInputs();
+
+  if (!bookingState.checkIn || !bookingState.checkOut || bookingState.nights < 1) {
+    markInvalid(bookingFields.arrivalDate, true);
+    markInvalid(bookingFields.departureDate, true);
+    valid = false;
+  }
+
+  if (!valid) {
+    showGlobalAlert(t("Please complete the required fields correctly.", "يرجى إكمال الحقول المطلوبة بشكل صحيح."));
+    scrollToFirstInvalid();
+  }
+
+  return valid;
+}
+
+function validateStep2() {
+  clearAllInvalidStates();
+  hideGlobalAlert();
+
+  let valid = true;
+
+  if (!cleanText(getFieldValue("billingName"))) {
+    markInvalid(bookingFields.billingName, true);
+    valid = false;
+  }
+
+  const payment = getSelectedPaymentValue();
+
+  if (payment === "ccp" || payment === "bank") {
+    if (!cleanText(getFieldValue("senderName"))) {
+      markInvalid(bookingFields.senderName, true);
+      valid = false;
+    }
+
+    if (!cleanText(getFieldValue("transferAmount"))) {
+      markInvalid(bookingFields.transferAmount, true);
+      valid = false;
+    }
+
+    if (!cleanText(getFieldValue("transferDate"))) {
+      markInvalid(bookingFields.transferDate, true);
+      valid = false;
+    }
+  }
+
+  if (payment === "cash") {
+    if (!cleanText(getFieldValue("cashPayerName"))) {
+      markInvalid(bookingFields.cashPayerName, true);
+      valid = false;
+    }
+
+    if (!cleanText(getFieldValue("cashCurrency"))) {
+      markInvalid(bookingFields.cashCurrency, true);
+      valid = false;
+    }
+  }
+
+  if (!valid) {
+    showGlobalAlert(t("Please complete the payment details.", "يرجى إكمال بيانات الدفع."));
+    scrollToFirstInvalid();
+  }
+
+  return valid;
+}
+
+function validateStep3() {
+  clearAllInvalidStates();
+  hideGlobalAlert();
+
+  if (!els.agreePolicy?.checked) {
+    markInvalid(els.agreePolicy, true);
+    showGlobalAlert(t("Please agree to the policy first.", "يرجى الموافقة على الشروط أولاً."));
+    scrollToFirstInvalid();
+    return false;
+  }
+
+  return true;
+}
+
+// ──────────────────────────────────────────
+// Draft Save / Load
+// ──────────────────────────────────────────
+function buildDraftPayload() {
+  updateBookingStateFromInputs();
+
+  return {
+    propertyId: bookingState.propertyId,
+    currentStep: bookingState.currentStep,
+    bookingReference: bookingState.bookingReference,
+
+    guestName: currentUser?.displayName ? "" : getFieldValue("guestName"),
+    guestEmail: currentUser?.email ? "" : getFieldValue("guestEmail"),
+    guestPhone: getFieldValue("guestPhone"),
+    guestCountry: getFieldValue("guestCountry"),
+
+    guestAdults: getFieldValue("guestAdults", "1"),
+    guestChildren: getFieldValue("guestChildren", "0"),
+    stayPurpose: getFieldValue("stayPurpose"),
+    bedType: getFieldValue("bedType"),
+    arrivalDate: getFieldValue("arrivalDate"),
+    departureDate: getFieldValue("departureDate"),
+    arrivalTime: getFieldValue("arrivalTime"),
+    specialRequests: getFieldValue("specialRequests"),
+
+    billingName: getFieldValue("billingName"),
+    billingNote: getFieldValue("billingNote"),
+
+    paymentValue: getSelectedPaymentValue(),
+    senderName: getFieldValue("senderName"),
+    transferAmount: getFieldValue("transferAmount"),
+    transferDate: getFieldValue("transferDate"),
+    transferTime: getFieldValue("transferTime"),
+    cashPayerName: getFieldValue("cashPayerName"),
+    cashCurrency: getFieldValue("cashCurrency"),
+    cashPaymentNote: getFieldValue("cashPaymentNote"),
+
+    paymentProofUrl: bookingState.paymentProofUrl || null,
+    paymentProofName: bookingState.paymentProofName || ""
+  };
+}
+
+function saveDraft() {
+  const payload = buildDraftPayload();
+  safeJsonSet(getBookingDraftKey(), payload);
+
+  const guestBasics = {
+    guestPhone: payload.guestPhone,
+    guestCountry: payload.guestCountry
+  };
+
+  if (!currentUser?.displayName) guestBasics.guestName = payload.guestName;
+  if (!currentUser?.email) guestBasics.guestEmail = payload.guestEmail;
+
+  safeJsonSet(getGuestBasicsKey(), guestBasics);
+}
+
+function applyDraftToFields(draft) {
+  if (!draft || typeof draft !== "object") return;
+
+  if (!currentUser?.displayName) setValueIfEmpty(bookingFields.guestName, draft.guestName);
+  if (!currentUser?.email) setValueIfEmpty(bookingFields.guestEmail, draft.guestEmail);
+
+  setValueIfEmpty(bookingFields.guestPhone, draft.guestPhone);
+  setValueIfEmpty(bookingFields.guestCountry, draft.guestCountry);
+
+  setValueIfEmpty(bookingFields.guestAdults, draft.guestAdults || "1");
+  setValueIfEmpty(bookingFields.guestChildren, draft.guestChildren || "0");
+  setValueIfEmpty(bookingFields.arrivalDate, draft.arrivalDate);
+  setValueIfEmpty(bookingFields.departureDate, draft.departureDate);
+  setValueIfEmpty(bookingFields.arrivalTime, draft.arrivalTime);
+  setValueIfEmpty(bookingFields.stayPurpose, draft.stayPurpose);
+  setValueIfEmpty(bookingFields.bedType, draft.bedType);
+  setValueIfEmpty(bookingFields.specialRequests, draft.specialRequests);
+
+  setValueIfEmpty(bookingFields.billingName, draft.billingName);
+  setValueIfEmpty(bookingFields.billingNote, draft.billingNote);
+
+  setValueIfEmpty(bookingFields.senderName, draft.senderName);
+  setValueIfEmpty(bookingFields.transferAmount, draft.transferAmount);
+  setValueIfEmpty(bookingFields.transferDate, draft.transferDate);
+  setValueIfEmpty(bookingFields.transferTime, draft.transferTime);
+
+  setValueIfEmpty(bookingFields.cashPayerName, draft.cashPayerName);
+  setValueIfEmpty(bookingFields.cashCurrency, draft.cashCurrency);
+  setValueIfEmpty(bookingFields.cashPaymentNote, draft.cashPaymentNote);
+
+  bookingState.paymentProofUrl = draft.paymentProofUrl || null;
+  bookingState.paymentProofName = draft.paymentProofName || "";
+
+  if (els.uploadText && bookingState.paymentProofName) {
+    els.uploadText.textContent = bookingState.paymentProofName;
+  }
+
+  if (draft.paymentValue) {
+    const radio = document.querySelector(`input[name="paymentmethod"][value="${CSS.escape(draft.paymentValue)}"], input[name="payment-method"][value="${CSS.escape(draft.paymentValue)}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  bookingState.bookingReference = draft.bookingReference || bookingState.bookingReference;
+  if (els.paymentReference && bookingState.bookingReference) {
+    els.paymentReference.textContent = bookingState.bookingReference;
+  }
+
+  setCurrentStep(draft.currentStep || 1);
+  updatePaymentCardsUI();
+  updateBookingStateFromInputs();
+  updateSummary();
+  updateReview();
+}
+
+function loadDraft() {
+  const draft = safeJsonGet(getBookingDraftKey(), null);
+  if (draft) {
+    applyDraftToFields(draft);
+    return;
+  }
+
+  const guestBasics = safeJsonGet(getGuestBasicsKey(), null);
+  if (guestBasics && typeof guestBasics === "object") {
+    if (!currentUser?.displayName) setValueIfEmpty(bookingFields.guestName, guestBasics.guestName);
+    if (!currentUser?.email) setValueIfEmpty(bookingFields.guestEmail, guestBasics.guestEmail);
+    setValueIfEmpty(bookingFields.guestPhone, guestBasics.guestPhone);
+    setValueIfEmpty(bookingFields.guestCountry, guestBasics.guestCountry);
+  }
+
+  updateBookingStateFromInputs();
+  updateSummary();
+  updateReview();
+}
+
+// ──────────────────────────────────────────
+// Upload
+// ──────────────────────────────────────────
+async function handlePaymentProofUpload(file) {
+  if (!file) return;
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  const maxSize = 5 * 1024 * 1024;
+
+  if (!allowed.includes(file.type)) {
+    showToast(t("Unsupported file type.", "نوع الملف غير مدعوم."), "error");
+    return;
+  }
+
+  if (file.size > maxSize) {
+    showToast(t("File is too large.", "الملف كبير جدًا."), "error");
+    return;
+  }
+
+  if (!storage) {
+    bookingState.paymentProofName = file.name;
+    bookingState.paymentProofUrl = null;
+    if (els.uploadText) els.uploadText.textContent = file.name;
+    saveDraft();
+    showToast(t("File attached locally.", "تم إرفاق الملف محليًا."), "success");
+    return;
+  }
+
+  try {
+    bookingState.paymentProofUploading = true;
+    if (els.uploadText) els.uploadText.textContent = t("Uploading...", "جارٍ الرفع...");
+
+    const ref = storage.ref().child(`booking-proofs/${getCurrentUserScope()}/${Date.now()}_${file.name}`);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+
+    bookingState.paymentProofUrl = url;
+    bookingState.paymentProofName = file.name;
+    if (els.uploadText) els.uploadText.textContent = file.name;
+
+    saveDraft();
+    updateReview();
+    showToast(t("Receipt uploaded successfully.", "تم رفع الإيصال بنجاح."), "success");
+  } catch (error) {
+    console.error("Upload error:", error);
+    if (els.uploadText) els.uploadText.textContent = t("Upload failed", "فشل الرفع");
+    showToast(t("Failed to upload file.", "تعذر رفع الملف."), "error");
+  } finally {
+    bookingState.paymentProofUploading = false;
+  }
+}
+
+// ──────────────────────────────────────────
+// Booking Persistence
+// ──────────────────────────────────────────
+function buildBookingPayload() {
+  updateBookingStateFromInputs();
+  updateSummary();
+
+  const nightly = getPropertyPrice();
+  const nights = bookingState.nights;
+  const serviceFee = nights > 0 ? Math.round(nightly * nights * 0.08) : 0;
+  const taxes = nights > 0 ? Math.round(nightly * nights * 0.06) : 0;
+  const total = nightly * nights + serviceFee + taxes;
+
+  return {
+    reference: bookingState.bookingReference || generateReference(),
+    userId: currentUser?.uid || null,
+    userEmail: cleanText(currentUser?.email) || getFieldValue("guestEmail"),
+    userDisplayName: cleanText(currentUser?.displayName) || getFieldValue("guestName"),
+
+    propertyId: bookingState.propertyId || null,
+    propertyTitle: getPropertyTitle(),
+    propertyLocation: getPropertyLocation(),
+    propertyType: getPropertyType(),
+    propertyImage: getPropertyImage(),
+
+    guestName: getFieldValue("guestName"),
+    guestEmail: getFieldValue("guestEmail"),
+    guestPhone: getFieldValue("guestPhone"),
+    guestCountry: getFieldValue("guestCountry"),
+
+    checkIn: bookingState.checkIn,
+    checkOut: bookingState.checkOut,
+    nights,
+    adults: parsePositiveInt(getFieldValue("guestAdults", "1"), 1),
+    children: parsePositiveInt(getFieldValue("guestChildren", "0"), 0),
+    guestCount: bookingState.guestCount,
+
+    arrivalTime: getFieldValue("arrivalTime"),
+    stayPurpose: getFieldValue("stayPurpose"),
+    bedType: getFieldValue("bedType"),
+    specialRequests: getFieldValue("specialRequests"),
+
+    billingName: getFieldValue("billingName"),
+    billingNote: getFieldValue("billingNote"),
+
+    paymentMethod: bookingState.paymentMethod,
+    paymentValue: bookingState.paymentValue,
+    senderName: getFieldValue("senderName"),
+    transferAmount: getFieldValue("transferAmount"),
+    transferDate: getFieldValue("transferDate"),
+    transferTime: getFieldValue("transferTime"),
+    cashPayerName: getFieldValue("cashPayerName"),
+    cashCurrency: getFieldValue("cashCurrency"),
+    cashPaymentNote: getFieldValue("cashPaymentNote"),
+    paymentProofUrl: bookingState.paymentProofUrl || null,
+    paymentProofName: bookingState.paymentProofName || "",
+
+    nightlyPrice: nightly,
+    serviceFee,
+    taxes,
+    total,
+    rewardPoints: bookingState.rewardPoints || 0,
+    status: "pending",
+    createdAt: new Date()
+  };
+}
+
+function saveBookingLocally(payload) {
+  const list = safeJsonGet(LOCAL_BOOKINGS_KEY, []);
+  list.unshift({
+    ...payload,
+    createdAt: new Date().toISOString()
+  });
+  safeJsonSet(LOCAL_BOOKINGS_KEY, list);
+}
+
+async function saveBookingRemotely(payload) {
+  if (!db) return false;
+
+  try {
+    await db.collection("bookings").add(payload);
+    return true;
+  } catch (error) {
+    console.error("Remote booking save error:", error);
+    return false;
+  }
+}
+
+async function confirmBooking() {
+  if (!validateStep1()) {
+    setCurrentStep(1);
+    return;
+  }
+
+  if (!validateStep2()) {
+    setCurrentStep(2);
+    return;
+  }
+
+  if (!validateStep3()) {
+    setCurrentStep(3);
+    return;
+  }
+
+  if (bookingState.paymentProofUploading) {
+    showToast(t("Please wait until upload finishes.", "يرجى الانتظار حتى ينتهي الرفع."), "info");
+    return;
+  }
+
+  try {
+    setButtonLoading(els.btnConfirmBooking, true, t("Confirming...", "جارٍ تأكيد الحجز..."));
+
+    const payload = buildBookingPayload();
+    bookingState.bookingReference = payload.reference;
+
+    const savedRemote = await saveBookingRemotely(payload);
+    if (!savedRemote) saveBookingLocally(payload);
+
+    clearScopedDrafts(getCurrentUserScope());
+    showBookingSuccessPopup(payload.reference);
+    showToast(
+      savedRemote
+        ? t("Booking submitted successfully.", "تم إرسال الحجز بنجاح.")
+        : t("Booking saved locally.", "تم حفظ الحجز محليًا."),
+      "success"
+    );
+
+    clearAllBookingFields();
+    fillAuthenticatedGuestFields(currentUser);
+    bookingState.paymentProofName = "";
+    bookingState.paymentProofUrl = null;
+    bookingState.bookingReference = generateReference();
+    if (els.paymentReference) els.paymentReference.textContent = bookingState.bookingReference;
+    if (els.uploadText) els.uploadText.textContent = t("Click to upload payment receipt", "اضغط لرفع إيصال الدفع");
+
+    updatePaymentCardsUI();
+    setCurrentStep(1);
+    updateBookingStateFromInputs();
+    updateSummary();
+    updateReview();
+  } catch (error) {
+    console.error("Confirm booking error:", error);
+    showToast(t("Failed to confirm booking.", "تعذر تأكيد الحجز."), "error");
+  } finally {
+    setButtonLoading(els.btnConfirmBooking, false);
+  }
+}
+
+// ──────────────────────────────────────────
+// Events
+// ──────────────────────────────────────────
+function setupFieldAutosave() {
+  Object.values(bookingFields).forEach((el) => {
+    if (!el) return;
+
+    const eventName = el.tagName === "SELECT" ? "change" : "input";
+
+    el.addEventListener(eventName, () => {
+      updateBookingStateFromInputs();
+      updatePaymentCardsUI();
+      updateSummary();
+      updateReview();
+      saveDraft();
+      markInvalid(el, false);
+    });
+
+    if (eventName !== "change") {
+      el.addEventListener("change", () => {
+        updateBookingStateFromInputs();
+        updatePaymentCardsUI();
+        updateSummary();
+        updateReview();
+        saveDraft();
+        markInvalid(el, false);
       });
-    } catch (_) {}
-  </script>
-
-  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
-
-  <link rel="stylesheet" href="booking.css" />
-</head>
-
-<body>
-  <nav class="navbar">
-    <a href="index.html" class="logo" aria-label="OreBooking">
-      <img
-        src="logos/orebooking.png"
-        alt="OreBooking"
-        class="logo-img"
-        loading="eager"
-        decoding="async"
-        onerror="this.onerror=null;this.src='logos/orebooking.png';"
-      />
-    </a>
-
-    <div class="nav-actions">
-      <a href="index.html" class="back-home-btn">
-        <i class="ph ph-house"></i>
-        <span data-i18n="home">الرئيسية</span>
-      </a>
-
-      <div class="rewards-badge">
-        <i class="ph ph-gift"></i>
-        <span id="user-points">0</span>
-        <span data-i18n="pts">نقطة</span>
-      </div>
-
-      <button id="lang-toggle" class="lang-btn" type="button" aria-label="Toggle language">
-        <i class="ph ph-translate"></i>
-        <span>EN</span>
-      </button>
-
-      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
-        <i class="ph ph-moon"></i>
-      </button>
-
-      <div class="profile-container">
-        <button
-          id="open-auth-btn"
-          class="profile-menu"
-          type="button"
-          aria-expanded="false"
-          aria-controls="profile-dropdown"
-        >
-          <i class="ph ph-user"></i>
-        </button>
-
-        <div id="profile-dropdown" class="profile-dropdown" role="menu">
-          <div class="dropdown-header">
-            <strong id="dropdown-user-name" data-i18n="guestuser">مستخدم ضيف</strong>
-            <span id="dropdown-user-email" data-i18n="signintocontinue">سجل الدخول للمتابعة</span>
-          </div>
-
-          <button id="my-bookings-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
-            <i class="ph ph-suitcase-rolling"></i>
-            <span data-i18n="mybookings">حجوزاتي</span>
-          </button>
-
-          <button id="my-favorites-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
-            <i class="ph ph-heart-straight"></i>
-            <span data-i18n="myfavorites">المفضلة</span>
-          </button>
-
-          <button id="logout-btn" class="dropdown-item" type="button" role="menuitem" style="display:none;">
-            <i class="ph ph-sign-out"></i>
-            <span data-i18n="logout">تسجيل الخروج</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <main class="booking-page">
-    <div class="container">
-      <section class="booking-hero">
-        <div class="booking-hero-card">
-          <h1 data-i18n="completebooking">أكمل حجزك</h1>
-          <p data-i18n="bookingherotext">
-            أدخل المعلومات الأساسية فقط لإتمام الحجز بسرعة ووضوح.
-          </p>
-        </div>
-      </section>
-
-      <section class="booking-steps-header">
-        <div class="step-indicator active">
-          <div class="step-num">1</div>
-          <div class="step-label" data-i18n="details">البيانات</div>
-        </div>
-
-        <div id="connector-1" class="step-connector"></div>
-
-        <div class="step-indicator">
-          <div class="step-num">2</div>
-          <div class="step-label" data-i18n="payment">الدفع</div>
-        </div>
-
-        <div id="connector-2" class="step-connector"></div>
-
-        <div class="step-indicator">
-          <div class="step-num">3</div>
-          <div class="step-label" data-i18n="review">المراجعة</div>
-        </div>
-      </section>
-
-      <div class="booking-wrapper">
-        <section class="booking-main-card">
-          <div id="booking-global-alert" class="booking-alert error d-none">
-            <i class="ph ph-warning-circle"></i>
-            <span data-i18n="completerequiredfields">يرجى إكمال المعلومات المطلوبة.</span>
-          </div>
-
-          <!-- Step 1 -->
-          <section id="step-1" class="booking-step active">
-            <div class="step-header">
-              <div class="step-header-icon">
-                <i class="ph ph-user-circle"></i>
-              </div>
-              <div>
-                <h2 class="step-title" data-i18n="guestreservationdetails">بيانات الحجز والضيف</h2>
-                <p class="step-subtitle" data-i18n="guestreservationsubtitle">
-                  أدخل فقط البيانات الأساسية المطلوبة لإتمام الحجز.
-                </p>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-identification-card"></i>
-                <span data-i18n="primaryguestinformation">معلومات الضيف الأساسية</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="guest-name" class="form-label">
-                    <span data-i18n="fullname">الاسم الكامل</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="guest-name"
-                    class="form-control"
-                    type="text"
-                    data-i18n-placeholder="fullnameplaceholder"
-                    placeholder="الاسم الكامل"
-                    autocomplete="name"
-                    required
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-email" class="form-label">
-                    <span data-i18n="emailaddress">البريد الإلكتروني</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="guest-email"
-                    class="form-control"
-                    type="email"
-                    data-i18n-placeholder="emailplaceholder"
-                    placeholder="name@example.com"
-                    autocomplete="email"
-                    required
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-phone" class="form-label">
-                    <span data-i18n="phonenumber">رقم الهاتف</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="guest-phone"
-                    class="form-control"
-                    type="tel"
-                    data-i18n-placeholder="phoneplaceholder"
-                    placeholder="+213 ..."
-                    autocomplete="tel"
-                    required
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-country" class="form-label">
-                    <span data-i18n="countryregion">الدولة / الجنسية</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="guest-country"
-                    class="form-control"
-                    type="text"
-                    data-i18n-placeholder="countryregionplaceholder"
-                    placeholder="الدولة أو الجنسية"
-                    autocomplete="country-name"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-calendar-check"></i>
-                <span data-i18n="staydetails">تفاصيل الإقامة</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="arrival-date" class="form-label">
-                    <span data-i18n="checkindate">تاريخ الدخول</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="arrival-date"
-                    class="form-control booking-date-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="YYYY-MM-DD"
-                    autocomplete="off"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                    dir="ltr"
-                    aria-describedby="arrival-date-hint"
-                    required
-                  />
-                  <span id="arrival-date-hint" class="hint-text">مثال: 2026-05-23</span>
-                </div>
-
-                <div class="form-group">
-                  <label for="departure-date" class="form-label">
-                    <span data-i18n="checkoutdate">تاريخ الخروج</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="departure-date"
-                    class="form-control booking-date-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="YYYY-MM-DD"
-                    autocomplete="off"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                    dir="ltr"
-                    aria-describedby="departure-date-hint"
-                    required
-                  />
-                  <span id="departure-date-hint" class="hint-text">مثال: 2026-05-25</span>
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-adults" class="form-label">
-                    <span data-i18n="adults">البالغون</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input id="guest-adults" class="form-control" type="number" min="1" value="1" required />
-                </div>
-
-                <div class="form-group">
-                  <label for="guest-children" class="form-label" data-i18n="children">الأطفال</label>
-                  <input id="guest-children" class="form-control" type="number" min="0" value="0" />
-                </div>
-
-                <div class="form-group">
-                  <label for="arrival-time" class="form-label">
-                    <span data-i18n="expectedarrivaltime">وقت الوصول المتوقع</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <select id="arrival-time" class="form-control" required>
-                    <option value="" data-i18n-option="selectarrivaltime">اختر وقت الوصول</option>
-                    <option value="08:00 - 10:00">08:00 - 10:00</option>
-                    <option value="10:00 - 12:00">10:00 - 12:00</option>
-                    <option value="12:00 - 14:00">12:00 - 14:00</option>
-                    <option value="14:00 - 16:00">14:00 - 16:00</option>
-                    <option value="16:00 - 18:00">16:00 - 18:00</option>
-                    <option value="18:00 - 20:00">18:00 - 20:00</option>
-                    <option value="after-20" data-i18n-option="after20">بعد 20:00</option>
-                    <option value="after-midnight" data-i18n-option="aftermidnight">بعد منتصف الليل</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="stay-purpose" class="form-label">
-                    <span data-i18n="purposeofstay">غرض الإقامة</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <select id="stay-purpose" class="form-control" required>
-                    <option value="" data-i18n-option="selectpurpose">اختر الغرض</option>
-                    <option value="family" data-i18n-option="familystay">عائلية</option>
-                    <option value="business" data-i18n-option="business">عمل</option>
-                    <option value="tourism" data-i18n-option="tourism">سياحة</option>
-                    <option value="medical" data-i18n-option="medical">علاج</option>
-                    <option value="other" data-i18n-option="other">أخرى</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="bed-type" class="form-label">
-                    <span data-i18n="bedtype">نوع السرير</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <select id="bed-type" class="form-control" required>
-                    <option value="" data-i18n-option="selectbedtype">اختر نوع السرير</option>
-                    <option value="single">مفرد / Single</option>
-                    <option value="double">مزدوج / Double</option>
-                    <option value="queen">كوين / Queen</option>
-                    <option value="king">كينغ / King</option>
-                  </select>
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="special-requests" class="form-label" data-i18n="specialrequests">طلبات خاصة</label>
-                  <textarea
-                    id="special-requests"
-                    class="form-control"
-                    data-i18n-placeholder="specialrequestsplaceholder"
-                    placeholder="ملاحظة اختيارية للمضيف"
-                  ></textarea>
-                  <span class="hint-text" data-i18n="specialrequestshint">
-                    اجعل الطلبات قصيرة وواضحة.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-grid-four"></i>
-                <span data-i18n="propertyamenities">مرافق العقار</span>
-              </h3>
-
-              <div class="amenities-box">
-                <div class="amenity-chip">
-                  <i class="ph ph-wifi-high"></i>
-                  <span data-i18n="wifi">واي فاي</span>
-                </div>
-                <div class="amenity-chip">
-                  <i class="ph ph-car"></i>
-                  <span data-i18n="parking">موقف سيارات</span>
-                </div>
-                <div class="amenity-chip">
-                  <i class="ph ph-snowflake"></i>
-                  <span data-i18n="airconditioning">تكييف</span>
-                </div>
-                <div class="amenity-chip">
-                  <i class="ph ph-cooking-pot"></i>
-                  <span data-i18n="kitchen">مطبخ</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="step-actions">
-              <button id="btn-next-1" class="primary-btn" type="button">
-                <span data-i18n="continuetopayment">متابعة إلى الدفع</span>
-                <i class="ph ph-arrow-left"></i>
-              </button>
-            </div>
-          </section>
-
-          <!-- Step 2 -->
-          <section id="step-2" class="booking-step">
-            <div class="step-header">
-              <div class="step-header-icon">
-                <i class="ph ph-credit-card"></i>
-              </div>
-              <div>
-                <h2 class="step-title" data-i18n="paymentbilling">الدفع والفوترة</h2>
-                <p class="step-subtitle" data-i18n="paymentbillingsubtitle">
-                  اختر طريقة الدفع وأدخل فقط التفاصيل الأساسية.
-                </p>
-              </div>
-            </div>
-
-            <div class="payment-methods-grid">
-              <label class="payment-method-card selected">
-                <input class="payment-radio" type="radio" name="paymentmethod" value="ccp" checked />
-                <div class="payment-method-icon"><i class="ph ph-bank"></i></div>
-                <div class="payment-method-title" data-i18n="banktransferccp">تحويل بنكي / CCP</div>
-                <p class="payment-method-desc" data-i18n="banktransferdesc">
-                  حول قيمة الحجز ثم ارفع وصل الدفع.
-                </p>
-              </label>
-
-              <label class="payment-method-card">
-                <input class="payment-radio" type="radio" name="paymentmethod" value="cash" />
-                <div class="payment-method-icon"><i class="ph ph-money"></i></div>
-                <div class="payment-method-title" data-i18n="payatproperty">الدفع عند الوصول</div>
-                <p class="payment-method-desc" data-i18n="payatpropertydesc">
-                  الدفع نقدًا عند تسجيل الدخول حسب موافقة المضيف.
-                </p>
-              </label>
-            </div>
-
-            <div class="section-block">
-              <h3>
-                <i class="ph ph-receipt"></i>
-                <span data-i18n="billingdetails">بيانات الفوترة</span>
-              </h3>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="billing-name" class="form-label">
-                    <span data-i18n="billingname">اسم الفوترة</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="billing-name"
-                    class="form-control"
-                    type="text"
-                    data-i18n-placeholder="billingnameplaceholder"
-                    placeholder="الاسم الكامل للفوترة"
-                    required
-                  />
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="billing-note" class="form-label" data-i18n="billingnote">ملاحظة الفوترة</label>
-                  <textarea
-                    id="billing-note"
-                    class="form-control"
-                    data-i18n-placeholder="billingnoteplaceholder"
-                    placeholder="ملاحظة اختيارية للفوترة أو الدفع"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div id="ccp-details" class="payment-details-box active">
-              <h3 style="margin-bottom:16px;">
-                <i class="ph ph-bank"></i>
-                <span data-i18n="banktransferdetails">تفاصيل التحويل البنكي</span>
-              </h3>
-
-              <p class="hint-text" style="margin-bottom:16px;" data-i18n="banktransferinstruction">
-                يرجى تحويل المبلغ الكامل ثم رفع الإيصال وإدخال بيانات المرسل.
-              </p>
-
-              <div class="bank-box">
-                <div class="bank-row">
-                  <span data-i18n="accountname">اسم الحساب</span>
-                  <strong>OreBooking LLC</strong>
-                </div>
-                <div class="bank-row">
-                  <span>CCP / RIB</span>
-                  <strong id="bank-iban">007 99999 0000000000 12</strong>
-                </div>
-                <div class="bank-row">
-                  <span data-i18n="bank">البنك</span>
-                  <strong>Algérie Poste</strong>
-                </div>
-                <div class="bank-row">
-                  <span>Reference</span>
-                  <strong id="payment-reference">ORE-REF-0000</strong>
-                </div>
-              </div>
-
-              <div class="step-actions" style="margin-top:0;padding-top:0;border-top:none;justify-content:flex-start;">
-                <button id="copy-rib-btn" class="ghost-btn" type="button">
-                  <i class="ph ph-copy"></i>
-                  <span>Copy RIB</span>
-                </button>
-
-                <button id="copy-reference-btn" class="ghost-btn" type="button">
-                  <i class="ph ph-copy"></i>
-                  <span>Copy Reference</span>
-                </button>
-              </div>
-
-              <div class="form-grid" style="margin-top:18px;">
-                <div class="form-group">
-                  <label for="sender-name" class="form-label">
-                    <span data-i18n="senderfullname">اسم المرسل</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="sender-name"
-                    class="form-control"
-                    type="text"
-                    data-i18n-placeholder="sendernameplaceholder"
-                    placeholder="الاسم المستخدم في التحويل"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="transfer-amount" class="form-label">
-                    <span data-i18n="transferredamount">المبلغ المحول</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="transfer-amount"
-                    class="form-control"
-                    type="number"
-                    min="0"
-                    data-i18n-placeholder="transferamountplaceholder"
-                    placeholder="المبلغ المدفوع"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="transfer-date" class="form-label">
-                    <span data-i18n="transferdate">تاريخ التحويل</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="transfer-date"
-                    class="form-control booking-date-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="YYYY-MM-DD"
-                    autocomplete="off"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                    dir="ltr"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="transfer-time" class="form-label">وقت التحويل</label>
-                  <input id="transfer-time" class="form-control" type="time" />
-                </div>
-
-                <div class="form-group full-width">
-                  <label class="file-upload-wrapper" for="receipt-upload">
-                    <div class="file-upload-icon"><i class="ph ph-upload-simple"></i></div>
-                    <div id="upload-text" class="file-upload-text" data-i18n="clickuploadreceipt">
-                      اضغط لرفع إيصال الدفع
-                    </div>
-                    <div class="file-upload-hint" data-i18n="uploadhint">JPG, PNG, PDF, WEBP - 5MB</div>
-                    <input
-                      id="receipt-upload"
-                      class="file-upload-input"
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf,.webp"
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div id="cash-details" class="payment-details-box">
-              <h3 style="margin-bottom:16px;">
-                <i class="ph ph-money"></i>
-                <span data-i18n="cashpaymentconfirmation">تأكيد الدفع النقدي</span>
-              </h3>
-
-              <p class="hint-text" style="margin-bottom:16px;" data-i18n="cashpaymentinstruction">
-                أكد من سيدفع عند الوصول.
-              </p>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="cash-payer-name" class="form-label">
-                    <span data-i18n="whowillpaycheckin">من سيدفع عند الوصول</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="cash-payer-name"
-                    class="form-control"
-                    type="text"
-                    data-i18n-placeholder="cashpayerplaceholder"
-                    placeholder="اسم الشخص المسؤول عن الدفع"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="cash-currency" class="form-label">
-                    <span data-i18n="preferredcurrency">العملة المفضلة</span>
-                    <span class="required-star">*</span>
-                  </label>
-                  <select id="cash-currency" class="form-control">
-                    <option value="" data-i18n-option="selectcurrency">اختر العملة</option>
-                    <option value="DZD">DZD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                  </select>
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="cash-payment-note" class="form-label">ملاحظة الدفع</label>
-                  <textarea
-                    id="cash-payment-note"
-                    class="form-control"
-                    placeholder="ملاحظة اختيارية حول الدفع"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div id="card-details" class="payment-details-box"></div>
-
-            <div class="step-actions step-actions-between">
-              <button id="btn-prev-2" class="ghost-btn" type="button">
-                <i class="ph ph-arrow-right"></i>
-                <span data-i18n="backtodetails">العودة للبيانات</span>
-              </button>
-
-              <button id="btn-next-2" class="primary-btn" type="button">
-                <span data-i18n="reviewbooking">مراجعة الحجز</span>
-                <i class="ph ph-arrow-left"></i>
-              </button>
-            </div>
-          </section>
-
-          <!-- Step 3 -->
-          <section id="step-3" class="booking-step">
-            <div class="step-header">
-              <div class="step-header-icon">
-                <i class="ph ph-check-circle"></i>
-              </div>
-              <div>
-                <h2 class="step-title" data-i18n="reviewconfirm">المراجعة والتأكيد</h2>
-                <p class="step-subtitle" data-i18n="reviewconfirmsubtitle">
-                  راجع بيانات الضيف والإقامة والدفع قبل التأكيد النهائي.
-                </p>
-              </div>
-            </div>
-
-            <div id="reviews-section">
-              <div class="review-grid">
-                <div class="review-card">
-                  <div class="review-card-header">
-                    <h3>
-                      <i class="ph ph-user"></i>
-                      <span data-i18n="guestinformation">معلومات الضيف</span>
-                    </h3>
-                    <button id="btn-edit-guest" class="edit-btn" type="button">
-                      <i class="ph ph-pencil-simple"></i>
-                      <span data-i18n="edit">تعديل</span>
-                    </button>
-                  </div>
-
-                  <div class="review-card-body">
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="fullname">الاسم</span>
-                      <span id="rev-name" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="email">البريد الإلكتروني</span>
-                      <span id="rev-email" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="phone">الهاتف</span>
-                      <span id="rev-phone" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="countryregion">الدولة / الجنسية</span>
-                      <span id="rev-nationality-gender" class="rd-value"></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="review-card">
-                  <div class="review-card-header">
-                    <h3>
-                      <i class="ph ph-calendar-check"></i>
-                      <span data-i18n="staydetails">تفاصيل الإقامة</span>
-                    </h3>
-                    <button id="btn-edit-dates" class="edit-btn" type="button">
-                      <i class="ph ph-pencil-simple"></i>
-                      <span data-i18n="edit">تعديل</span>
-                    </button>
-                  </div>
-
-                  <div class="review-card-body">
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="checkincheckout">الدخول والخروج</span>
-                      <span id="rev-dates" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="guests">الضيوف</span>
-                      <span id="rev-guests" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="purposeofstay">غرض الإقامة</span>
-                      <span id="rev-purpose-arrival" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="bedtype">نوع السرير</span>
-                      <span id="rev-bed-type" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="specialrequests">طلبات إضافية</span>
-                      <span id="rev-special-requests" class="rd-value"></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="review-card">
-                  <div class="review-card-header">
-                    <h3>
-                      <i class="ph ph-credit-card"></i>
-                      <span data-i18n="payment">الدفع</span>
-                    </h3>
-                    <button id="btn-edit-payment" class="edit-btn" type="button">
-                      <i class="ph ph-pencil-simple"></i>
-                      <span data-i18n="edit">تعديل</span>
-                    </button>
-                  </div>
-
-                  <div class="review-card-body">
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="paymentmethod">طريقة الدفع</span>
-                      <span id="rev-payment-method" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="documents">المستندات</span>
-                      <span id="rev-documents" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="billingdetails">الفوترة</span>
-                      <span id="rev-billings" class="rd-value"></span>
-                    </div>
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="specialrequests">ملاحظات</span>
-                      <span id="rev-special-requests" class="rd-value"></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="review-card full-width">
-                  <div class="review-card-header">
-                    <h3>
-                      <i class="ph ph-gift"></i>
-                      <span data-i18n="rewardpoints">نقاط المكافأة</span>
-                    </h3>
-                  </div>
-
-                  <div class="review-card-body">
-                    <div class="points-box">
-                      <div class="points-icon">
-                        <i class="ph ph-gift"></i>
-                      </div>
-                      <div class="points-text">
-                        <span class="points-title" data-i18n="rewardpoints">نقاط المكافأة</span>
-                        <p data-i18n="rewardpointstext">
-                          ستحصل على نقاط تقديرية بعد تأكيد الحجز.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="review-data">
-                      <span class="rd-label" data-i18n="rewardpoints">النقاط</span>
-                      <span id="rev-points" class="rd-value">0</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="policy-agreement">
-              <label class="checkbox-container">
-                <input id="agree-policy" type="checkbox" />
-                <span class="checkmark"></span>
-                <span class="agree-text" data-i18n="agreepolicy">
-                  أوافق على الشروط والأحكام وسياسة الحجز.
-                </span>
-              </label>
-            </div>
-
-            <div class="step-actions step-actions-between">
-              <button id="btn-prev-3" class="ghost-btn" type="button">
-                <i class="ph ph-arrow-right"></i>
-                <span data-i18n="backtopayment">العودة للدفع</span>
-              </button>
-
-              <button id="btn-confirm-booking" class="primary-btn green-btn" type="button">
-                <span data-i18n="confirmbooking">تأكيد الحجز</span>
-                <i class="ph ph-check"></i>
-              </button>
-            </div>
-          </section>
-        </section>
-
-        <aside class="booking-summary-sidebar">
-          <h3 class="sidebar-title">
-            <i class="ph ph-receipt"></i>
-            <span data-i18n="bookingsummary">ملخص الحجز</span>
-          </h3>
-
-          <div class="prop-mini-card">
-            <img
-              id="prop-mini-img"
-              class="prop-mini-img"
-              src="images/placeholder.jpg"
-              alt="Property"
-            />
-            <div class="prop-mini-details">
-              <h4 id="prop-mini-title">Selected Property</h4>
-              <p id="prop-mini-loc">
-                <i class="ph ph-map-pin"></i>
-                <span>Location unavailable</span>
-              </p>
-              <span id="prop-mini-type" class="prop-type-badge">Stay</span>
-            </div>
-          </div>
-
-          <div class="summary-list">
-            <div class="summary-row">
-              <span data-i18n="checkindate">تاريخ الدخول</span>
-              <strong id="summary-checkin">-</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="checkoutdate">تاريخ الخروج</span>
-              <strong id="summary-checkout">-</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="guests">الضيوف</span>
-              <strong id="summary-guests">1</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="bedtype">نوع السرير</span>
-              <strong id="summary-bed-type">-</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="pricepernight">السعر لكل ليلة</span>
-              <strong id="sb-night-price">0 DZD</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="nights">الليالي</span>
-              <strong id="sb-nights-count">0</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="servicefee">رسوم الخدمة</span>
-              <strong id="sb-fee-amount">0 DZD</strong>
-            </div>
-
-            <div class="summary-row">
-              <span data-i18n="taxes">الضرائب والرسوم</span>
-              <strong id="sb-addons-amount">0 DZD</strong>
-            </div>
-
-            <div class="summary-row total">
-              <span data-i18n="total">الإجمالي</span>
-              <strong id="sb-final-total">0 DZD</strong>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
-  </main>
-
-  <!-- Auth Modal -->
-  <div id="auth-modal" class="auth-modal" aria-hidden="true">
-    <div class="modal-content">
-      <div class="auth-card">
-        <button id="close-auth-btn" class="close-modal-btn" type="button" aria-label="Close">
-          <i class="ph ph-x"></i>
-        </button>
-
-        <div class="auth-header">
-          <img
-            src="logos/orebooking.png"
-            alt="OreBooking"
-            loading="eager"
-            decoding="async"
-            onerror="this.onerror=null;this.src='logos/orebooking.png';"
-          />
-        </div>
-
-        <div class="auth-content">
-          <div id="auth-message" class="auth-message"></div>
-
-          <!-- Login -->
-          <form id="login-form" class="auth-form active">
-            <h2 class="auth-title" data-i18n="welcomeback">مرحبًا بعودتك</h2>
-            <p class="auth-subtitle" data-i18n="loginsubtitle">
-              أدخل بياناتك للوصول إلى حسابك.
-            </p>
-
-            <div class="input-group">
-              <label for="login-email" data-i18n="emailaddress">البريد الإلكتروني</label>
-              <input id="login-email" type="email" placeholder="name@example.com" autocomplete="email" />
-            </div>
-
-            <div class="input-group">
-              <label for="login-password" data-i18n="password">كلمة المرور</label>
-              <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-            </div>
-
-            <div class="auth-options">
-              <a href="#" id="go-to-forgot" class="forgot-link" data-auth-switch="forgot" data-i18n="forgotpassword">نسيت كلمة المرور؟</a>
-            </div>
-
-            <button id="login-submit-btn" class="primary-btn" type="submit">
-              <span data-i18n="signin">تسجيل الدخول</span>
-            </button>
-
-            <div class="divider">OR</div>
-
-            <button id="google-signin-btn" class="google-btn" type="button">
-              <i class="ph ph-google-logo"></i>
-              <span>Google</span>
-            </button>
-
-            <p class="switch-form-text">
-              <span data-i18n="donthaveaccount">ليس لديك حساب؟</span>
-              <a href="#" id="go-to-register" data-auth-switch="register" data-i18n="signup">إنشاء حساب</a>
-            </p>
-          </form>
-
-          <!-- Register -->
-          <form id="register-form" class="auth-form">
-            <h2 class="auth-title" data-i18n="createaccount">إنشاء حساب</h2>
-            <p class="auth-subtitle" data-i18n="registersubtitle">
-              أنشئ حسابك للوصول إلى الحجوزات والمفضلة بسهولة.
-            </p>
-
-            <div class="input-group">
-              <label for="reg-name" data-i18n="fullname">الاسم الكامل</label>
-              <input id="reg-name" type="text" placeholder="الاسم الكامل" autocomplete="name" />
-            </div>
-
-            <div class="input-group">
-              <label for="reg-email" data-i18n="emailaddress">البريد الإلكتروني</label>
-              <input id="reg-email" type="email" placeholder="name@example.com" autocomplete="email" />
-            </div>
-
-            <div class="input-group">
-              <label for="reg-password" data-i18n="password">كلمة المرور</label>
-              <input id="reg-password" type="password" placeholder="••••••••" autocomplete="new-password" />
-            </div>
-
-            <button id="register-submit-btn" class="primary-btn" type="submit">
-              <span data-i18n="signup">إنشاء حساب</span>
-            </button>
-
-            <p class="switch-form-text">
-              <span data-i18n="alreadyhaveaccount">لديك حساب بالفعل؟</span>
-              <a href="#" data-auth-switch="login" data-i18n="signin">تسجيل الدخول</a>
-            </p>
-          </form>
-
-          <!-- Forgot -->
-          <form id="forgot-form" class="auth-form">
-            <h2 class="auth-title" data-i18n="forgotpassword">نسيت كلمة المرور</h2>
-            <p class="auth-subtitle" data-i18n="forgotsubtitle">
-              أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.
-            </p>
-
-            <div class="input-group">
-              <label for="forgot-email" data-i18n="emailaddress">البريد الإلكتروني</label>
-              <input id="forgot-email" type="email" placeholder="name@example.com" autocomplete="email" />
-            </div>
-
-            <button class="primary-btn" type="submit">
-              <span data-i18n="sendresetlink">إرسال رابط الاستعادة</span>
-            </button>
-
-            <p class="switch-form-text">
-              <a href="#" data-auth-switch="login" data-i18n="backtologin">العودة لتسجيل الدخول</a>
-            </p>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="booking-translations.js"></script>
-  <script src="booking.js"></script>
-</body>
-
-</html>
+    }
+  });
+}
+
+function setupAuthForms() {
+  els.loginForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await loginWithEmail(cleanText(els.loginEmail?.value), cleanText(els.loginPassword?.value));
+  });
+
+  els.registerForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await registerWithEmail(
+      cleanText(els.regName?.value),
+      cleanText(els.regEmail?.value),
+      cleanText(els.regPassword?.value)
+    );
+  });
+
+  els.forgotForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await sendResetEmail(cleanText(els.forgotEmail?.value));
+  });
+
+  getById("go-to-register")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("register");
+  });
+
+  getById("go-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("login");
+  });
+
+  getById("go-to-forgot")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("forgot");
+  });
+
+  getById("back-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("login");
+  });
+}
+
+function setupEventListeners() {
+  els.langToggle?.addEventListener("click", () => {
+    bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
+    safeSet("ore_lang", bookingState.lang);
+    safeSet("orelang", bookingState.lang);
+    refreshLocalizedUI();
+  });
+
+  els.themeToggle?.addEventListener("click", () => {
+    bookingState.theme = bookingState.theme === "dark" ? "light" : "dark";
+    safeSet("ore_theme", bookingState.theme);
+    safeSet("oretheme", bookingState.theme);
+    applyTheme();
+  });
+
+  els.openAuthBtn?.addEventListener("click", handleProfileButtonClick);
+  els.closeAuthBtn?.addEventListener("click", closeAuthModal);
+  els.authModal?.addEventListener("click", (e) => {
+    if (e.target === els.authModal) closeAuthModal();
+  });
+
+  els.logoutBtn?.addEventListener("click", logoutUser);
+
+  els.paymentRadios.forEach((radio) => {
+    radio.addEventListener("change", () => {
+      updatePaymentCardsUI();
+      updateSummary();
+      updateReview();
+      saveDraft();
+    });
+  });
+
+  els.copyIbanBtn?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(cleanText(els.bankIban?.textContent));
+      showToast(t("RIB copied.", "تم نسخ الحساب."), "success");
+    } catch (_) {
+      showToast(t("Failed to copy.", "تعذر النسخ."), "error");
+    }
+  });
+
+  els.copyReferenceBtn?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(cleanText(els.paymentReference?.textContent));
+      showToast(t("Reference copied.", "تم نسخ المرجع."), "success");
+    } catch (_) {
+      showToast(t("Failed to copy.", "تعذر النسخ."), "error");
+    }
+  });
+
+  els.paymentProof?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (file) handlePaymentProofUpload(file);
+  });
+
+  els.btnNext1?.addEventListener("click", () => {
+    if (!validateStep1()) return;
+    setCurrentStep(2);
+    saveDraft();
+  });
+
+  els.btnPrev2?.addEventListener("click", () => {
+    setCurrentStep(1);
+    saveDraft();
+  });
+
+  els.btnNext2?.addEventListener("click", () => {
+    if (!validateStep2()) return;
+    setCurrentStep(3);
+    updateReview();
+    saveDraft();
+  });
+
+  els.btnPrev3?.addEventListener("click", () => {
+    setCurrentStep(2);
+    saveDraft();
+  });
+
+  els.btnConfirmBooking?.addEventListener("click", confirmBooking);
+
+  els.editStep1Btns.forEach((btn) => {
+    btn.addEventListener("click", () => setCurrentStep(1));
+  });
+
+  els.editStep2Btns.forEach((btn) => {
+    btn.addEventListener("click", () => setCurrentStep(2));
+  });
+
+  els.agreePolicy?.addEventListener("change", () => {
+    markInvalid(els.agreePolicy, false);
+    saveDraft();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (
+      els.profileDropdown?.classList.contains("active") &&
+      els.profileContainer &&
+      !els.profileContainer.contains(e.target)
+    ) {
+      toggleProfileDropdown(false);
+    }
+  });
+
+  setupFieldAutosave();
+  setupAuthForms();
+}
+
+// ──────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────
+function init() {
+  clearLegacyDateStorage();
+  cacheOriginalLocalizedContent();
+
+  bookingState.bookingReference = generateReference();
+
+  if (els.paymentReference) {
+    els.paymentReference.textContent = bookingState.bookingReference;
+  }
+
+  applyTheme();
+  refreshLocalizedUI();
+  setupDateInputs();
+  setupEventListeners();
+  updatePaymentCardsUI();
+  updateDateConstraints();
+  updateSummary();
+  updateReview();
+  loadPropertyData();
+
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      const previousScope = getCurrentUserScope();
+
+      currentUser = user || null;
+      updateAuthUI(currentUser);
+
+      if (user) {
+        fillAuthenticatedGuestFields(user);
+      } else {
+        clearGuestIdentityFields();
+      }
+
+      const nextScope = getCurrentUserScope();
+
+      if (previousScope !== nextScope) {
+        clearAllBookingFields();
+        if (user) fillAuthenticatedGuestFields(user);
+        loadDraft();
+      } else {
+        loadDraft();
+      }
+
+      updateSummary();
+      updateReview();
+    });
+  } else {
+    updateAuthUI(null);
+    clearGuestIdentityFields();
+    loadDraft();
+  }
+
+  bookingState.initialized = true;
+}
+
+document.addEventListener("DOMContentLoaded", init);
