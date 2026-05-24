@@ -668,7 +668,6 @@ function applyGuestAuthUI() {
   if (els.profileMenu) {
     const icon = els.profileMenu.querySelector("i");
     if (icon) icon.className = "ph ph-user";
-    // أزل class تسجيل الدخول
     els.profileMenu.classList.remove("auth-btn-logged");
     els.profileMenu.classList.add("auth-btn-guest");
   }
@@ -939,7 +938,6 @@ async function updateAuthUI(user) {
   if (els.profileMenu) {
     const icon = els.profileMenu.querySelector("i");
     if (icon) icon.className = "ph ph-user-circle-check";
-    // أضف class تدل على أن المستخدم مسجل دخوله (مهمة للـ inline script في index.html)
     els.profileMenu.classList.add("auth-btn-logged");
     els.profileMenu.classList.remove("auth-btn-guest");
   }
@@ -1779,13 +1777,8 @@ function bindUIEvents() {
   els.profileMenu?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (state.currentUser) {
-      // المستخدم مسجل دخوله — نفتح/نغلق الـ dropdown فقط
-      toggleProfileDropdown();
-    } else {
-      // المستخدم غير مسجل — نفتح نافذة تسجيل الدخول
-      showAuthModal("login");
-    }
+    if (state.currentUser) toggleProfileDropdown();
+    else showAuthModal("login");
   });
 
   document.addEventListener("click", (e) => {
@@ -1847,12 +1840,8 @@ function bindUIEvents() {
 
   els.chatCloseBtn?.addEventListener("click", closeSupportChat);
   els.closeBookingsBtn?.addEventListener("click", () => closeModal(els.bookingsModal));
-
-  // FIX: ربط زر X في نافذة المفضلة
-  const closeFavoritesBtn = document.getElementById("close-favorites-btn");
-  if (closeFavoritesBtn) {
-    closeFavoritesBtn.addEventListener("click", () => closeModal(els.favoritesModal));
-  }
+  const closeFavBtn = document.getElementById("close-favorites-btn");
+  if (closeFavBtn) closeFavBtn.addEventListener("click", () => closeModal(els.favoritesModal));
 
   els.favoritesModal?.addEventListener("click", (e) => {
     if (e.target === els.favoritesModal) closeModal(els.favoritesModal);
@@ -1983,20 +1972,7 @@ function initAuthListener() {
 
       if (user?.uid) {
         await loadBookings();
-        // ابدأ مراقبة تغييرات الحجوزات لإرسال إشعارات البريد
         startBookingStatusListener(user.uid);
-
-        // إذا كان عنده chat سابق مخزّن، اشترك فيه لاستقبال الإشعارات تلقائياً
-        const savedChatId = safeGet("ore_current_chat_id", "");
-        if (savedChatId && savedChatId !== state.currentChatId) {
-          state.currentChatId = savedChatId;
-          state.chatInitializedForUser = user.uid;
-          updateChatHiddenFields(savedChatId);
-          subscribeToCurrentChat(savedChatId);
-        } else if (!savedChatId) {
-          // ابدأ chat جديد في الخلفية بدون فتح النافذة
-          ensureSupportChat(false).catch(() => {});
-        }
       } else {
         stopBookingStatusListener();
         resetFrontendUserState();
@@ -2009,263 +1985,174 @@ function initAuthListener() {
 
 
 // ──────────────────────────────────────────
-// Booking Status Notifications (إشعارات البريد المراسلة)
+// Booking Status Notifications
 // ──────────────────────────────────────────
-let bookingStatusUnsub = null;
+let _bookingUnsub = null;
 
-function stopBookingStatusListener() {
-  if (typeof bookingStatusUnsub === "function") {
-    try { bookingStatusUnsub(); } catch {}
-  }
-  bookingStatusUnsub = null;
+function _stopBookingListener() {
+  if (typeof _bookingUnsub === "function") { try { _bookingUnsub(); } catch {} }
+  _bookingUnsub = null;
 }
 
-function generateRoomNumber() {
-  // رقم غرفة عشوائي مكون من رقمين (10-99)
+function _roomNumber() {
   return String(Math.floor(Math.random() * 90) + 10);
 }
 
-function renderBookingNotification(booking, newStatus, roomNumber) {
-  const lang = state.lang;
-  const propertyName = cleanText(booking.propertyTitle || booking.propertyName || (lang === "ar" ? "الفندق" : "the property"));
-  const refId = cleanText(booking.id || "");
-  const checkIn = cleanText(booking.checkIn || booking.startDate || "");
-  const checkOut = cleanText(booking.checkOut || booking.endDate || "");
-  const rejectionReason = cleanText(booking.rejectionReason || booking.cancelReason || "");
+function _buildNotifMessage(booking, status, roomNum) {
+  const ar = (localStorage.getItem("ore_lang") || localStorage.getItem("orelang") || "en") === "ar";
+  const prop = String(booking.propertyTitle || booking.propertyName || (ar ? "الفندق" : "the property")).trim();
+  const ref  = String(booking.id || "").trim();
+  const cin  = String(booking.checkIn  || booking.startDate || "").trim();
+  const cout = String(booking.checkOut || booking.endDate   || "").trim();
+  const why  = String(booking.rejectionReason || booking.cancelReason || "").trim();
 
-  if (newStatus === "confirmed") {
-    if (lang === "ar") {
-      return `✅ تم تأكيد حجزك في ${propertyName}!
-` +
-             `رقم المرجع: ${refId}
-` +
-             (roomNumber ? `رقم الغرفة: ${roomNumber}
-` : "") +
-             (checkIn ? `تاريخ الدخول: ${checkIn}
-` : "") +
-             (checkOut ? `تاريخ الخروج: ${checkOut}` : "");
-    } else {
-      return `✅ Your booking at ${propertyName} has been confirmed!
-` +
-             `Reference #: ${refId}
-` +
-             (roomNumber ? `Room Number: ${roomNumber}
-` : "") +
-             (checkIn ? `Check-in: ${checkIn}
-` : "") +
-             (checkOut ? `Check-out: ${checkOut}` : "");
-    }
+  if (status === "confirmed") {
+    return ar
+      ? `✅ تم تأكيد حجزك في ${prop}!
+رقم المرجع: ${ref}
+رقم الغرفة: ${roomNum}` + (cin ? `
+تاريخ الدخول: ${cin}` : "") + (cout ? `
+تاريخ الخروج: ${cout}` : "")
+      : `✅ Your booking at ${prop} has been confirmed!
+Reference #: ${ref}
+Room Number: ${roomNum}` + (cin ? `
+Check-in: ${cin}` : "") + (cout ? `
+Check-out: ${cout}` : "");
   }
-
-  if (newStatus === "rejected" || newStatus === "cancelled") {
-    if (lang === "ar") {
-      return `❌ تم رفض حجزك في ${propertyName}.
-` +
-             `رقم المرجع: ${refId}
-` +
-             (rejectionReason ? `السبب: ${rejectionReason}` : "");
-    } else {
-      return `❌ Your booking at ${propertyName} has been rejected.
-` +
-             `Reference #: ${refId}
-` +
-             (rejectionReason ? `Reason: ${rejectionReason}` : "");
-    }
+  if (status === "rejected") {
+    return ar
+      ? `❌ تم رفض حجزك في ${prop}.
+رقم المرجع: ${ref}` + (why ? `
+السبب: ${why}` : "")
+      : `❌ Your booking at ${prop} has been rejected.
+Reference #: ${ref}` + (why ? `
+Reason: ${why}` : "");
   }
-
   return "";
 }
 
-async function sendBookingNotificationToChat(booking, newStatus) {
+async function _sendBookingNotif(booking, status) {
   if (!db || !state.currentUser?.uid) return;
+  const text = _buildNotifMessage(booking, status, _roomNumber());
+  if (!text) return;
 
-  const roomNumber = newStatus === "confirmed" ? generateRoomNumber() : null;
-  const message = renderBookingNotification(booking, newStatus, roomNumber);
-  if (!message) return;
+  const uid    = state.currentUser.uid;
+  const chatId = "support_" + uid;
+  const chatRef = db.collection("supportChats").doc(chatId);
+  const now = new Date();
+  const serverTs = (firestoreFieldValue && firestoreFieldValue.serverTimestamp)
+    ? firestoreFieldValue.serverTimestamp() : now;
 
   try {
-    const uid = state.currentUser.uid;
-
-    // 1. تأكد من إنشاء chat doc + subscribe — يضمن أن الرسائل تظهر فوراً
-    const chatId = `support_${uid}`;
-    const chatRef = db.collection("supportChats").doc(chatId);
-    const messagesRef = chatRef.collection("messages");
-    const now = new Date();
-    const serverTs = firestoreFieldValue?.serverTimestamp
-      ? firestoreFieldValue.serverTimestamp()
-      : now;
-
-    // أنشئ/حدّث chat document أولاً
+    // 1. أنشئ/تأكد من chat document
     await chatRef.set({
-      chatId,
-      userId: uid,
+      chatId, userId: uid,
       userEmail: getCurrentUserEmail(),
       userName: getCurrentUserName(),
-      status: "open",
-      channel: "support",
-      source: "website",
+      status: "open", channel: "support",
       updatedAt: now
     }, { merge: true });
 
-    // تأكد من الـ subscription حتى تظهر الرسائل الجديدة في الـ UI فوراً
+    // 2. اشترك في الـ chat لو مش مشترك (حتى تظهر الرسالة فوراً في الـ UI)
     if (state.currentChatId !== chatId || typeof state.currentChatUnsub !== "function") {
       state.currentChatId = chatId;
       state.chatInitializedForUser = uid;
-      safeSet("ore_current_chat_id", chatId);
+      try { localStorage.setItem("ore_current_chat_id", chatId); } catch {}
       updateChatHiddenFields(chatId);
       subscribeToCurrentChat(chatId);
     }
 
-    // 2. احفظ رقم الغرفة في document الحجز
-    if (newStatus === "confirmed" && roomNumber && booking.id) {
-      try {
-        await db.collection("bookings").doc(booking.id).update({
-          roomNumber,
-          roomAssignedAt: serverTs,
-          notificationSentAt: serverTs
-        });
-      } catch (e) {
-        console.warn("Could not save room number:", e);
+    // 3. احفظ رقم الغرفة في الحجز
+    if (status === "confirmed" && booking.id) {
+      const room = text.match(/Room Number: (\d+)/)?.[1] || text.match(/رقم الغرفة: (\d+)/)?.[1] || "";
+      if (room) {
+        db.collection("bookings").doc(booking.id)
+          .update({ roomNumber: room, roomAssignedAt: serverTs })
+          .catch(() => {});
       }
     }
 
-    // 3. أضف الرسالة في subcollection messages
-    await messagesRef.add({
-      text: message,
-      role: "admin",
-      senderRole: "admin",
+    // 4. أضف الرسالة
+    await chatRef.collection("messages").add({
+      text, role: "admin", senderRole: "admin",
       senderId: "system",
-      senderName: state.lang === "ar" ? "إشعار الحجز" : "Booking Notification",
+      senderName: "OreBooking",
       userId: uid,
-      userEmail: getCurrentUserEmail(),
-      userName: getCurrentUserName(),
-      bookingId: cleanText(booking.id || ""),
-      notificationType: "booking_status",
-      bookingStatus: newStatus,
-      roomNumber: roomNumber || null,
-      createdAt: now,
-      createdAtServer: serverTs,
-      readByAdmin: true,
-      readByCustomer: false,
+      bookingId: String(booking.id || ""),
+      bookingStatus: status,
+      createdAt: now, createdAtServer: serverTs,
+      readByAdmin: true, readByCustomer: false,
       source: "system_notification"
     });
 
-    // 4. حدّث lastMessage في chat document
+    // 5. حدّث lastMessage
     await chatRef.update({
-      lastMessage: message.split("
-")[0],
+      lastMessage: text.split("\n")[0],
       lastMessageRole: "admin",
-      lastMessageAt: now,
-      updatedAt: now
+      lastMessageAt: now, updatedAt: now
     });
 
-    // 5. حدّث الـ unread badge
-    if (!state.chatOpen) {
-      state.chatUnread += 1;
-      setUnreadBadge();
-    }
+    // 6. Badge + Toast
+    if (!state.chatOpen) { state.chatUnread += 1; setUnreadBadge(); }
 
-    // 6. Toast إشعار واضح
-    const propName = cleanText(booking.propertyTitle || booking.propertyName || "");
-    if (newStatus === "confirmed") {
-      showToast(
-        state.lang === "ar"
-          ? `✅ تم تأكيد حجزك${propName ? " في " + propName : ""} — رقم الغرفة: ${roomNumber}`
-          : `✅ Booking confirmed${propName ? " at " + propName : ""} — Room: ${roomNumber}`,
-        "success"
-      );
+    const prop = String(booking.propertyTitle || booking.propertyName || "").trim();
+    const ar = state.lang === "ar";
+    if (status === "confirmed") {
+      showToast(ar ? `✅ تم تأكيد حجزك${prop ? " في " + prop : ""}` : `✅ Booking confirmed${prop ? " at " + prop : ""}`, "success");
     } else {
-      showToast(
-        state.lang === "ar"
-          ? `❌ تم رفض حجزك${propName ? " في " + propName : ""}`
-          : `❌ Booking rejected${propName ? " at " + propName : ""}`,
-        "error"
-      );
+      showToast(ar ? `❌ تم رفض حجزك${prop ? " في " + prop : ""}` : `❌ Booking rejected${prop ? " at " + prop : ""}`, "error");
     }
-
-    console.log("[OreBooking] Booking notification sent:", newStatus, booking.id);
 
   } catch (err) {
-    console.error("[OreBooking] sendBookingNotificationToChat error:", err);
-    // لا نرمي الخطأ حتى لا يمنع loadBookings من الاستمرار
+    console.warn("[OreBooking] notification error:", err);
   }
 }
 
 function startBookingStatusListener(uid) {
-  stopBookingStatusListener();
+  _stopBookingListener();
   if (!db || !uid) return;
 
-  // نبحث عن الحجوزات بكل الحقول المحتملة لـ userId
-  // لأن لوحة التحكم قد تحفظ بحقول مختلفة
   const knownStatuses = {};
-  let initialized = false;
+  let ready = false;
 
-  function handleSnapshot(snap) {
-    snap.forEach((doc) => {
-      const data = doc.data();
-      const docId = doc.id;
-      const newStatus = cleanText(data.status || "").toLowerCase();
+  _bookingUnsub = db.collection("bookings")
+    .where("userId", "==", uid)
+    .onSnapshot((snap) => {
+      snap.forEach((doc) => {
+        const data = doc.data();
+        const id   = doc.id;
+        const st   = String(data.status || "").toLowerCase().trim();
 
-      if (!initialized) {
-        // أول مرة: سجّل الـ statuses الحالية + تحقق من أي حجز تم تأكيده/رفضه
-        // وما أُرسل له إشعار بعد (notifSent غير موجود في doc)
-        const notifKey = `ore_notif_${docId}_${newStatus}`;
-        const alreadySent = safeGet(notifKey);
-        const isTarget = newStatus === "confirmed" || newStatus === "rejected";
-
-        if (isTarget && !alreadySent) {
-          // حجز تم البت فيه لكن الزبون ما استلم إشعار — أرسله الآن
-          const booking = { id: docId, ...data };
-          safeSet(notifKey, "1");
-          sendBookingNotificationToChat(booking, newStatus).catch(console.warn);
+        if (!ready) {
+          // snapshot أول: سجّل الـ statuses الحالية
+          knownStatuses[id] = st;
+          return;
         }
 
-        knownStatuses[docId] = newStatus;
-        return;
-      }
+        // snapshot لاحق: تحقق من التغيير
+        const prev = knownStatuses[id];
+        knownStatuses[id] = st;
 
-      // بعد التهيئة: تحقق من التغيير
-      const prevStatus = knownStatuses[docId];
-      knownStatuses[docId] = newStatus;
+        const isTarget  = st === "confirmed" || st === "rejected";
+        const isChanged = prev !== undefined && prev !== st;
+        if (!isTarget || !isChanged) return;
 
-      const isTarget = newStatus === "confirmed" || newStatus === "rejected";
-      const changed = prevStatus !== undefined && prevStatus !== newStatus;
+        // تحقق من عدم تكرار الإشعار
+        const flag = "ore_notif_" + id + "_" + st;
+        try { if (localStorage.getItem(flag)) return; localStorage.setItem(flag, "1"); } catch {}
 
-      if (isTarget && changed) {
-        const notifKey = `ore_notif_${docId}_${newStatus}`;
-        if (safeGet(notifKey)) return;
-        safeSet(notifKey, "1");
-
-        const booking = { id: docId, ...data };
-        sendBookingNotificationToChat(booking, newStatus)
+        _sendBookingNotif({ id, ...data }, st)
           .then(() => loadBookings())
           .catch(console.warn);
-      }
-    });
 
-    if (!initialized) {
-      initialized = true;
-    }
-  }
+      });
 
-  // الاستماع بحقل userId
-  const unsub1 = db
-    .collection("bookings")
-    .where("userId", "==", uid)
-    .onSnapshot(handleSnapshot, (err) => console.warn("bookingListener userId error:", err));
+      if (!ready) ready = true;
 
-  // الاستماع بحقل customerId (لو لوحة التحكم تستخدم حقلاً مختلفاً)
-  const unsub2 = db
-    .collection("bookings")
-    .where("customerId", "==", uid)
-    .onSnapshot(handleSnapshot, (err) => console.warn("bookingListener customerId error:", err));
-
-  // نخزّن دالة إلغاء الاشتراكين معاً
-  bookingStatusUnsub = () => {
-    try { unsub1(); } catch {}
-    try { unsub2(); } catch {}
-  };
+    }, (err) => console.warn("[OreBooking] bookingListener error:", err));
 }
+
+function stopBookingStatusListener() { _stopBookingListener(); }
 
 // ──────────────────────────────────────────
 // Init
