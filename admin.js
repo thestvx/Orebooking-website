@@ -212,6 +212,76 @@
   function getAutoRejectionMessage(reason) {
     return `تم رفض الحجز. السبب: ${cleanText(reason || "لم يتم تحديد السبب")}`;
   }
+  // ── إشعار الزبون في بريد المراسلة (supportChats) ──
+  async function sendBookingNotifToCustomer(booking, status, roomNumber, rejectReason) {
+    if (!db) return;
+    const uid = cleanText(booking.userId || booking.customerId || booking.uid || "");
+    if (!uid) return;
+
+    const prop    = cleanText(booking.propertyTitle || booking.propertyName || booking.title || "العقار");
+    const ref     = cleanText(booking.id || "");
+    const checkIn = cleanText(booking.checkIn  || booking.startDate || "");
+    const checkOut= cleanText(booking.checkOut || booking.endDate   || "");
+
+    let text = "";
+    if (status === "confirmed") {
+      text = `✅ تم تأكيد حجزك في ${prop}!`
+           + `\nرقم المرجع: ${ref}`
+           + (roomNumber ? `\nرقم الغرفة: ${roomNumber}` : "")
+           + (checkIn    ? `\nتاريخ الدخول: ${checkIn}`  : "")
+           + (checkOut   ? `\nتاريخ الخروج: ${checkOut}` : "");
+    } else if (status === "rejected") {
+      text = `❌ تم رفض حجزك في ${prop}.`
+           + `\nرقم المرجع: ${ref}`
+           + (rejectReason ? `\nالسبب: ${rejectReason}` : "");
+    }
+    if (!text) return;
+
+    const chatId  = "support_" + uid;
+    const chatRef = db.collection("supportChats").doc(chatId);
+    const now     = new Date();
+    const serverTs= getServerTimestamp();
+
+    try {
+      // تأكد من وجود document الـ chat
+      await chatRef.set({
+        chatId, userId: uid,
+        status: "open", channel: "support",
+        updatedAt: now
+      }, { merge: true });
+
+      // أضف الرسالة
+      await chatRef.collection("messages").add({
+        text,
+        role: "admin",
+        senderRole: "admin",
+        senderId: "system",
+        senderName: "OreBooking",
+        userId: uid,
+        bookingId: ref,
+        bookingStatus: status,
+        roomNumber: roomNumber || null,
+        createdAt: now,
+        createdAtServer: serverTs,
+        readByAdmin: true,
+        readByCustomer: false,
+        source: "booking_notification"
+      });
+
+      // حدّث lastMessage
+      await chatRef.update({
+        lastMessage: text.split("\n")[0],
+        lastMessageRole: "admin",
+        lastMessageAt: now,
+        updatedAt: now
+      });
+
+    } catch (err) {
+      console.warn("[Admin] sendBookingNotifToCustomer error:", err);
+    }
+  }
+
+
 
   function isPermissionDenied(error) {
     const code = String(error?.code || "");
@@ -1781,6 +1851,8 @@
         payload.roomNumber = roomNumber;
         payload.approvalReply = getAutoApprovalMessage(roomNumber);
         await db.collection("bookings").doc(id).update(payload);
+        // أرسل إشعار للزبون في بريد المراسلة
+        await sendBookingNotifToCustomer(booking, "confirmed", roomNumber, "");
         showToast(`تم تحديث حالة الحجز إلى ${statusLabel(status)}.`, "success");
         await loadBookings();
       }
@@ -1855,6 +1927,9 @@
       };
 
       await db.collection("bookings").doc(bookingId).update(payload);
+      // أرسل إشعار للزبون في بريد المراسلة
+      const rejBooking = state.bookings.find((b) => cleanText(b.id) === cleanText(bookingId)) || { id: bookingId };
+      await sendBookingNotifToCustomer(rejBooking, "rejected", null, reason);
       closeRejectModal();
       showToast("تم رفض الحجز.", "success");
       await loadBookings();
