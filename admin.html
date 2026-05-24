@@ -289,6 +289,30 @@
       animation: spin .9s linear infinite;
     }
 
+    .ghost-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.72);
+      color: var(--text-main);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .ghost-action:hover {
+      border-color: rgba(67,90,191,0.20);
+      color: var(--primary);
+      background: rgba(67,90,191,0.05);
+    }
+
     .login-submit-text {
       display: inline-flex;
       align-items: center;
@@ -461,6 +485,11 @@
 
     .sidebar-nav .nav-item.logout-item i {
       color: var(--danger-text);
+    }
+
+    .sidebar-nav .nav-item.logout-item:hover {
+      background: #ffe4e6;
+      transform: none;
     }
 
     .admin-main {
@@ -708,7 +737,8 @@
     }
 
     .price-pill,
-    .status-badge {
+    .status-badge,
+    .pill-soft {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -752,7 +782,8 @@
       flex-wrap: wrap;
     }
 
-    .table-actions button {
+    .table-actions button,
+    .table-actions a {
       min-height: 38px;
       padding: 0 12px;
       border-radius: 12px;
@@ -767,6 +798,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      text-decoration: none;
     }
 
     .bookings-filter-bar {
@@ -900,12 +932,16 @@
       background-color: #fff;
     }
 
-    /* ===== BOOKINGS GRID - FIXED ===== */
+    /* ===== BOOKINGS GRID - DESKTOP FIX ===== */
+    #bookings-container.bookings-grid,
+    #bookings-container .bookings-grid,
     .bookings-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 20px;
-      align-items: start; /* ← تغيير من stretch إلى start لمنع التمدد العمودي المتداخل */
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
+      gap: 20px !important;
+      width: 100%;
+      align-items: start !important;
+      align-content: start;
     }
 
     .booking-card {
@@ -918,10 +954,15 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      width: 100%;           /* ← عرض كامل داخل الخلية */
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      height: auto;
+      min-height: unset;
       overflow: hidden;
       transition: var(--transition);
-      /* لا نستخدم min-height أو height لأنها تسبب التداخل */
+      box-sizing: border-box;
+      align-self: start;
     }
 
     .booking-card:hover {
@@ -949,14 +990,14 @@
       gap: 12px;
       padding-bottom: 14px;
       border-bottom: 1px dashed rgba(148,163,184,.28);
-      flex-wrap: nowrap;    /* ← منع التفاف العناصر داخل الرأس */
+      flex-wrap: nowrap;
     }
 
     .booking-title {
       display: flex;
       flex-direction: column;
       gap: 5px;
-      min-width: 0;         /* ← مهم لمنع overflow النصوص الطويلة */
+      min-width: 0;
       flex: 1;
     }
 
@@ -967,7 +1008,7 @@
       word-break: break-word;
       overflow-wrap: break-word;
       display: -webkit-box;
-      -webkit-line-clamp: 2;  /* ← تحديد الاسم بسطرين كحد أقصى */
+      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
@@ -982,23 +1023,24 @@
       text-overflow: ellipsis;
     }
 
-    /* ===== BOOKING META GRID - FIXED ===== */
     .booking-meta-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      align-items: start;   /* ← منع تمدد الخلايا عمودياً */
+      align-items: start;
     }
 
     .booking-meta-item {
       background: rgba(248,250,252,0.95);
       border: 1px solid rgba(226,232,240,0.95);
-      border-radius: 14px;  /* ← تقليل طفيف للـ radius */
+      border-radius: 14px;
       padding: 10px 12px;
       display: flex;
       flex-direction: column;
       gap: 4px;
-      align-self: start;    /* ← كل خلية تأخذ حجمها الطبيعي فقط */
+      align-self: start;
+      min-width: 0;
+      min-height: auto;
     }
 
     .booking-meta-item.wide {
@@ -1047,6 +1089,7 @@
       font-size: .78rem;
       font-weight: 800;
       white-space: nowrap;
+      max-width: 100%;
     }
 
     .booking-info-pill.room {
@@ -1069,6 +1112,7 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
+      min-width: 0;
     }
 
     .booking-reply-box label {
@@ -1112,6 +1156,8 @@
       transition: var(--transition);
       white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .booking-actions-row button:hover:not(:disabled) {
@@ -1142,7 +1188,8 @@
     }
     /* ===== END BOOKINGS FIX ===== */
 
-    .messages-layout {
+    .messages-layout,
+    .chat-admin-layout {
       display: grid;
       grid-template-columns: 340px minmax(0, 1fr);
       gap: 18px;
@@ -1194,6 +1241,7 @@
       background: linear-gradient(180deg, rgba(248,250,252,.8), rgba(255,255,255,.95));
     }
 
+    .chat-composer,
     .chat-send-box {
       padding: 16px;
       border-top: 1px solid var(--border-color);
@@ -1206,8 +1254,10 @@
       align-items: flex-end;
     }
 
-    .chat-send-form textarea {
+    .chat-send-form textarea,
+    .chat-composer textarea {
       flex: 1;
+      width: 100%;
       min-height: 52px;
       max-height: 140px;
       resize: vertical;
@@ -1220,8 +1270,24 @@
       outline: none;
     }
 
-    .owner-form-card {
-      margin-bottom: 20px;
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .owner-note {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(67,90,191,0.06);
+      border: 1px solid rgba(67,90,191,0.1);
+      color: var(--text-muted);
+      line-height: 1.8;
+      font-size: .88rem;
+      margin-bottom: 18px;
     }
 
     .quick-stats-grid {
@@ -1257,7 +1323,8 @@
       font-size: .92rem;
     }
 
-    .form-grid {
+    .form-grid,
+    .owner-form-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
@@ -1282,7 +1349,8 @@
       display: flex;
     }
 
-    .modal-card {
+    .modal-card,
+    .modal-content.admin-card {
       width: min(100%, 960px);
       max-height: calc(100vh - 32px);
       overflow-y: auto;
@@ -1291,9 +1359,11 @@
       border: 1px solid var(--border-color);
       box-shadow: 0 28px 80px rgba(15,23,42,.18);
       padding: 24px;
+      position: relative;
     }
 
-    .modal-head {
+    .modal-head,
+    .modal-topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1301,7 +1371,8 @@
       margin-bottom: 18px;
     }
 
-    .modal-close {
+    .modal-close,
+    .close-modal-btn {
       width: 42px;
       height: 42px;
       border-radius: 14px;
@@ -1362,7 +1433,9 @@
       background: #fff;
     }
 
-    .map-box .leaflet-map {
+    .leaflet-map,
+    #admin-map-picker,
+    #edit-map-picker {
       width: 100%;
       height: 280px;
     }
@@ -1390,36 +1463,73 @@
       to { transform: rotate(360deg); }
     }
 
-    /* شاشات ≤ 1200px: بطاقتان */
     @media (max-width: 1200px) {
-      .bookings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bookings-grid,
+      #bookings-container.bookings-grid,
+      #bookings-container .bookings-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
     }
 
-    /* شاشات ≤ 1100px */
     @media (max-width: 1100px) {
       .dashboard-strip,
-      .quick-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .messages-layout { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
+      .quick-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .messages-layout,
+      .chat-admin-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid,
+      .owner-form-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
-    /* شاشات ≤ 768px: بطاقة واحدة */
     @media (max-width: 768px) {
       .admin-main { padding: 16px; }
       .admin-login-card { padding: 24px; }
+
       .dashboard-strip,
       .quick-stats-grid,
-      .booking-meta-grid { grid-template-columns: 1fr; }
-      .bookings-grid { grid-template-columns: 1fr; }
+      .booking-meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bookings-grid,
+      #bookings-container.bookings-grid,
+      #bookings-container .bookings-grid {
+        grid-template-columns: 1fr !important;
+      }
+
       .logo-img { max-width: 180px; height: 54px; }
       .chat-send-form { flex-direction: column; }
       .chat-send-form .primary-btn { width: 100%; }
-      .booking-card { padding: 16px; border-radius: 20px; }
-      .booking-head { flex-direction: column; align-items: stretch; }
+
+      .booking-card {
+        padding: 16px;
+        border-radius: 20px;
+      }
+
+      .booking-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
       .booking-meta-item,
-      .booking-meta-item.wide { grid-column: auto; }
-      .booking-actions-row { grid-template-columns: 1fr; }
-      .booking-actions-row button { width: 100%; }
+      .booking-meta-item.wide {
+        grid-column: auto;
+      }
+
+      .booking-actions-row {
+        grid-template-columns: 1fr;
+      }
+
+      .booking-actions-row button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -1552,8 +1662,6 @@
       </header>
 
       <section class="admin-content">
-
-        <!-- ===== DASHBOARD ===== -->
         <div id="dashboard-pane" class="tab-pane active">
           <div class="dashboard-strip">
             <div class="stat-mini-card">
@@ -1611,7 +1719,6 @@
           </div>
         </div>
 
-        <!-- ===== PROPERTIES ===== -->
         <div id="properties-pane" class="tab-pane">
           <div class="admin-card">
             <div class="pane-head">
@@ -1647,7 +1754,6 @@
           </div>
         </div>
 
-        <!-- ===== BOOKINGS ===== -->
         <div id="bookings-pane" class="tab-pane">
           <div class="admin-card">
             <div class="pane-head">
@@ -1669,16 +1775,23 @@
 
             <div class="bookings-filter-bar">
               <button class="filter-tab-btn active all" data-booking-filter="all" type="button">
-                الكل <span id="booking-count-all" class="filter-count-badge">0</span>
+                <span>الكل</span>
+                <span id="booking-count-all" class="filter-count-badge">0</span>
               </button>
+
               <button class="filter-tab-btn pending" data-booking-filter="pending" type="button">
-                قيد الانتظار <span id="booking-count-pending" class="filter-count-badge">0</span>
+                <span>قيد الانتظار</span>
+                <span id="booking-count-pending" class="filter-count-badge">0</span>
               </button>
+
               <button class="filter-tab-btn confirmed" data-booking-filter="confirmed" type="button">
-                مؤكد <span id="booking-count-confirmed" class="filter-count-badge">0</span>
+                <span>مؤكدة</span>
+                <span id="booking-count-confirmed" class="filter-count-badge">0</span>
               </button>
+
               <button class="filter-tab-btn rejected" data-booking-filter="rejected" type="button">
-                مرفوض <span id="booking-count-rejected" class="filter-count-badge">0</span>
+                <span>مرفوضة</span>
+                <span id="booking-count-rejected" class="filter-count-badge">0</span>
               </button>
             </div>
 
@@ -1691,60 +1804,59 @@
           </div>
         </div>
 
-        <!-- ===== OWNERS ===== -->
         <div id="owners-pane" class="tab-pane">
-          <div class="admin-card owner-form-card admin-only">
-            <div class="pane-head">
-              <h3><i class="ph ph-user-plus"></i> حسابات المُلّاك</h3>
-            </div>
-
-            <form id="owner-account-form" class="form-grid">
-              <div class="input-group">
-                <label for="owner-name">الاسم</label>
-                <input id="owner-name" type="text" placeholder="اسم المالك" />
-              </div>
-
-              <div class="input-group">
-                <label for="owner-email">البريد الإلكتروني</label>
-                <input id="owner-email" type="email" placeholder="owner@example.com" dir="ltr" />
-              </div>
-
-              <div class="input-group">
-                <label for="owner-phone">رقم الهاتف</label>
-                <input id="owner-phone" type="text" placeholder="رقم الهاتف" dir="ltr" />
-              </div>
-
-              <div class="input-group">
-                <label for="owner-username">اسم المستخدم</label>
-                <input id="owner-username" type="text" placeholder="username" dir="ltr" />
-              </div>
-
-              <div class="input-group full-span">
-                <label for="owner-password">كلمة المرور</label>
-                <input id="owner-password" type="text" placeholder="كلمة المرور" dir="ltr" />
-              </div>
-
-              <div class="full-span" style="display:flex;justify-content:flex-start;">
-                <button type="submit" class="primary-btn">
-                  <i class="ph ph-floppy-disk"></i>
-                  <span>حفظ الحساب</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
           <div class="admin-card">
             <div class="pane-head">
-              <h3><i class="ph ph-users-three"></i> قائمة المُلّاك</h3>
+              <h3><i class="ph ph-users-three"></i> حسابات الملاك</h3>
               <div class="pane-tools">
                 <div class="search-inline">
                   <i class="ph ph-magnifying-glass"></i>
-                  <input id="owners-search" type="text" placeholder="ابحث عن مالك..." />
+                  <input id="owners-search" type="text" placeholder="ابحث باسم المالك أو البريد..." />
                 </div>
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div class="owner-note">
+              هذا النموذج يُستخدم لإضافة أو تعديل بيانات حسابات الملاك داخل Firestore.
+            </div>
+
+            <form id="owner-account-form" class="admin-form">
+              <div class="owner-form-grid">
+                <div class="input-group">
+                  <label for="owner-name">اسم المالك</label>
+                  <input id="owner-name" type="text" placeholder="الاسم الكامل" />
+                </div>
+
+                <div class="input-group">
+                  <label for="owner-email">البريد الإلكتروني</label>
+                  <input id="owner-email" type="email" placeholder="owner@example.com" />
+                </div>
+
+                <div class="input-group">
+                  <label for="owner-phone">رقم الهاتف</label>
+                  <input id="owner-phone" type="text" placeholder="+213..." />
+                </div>
+
+                <div class="input-group">
+                  <label for="owner-username">اسم المستخدم</label>
+                  <input id="owner-username" type="text" placeholder="owner_user" />
+                </div>
+
+                <div class="input-group full-span">
+                  <label for="owner-password">كلمة المرور</label>
+                  <input id="owner-password" type="text" placeholder="كلمة مرور مؤقتة أو مرجعية" />
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <button type="submit" class="primary-btn">
+                  <i class="ph ph-user-plus"></i>
+                  <span>حفظ الحساب</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="table-responsive mt-4">
               <table class="admin-table">
                 <thead>
                   <tr>
@@ -1758,7 +1870,7 @@
                 </thead>
                 <tbody id="owner-accounts-tbody">
                   <tr>
-                    <td colspan="6" style="text-align:center;padding:24px;">لا توجد حسابات حالياً.</td>
+                    <td colspan="6" style="text-align:center;padding:26px;">جارٍ تحميل حسابات الملاك...</td>
                   </tr>
                 </tbody>
               </table>
@@ -1766,57 +1878,52 @@
           </div>
         </div>
 
-        <!-- ===== CHATS ===== -->
         <div id="chats-pane" class="tab-pane">
           <div class="admin-card">
             <div class="pane-head">
-              <h3><i class="ph ph-chat-circle-dots"></i> الرسائل</h3>
-              <div class="pane-tools">
-                <div class="search-inline">
-                  <i class="ph ph-magnifying-glass"></i>
-                  <input id="chats-search" type="text" placeholder="ابحث في المحادثات..." />
-                </div>
-              </div>
+              <h3><i class="ph ph-chat-circle-dots"></i> الرسائل والدعم</h3>
             </div>
 
-            <div class="messages-layout">
-              <aside class="chat-sidebar">
+            <div class="chat-admin-layout">
+              <div class="chat-sidebar">
                 <div id="admin-chat-list" class="chat-thread-list">
                   <div class="empty-state" style="padding:24px;">
-                    <i class="ph ph-chat-centered-dots"></i>
+                    <i class="ph ph-chat-circle-dots"></i>
                     <div>لا توجد محادثات حالياً.</div>
                   </div>
                 </div>
-              </aside>
+              </div>
 
-              <section class="chat-main">
+              <div class="chat-main">
                 <div class="chat-main-head">
-                  <h4 id="admin-chat-title">اختر محادثة</h4>
-                  <p id="admin-chat-subtitle">سيظهر هنا تفاصيل الطرف الآخر أو الحجز المرتبط.</p>
+                  <div>
+                    <h4 id="admin-chat-title">اختر محادثة</h4>
+                    <p id="admin-chat-subtitle">سيظهر هنا اسم العميل أو بريده الإلكتروني.</p>
+                  </div>
                 </div>
 
                 <div id="admin-chat-messages" class="chat-messages">
                   <div class="empty-state">
                     <i class="ph ph-chat-circle"></i>
-                    <div>لا توجد محادثة محددة بعد.</div>
+                    <div>اختر محادثة من القائمة لعرض الرسائل.</div>
                   </div>
                 </div>
 
-                <div class="chat-send-box">
-                  <form id="admin-chat-send-form" class="chat-send-form">
-                    <textarea placeholder="اكتب رسالة..." aria-label="اكتب رسالة"></textarea>
-                    <button type="submit" class="primary-btn">
+                <div class="chat-composer">
+                  <textarea id="admin-chat-input" placeholder="اكتب ردّك هنا..."></textarea>
+                  <div class="chat-actions">
+                    <small>سيتم إرسال الرسالة داخل المحادثة الحالية مباشرة.</small>
+                    <button id="admin-chat-send-btn" type="button" class="primary-btn">
                       <i class="ph ph-paper-plane-tilt"></i>
                       <span>إرسال</span>
                     </button>
-                  </form>
+                  </div>
                 </div>
-              </section>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- ===== ADD PROPERTY ===== -->
         <div id="add-property-pane" class="tab-pane">
           <div class="admin-card">
             <div class="pane-head">
@@ -1825,18 +1932,18 @@
 
             <form id="add-property-form" class="form-grid">
               <div class="input-group">
-                <label for="admin-title-ar">اسم العقار بالعربية</label>
-                <input id="admin-title-ar" type="text" placeholder="مثال: إقامة الورود" />
+                <label for="admin-title-ar">العنوان بالعربية</label>
+                <input id="admin-title-ar" type="text" placeholder="مثال: شقة فاخرة في الوادي" />
               </div>
 
               <div class="input-group">
-                <label for="admin-title-en">اسم العقار بالإنجليزية</label>
+                <label for="admin-title-en">العنوان بالإنجليزية</label>
                 <input id="admin-title-en" type="text" placeholder="Property title in English" />
               </div>
 
               <div class="input-group">
                 <label for="admin-location-ar">الموقع بالعربية</label>
-                <input id="admin-location-ar" type="text" placeholder="مثال: قسنطينة" />
+                <input id="admin-location-ar" type="text" placeholder="الوادي - الجزائر" />
               </div>
 
               <div class="input-group">
@@ -1845,18 +1952,18 @@
               </div>
 
               <div class="input-group">
-                <label for="admin-type-ar">النوع</label>
-                <input id="admin-type-ar" type="text" placeholder="شقة / فندق / إقامة" />
+                <label for="admin-type-ar">نوع العقار بالعربية</label>
+                <input id="admin-type-ar" type="text" placeholder="شقة / فيلا / فندق" />
               </div>
 
               <div class="input-group">
                 <label for="admin-price">السعر</label>
-                <input id="admin-price" type="number" placeholder="السعر بالدينار" />
+                <input id="admin-price" type="number" placeholder="12000" />
               </div>
 
               <div class="input-group full-span">
-                <label for="admin-description-ar">الوصف</label>
-                <textarea id="admin-description-ar" placeholder="وصف العقار"></textarea>
+                <label for="admin-description-ar">الوصف بالعربية</label>
+                <textarea id="admin-description-ar" placeholder="اكتب وصف العقار..."></textarea>
               </div>
 
               <div class="input-group">
@@ -1866,66 +1973,59 @@
 
               <div class="input-group">
                 <label for="admin-owner-email">بريد المالك</label>
-                <input id="admin-owner-email" type="email" placeholder="owner@example.com" dir="ltr" />
+                <input id="admin-owner-email" type="email" placeholder="owner@example.com" />
               </div>
 
               <div class="input-group">
                 <label for="admin-owner-phone">هاتف المالك</label>
-                <input id="admin-owner-phone" type="text" placeholder="رقم الهاتف" dir="ltr" />
+                <input id="admin-owner-phone" type="text" placeholder="+213..." />
               </div>
 
               <div class="input-group">
                 <label for="admin-image-url">رابط الصورة الرئيسية</label>
-                <input id="admin-image-url" type="text" placeholder="https://..." dir="ltr" />
+                <input id="admin-image-url" type="text" placeholder="https://..." />
               </div>
 
               <div class="input-group full-span">
-                <label for="admin-gallery">معرض الصور</label>
-                <input id="admin-gallery" type="text" placeholder="ضع الروابط مفصولة بفواصل" dir="ltr" />
-              </div>
-
-              <div class="full-span upload-preview" id="admin-upload-preview">
-                <img id="admin-upload-preview-img" src="" alt="Preview" />
-                <div>
-                  <strong id="admin-upload-preview-name">—</strong>
-                  <div id="admin-upload-preview-meta" style="color:var(--text-muted);font-size:.85rem;">—</div>
-                </div>
+                <label for="admin-gallery">روابط المعرض</label>
+                <input id="admin-gallery" type="text" placeholder="https://... , https://..." />
               </div>
 
               <div class="input-group">
                 <label for="admin-guests">عدد الضيوف</label>
-                <input id="admin-guests" type="number" placeholder="مثال: 4" />
+                <input id="admin-guests" type="number" placeholder="4" />
               </div>
 
               <div class="input-group">
-                <label for="admin-bedrooms">عدد الغرف</label>
-                <input id="admin-bedrooms" type="number" placeholder="مثال: 2" />
+                <label for="admin-bedrooms">غرف النوم</label>
+                <input id="admin-bedrooms" type="number" placeholder="2" />
               </div>
 
               <div class="input-group">
-                <label for="admin-bathrooms">عدد الحمامات</label>
-                <input id="admin-bathrooms" type="number" placeholder="مثال: 1" />
+                <label for="admin-bathrooms">الحمامات</label>
+                <input id="admin-bathrooms" type="number" placeholder="1" />
               </div>
 
               <div class="input-group">
-                <label for="admin-amenities">المزايا</label>
+                <label for="admin-amenities">المرافق</label>
                 <input id="admin-amenities" type="text" placeholder="WiFi, Parking, AC" />
               </div>
 
               <div class="input-group full-span">
-                <label for="admin-extras">إضافات</label>
-                <input id="admin-extras" type="text" placeholder="إضافات مفصولة بفواصل" />
+                <label for="admin-extras">ميزات إضافية</label>
+                <input id="admin-extras" type="text" placeholder="Self check-in, breakfast..." />
               </div>
 
               <div class="input-group">
-                <label for="admin-map-search">ابحث عن موقع</label>
-                <input id="admin-map-search" type="text" placeholder="ابحث عن الولاية أو العنوان" />
+                <label for="admin-map-search">البحث في الخريطة</label>
+                <input id="admin-map-search" type="text" placeholder="ابحث عن الموقع..." />
               </div>
 
-              <div style="display:flex;align-items:end;">
+              <div class="input-group">
+                <label>&nbsp;</label>
                 <button id="admin-map-search-btn" type="button" class="primary-btn">
                   <i class="ph ph-map-pin"></i>
-                  <span>تحديد الموقع</span>
+                  <span>بحث</span>
                 </button>
               </div>
 
@@ -1945,29 +2045,27 @@
                 </div>
                 <div id="admin-map-picked-badge" class="map-picked-badge">
                   <i class="ph ph-check-circle"></i>
-                  <span>تم تحديد الموقع على الخريطة</span>
+                  <span>تم تحديد الموقع</span>
                 </div>
               </div>
 
-              <div class="full-span" style="display:flex;justify-content:flex-start;">
+              <div class="full-span mt-4">
                 <button type="submit" class="primary-btn">
                   <i class="ph ph-plus-circle"></i>
-                  <span>إضافة العقار</span>
+                  <span>حفظ العقار</span>
                 </button>
               </div>
             </form>
           </div>
         </div>
-
       </section>
     </main>
   </div>
 
-  <!-- ===== EDIT MODAL ===== -->
   <div id="edit-property-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-head">
-        <h3 style="margin:0;">تعديل العقار</h3>
+        <h3 style="margin:0;">تعديل بيانات العقار</h3>
         <button type="button" class="modal-close" data-close-modal>
           <i class="ph ph-x"></i>
         </button>
@@ -1975,12 +2073,12 @@
 
       <form id="edit-property-form" class="form-grid">
         <div class="input-group">
-          <label for="edit-title-ar">اسم العقار بالعربية</label>
+          <label for="edit-title-ar">العنوان بالعربية</label>
           <input id="edit-title-ar" type="text" />
         </div>
 
         <div class="input-group">
-          <label for="edit-title-en">اسم العقار بالإنجليزية</label>
+          <label for="edit-title-en">العنوان بالإنجليزية</label>
           <input id="edit-title-en" type="text" />
         </div>
 
@@ -1995,7 +2093,7 @@
         </div>
 
         <div class="input-group">
-          <label for="edit-type-ar">النوع</label>
+          <label for="edit-type-ar">نوع العقار بالعربية</label>
           <input id="edit-type-ar" type="text" />
         </div>
 
@@ -2005,7 +2103,7 @@
         </div>
 
         <div class="input-group full-span">
-          <label for="edit-description-ar">الوصف</label>
+          <label for="edit-description-ar">الوصف بالعربية</label>
           <textarea id="edit-description-ar"></textarea>
         </div>
 
@@ -2025,21 +2123,13 @@
         </div>
 
         <div class="input-group">
-          <label for="edit-image-url">رابط الصورة الرئيسية</label>
+          <label for="edit-image-url">رابط الصورة</label>
           <input id="edit-image-url" type="text" dir="ltr" />
         </div>
 
         <div class="input-group full-span">
-          <label for="edit-gallery">معرض الصور</label>
+          <label for="edit-gallery">روابط المعرض</label>
           <input id="edit-gallery" type="text" dir="ltr" />
-        </div>
-
-        <div class="full-span upload-preview" id="edit-upload-preview">
-          <img id="edit-upload-preview-img" src="" alt="Preview" />
-          <div>
-            <strong id="edit-upload-preview-name">—</strong>
-            <div id="edit-upload-preview-meta" style="color:var(--text-muted);font-size:.85rem;">—</div>
-          </div>
         </div>
 
         <div class="input-group">
@@ -2048,34 +2138,35 @@
         </div>
 
         <div class="input-group">
-          <label for="edit-bedrooms">عدد الغرف</label>
+          <label for="edit-bedrooms">غرف النوم</label>
           <input id="edit-bedrooms" type="number" />
         </div>
 
         <div class="input-group">
-          <label for="edit-bathrooms">عدد الحمامات</label>
+          <label for="edit-bathrooms">الحمامات</label>
           <input id="edit-bathrooms" type="number" />
         </div>
 
         <div class="input-group">
-          <label for="edit-amenities">المزايا</label>
+          <label for="edit-amenities">المرافق</label>
           <input id="edit-amenities" type="text" />
         </div>
 
         <div class="input-group full-span">
-          <label for="edit-extras">إضافات</label>
+          <label for="edit-extras">ميزات إضافية</label>
           <input id="edit-extras" type="text" />
         </div>
 
         <div class="input-group">
-          <label for="edit-map-search">ابحث عن موقع</label>
+          <label for="edit-map-search">البحث في الخريطة</label>
           <input id="edit-map-search" type="text" />
         </div>
 
-        <div style="display:flex;align-items:end;">
+        <div class="input-group">
+          <label>&nbsp;</label>
           <button id="edit-map-search-btn" type="button" class="primary-btn">
             <i class="ph ph-map-pin"></i>
-            <span>تحديد الموقع</span>
+            <span>بحث</span>
           </button>
         </div>
 
@@ -2095,11 +2186,11 @@
           </div>
           <div id="edit-map-picked-badge" class="map-picked-badge">
             <i class="ph ph-check-circle"></i>
-            <span>تم تحديد الموقع على الخريطة</span>
+            <span>تم تحديد الموقع</span>
           </div>
         </div>
 
-        <div class="full-span" style="display:flex;justify-content:flex-start;">
+        <div class="full-span mt-4">
           <button type="submit" class="primary-btn">
             <i class="ph ph-floppy-disk"></i>
             <span>حفظ التعديلات</span>
