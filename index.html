@@ -61,13 +61,8 @@
             --transition-fast: 0.2s ease-out;
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
 
         body {
             font-family: 'Outfit', sans-serif;
@@ -81,9 +76,7 @@
             transition: background-color .3s ease, color .3s ease;
         }
 
-        html[dir="rtl"] body {
-            font-family: 'Tajawal', sans-serif;
-        }
+        html[dir="rtl"] body { font-family: 'Tajawal', sans-serif; }
 
         .preload-dark body,
         html.dark body,
@@ -99,26 +92,11 @@
             --shadow-hover: 0 24px 48px rgba(0, 0, 0, 0.28);
         }
 
-        body.modal-open {
-            overflow: hidden;
-        }
+        body.modal-open { overflow: hidden; }
 
-        img {
-            max-width: 100%;
-            display: block;
-        }
-
-        a {
-            text-decoration: none;
-            color: inherit;
-        }
-
-        button,
-        input,
-        select,
-        textarea {
-            font: inherit;
-        }
+        img { max-width: 100%; display: block; }
+        a { text-decoration: none; color: inherit; }
+        button, input, select, textarea { font: inherit; }
 
         .container {
             max-width: 1280px;
@@ -126,17 +104,9 @@
             padding: 0 24px;
         }
 
-        .hidden {
-            display: none !important;
-        }
-
-        .text-muted {
-            color: var(--text-muted);
-        }
-
-        .text-sm {
-            font-size: 0.875rem;
-        }
+        .hidden { display: none !important; }
+        .text-muted { color: var(--text-muted); }
+        .text-sm { font-size: 0.875rem; }
 
         .pill {
             display: inline-flex;
@@ -150,70 +120,34 @@
         }
 
         @keyframes slideUpFade {
-            from {
-                opacity: 0;
-                transform: translateY(24px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes scaleIn {
-            from {
-                opacity: 0;
-                transform: scale(0.96);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+            from { opacity: 0; transform: scale(0.96); }
+            to   { opacity: 1; transform: scale(1); }
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .ph-spin {
-            animation: spin 1s linear infinite;
-        }
+        .ph-spin { animation: spin 1s linear infinite; }
 
         .animate-up {
             opacity: 0;
             animation: slideUpFade 0.55s var(--transition-smooth) forwards;
         }
 
-        .delay-1 {
-            animation-delay: 0.08s;
-        }
-
-        .delay-2 {
-            animation-delay: 0.16s;
-        }
-
-        .delay-3 {
-            animation-delay: 0.24s;
-        }
-
-        .delay-4 {
-            animation-delay: 0.32s;
-        }
-
-        .delay-5 {
-            animation-delay: 0.4s;
-        }
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+        .delay-4 { animation-delay: 0.32s; }
+        .delay-5 { animation-delay: 0.4s; }
 
         .ore-reveal {
             opacity: 0;
             transform: translateY(22px) scale(0.985);
-            transition:
-                opacity 0.7s ease,
-                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
             transition-delay: var(--ore-delay, 0ms);
             will-change: opacity, transform;
         }
@@ -224,21 +158,13 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-
-            .animate-up,
-            .ore-reveal,
-            .ore-reveal.ore-reveal-in {
-                animation: none;
-                transition: none;
-                opacity: 1;
-                transform: none;
+            .animate-up, .ore-reveal, .ore-reveal.ore-reveal-in {
+                animation: none; transition: none; opacity: 1; transform: none;
             }
         }
 
-        [class^="ph-"],
-        [class*=" ph-"],
-        [class^="ph "],
-        [class*=" ph "] {
+        [class^="ph-"], [class*=" ph-"],
+        [class^="ph "], [class*=" ph "] {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -246,6 +172,7 @@
             font-style: normal;
         }
 
+        /* ── Navbar ── */
         .navbar {
             width: 100%;
             display: flex;
@@ -263,8 +190,7 @@
             transition: var(--transition-smooth);
         }
 
-        .dark .navbar,
-        html.dark .navbar {
+        .dark .navbar, html.dark .navbar {
             background: rgba(15, 23, 42, 0.88);
         }
 
@@ -276,11 +202,7 @@
             min-width: 0;
         }
 
-        .logo-img {
-            height: 42px;
-            width: auto;
-            object-fit: contain;
-        }
+        .logo-img { height: 42px; width: auto; object-fit: contain; }
 
         .nav-actions {
             display: flex;
@@ -305,13 +227,8 @@
             border: 1px solid rgba(139, 92, 246, 0.18);
         }
 
-        .icon-btn,
-        .lang-btn,
-        .profile-menu,
-        .chat-toggle-btn,
-        .auth-link-btn,
-        .secondary-btn,
-        .ghost-icon-btn {
+        .icon-btn, .lang-btn, .profile-menu,
+        .chat-toggle-btn, .secondary-btn, .ghost-icon-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -324,18 +241,14 @@
             text-decoration: none;
         }
 
-        .icon-btn,
-        .profile-menu,
-        .ghost-icon-btn {
+        .icon-btn, .profile-menu, .ghost-icon-btn {
             width: 42px;
             height: 42px;
             border-radius: 50%;
             font-size: 1.2rem;
         }
 
-        .lang-btn,
-        .auth-link-btn,
-        .secondary-btn {
+        .lang-btn, .secondary-btn {
             padding: 0 18px;
             border-radius: var(--radius-full);
             font-weight: 700;
@@ -343,21 +256,21 @@
             gap: 8px;
         }
 
-        .icon-btn:hover,
-        .lang-btn:hover,
-        .profile-menu:hover,
-        .auth-link-btn:hover,
-        .secondary-btn:hover,
-        .ghost-icon-btn:hover {
+        .icon-btn:hover, .lang-btn:hover, .profile-menu:hover,
+        .secondary-btn:hover, .ghost-icon-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
             transform: translateY(-2px);
             box-shadow: var(--shadow-sm);
         }
 
-        .profile-container {
-            position: relative;
+        /* Profile menu — icon turns green when logged in */
+        .profile-menu.auth-btn-logged {
+            border-color: var(--success);
+            color: var(--success);
         }
+
+        .profile-container { position: relative; }
 
         #profile-dropdown {
             position: absolute;
@@ -387,9 +300,7 @@
             gap: 4px;
         }
 
-        .dropdown-body {
-            padding: 8px;
-        }
+        .dropdown-body { padding: 8px; }
 
         .dropdown-item {
             width: 100%;
@@ -418,20 +329,12 @@
             color: var(--error);
         }
 
-        .hero {
-            position: relative;
-            padding: 88px 0 34px;
-            text-align: center;
-        }
+        /* ── Hero ── */
+        .hero { position: relative; padding: 88px 0 34px; text-align: center; }
 
-        .hero-copy {
-            max-width: 860px;
-            margin: 0 auto;
-            text-align: center;
-        }
+        .hero-copy { max-width: 860px; margin: 0 auto; text-align: center; }
 
-        .hero h1,
-        #hero-title {
+        .hero h1, #hero-title {
             font-size: clamp(2.4rem, 5vw, 4rem);
             letter-spacing: -0.03em;
             margin: 0 auto 16px;
@@ -442,8 +345,7 @@
             text-align: center;
         }
 
-        .hero p,
-        #hero-desc {
+        .hero p, #hero-desc {
             font-size: 1.1rem;
             color: var(--text-muted);
             max-width: 760px;
@@ -473,6 +375,7 @@
             font-weight: 700;
         }
 
+        /* ── Search ── */
         .search-bar {
             display: flex;
             align-items: stretch;
@@ -491,8 +394,7 @@
             flex-wrap: wrap;
         }
 
-        .search-bar:hover,
-        .search-bar:focus-within {
+        .search-bar:hover, .search-bar:focus-within {
             border-color: var(--primary);
             box-shadow: var(--shadow-hover);
         }
@@ -510,14 +412,8 @@
             text-align: start;
         }
 
-        .search-field:hover {
-            background: rgba(0, 0, 0, 0.03);
-        }
-
-        .dark .search-field:hover,
-        html.dark .search-field:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
+        .search-field:hover { background: rgba(0,0,0,0.03); }
+        .dark .search-field:hover, html.dark .search-field:hover { background: rgba(255,255,255,0.05); }
 
         .search-field label {
             font-size: 0.76rem;
@@ -528,8 +424,7 @@
             color: var(--text-main);
         }
 
-        .search-field input,
-        .search-field select {
+        .search-field input, .search-field select {
             border: none;
             background: transparent;
             outline: none;
@@ -539,11 +434,7 @@
             width: 100%;
         }
 
-        .search-field input::placeholder,
-        .chat-input-area textarea::placeholder {
-            color: var(--text-muted);
-            opacity: 1;
-        }
+        .search-field input::placeholder { color: var(--text-muted); opacity: 1; }
 
         .search-dropdown {
             position: absolute;
@@ -561,10 +452,7 @@
             z-index: 100;
         }
 
-        .search-dropdown.active {
-            display: block;
-            animation: scaleIn 0.18s ease;
-        }
+        .search-dropdown.active { display: block; animation: scaleIn 0.18s ease; }
 
         .search-suggestion-item {
             width: 100%;
@@ -579,35 +467,14 @@
             transition: var(--transition-fast);
         }
 
-        .search-suggestion-item:hover {
-            background: rgba(67, 90, 191, 0.08);
-        }
+        .search-suggestion-item:hover { background: rgba(67,90,191,0.08); }
+        .search-suggestion-main { font-weight: 800; line-height: 1.35; }
+        .search-suggestion-sub { margin-top: 4px; color: var(--text-muted); font-size: 0.86rem; }
+        .search-empty { padding: 14px; text-align: center; color: var(--text-muted); }
 
-        .search-suggestion-main {
-            font-weight: 800;
-            line-height: 1.35;
-        }
+        .search-divider { width: 1px; background: var(--border-color); margin: 8px 4px; }
 
-        .search-suggestion-sub {
-            margin-top: 4px;
-            color: var(--text-muted);
-            font-size: 0.86rem;
-        }
-
-        .search-empty {
-            padding: 14px;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .search-divider {
-            width: 1px;
-            background: var(--border-color);
-            margin: 8px 4px;
-        }
-
-        .search-btn,
-        .primary-btn {
+        .search-btn, .primary-btn {
             background: linear-gradient(135deg, var(--primary), var(--primary-hover));
             color: #fff;
             border: none;
@@ -622,17 +489,17 @@
             justify-content: center;
             gap: 8px;
             transition: var(--transition-smooth);
-            box-shadow: 0 6px 18px rgba(67, 90, 191, 0.32);
+            box-shadow: 0 6px 18px rgba(67,90,191,0.32);
             font-family: inherit;
         }
 
-        .search-btn:hover,
-        .primary-btn:hover {
+        .search-btn:hover, .primary-btn:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-hover);
             filter: brightness(1.03);
         }
 
+        /* ── Categories ── */
         .categories {
             display: flex;
             align-items: center;
@@ -672,6 +539,7 @@
             border-color: var(--text-main);
         }
 
+        /* ── Section header ── */
         .section-header-wrapper {
             display: flex;
             justify-content: center;
@@ -682,22 +550,9 @@
             text-align: center;
         }
 
-        .section-header-main {
-            flex: 1 1 100%;
-            text-align: center;
-        }
-
-        .section-header-wrapper h2 {
-            margin: 0 0 8px;
-            font-size: 1.8rem;
-            text-align: center;
-        }
-
-        .section-header-wrapper p {
-            margin: 0;
-            color: var(--text-muted);
-            text-align: center;
-        }
+        .section-header-main { flex: 1 1 100%; text-align: center; }
+        .section-header-wrapper h2 { margin: 0 0 8px; font-size: 1.8rem; text-align: center; }
+        .section-header-wrapper p { margin: 0; color: var(--text-muted); text-align: center; }
 
         .section-header-controls {
             display: flex;
@@ -708,8 +563,7 @@
             width: 100%;
         }
 
-        .sort-select,
-        .clear-search-btn {
+        .sort-select, .clear-search-btn {
             min-height: 46px;
             padding: 0 18px;
             border-radius: var(--radius-full);
@@ -724,18 +578,14 @@
             box-shadow: var(--shadow-sm);
         }
 
-        .clear-search-btn {
-            display: none;
-            align-items: center;
-            gap: 8px;
-        }
+        .clear-search-btn { display: none; align-items: center; gap: 8px; }
 
-        .sort-select:hover,
-        .clear-search-btn:hover {
+        .sort-select:hover, .clear-search-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
         }
 
+        /* ── Listings ── */
         #listings-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -772,42 +622,30 @@
         }
 
         .property-card-media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            width: 100%; height: 100%; object-fit: cover;
             transition: transform 0.5s ease;
         }
 
-        .property-card:hover .property-card-media img {
-            transform: scale(1.05);
-        }
+        .property-card:hover .property-card-media img { transform: scale(1.05); }
 
         .favorite-btn {
             position: absolute;
             top: 14px;
             inset-inline-end: 14px;
-            width: 42px;
-            height: 42px;
+            width: 42px; height: 42px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.72);
-            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(255,255,255,0.72);
+            background: rgba(255,255,255,0.92);
             color: #0f172a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             cursor: pointer;
             z-index: 3;
             transition: .25s ease;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, .12);
+            box-shadow: 0 6px 18px rgba(15,23,42,.12);
         }
 
-        .favorite-btn:hover {
-            transform: scale(1.06);
-        }
-
-        .favorite-btn.active {
-            color: #ef4444;
-        }
+        .favorite-btn:hover { transform: scale(1.06); }
+        .favorite-btn.active { color: #ef4444; }
 
         .property-urgency {
             position: absolute;
@@ -815,7 +653,7 @@
             inset-inline-start: 14px;
             padding: 8px 12px;
             border-radius: var(--radius-full);
-            background: rgba(15, 23, 42, .82);
+            background: rgba(15,23,42,.82);
             color: #fff;
             font-size: 0.8rem;
             font-weight: 800;
@@ -859,8 +697,7 @@
             color: #f59e0b;
         }
 
-        .property-card-location,
-        .property-card-meta {
+        .property-card-location, .property-card-meta {
             color: var(--text-muted);
             font-size: 0.92rem;
             display: flex;
@@ -938,12 +775,11 @@
             color: var(--primary);
         }
 
-        #scroll-top-btn,
-        #chat-open-btn {
+        /* ── Floating buttons ── */
+        #scroll-top-btn, #chat-open-btn {
             position: fixed;
             inset-inline-end: 24px;
-            width: 52px;
-            height: 52px;
+            width: 52px; height: 52px;
             border-radius: 50%;
             color: #fff;
             border: none;
@@ -959,7 +795,7 @@
         #scroll-top-btn {
             bottom: 88px;
             background: var(--primary);
-            box-shadow: 0 8px 24px rgba(67, 90, 191, 0.4);
+            box-shadow: 0 8px 24px rgba(67,90,191,0.4);
             opacity: 0;
             transform: translateY(20px) scale(0.8);
             pointer-events: none;
@@ -971,27 +807,21 @@
             pointer-events: auto;
         }
 
-        #scroll-top-btn:hover {
-            transform: translateY(-4px) scale(1.08);
-            background: var(--primary-hover);
-        }
+        #scroll-top-btn:hover { transform: translateY(-4px) scale(1.08); background: var(--primary-hover); }
 
         #chat-open-btn {
             bottom: 150px;
             background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            box-shadow: 0 10px 28px rgba(67, 90, 191, 0.35);
+            box-shadow: 0 10px 28px rgba(67,90,191,0.35);
         }
 
-        #chat-open-btn:hover {
-            transform: translateY(-3px) scale(1.06);
-        }
+        #chat-open-btn:hover { transform: translateY(-3px) scale(1.06); }
 
         .chat-unread-badge {
             position: absolute;
             top: -4px;
             inset-inline-end: -2px;
-            min-width: 22px;
-            height: 22px;
+            min-width: 22px; height: 22px;
             padding: 0 6px;
             border-radius: 999px;
             background: #ef4444;
@@ -1004,10 +834,8 @@
             border: 2px solid #fff;
         }
 
-        .modal-overlay,
-        .bookings-modal,
-        .chat-modal,
-        .favorites-modal {
+        /* ── Modals ── */
+        .modal-overlay, .bookings-modal, .chat-modal, .favorites-modal {
             position: fixed;
             inset: 0;
             background: rgba(2, 6, 23, 0.58);
@@ -1018,16 +846,10 @@
             padding: 18px;
         }
 
-        .modal-overlay.active,
-        .bookings-modal.active,
-        .chat-modal.active,
-        .favorites-modal.active {
-            display: flex;
-        }
+        .modal-overlay.active, .bookings-modal.active,
+        .chat-modal.active, .favorites-modal.active { display: flex; }
 
-        .modal-content,
-        .bookings-modal-dialog,
-        .favorites-modal-dialog {
+        .modal-content, .bookings-modal-dialog, .favorites-modal-dialog {
             width: min(960px, 100%);
             max-height: 90vh;
             overflow: hidden;
@@ -1039,9 +861,17 @@
             flex-direction: column;
         }
 
+        /* ── Auth card ── */
         .auth-card {
             width: min(460px, 100%);
             position: relative;
+            background: var(--surface-color);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-hover);
+            animation: scaleIn 0.22s ease forwards;
+            max-height: 92vh;
+            overflow-y: auto;
         }
 
         .auth-header {
@@ -1051,37 +881,15 @@
             justify-content: center;
         }
 
-        .auth-header img {
-            height: 52px;
-            width: auto;
-            object-fit: contain;
-        }
+        .auth-header img { height: 52px; width: auto; object-fit: contain; }
 
-        .auth-content {
-            padding: 24px;
-        }
+        .auth-content { padding: 24px; }
 
-        .auth-form {
-            display: none;
-            flex-direction: column;
-        }
+        .auth-form { display: none; flex-direction: column; }
+        .auth-form.active { display: flex; }
 
-        .auth-form.active {
-            display: flex;
-        }
-
-        .auth-title {
-            margin: 0 0 8px;
-            text-align: center;
-            font-size: 1.5rem;
-        }
-
-        .auth-subtitle {
-            margin: 0 0 18px;
-            color: var(--text-muted);
-            text-align: center;
-            line-height: 1.7;
-        }
+        .auth-title { margin: 0 0 8px; text-align: center; font-size: 1.5rem; }
+        .auth-subtitle { margin: 0 0 18px; color: var(--text-muted); text-align: center; line-height: 1.7; }
 
         .auth-message {
             display: none;
@@ -1093,35 +901,55 @@
 
         .auth-message.error {
             display: block;
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(239,68,68,0.1);
             color: #b91c1c;
-            border: 1px solid rgba(239, 68, 68, .18);
+            border: 1px solid rgba(239,68,68,.18);
         }
 
         .auth-message.success {
             display: block;
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(16,185,129,0.1);
             color: #047857;
-            border: 1px solid rgba(16, 185, 129, .18);
+            border: 1px solid rgba(16,185,129,.18);
         }
 
-        .close-modal-btn,
-        .bookings-modal-header button,
-        .favorites-modal-header button,
-        .chat-close-btn {
-            width: 42px;
-            height: 42px;
+        /* Close button — always visible, high z-index */
+        .close-modal-btn {
+            position: absolute;
+            top: 16px;
+            inset-inline-end: 16px;
+            width: 38px; height: 38px;
             border-radius: 50%;
             border: 1px solid var(--border-color);
             background: var(--surface-color);
             color: var(--text-main);
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            z-index: 10;
+            transition: var(--transition-fast);
         }
 
-        .close-modal-btn {
-            position: absolute;
-            top: 16px;
-            inset-inline-end: 16px;
+        .close-modal-btn:hover {
+            background: rgba(239,68,68,0.1);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .bookings-modal-header button,
+        .favorites-modal-header button,
+        .chat-close-btn {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .input-group {
@@ -1131,13 +959,9 @@
             margin-bottom: 16px;
         }
 
-        .input-group label {
-            font-size: 0.9rem;
-            font-weight: 700;
-        }
+        .input-group label { font-size: 0.9rem; font-weight: 700; }
 
-        .input-group input,
-        .chat-input-area textarea {
+        .input-group input {
             width: 100%;
             padding: 14px 16px;
             border-radius: 12px;
@@ -1147,21 +971,23 @@
             outline: none;
         }
 
-        .pass-wrapper {
-            position: relative;
-        }
+        .input-group input:focus { border-color: var(--primary); }
+
+        .pass-wrapper { position: relative; }
 
         .toggle-pass-btn {
             position: absolute;
             top: 50%;
             inset-inline-end: 10px;
             transform: translateY(-50%);
-            width: 36px;
-            height: 36px;
+            width: 36px; height: 36px;
             border: none;
             background: transparent;
             color: var(--text-muted);
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .password-strength {
@@ -1177,17 +1003,8 @@
             margin-bottom: 8px;
         }
 
-        .str-bar {
-            height: 6px;
-            border-radius: 999px;
-            background: var(--border-color);
-        }
-
-        .strength-label {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            font-weight: 700;
-        }
+        .str-bar { height: 6px; border-radius: 999px; background: var(--border-color); }
+        .strength-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 700; }
 
         .auth-options {
             display: flex;
@@ -1208,8 +1025,7 @@
         }
 
         .auth-checkmark {
-            width: 18px;
-            height: 18px;
+            width: 18px; height: 18px;
             border-radius: 6px;
             border: 1.5px solid var(--border-color);
             background: var(--surface-color);
@@ -1218,17 +1034,9 @@
             justify-content: center;
         }
 
-        .forgot-link {
-            color: var(--primary);
-            font-weight: 700;
-        }
+        .forgot-link { color: var(--primary); font-weight: 700; }
 
-        .social-logins {
-            display: flex;
-            gap: 12px;
-            margin-top: 14px;
-            margin-bottom: 18px;
-        }
+        .social-logins { display: flex; gap: 12px; margin-top: 14px; margin-bottom: 18px; }
 
         .social-btn {
             flex: 1;
@@ -1243,21 +1051,16 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            transition: var(--transition-fast);
         }
 
-        .switch-form-text {
-            text-align: center;
-            line-height: 1.7;
-            color: var(--text-muted);
-        }
+        .social-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-        .switch-form-text a {
-            color: var(--primary);
-            font-weight: 800;
-        }
+        .switch-form-text { text-align: center; line-height: 1.7; color: var(--text-muted); }
+        .switch-form-text a { color: var(--primary); font-weight: 800; }
 
-        .bookings-modal-header,
-        .favorites-modal-header {
+        /* ── Bookings & Favorites modals ── */
+        .bookings-modal-header, .favorites-modal-header {
             padding: 22px 24px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
@@ -1266,8 +1069,7 @@
             gap: 12px;
         }
 
-        .bookings-modal-header h3,
-        .favorites-modal-header h3 {
+        .bookings-modal-header h3, .favorites-modal-header h3 {
             margin: 0;
             font-size: 1.25rem;
             display: flex;
@@ -1275,16 +1077,14 @@
             gap: 10px;
         }
 
-        .bookings-modal-body,
-        .favorites-modal-body {
+        .bookings-modal-body, .favorites-modal-body {
             padding: 24px;
             max-height: min(72vh, 700px);
             overflow: auto;
             background: var(--bg-color);
         }
 
-        .booking-card,
-        .booking-entry {
+        .booking-card, .booking-entry {
             background: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 18px;
@@ -1293,9 +1093,7 @@
             box-shadow: var(--shadow-sm);
         }
 
-        .booking-entry:last-child {
-            margin-bottom: 0;
-        }
+        .booking-entry:last-child { margin-bottom: 0; }
 
         .booking-entry-head {
             display: flex;
@@ -1305,11 +1103,7 @@
             flex-wrap: wrap;
         }
 
-        .booking-entry-title {
-            margin: 0 0 6px;
-            font-size: 1.05rem;
-            font-weight: 800;
-        }
+        .booking-entry-title { margin: 0 0 6px; font-size: 1.05rem; font-weight: 800; }
 
         .booking-entry-meta {
             display: flex;
@@ -1329,22 +1123,12 @@
             font-weight: 800;
         }
 
-        .booking-status-badge.pending {
-            background: rgba(245, 158, 11, .12);
-            color: #b45309;
-        }
-
-        .booking-status-badge.confirmed {
-            background: rgba(16, 185, 129, .12);
-            color: #047857;
-        }
-
+        .booking-status-badge.pending  { background: rgba(245,158,11,.12); color: #b45309; }
+        .booking-status-badge.confirmed { background: rgba(16,185,129,.12); color: #047857; }
         .booking-status-badge.cancelled,
-        .booking-status-badge.rejected {
-            background: rgba(239, 68, 68, .12);
-            color: #b91c1c;
-        }
+        .booking-status-badge.rejected  { background: rgba(239,68,68,.12); color: #b91c1c; }
 
+        /* ── Chat modal ── */
         .chat-modal-dialog {
             width: min(460px, 100%);
             height: min(720px, 88vh);
@@ -1366,17 +1150,12 @@
             gap: 12px;
         }
 
-        .chat-modal-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .chat-modal-title { display: flex; align-items: center; gap: 12px; }
 
         .chat-avatar {
-            width: 42px;
-            height: 42px;
+            width: 42px; height: 42px;
             border-radius: 50%;
-            background: rgba(67, 90, 191, 0.12);
+            background: rgba(67,90,191,0.12);
             color: var(--primary);
             display: inline-flex;
             align-items: center;
@@ -1385,16 +1164,8 @@
             flex-shrink: 0;
         }
 
-        .chat-title-text h3 {
-            margin: 0;
-            font-size: 1rem;
-        }
-
-        .chat-title-text p {
-            margin: 3px 0 0;
-            font-size: 0.84rem;
-            color: var(--text-muted);
-        }
+        .chat-title-text h3 { margin: 0; font-size: 1rem; }
+        .chat-title-text p { margin: 3px 0 0; font-size: 0.84rem; color: var(--text-muted); }
 
         .chat-status-line {
             display: inline-flex;
@@ -1407,27 +1178,17 @@
         }
 
         .chat-status-dot {
-            width: 9px;
-            height: 9px;
+            width: 9px; height: 9px;
             border-radius: 50%;
             background: #cbd5e1;
             display: inline-block;
         }
 
-        .chat-status-line.connected .chat-status-dot {
-            background: var(--success);
-        }
+        .chat-status-line.connected .chat-status-dot { background: var(--success); }
+        .chat-status-line.syncing  .chat-status-dot { background: var(--warning); }
+        .chat-status-line.error    .chat-status-dot { background: var(--error); }
 
-        .chat-status-line.syncing .chat-status-dot {
-            background: var(--warning);
-        }
-
-        .chat-status-line.error .chat-status-dot {
-            background: var(--error);
-        }
-
-        .chat-modal-body,
-        #chat-messages {
+        .chat-modal-body, #chat-messages {
             flex: 1;
             overflow-y: auto;
             background: var(--bg-color);
@@ -1472,12 +1233,7 @@
             border-top-right-radius: 6px;
         }
 
-        .chat-meta {
-            display: block;
-            margin-top: 6px;
-            font-size: 0.75rem;
-            opacity: 0.8;
-        }
+        .chat-meta { display: block; margin-top: 6px; font-size: 0.75rem; opacity: 0.8; }
 
         .chat-input-area {
             border-top: 1px solid var(--border-color);
@@ -1488,11 +1244,19 @@
             gap: 10px;
         }
 
-        .chat-send-form {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        .chat-send-form { display: flex; flex-direction: column; gap: 10px; }
+
+        .chat-input-area textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-main);
+            outline: none;
         }
+
+        .chat-input-area textarea::placeholder { color: var(--text-muted); opacity: 1; }
 
         .chat-actions {
             display: flex;
@@ -1502,16 +1266,10 @@
             flex-wrap: wrap;
         }
 
-        .chat-note {
-            color: var(--text-muted);
-            font-size: 0.82rem;
-        }
+        .chat-note { color: var(--text-muted); font-size: 0.82rem; }
+        .chat-send-btn { min-width: 140px; min-height: 46px; }
 
-        .chat-send-btn {
-            min-width: 140px;
-            min-height: 46px;
-        }
-
+        /* ── Toast ── */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -1523,27 +1281,23 @@
             max-width: min(92vw, 360px);
         }
 
+        /* ── Mobile nav ── */
         .mobile-bottom-nav {
             position: sticky;
             bottom: 0;
             z-index: 999;
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255,255,255,0.92);
             backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            border-top: 1px solid rgba(0,0,0,0.05);
             display: none;
         }
 
-        .dark .mobile-bottom-nav,
-        html.dark .mobile-bottom-nav {
-            background: rgba(15, 23, 42, 0.92);
-            border-top-color: rgba(255, 255, 255, 0.06);
+        .dark .mobile-bottom-nav, html.dark .mobile-bottom-nav {
+            background: rgba(15,23,42,0.92);
+            border-top-color: rgba(255,255,255,0.06);
         }
 
-        .mobile-nav-inner {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-        }
+        .mobile-nav-inner { display: flex; justify-content: space-around; padding: 10px 0; }
 
         .mob-nav-btn {
             display: flex;
@@ -1559,42 +1313,20 @@
             transition: var(--transition-fast);
         }
 
-        .mob-nav-btn i {
-            font-size: 1.25rem;
-        }
-
-        .mob-nav-btn span {
-            font-size: 0.78rem;
-            font-weight: 800;
-        }
-
-        .mob-nav-btn.active,
-        .mob-nav-btn:hover {
-            color: var(--primary);
-        }
+        .mob-nav-btn i { font-size: 1.25rem; }
+        .mob-nav-btn span { font-size: 0.78rem; font-weight: 800; }
+        .mob-nav-btn.active, .mob-nav-btn:hover { color: var(--primary); }
 
         .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            margin: -1px;
-            padding: 0;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
+            position: absolute; width: 1px; height: 1px;
+            margin: -1px; padding: 0; overflow: hidden;
+            clip: rect(0,0,0,0); border: 0;
         }
 
+        /* ── Responsive ── */
         @media (max-width: 1024px) {
-            .search-bar {
-                border-radius: 28px;
-                padding: 14px;
-                gap: 10px;
-            }
-
-            .search-divider {
-                display: none;
-            }
-
+            .search-bar { border-radius: 28px; padding: 14px; gap: 10px; }
+            .search-divider { display: none; }
             .search-field {
                 min-width: calc(50% - 10px);
                 padding: 10px 12px;
@@ -1602,96 +1334,32 @@
                 border-radius: 16px;
                 background: var(--bg-color);
             }
-
-            .search-dropdown {
-                width: 100%;
-            }
-
-            .search-btn {
-                width: 100%;
-            }
+            .search-dropdown { width: 100%; }
+            .search-btn { width: 100%; }
         }
 
         @media (max-width: 768px) {
-            .navbar {
-                padding: 14px 18px;
-                gap: 12px;
-            }
-
-            .nav-actions {
-                gap: 10px;
-            }
-
-            .rewards-badge {
-                display: none;
-            }
-
-            .hero {
-                padding: 64px 0 28px;
-            }
-
-            .hero p {
-                margin-bottom: 24px;
-            }
-
-            .container {
-                padding: 0 16px;
-            }
-
-            .mobile-bottom-nav {
-                display: block;
-            }
-
-            #chat-open-btn,
-            #scroll-top-btn {
-                inset-inline-end: 16px;
-            }
-
-            #chat-open-btn {
-                bottom: 134px;
-            }
-
-            #scroll-top-btn {
-                bottom: 72px;
-            }
+            .navbar { padding: 14px 18px; gap: 12px; }
+            .nav-actions { gap: 10px; }
+            .rewards-badge { display: none; }
+            .hero { padding: 64px 0 28px; }
+            .hero p { margin-bottom: 24px; }
+            .container { padding: 0 16px; }
+            .mobile-bottom-nav { display: block; }
+            #chat-open-btn, #scroll-top-btn { inset-inline-end: 16px; }
+            #chat-open-btn { bottom: 134px; }
+            #scroll-top-btn { bottom: 72px; }
         }
 
         @media (max-width: 640px) {
-            .logo-img {
-                height: 36px;
-            }
-
-            .lang-btn,
-            .auth-link-btn,
-            .secondary-btn {
-                padding: 0 14px;
-                font-size: 0.9rem;
-            }
-
-            .search-field {
-                min-width: 100%;
-            }
-
-            .section-header-wrapper h2 {
-                font-size: 1.45rem;
-            }
-
-            #listings-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .property-card-actions {
-                flex-direction: column;
-            }
-
-            .chat-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .chat-send-btn {
-                width: 100%;
-            }
+            .logo-img { height: 36px; }
+            .lang-btn, .secondary-btn { padding: 0 14px; font-size: 0.9rem; }
+            .search-field { min-width: 100%; }
+            .section-header-wrapper h2 { font-size: 1.45rem; }
+            #listings-grid { grid-template-columns: 1fr; }
+            .property-card-actions { flex-direction: column; }
+            .chat-actions { flex-direction: column; align-items: stretch; }
+            .chat-send-btn { width: 100%; }
         }
     </style>
 </head>
@@ -1719,21 +1387,18 @@
                 <span id="lang-toggle-text">AR</span>
             </button>
 
-            <a id="auth-cta" class="auth-link-btn" href="#" role="button">
-                <i class="ph ph-sign-in"></i>
-                <span>Sign In</span>
-            </a>
-
+            <!-- زر الشخص فقط — بدون زر Sign In منفصل -->
             <div class="profile-container">
-                <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button" aria-label="Account"
-                    aria-haspopup="true" aria-expanded="false" aria-controls="profile-dropdown">
+                <button id="open-auth-btn" class="profile-menu auth-btn-guest" type="button"
+                    aria-label="Account" aria-haspopup="true" aria-expanded="false"
+                    aria-controls="profile-dropdown">
                     <i class="ph ph-user"></i>
                 </button>
 
                 <div id="profile-dropdown" role="menu" aria-hidden="true">
                     <div class="dropdown-header">
                         <span id="dropdown-user-name">Guest User</span>
-                        <span id="dropdown-user-email" class="text-muted">Sign in to continue</span>
+                        <span id="dropdown-user-email" class="text-muted text-sm">Sign in to continue</span>
                         <span class="text-sm text-muted">
                             <span id="user-points">0</span>
                         </span>
@@ -1793,8 +1458,7 @@
                 <div class="search-bar animate-up delay-2">
                     <div class="search-field">
                         <label for="destination-input">Search by city, wilaya, or property name</label>
-                        <input id="destination-input" type="text" placeholder="Search city or property"
-                            autocomplete="off">
+                        <input id="destination-input" type="text" placeholder="Search city or property" autocomplete="off">
                         <div class="search-dropdown" id="search-dropdown"></div>
                     </div>
 
@@ -1816,8 +1480,7 @@
 
                     <div class="search-field">
                         <label for="search-guests">Guests</label>
-                        <input id="search-guests" type="number" name="guests" min="1" max="20" value="2"
-                            placeholder="2">
+                        <input id="search-guests" type="number" name="guests" min="1" max="20" value="2" placeholder="2">
                     </div>
 
                     <button id="search-btn" class="search-btn" type="button">
@@ -1833,17 +1496,14 @@
                 <i class="ph ph-buildings"></i>
                 <span>All stays</span>
             </button>
-
             <button class="category-item" type="button" data-category="hotels">
                 <i class="ph ph-bed"></i>
                 <span>Hotels</span>
             </button>
-
             <button class="category-item" type="button" data-category="apartments">
                 <i class="ph ph-house-line"></i>
                 <span>Apartments</span>
             </button>
-
             <button class="category-item" type="button" data-category="villas">
                 <i class="ph ph-house"></i>
                 <span>Villas</span>
@@ -1891,12 +1551,10 @@
                 <i class="ph ph-house-line"></i>
                 <span>Stays</span>
             </button>
-
             <button id="mob-fav-btn" class="mob-nav-btn" type="button" data-target="favorites">
                 <i class="ph ph-heart"></i>
                 <span>Favorites</span>
             </button>
-
             <button id="mob-profile-btn" class="mob-nav-btn" type="button" data-target="profile">
                 <i class="ph ph-user-circle"></i>
                 <span>Profile</span>
@@ -1904,8 +1562,11 @@
         </div>
     </nav>
 
-    <div class="modal-overlay" id="auth-modal" aria-hidden="true">
-        <div class="modal-content auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+    <!-- ── Auth Modal ── -->
+    <div class="modal-overlay" id="auth-modal" aria-hidden="true" role="presentation">
+        <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+
+            <!-- X button داخل الكارد مباشرة -->
             <button class="close-modal-btn" id="close-auth-btn" type="button" aria-label="Close">
                 <i class="ph ph-x"></i>
             </button>
@@ -2044,6 +1705,7 @@
         </div>
     </div>
 
+    <!-- Bookings modal -->
     <div class="bookings-modal" id="bookings-modal" aria-hidden="true">
         <div class="bookings-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bookings-modal-title">
             <div class="bookings-modal-header">
@@ -2055,13 +1717,13 @@
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-
             <div class="bookings-modal-body">
                 <div id="bookings-list"></div>
             </div>
         </div>
     </div>
 
+    <!-- Favorites modal -->
     <div class="favorites-modal" id="favorites-modal" aria-hidden="true">
         <div class="favorites-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="favorites-modal-title">
             <div class="favorites-modal-header">
@@ -2073,13 +1735,13 @@
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-
             <div class="favorites-modal-body">
                 <div id="favorites-list"></div>
             </div>
         </div>
     </div>
 
+    <!-- Chat modal -->
     <div class="chat-modal" id="chat-modal" aria-hidden="true">
         <div class="chat-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-title">
             <div class="chat-modal-header">
@@ -2090,14 +1752,12 @@
                     <div class="chat-title-text">
                         <h3 id="chat-title">Support chat</h3>
                         <p id="chat-subtitle">We usually reply quickly</p>
-
                         <div id="chat-connection-status" class="chat-status-line syncing">
                             <span class="chat-status-dot"></span>
                             <span id="chat-connection-text">Preparing secure connection...</span>
                         </div>
                     </div>
                 </div>
-
                 <button class="chat-close-btn" id="chat-close-btn" type="button" aria-label="Close chat">
                     <i class="ph ph-x"></i>
                 </button>
@@ -2126,7 +1786,6 @@
                         <div class="chat-note" id="chat-note">
                             This chat works now and can also be connected to Firestore later.
                         </div>
-
                         <button class="primary-btn chat-send-btn" id="chat-send-btn" type="submit">
                             <i class="ph ph-paper-plane-tilt"></i>
                             <span id="send-chat-text">Send message</span>
@@ -2137,6 +1796,7 @@
         </div>
     </div>
 
+    <!-- ── Inline scripts (قبل script.js) ── -->
     <script>
         (function () {
             try {
@@ -2151,14 +1811,80 @@
         (function () {
             const btn = document.getElementById("scroll-top-btn");
             if (!btn) return;
-
             function onScroll() {
-                if (window.scrollY > 280) btn.classList.add("visible");
-                else btn.classList.remove("visible");
+                btn.classList.toggle("visible", window.scrollY > 280);
             }
-
             window.addEventListener("scroll", onScroll, { passive: true });
             onScroll();
+        })();
+    </script>
+
+    <!-- ── FIX: Auth modal open/close — مستقل عن script.js ── -->
+    <script>
+        (function () {
+            const authModal   = document.getElementById("auth-modal");
+            const openAuthBtn = document.getElementById("open-auth-btn");
+            const closeAuthBtn = document.getElementById("close-auth-btn");
+            const profileDropdown = document.getElementById("profile-dropdown");
+
+            if (!authModal || !openAuthBtn || !closeAuthBtn) return;
+
+            function openModal() {
+                authModal.classList.add("active");
+                authModal.setAttribute("aria-hidden", "false");
+                document.body.classList.add("modal-open");
+                // أغلق الـ dropdown إن كان مفتوحاً
+                if (profileDropdown) {
+                    profileDropdown.classList.remove("active");
+                    openAuthBtn.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            function closeModal() {
+                authModal.classList.remove("active");
+                authModal.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("modal-open");
+            }
+
+            // زر الشخص — إذا مش logged in يفتح النافذة
+            // (إذا logged in، script.js يتولى الـ dropdown)
+            openAuthBtn.addEventListener("click", function (e) {
+                const isLoggedIn = openAuthBtn.classList.contains("auth-btn-logged");
+                if (isLoggedIn) return; // script.js يتولى الـ dropdown
+                e.stopPropagation();
+                openModal();
+            });
+
+            // زر X
+            closeAuthBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                closeModal();
+            });
+
+            // الضغط على الـ backdrop
+            authModal.addEventListener("click", function (e) {
+                if (e.target === authModal) closeModal();
+            });
+
+            // ESC
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape" && authModal.classList.contains("active")) {
+                    closeModal();
+                }
+            });
+
+            // اربط الـ auth-cta القديم لو موجود
+            const authCta = document.getElementById("auth-cta");
+            if (authCta) {
+                authCta.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    openModal();
+                });
+            }
+
+            // اجعل الدالة متاحة لـ script.js
+            window._oreOpenAuthModal  = openModal;
+            window._oreCloseAuthModal = closeModal;
         })();
     </script>
 
