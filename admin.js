@@ -1233,11 +1233,116 @@
 
     if (explicit && explicit.classList.contains("tab-pane")) explicit.classList.add("active");
 
+    if (state.activeTab === "properties") renderProperties();
     if (state.activeTab === "bookings") renderBookings();
     if (state.activeTab === "chats") {
       renderChatThreads();
       renderCurrentChatMessages();
     }
+  }
+
+  async function loadProperties() {
+    if (!db) { state.properties = []; return []; }
+    try {
+      const snap = await db.collection("properties").get();
+      const items = [];
+      snap.forEach((doc) => {
+        const data = doc.data() || {};
+        const item = { id: doc.id, ...data, titleAr: pickFirst(data.titleAr, data.title, data.name), locationAr: pickFirst(data.locationAr, data.location, data.city), typeAr: pickFirst(data.typeAr, data.type, data.category), imageUrl: pickFirst(data.imageUrl, data.mainImage, Array.isArray(data.images) ? data.images[0] : "") };
+        if (propertyBelongsToCurrentOwner(item)) items.push(item);
+      });
+      state.properties = sortByCreatedDesc(items);
+      return state.properties;
+    } catch (error) { console.error("loadProperties failed:", error); state.properties = []; return []; }
+  }
+
+  async function loadBookings() {
+    if (!db) { state.bookings = []; return []; }
+    try {
+      const snap = await db.collection("bookings").get();
+      const items = [];
+      snap.forEach((doc) => {
+        const booking = normalizeBooking({ id: doc.id, ...(doc.data() || {}) });
+        if (canAccessBooking(booking)) items.push(booking);
+      });
+      state.bookings = sortByCreatedDesc(items);
+      return state.bookings;
+    } catch (error) { console.error("loadBookings failed:", error); state.bookings = []; return []; }
+  }
+
+  async function loadChats() {
+    if (!db) { state.chats = []; return []; }
+    try {
+      const snap = await db.collection("chats").get();
+      const items = [];
+      snap.forEach((doc) => {
+        const chat = normalizeChat(doc.data() || {}, doc.id);
+        if (canAccessChat(chat)) items.push(chat);
+      });
+      state.chats = sortByUpdatedDesc(items);
+      return state.chats;
+    } catch (error) { console.error("loadChats failed:", error); state.chats = []; return []; }
+  }
+
+  function getPropertiesGrid() { return byId("properties-grid") || q("[data-properties-grid]") || q(".properties-grid"); }
+  function getChatThreadsHost() { return byId("chat-threads") || q("[data-chat-threads]"); }
+  function getChatMessagesHost() { return byId("chat-messages") || q("[data-chat-messages]"); }
+
+  function renderProperties() {
+    const host = getPropertiesGrid(); if (!host) return;
+    const items = state.properties.filter((p) => canManageProperty(p));
+    if (!items.length) { host.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="ph ph-buildings"></i> لا توجد عقارات لعرضها.</div>`; return; }
+    host.innerHTML = items.map((prop) => {
+      const img = getPropertyImage(prop); const title = getPropertyTitle(prop); const location = getPropertyLocation(prop); const type = getPropertyType(prop);
+      return `<article class="booking-card"><div class="booking-head"><div class="booking-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(location)}</span></div>${statusBadge(prop.status || prop.visibility || "visible")}</div><img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" style="width:100%;height:180px;object-fit:cover;border-radius:18px;border:1px solid var(--border-color);"><div class="booking-extra-row"><span class="booking-info-pill"><i class="ph ph-tag"></i>${escapeHtml(type)}</span><span class="booking-info-pill"><i class="ph ph-map-pin"></i>${escapeHtml(location)}</span></div></article>`;
+    }).join("");
+  }
+
+  function renderBookings() {
+    const host = getBookingCardGrid(); if (!host) return;
+    const items = state.bookings.filter((b) => canAccessBooking(b));
+    const filtered = state.bookingFilter === "all" ? items : items.filter((b) => b.status === state.bookingFilter);
+    if (!filtered.length) { host.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="ph ph-calendar-x"></i> لا توجد حجوزات لعرضها.</div>`; return; }
+    host.innerHTML = filtered.map((booking) => {
+      const nights = calcNights(booking.checkIn, booking.checkOut);
+      return `<article class="booking-card" data-booking-id="${escapeHtml(booking.id)}" data-status="${escapeHtml(booking.status)}"><div class="booking-head"><div class="booking-title"><strong>${escapeHtml(booking.propertyTitle)}</strong><span>${escapeHtml(booking.reference || booking.id)}</span></div>${statusBadge(booking.status)}</div><div class="booking-meta-grid"><div class="booking-meta-item"><label>الضيف</label><strong>${escapeHtml(booking.guestName)}</strong></div><div class="booking-meta-item"><label>الإيميل</label><strong class="mono">${escapeHtml(booking.guestEmail)}</strong></div><div class="booking-meta-item"><label>رقم الهاتف</label><strong class="mono">${escapeHtml(booking.guestPhone)}</strong></div><div class="booking-meta-item"><label>السعر الإجمالي</label><strong>${escapeHtml(formatPrice(booking.total))}</strong></div><div class="booking-meta-item"><label>تاريخ الدخول</label><strong class="mono">${escapeHtml(booking.checkIn)}</strong></div><div class="booking-meta-item"><label>تاريخ الخروج</label><strong class="mono">${escapeHtml(booking.checkOut)}</strong></div><div class="booking-meta-item"><label>عدد الليالي</label><strong>${nights}</strong></div><div class="booking-meta-item"><label>عدد الضيوف</label><strong>${booking.guests || 0}</strong></div></div><div class="booking-extra-row">${booking.roomNumber ? `<span class="booking-info-pill room"><i class="ph ph-door-open"></i>${escapeHtml(booking.roomNumber)}</span>` : ""}${booking.rejectReason ? `<span class="booking-info-pill reject"><i class="ph ph-prohibit"></i>${escapeHtml(booking.rejectReason)}</span>` : ""}</div>${booking.approvalReply ? `<div class="booking-reply-box"><label>رد المالك</label><p>${escapeHtml(booking.approvalReply)}</p></div>` : ""}<div class="booking-actions-row"><button class="btn-open-chat" data-booking-view="${escapeHtml(booking.id)}" type="button"><i class="ph ph-eye"></i><span>عرض</span></button><button class="btn-approve" data-booking-confirm="${escapeHtml(booking.id)}" type="button"><i class="ph ph-check"></i><span>قبول</span></button><button class="btn-reject" data-booking-reject="${escapeHtml(booking.id)}" type="button"><i class="ph ph-x"></i><span>رفض</span></button></div></article>`;
+    }).join("");
+    ensureBookingGridLayout(); bindBookingCardEvents();
+  }
+
+  function renderChatThreads() {
+    const host = getChatThreadsHost(); if (!host) return;
+    const items = state.chats.filter((chat) => canAccessChat(chat));
+    if (!items.length) { host.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle-dots"></i> لا توجد محادثات.</div>`; return; }
+    host.innerHTML = items.map((chat) => `<button class="chat-thread ${chat.id === state.currentChatId ? "active" : ""}" data-chat-id="${escapeHtml(chat.id)}" type="button"><strong>${escapeHtml(chat.userName || chat.propertyTitle || chat.id)}</strong><span>${escapeHtml(chat.lastMessage || "")}</span></button>`).join("");
+  }
+
+  function renderCurrentChatMessages() {
+    const host = getChatMessagesHost(); if (!host) return;
+    const msgs = state.currentChatMessages || [];
+    if (!msgs.length) { host.innerHTML = `<div class="empty-state"><i class="ph ph-chat-teardrop"></i> اختر محادثة لعرض الرسائل.</div>`; return; }
+    host.innerHTML = msgs.map((m) => `<div class="chat-message ${m.from === "admin" ? "is-admin" : "is-user"}"><div class="chat-message-text">${escapeHtml(m.text || m.message || "")}</div><div class="chat-message-time">${escapeHtml(formatDate(m.createdAt || m.timestamp))}</div></div>`).join("");
+  }
+
+  async function loadCurrentChatMessages(chatId) {
+    if (!db || !chatId) { state.currentChatMessages = []; renderCurrentChatMessages(); return []; }
+    try {
+      const snap = await db.collection("chats").doc(chatId).collection("messages").orderBy("createdAt", "asc").get();
+      const items = []; snap.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
+      state.currentChatMessages = items; renderCurrentChatMessages(); return items;
+    } catch (error) { console.error("loadCurrentChatMessages failed:", error); state.currentChatMessages = []; renderCurrentChatMessages(); return []; }
+  }
+
+  async function loadAllData() {
+    await Promise.all([loadProperties(), loadBookings(), loadChats()]);
+    setStat("stats-properties", String(state.properties.length));
+    setStat("stats-bookings", String(state.bookings.length));
+    setStat("stats-chats", String(state.chats.length));
+    if (state.activeTab === "properties") renderProperties();
+    if (state.activeTab === "bookings") renderBookings();
+    if (state.activeTab === "chats") renderChatThreads();
+    if (!state.currentChatId && state.chats.length) state.currentChatId = state.chats[0].id;
+    if (state.currentChatId) await loadCurrentChatMessages(state.currentChatId); else renderCurrentChatMessages();
   }
 
   function getBookingCardGrid() {
@@ -1258,114 +1363,6 @@
     });
   }
 
-  function renderBookings() {
-    const grid = getBookingCardGrid();
-    if (!grid) return;
-
-    const items = state.bookings.filter((b) => canAccessBooking(b));
-    const filtered = state.bookingFilter === "all" ? items : items.filter((b) => b.status === state.bookingFilter);
-
-    if (!filtered.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="ph ph-calendar-x"></i> لا توجد حجوزات لعرضها.</div>`;
-      return;
-    }
-
-    grid.innerHTML = filtered.map((booking) => {
-      const nights = calcNights(booking.checkIn, booking.checkOut);
-      const guests = booking.guests || 0;
-      const total = toNumber(booking.total, 0);
-      const prop = booking.property || {};
-      const image = getPropertyImage(prop);
-
-      return `
-        <article class="booking-card" data-booking-id="${escapeHtml(booking.id)}" data-status="${escapeHtml(booking.status)}">
-          <div class="booking-head">
-            <div class="booking-title">
-              <strong>${escapeHtml(booking.propertyTitle)}</strong>
-              <span>${escapeHtml(booking.reference || booking.id)}</span>
-            </div>
-            ${statusBadge(booking.status)}
-          </div>
-
-          <div class="booking-meta-grid">
-            <div class="booking-meta-item">
-              <label>الضيف</label>
-              <strong>${escapeHtml(booking.guestName)}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>الإيميل</label>
-              <strong class="mono">${escapeHtml(booking.guestEmail)}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>رقم الهاتف</label>
-              <strong class="mono">${escapeHtml(booking.guestPhone)}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>السعر الإجمالي</label>
-              <strong>${escapeHtml(formatPrice(total))}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>تاريخ الدخول</label>
-              <strong class="mono">${escapeHtml(booking.checkIn)}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>تاريخ الخروج</label>
-              <strong class="mono">${escapeHtml(booking.checkOut)}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>عدد الليالي</label>
-              <strong>${nights}</strong>
-            </div>
-            <div class="booking-meta-item">
-              <label>عدد الضيوف</label>
-              <strong>${guests}</strong>
-            </div>
-          </div>
-
-          <div class="booking-extra-row">
-            <span class="booking-info-pill"><i class="ph ph-hash"></i>${escapeHtml(booking.reference || booking.id)}</span>
-            ${booking.roomNumber ? `<span class="booking-info-pill room"><i class="ph ph-door-open"></i>${escapeHtml(booking.roomNumber)}</span>` : ""}
-            ${booking.rejectReason ? `<span class="booking-info-pill reject"><i class="ph ph-prohibit"></i>${escapeHtml(booking.rejectReason)}</span>` : ""}
-          </div>
-
-          ${booking.approvalReply ? `
-            <div class="booking-reply-box">
-              <label>رد المالك</label>
-              <p>${escapeHtml(booking.approvalReply)}</p>
-            </div>
-          ` : ""}
-
-          <div class="booking-actions-row">
-            <button class="btn-open-chat" data-booking-view="${escapeHtml(booking.id)}" type="button">
-              <i class="ph ph-eye"></i><span>عرض</span>
-            </button>
-            <button class="btn-approve" data-booking-confirm="${escapeHtml(booking.id)}" type="button">
-              <i class="ph ph-check"></i><span>قبول</span>
-            </button>
-            <button class="btn-reject" data-booking-reject="${escapeHtml(booking.id)}" type="button">
-              <i class="ph ph-x"></i><span>رفض</span>
-            </button>
-          </div>
-        </article>
-      `;
-    }).join("");
-
-    ensureBookingGridLayout();
-    bindBookingCardEvents();
-  }
-
-  function renderCurrentChatMessages() {
-    const host = byId("chat-messages") || q("[data-chat-messages]");
-    if (!host) return;
-    host.innerHTML = state.currentChatMessages.map((m) => `<div class="chat-message ${m.from === "admin" ? "is-admin" : "is-user"}"><div class="chat-message-text">${escapeHtml(m.text || m.message || "")}</div><div class="chat-message-time">${escapeHtml(formatDate(m.createdAt))}</div></div>`).join("");
-  }
-
-  function renderChatThreads() {
-    const host = byId("chat-threads") || q("[data-chat-threads]");
-    if (!host) return;
-    host.innerHTML = state.chats.filter(canAccessChat).map((chat) => `<button class="chat-thread ${chat.id === state.currentChatId ? "active" : ""}" data-chat-id="${escapeHtml(chat.id)}"><strong>${escapeHtml(chat.userName || chat.propertyTitle || chat.id)}</strong><span>${escapeHtml(chat.lastMessage || "")}</span></button>`).join("");
-  }
-
   function bindBookingCardEvents() {
     qa("[data-booking-view]").forEach((btn) => {
       if (btn.dataset.boundBookingView) return;
@@ -1384,12 +1381,6 @@
       btn.dataset.boundBookingReject = "1";
       btn.addEventListener("click", () => showToast("تم رفض الحجز.", "warning"));
     });
-  }
-
-  function loadAllData() {
-    renderBookings();
-    renderChatThreads();
-    renderCurrentChatMessages();
   }
 
   function bindStaticEvents() {
@@ -1423,6 +1414,8 @@
     state.listeners.auth = auth.onAuthStateChanged(async (user) => {
       state.authReady = true;
       if (user) {
+        const hint = safeGet(ADMIN_LOGIN_HINT_KEY, "");
+        if (hint) safeSet(ADMIN_LOGIN_HINT_KEY, hint);
         const roleResult = await getAdminRoleFromFirestore(user);
         if (roleResult.ok) await applyAuthorizedSession(user, roleResult);
         else {
