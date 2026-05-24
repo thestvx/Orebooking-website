@@ -2084,26 +2084,18 @@ async function sendBookingNotificationToChat(booking, newStatus) {
   if (!message) return;
 
   try {
-    // تأكد من وجود محادثة الدعم
     const uid = state.currentUser.uid;
+
+    // 1. تأكد من إنشاء chat doc + subscribe — يضمن أن الرسائل تظهر فوراً
     const chatId = `support_${uid}`;
     const chatRef = db.collection("supportChats").doc(chatId);
     const messagesRef = chatRef.collection("messages");
     const now = new Date();
+    const serverTs = firestoreFieldValue?.serverTimestamp
+      ? firestoreFieldValue.serverTimestamp()
+      : now;
 
-    // احفظ رقم الغرفة في الحجز إذا كان تأكيداً
-    if (newStatus === "confirmed" && roomNumber && booking.id) {
-      try {
-        await db.collection("bookings").doc(booking.id).update({
-          roomNumber,
-          roomAssignedAt: now
-        });
-      } catch (e) {
-        console.warn("Could not save room number:", e);
-      }
-    }
-
-    // تأكد من وجود document الـ chat أولاً قبل إضافة الرسالة
+    // أنشئ/حدّث chat document أولاً
     await chatRef.set({
       chatId,
       userId: uid,
@@ -2111,18 +2103,39 @@ async function sendBookingNotificationToChat(booking, newStatus) {
       userName: getCurrentUserName(),
       status: "open",
       channel: "support",
-      createdAt: now,
+      source: "website",
       updatedAt: now
     }, { merge: true });
 
-    // أضف رسالة من الـ admin/support في chat الزبون
+    // تأكد من الـ subscription حتى تظهر الرسائل الجديدة في الـ UI فوراً
+    if (state.currentChatId !== chatId || typeof state.currentChatUnsub !== "function") {
+      state.currentChatId = chatId;
+      state.chatInitializedForUser = uid;
+      safeSet("ore_current_chat_id", chatId);
+      updateChatHiddenFields(chatId);
+      subscribeToCurrentChat(chatId);
+    }
+
+    // 2. احفظ رقم الغرفة في document الحجز
+    if (newStatus === "confirmed" && roomNumber && booking.id) {
+      try {
+        await db.collection("bookings").doc(booking.id).update({
+          roomNumber,
+          roomAssignedAt: serverTs,
+          notificationSentAt: serverTs
+        });
+      } catch (e) {
+        console.warn("Could not save room number:", e);
+      }
+    }
+
+    // 3. أضف الرسالة في subcollection messages
     await messagesRef.add({
       text: message,
       role: "admin",
       senderRole: "admin",
       senderId: "system",
-      senderEmail: "support@orebooking.com",
-      senderName: "OreBooking Support",
+      senderName: state.lang === "ar" ? "إشعار الحجز" : "Booking Notification",
       userId: uid,
       userEmail: getCurrentUserEmail(),
       userName: getCurrentUserName(),
@@ -2131,51 +2144,50 @@ async function sendBookingNotificationToChat(booking, newStatus) {
       bookingStatus: newStatus,
       roomNumber: roomNumber || null,
       createdAt: now,
-      createdAtServer: firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : now,
+      createdAtServer: serverTs,
       readByAdmin: true,
       readByCustomer: false,
       source: "system_notification"
     });
 
-    // حدّث metadata الـ chat
-    await chatRef.set({
-      chatId,
-      userId: uid,
-      userEmail: getCurrentUserEmail(),
-      userName: getCurrentUserName(),
-      status: "open",
-      channel: "support",
-      lastMessage: message.split("\n")[0],
+    // 4. حدّث lastMessage في chat document
+    await chatRef.update({
+      lastMessage: message.split("
+")[0],
       lastMessageRole: "admin",
       lastMessageAt: now,
       updatedAt: now
-    }, { merge: true });
+    });
 
-    // حدّث الـ unread badge إذا الـ chat مغلق
+    // 5. حدّث الـ unread badge
     if (!state.chatOpen) {
       state.chatUnread += 1;
       setUnreadBadge();
     }
 
-    // أظهر toast إشعار
+    // 6. Toast إشعار واضح
+    const propName = cleanText(booking.propertyTitle || booking.propertyName || "");
     if (newStatus === "confirmed") {
       showToast(
         state.lang === "ar"
-          ? `تم تأكيد حجزك في ${cleanText(booking.propertyTitle || booking.propertyName || "")} 🎉`
-          : `Booking confirmed at ${cleanText(booking.propertyTitle || booking.propertyName || "")} 🎉`,
+          ? `✅ تم تأكيد حجزك${propName ? " في " + propName : ""} — رقم الغرفة: ${roomNumber}`
+          : `✅ Booking confirmed${propName ? " at " + propName : ""} — Room: ${roomNumber}`,
         "success"
       );
     } else {
       showToast(
         state.lang === "ar"
-          ? `تم رفض حجزك في ${cleanText(booking.propertyTitle || booking.propertyName || "")}`
-          : `Booking rejected at ${cleanText(booking.propertyTitle || booking.propertyName || "")}`,
+          ? `❌ تم رفض حجزك${propName ? " في " + propName : ""}`
+          : `❌ Booking rejected${propName ? " at " + propName : ""}`,
         "error"
       );
     }
 
+    console.log("[OreBooking] Booking notification sent:", newStatus, booking.id);
+
   } catch (err) {
-    console.warn("sendBookingNotificationToChat error:", err);
+    console.error("[OreBooking] sendBookingNotificationToChat error:", err);
+    // لا نرمي الخطأ حتى لا يمنع loadBookings من الاستمرار
   }
 }
 
@@ -2183,57 +2195,76 @@ function startBookingStatusListener(uid) {
   stopBookingStatusListener();
   if (!db || !uid) return;
 
-  // نخزّن الـ statuses المعروفة — يُملأ في أول snapshot (added)
-  // ويُقارن عند كل تعديل (modified)
+  // نبحث عن الحجوزات بكل الحقول المحتملة لـ userId
+  // لأن لوحة التحكم قد تحفظ بحقول مختلفة
   const knownStatuses = {};
-  let isFirstSnapshot = true;
+  let initialized = false;
 
-  bookingStatusUnsub = db
+  function handleSnapshot(snap) {
+    snap.forEach((doc) => {
+      const data = doc.data();
+      const docId = doc.id;
+      const newStatus = cleanText(data.status || "").toLowerCase();
+
+      if (!initialized) {
+        // أول مرة: سجّل الـ statuses الحالية + تحقق من أي حجز تم تأكيده/رفضه
+        // وما أُرسل له إشعار بعد (notifSent غير موجود في doc)
+        const notifKey = `ore_notif_${docId}_${newStatus}`;
+        const alreadySent = safeGet(notifKey);
+        const isTarget = newStatus === "confirmed" || newStatus === "rejected";
+
+        if (isTarget && !alreadySent) {
+          // حجز تم البت فيه لكن الزبون ما استلم إشعار — أرسله الآن
+          const booking = { id: docId, ...data };
+          safeSet(notifKey, "1");
+          sendBookingNotificationToChat(booking, newStatus).catch(console.warn);
+        }
+
+        knownStatuses[docId] = newStatus;
+        return;
+      }
+
+      // بعد التهيئة: تحقق من التغيير
+      const prevStatus = knownStatuses[docId];
+      knownStatuses[docId] = newStatus;
+
+      const isTarget = newStatus === "confirmed" || newStatus === "rejected";
+      const changed = prevStatus !== undefined && prevStatus !== newStatus;
+
+      if (isTarget && changed) {
+        const notifKey = `ore_notif_${docId}_${newStatus}`;
+        if (safeGet(notifKey)) return;
+        safeSet(notifKey, "1");
+
+        const booking = { id: docId, ...data };
+        sendBookingNotificationToChat(booking, newStatus)
+          .then(() => loadBookings())
+          .catch(console.warn);
+      }
+    });
+
+    if (!initialized) {
+      initialized = true;
+    }
+  }
+
+  // الاستماع بحقل userId
+  const unsub1 = db
     .collection("bookings")
     .where("userId", "==", uid)
-    .onSnapshot(async (snap) => {
-      try {
-        if (isFirstSnapshot) {
-          // الـ snapshot الأول: نسجّل الـ statuses الحالية فقط بدون إشعار
-          snap.forEach((doc) => {
-            const status = cleanText((doc.data().status || "")).toLowerCase();
-            knownStatuses[doc.id] = status;
-          });
-          isFirstSnapshot = false;
-          return; // لا نرسل إشعارات للبيانات الأولية
-        }
+    .onSnapshot(handleSnapshot, (err) => console.warn("bookingListener userId error:", err));
 
-        // الـ snapshots اللاحقة: نعالج التعديلات فقط
-        for (const change of snap.docChanges()) {
-          if (change.type !== "modified") continue;
+  // الاستماع بحقل customerId (لو لوحة التحكم تستخدم حقلاً مختلفاً)
+  const unsub2 = db
+    .collection("bookings")
+    .where("customerId", "==", uid)
+    .onSnapshot(handleSnapshot, (err) => console.warn("bookingListener customerId error:", err));
 
-          const booking = { id: change.doc.id, ...change.doc.data() };
-          const newStatus = cleanText(booking.status || "").toLowerCase();
-          const prevStatus = knownStatuses[booking.id];
-
-          // حدّث القيمة المخزّنة
-          knownStatuses[booking.id] = newStatus;
-
-          // أرسل إشعار فقط إذا تغيّر الـ status فعلاً إلى confirmed أو rejected
-          const isTargetStatus = newStatus === "confirmed" || newStatus === "rejected";
-          const statusChanged = prevStatus !== newStatus;
-
-          if (isTargetStatus && statusChanged) {
-            // تأكد أنه ما أُرسل إشعار لهذا الحجز بهذا الـ status من قبل
-            const notifKey = `ore_notif_${booking.id}_${newStatus}`;
-            if (safeGet(notifKey)) continue; // سبق إرسال إشعار لهذا التغيير
-            safeSet(notifKey, "1");
-
-            await sendBookingNotificationToChat(booking, newStatus);
-            await loadBookings();
-          }
-        }
-      } catch (err) {
-        console.warn("bookingStatusListener snapshot handler error:", err);
-      }
-    }, (err) => {
-      console.warn("bookingStatusListener error:", err);
-    });
+  // نخزّن دالة إلغاء الاشتراكين معاً
+  bookingStatusUnsub = () => {
+    try { unsub1(); } catch {}
+    try { unsub2(); } catch {}
+  };
 }
 
 // ──────────────────────────────────────────
