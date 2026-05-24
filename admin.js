@@ -1783,22 +1783,90 @@
         const roomNumber = booking.roomNumber || getRandomRoomNumber();
         payload.roomNumber = roomNumber;
         payload.approvalReply = getAutoApprovalMessage(roomNumber);
+        await db.collection("bookings").doc(id).update(payload);
+        showToast(`تم تحديث حالة الحجز إلى ${statusLabel(status)}.`, "success");
+        await loadBookings();
       }
 
       if (status === "rejected") {
-        const reason = window.prompt("سبب الرفض:", booking.rejectReason || "الحجز غير متاح");
-        if (reason === null) return;
-        payload.rejectReason = cleanText(reason || "الحجز غير متاح");
-        payload.approvalReply = getAutoRejectionMessage(payload.rejectReason);
+        // Open reject modal instead of prompt
+        openRejectModal(id, booking);
       }
 
-      await db.collection("bookings").doc(id).update(payload);
-      showToast(`تم تحديث حالة الحجز إلى ${statusLabel(status)}.`, "success");
-      await loadBookings();
     } catch (error) {
       console.error("updateBookingStatus error:", error);
       if (isPermissionDenied(error)) showPermissionMessage("bookings");
       else showToast("تعذر تحديث حالة الحجز.", "error");
+    }
+  }
+
+  function openRejectModal(bookingId, booking) {
+    const modal = byId("reject-reason-modal");
+    if (!modal) return;
+
+    // Reset state
+    qa(".reject-reason-chip").forEach((chip) => chip.classList.remove("selected"));
+    const customInput = byId("reject-custom-reason");
+    if (customInput) customInput.value = "";
+
+    // Pre-fill if existing reason
+    if (booking?.rejectReason) {
+      const matched = qa(".reject-reason-chip").find((chip) => chip.dataset.reason === booking.rejectReason);
+      if (matched) {
+        matched.classList.add("selected");
+      } else if (customInput) {
+        customInput.value = booking.rejectReason;
+      }
+    }
+
+    modal.dataset.pendingBookingId = bookingId;
+    modal.classList.add("active");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeRejectModal() {
+    const modal = byId("reject-reason-modal");
+    if (!modal) return;
+    modal.classList.remove("active");
+    document.body.classList.remove("modal-open");
+    delete modal.dataset.pendingBookingId;
+    qa(".reject-reason-chip").forEach((chip) => chip.classList.remove("selected"));
+    const customInput = byId("reject-custom-reason");
+    if (customInput) customInput.value = "";
+  }
+
+  async function confirmRejectBooking() {
+    const modal = byId("reject-reason-modal");
+    if (!modal) return;
+
+    const bookingId = cleanText(modal.dataset.pendingBookingId);
+    if (!bookingId) return;
+
+    const selectedChip = q(".reject-reason-chip.selected");
+    const customInput = byId("reject-custom-reason");
+    const reason = cleanText(selectedChip?.dataset.reason || customInput?.value || "الحجز غير متاح");
+
+    const btn = byId("confirm-reject-btn");
+    setButtonLoading(btn, true, "جارٍ الرفض...");
+
+    try {
+      const payload = {
+        status: "rejected",
+        rejectReason: reason,
+        approvalReply: getAutoRejectionMessage(reason),
+        updatedAt: getServerTimestamp()
+      };
+
+      await db.collection("bookings").doc(bookingId).update(payload);
+      closeRejectModal();
+      showToast("تم رفض الحجز.", "success");
+      await loadBookings();
+    } catch (error) {
+      console.error("confirmRejectBooking error:", error);
+      if (isPermissionDenied(error)) showPermissionMessage("bookings");
+      else showToast("تعذر رفض الحجز.", "error");
+    } finally {
+      setButtonLoading(btn, false);
     }
   }
 
@@ -2207,9 +2275,20 @@
 
     const titleEl = byId("admin-chat-title") || byId("chat-room-title");
     const subEl = byId("admin-chat-subtitle") || byId("chat-room-subtitle");
+    const deleteBtn = byId("delete-current-chat-btn");
 
     if (titleEl) titleEl.textContent = cleanText(chat?.userName || chat?.customerName || chat?.userEmail || chatId);
     if (subEl) subEl.textContent = cleanText(chat?.propertyTitle || chat?.bookingId || chat?.lastMessage);
+
+    // Show delete button only for real (non-pseudo) chats
+    if (deleteBtn) {
+      if (!chat.pseudo) {
+        deleteBtn.style.display = "inline-flex";
+        deleteBtn.dataset.chatId = chatId;
+      } else {
+        deleteBtn.style.display = "none";
+      }
+    }
 
     if (chatId.startsWith("booking-thread-")) loadPseudoChatMessages(chatId);
     else subscribeToChatMessages(chatId);
@@ -2326,6 +2405,77 @@
         `;
       })
       .join("");
+  }
+
+  function openDeleteChatModal(chatId) {
+    const modal = byId("delete-chat-modal");
+    if (!modal) return;
+    modal.dataset.pendingChatId = chatId;
+    modal.classList.add("active");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeDeleteChatModal() {
+    const modal = byId("delete-chat-modal");
+    if (!modal) return;
+    modal.classList.remove("active");
+    document.body.classList.remove("modal-open");
+    delete modal.dataset.pendingChatId;
+  }
+
+  async function confirmDeleteChat() {
+    const modal = byId("delete-chat-modal");
+    if (!modal) return;
+
+    const chatId = cleanText(modal.dataset.pendingChatId);
+    if (!chatId) return;
+
+    const btn = byId("confirm-delete-chat-btn");
+    setButtonLoading(btn, true, "جارٍ الحذف...");
+
+    try {
+      // Delete sub-collection messages first
+      try {
+        const messagesSnap = await db.collection("chats").doc(chatId).collection("messages").get();
+        const batchOp = db.batch();
+        messagesSnap.forEach((doc) => batchOp.delete(doc.ref));
+        if (!messagesSnap.empty) await batchOp.commit();
+      } catch (err) {
+        console.warn("Could not delete sub-messages:", err);
+      }
+
+      // Delete the chat document
+      await db.collection("chats").doc(chatId).delete();
+
+      // Reset UI
+      state.chats = state.chats.filter((c) => c.id !== chatId);
+      if (state.currentChatId === chatId) {
+        if (state.listeners.chatMessages) {
+          state.listeners.chatMessages();
+          state.listeners.chatMessages = null;
+        }
+        state.currentChatId = null;
+        state.currentChatMessages = [];
+        const titleEl = byId("admin-chat-title");
+        const subEl = byId("admin-chat-subtitle");
+        if (titleEl) titleEl.textContent = "اختر محادثة";
+        if (subEl) subEl.textContent = "سيظهر هنا اسم العميل أو بريده الإلكتروني.";
+        const deleteBtn = byId("delete-current-chat-btn");
+        if (deleteBtn) deleteBtn.style.display = "none";
+        renderCurrentChatMessages();
+      }
+
+      closeDeleteChatModal();
+      renderChatThreads();
+      renderDashboardStats();
+      showToast("تم حذف المحادثة بنجاح.", "success");
+    } catch (error) {
+      console.error("confirmDeleteChat error:", error);
+      if (isPermissionDenied(error)) showPermissionMessage("chats");
+      else showToast("تعذر حذف المحادثة.", "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
   }
 
   async function ensureChatForBooking(bookingId) {
@@ -2576,6 +2726,30 @@
     byId("admin-chat-send-form")?.addEventListener("submit", sendAdminMessage);
     byId("chat-send-form")?.addEventListener("submit", sendAdminMessage);
     byId("admin-chat-send-btn")?.addEventListener("click", sendAdminMessage);
+
+    // Reject Booking Modal
+    byId("close-reject-modal")?.addEventListener("click", closeRejectModal);
+    byId("cancel-reject-btn")?.addEventListener("click", closeRejectModal);
+    byId("confirm-reject-btn")?.addEventListener("click", confirmRejectBooking);
+
+    document.addEventListener("click", (e) => {
+      const chip = e.target.closest(".reject-reason-chip");
+      if (chip) {
+        qa(".reject-reason-chip").forEach((c) => c.classList.remove("selected"));
+        chip.classList.add("selected");
+        const customInput = byId("reject-custom-reason");
+        if (customInput) customInput.value = "";
+      }
+    });
+
+    // Delete Chat Modal
+    byId("delete-current-chat-btn")?.addEventListener("click", (e) => {
+      const chatId = e.currentTarget.dataset.chatId || state.currentChatId;
+      if (chatId) openDeleteChatModal(chatId);
+    });
+    byId("close-delete-chat-modal")?.addEventListener("click", closeDeleteChatModal);
+    byId("cancel-delete-chat-btn")?.addEventListener("click", closeDeleteChatModal);
+    byId("confirm-delete-chat-btn")?.addEventListener("click", confirmDeleteChat);
 
     ["properties-search", "property-search"].forEach((id) => byId(id)?.addEventListener("input", renderPropertiesTable));
     ["bookings-search", "booking-search"].forEach((id) => byId(id)?.addEventListener("input", renderBookings));
