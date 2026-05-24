@@ -940,7 +940,7 @@
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
       gap: 20px !important;
       width: 100%;
-      align-items: start !important;
+      align-items: stretch !important;
       align-content: start;
     }
 
@@ -951,8 +951,8 @@
       border-radius: 24px;
       padding: 20px;
       box-shadow: 0 14px 34px rgba(15,23,42,.06);
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto auto;
       gap: 14px;
       width: 100%;
       max-width: 100%;
@@ -962,7 +962,7 @@
       overflow: hidden;
       transition: var(--transition);
       box-sizing: border-box;
-      align-self: start;
+      align-self: stretch;
     }
 
     .booking-card:hover {
@@ -1132,7 +1132,7 @@
 
     .booking-actions-row {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
       margin-top: auto;
       padding-top: 4px;
@@ -1186,6 +1186,183 @@
       color: var(--primary);
       border-color: rgba(67,90,191,0.14);
     }
+
+    .booking-actions-row .btn-delete-chat {
+      background: rgba(100,116,139,0.07);
+      color: var(--text-muted);
+      border-color: rgba(100,116,139,0.18);
+    }
+
+    .booking-actions-row .btn-delete-chat:hover:not(:disabled) {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    /* Booking cards: ensure all cards are equal height sections */
+    .booking-card .booking-meta-grid {
+      flex: 1;
+    }
+
+    /* ===== REJECT REASON MODAL ===== */
+    #reject-reason-modal .modal-card {
+      width: min(100%, 520px);
+      max-height: 90vh;
+    }
+
+    .reject-modal-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0;
+    }
+
+    .reject-modal-title i {
+      color: var(--danger-text);
+      font-size: 1.3rem;
+    }
+
+    .reject-reasons-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .reject-reason-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 2px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.87rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: start;
+      line-height: 1.5;
+    }
+
+    .reject-reason-chip i {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .reject-reason-chip:hover {
+      border-color: var(--danger-text);
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .reject-reason-chip:hover i {
+      color: var(--danger-text);
+    }
+
+    .reject-reason-chip.selected {
+      border-color: var(--danger-text);
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .reject-reason-chip.selected i {
+      color: var(--danger-text);
+    }
+
+    .reject-custom-label {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .reject-modal-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel-reject {
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-confirm-reject {
+      min-height: 44px;
+      padding: 0 22px;
+      border-radius: 14px;
+      border: none;
+      background: var(--danger-text);
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 20px rgba(225,29,72,0.2);
+    }
+
+    .btn-confirm-reject:hover:not(:disabled) {
+      background: #be123c;
+      transform: translateY(-1px);
+    }
+
+    .btn-confirm-reject:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Delete chat button in chat header */
+    .chat-delete-btn {
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--danger-border);
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+
+    .chat-delete-btn:hover {
+      background: #ffe4e6;
+    }
+
+    .chat-main-head-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    /* ===== END REJECT REASON MODAL ===== */
+
     /* ===== END BOOKINGS FIX ===== */
 
     .messages-layout,
@@ -1896,9 +2073,15 @@
 
               <div class="chat-main">
                 <div class="chat-main-head">
-                  <div>
-                    <h4 id="admin-chat-title">اختر محادثة</h4>
-                    <p id="admin-chat-subtitle">سيظهر هنا اسم العميل أو بريده الإلكتروني.</p>
+                  <div class="chat-main-head-row">
+                    <div>
+                      <h4 id="admin-chat-title">اختر محادثة</h4>
+                      <p id="admin-chat-subtitle">سيظهر هنا اسم العميل أو بريده الإلكتروني.</p>
+                    </div>
+                    <button type="button" id="delete-current-chat-btn" class="chat-delete-btn" style="display:none;">
+                      <i class="ph ph-trash"></i>
+                      حذف المحادثة
+                    </button>
                   </div>
                 </div>
 
@@ -2197,6 +2380,84 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- REJECT BOOKING MODAL -->
+  <div id="reject-reason-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 class="reject-modal-title">
+          <i class="ph ph-x-circle"></i>
+          تحديد سبب الرفض
+        </h3>
+        <button type="button" class="modal-close" id="close-reject-modal">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <p style="color:var(--text-muted);font-size:.9rem;margin:0 0 16px;line-height:1.7;">اختر السبب المناسب أو اكتب سببًا مخصصًا، ثم اضغط «تأكيد الرفض».</p>
+
+      <div class="reject-reasons-grid">
+        <button type="button" class="reject-reason-chip" data-reason="الموعد المطلوب غير متوفر">
+          <i class="ph ph-calendar-x"></i>الموعد المطلوب غير متوفر
+        </button>
+        <button type="button" class="reject-reason-chip" data-reason="العقار محجوز في هذه الفترة">
+          <i class="ph ph-lock-key"></i>العقار محجوز في هذه الفترة
+        </button>
+        <button type="button" class="reject-reason-chip" data-reason="تجاوز الحد الأقصى للضيوف">
+          <i class="ph ph-users"></i>تجاوز الحد الأقصى للضيوف
+        </button>
+        <button type="button" class="reject-reason-chip" data-reason="بيانات الحجز غير مكتملة">
+          <i class="ph ph-warning"></i>بيانات الحجز غير مكتملة
+        </button>
+        <button type="button" class="reject-reason-chip" data-reason="العقار قيد الصيانة">
+          <i class="ph ph-wrench"></i>العقار قيد الصيانة
+        </button>
+        <button type="button" class="reject-reason-chip" data-reason="مخالفة سياسة الحجز">
+          <i class="ph ph-shield-slash"></i>مخالفة سياسة الحجز
+        </button>
+      </div>
+
+      <span class="reject-custom-label">أو اكتب سببًا مخصصًا:</span>
+      <textarea
+        id="reject-custom-reason"
+        class="form-control"
+        rows="3"
+        placeholder="اكتب السبب هنا..."
+        style="min-height:90px;resize:vertical;"
+      ></textarea>
+
+      <div class="reject-modal-footer">
+        <button type="button" class="btn-cancel-reject" id="cancel-reject-btn">إلغاء</button>
+        <button type="button" class="btn-confirm-reject" id="confirm-reject-btn">
+          <i class="ph ph-x-circle"></i>
+          تأكيد الرفض
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CHAT CONFIRM MODAL -->
+  <div id="delete-chat-modal" class="modal-overlay">
+    <div class="modal-card" style="width:min(100%,420px);">
+      <div class="modal-head">
+        <h3 style="margin:0;font-size:1.05rem;font-weight:800;color:var(--text-main);">
+          <i class="ph ph-trash" style="color:var(--danger-text);"></i>
+          حذف المحادثة
+        </h3>
+        <button type="button" class="modal-close" id="close-delete-chat-modal">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <p style="color:var(--text-muted);line-height:1.8;margin:0 0 20px;">هل أنت متأكد من حذف هذه المحادثة؟ سيتم حذف جميع رسائلها بشكل نهائي ولا يمكن التراجع.</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn-cancel-reject" id="cancel-delete-chat-btn">إلغاء</button>
+        <button type="button" class="btn-confirm-reject" id="confirm-delete-chat-btn">
+          <i class="ph ph-trash"></i>
+          حذف نهائياً
+        </button>
+      </div>
     </div>
   </div>
 
