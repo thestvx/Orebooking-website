@@ -1,7 +1,7 @@
 // =========================================
-// script.js — OreBooking Index Page v4.4
+// script.js — OreBooking Index Page v4.5
 // Full Firebase + Auth + Real-time Chat + Listings + Favorites Modal
-// Fixed support chat delivery + user-linked conversations
+// Stable support chat + race-condition fixes
 // Compatible with current index.html IDs
 // =========================================
 "use strict";
@@ -98,6 +98,7 @@ const state = {
   currentChatId: safeGet("ore_current_chat_id", ""),
   currentChatUnsub: null,
   chatInitializedForUser: "",
+  chatRetryTimer: null,
   bookings: []
 };
 
@@ -508,6 +509,24 @@ function getServerTimestamp() {
   return firestoreFieldValue?.serverTimestamp ? firestoreFieldValue.serverTimestamp() : new Date();
 }
 
+function clearChatRetryTimer() {
+  if (state.chatRetryTimer) {
+    clearTimeout(state.chatRetryTimer);
+    state.chatRetryTimer = null;
+  }
+}
+
+function scheduleChatRetry(uid) {
+  clearChatRetryTimer();
+  state.chatRetryTimer = setTimeout(() => {
+    if (state.currentUser?.uid === uid) {
+      ensureSupportChat(false).catch((err) => {
+        console.warn("chat retry failed:", err);
+      });
+    }
+  }, 1500);
+}
+
 function formatCurrency(amount) {
   const n = Number(amount || 0);
   return state.lang === "ar"
@@ -622,6 +641,7 @@ function resetFrontendUserState() {
   state.currentChatId = "";
   state.chatInitializedForUser = "";
   safeRemove("ore_current_chat_id");
+  clearChatRetryTimer();
   stopChatSubscription();
   setUnreadBadge();
   setChatStatus("syncing", t("chatPreparing"));
@@ -903,7 +923,6 @@ async function updateAuthUI(user) {
     applyGuestAuthUI();
     resetFrontendUserState();
     closeProfileDropdown();
-
     if (els.loginEmail) els.loginEmail.value = user.email || "";
     return;
   }
@@ -951,11 +970,14 @@ async function updateAuthUI(user) {
   updateChatHiddenFields();
 
   if (prevUid !== user.uid) {
+    clearChatRetryTimer();
+    stopChatSubscription();
     state.chatMessages = [];
     state.chatUnread = 0;
+    state.currentChatId = "";
+    state.chatInitializedForUser = "";
     setUnreadBadge();
-    ensureSupportChat(false).catch((err) => console.warn("ensureSupportChat after auth:", err));
-    loadBookings().catch((err) => console.warn("loadBookings after auth:", err));
+    renderChatMessages();
   }
 
   renderFavorites();
@@ -1008,9 +1030,7 @@ function handleLogin(e) {
   const email = els.loginEmail?.value?.trim();
   const pass = els.loginPassword?.value;
 
-  if (!email || !pass) {
-    return showAuthMessage(t("fillAllFields"));
-  }
+  if (!email || !pass) return showAuthMessage(t("fillAllFields"));
 
   clearAuthMessage();
 
@@ -1057,17 +1077,9 @@ function handleRegister(e) {
   const pass = els.regPassword?.value;
   const confirm = els.regConfirm?.value;
 
-  if (!name || !email || !pass || !confirm) {
-    return showAuthMessage(t("fillAllFields"));
-  }
-
-  if (pass !== confirm) {
-    return showAuthMessage(state.lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords don't match");
-  }
-
-  if (pass.length < 6) {
-    return showAuthMessage(t("passwordShort"));
-  }
+  if (!name || !email || !pass || !confirm) return showAuthMessage(t("fillAllFields"));
+  if (pass !== confirm) return showAuthMessage(state.lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords don't match");
+  if (pass.length < 6) return showAuthMessage(t("passwordShort"));
 
   clearAuthMessage();
 
@@ -1109,9 +1121,7 @@ function handleForgot(e) {
   if (!auth) return showToast(t("firebaseMissing"), "error");
 
   const email = els.forgotEmail?.value?.trim();
-  if (!email) {
-    return showAuthMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني" : "Enter your email");
-  }
+  if (!email) return showAuthMessage(state.lang === "ar" ? "أدخل بريدك الإلكتروني" : "Enter your email");
 
   clearAuthMessage();
 
@@ -1204,7 +1214,7 @@ function normalizeCategory(cat = "") {
   if (val.includes("hotel") || val.includes("فندق")) return "hotel";
   if (val.includes("villa") || val.includes("فيلا")) return "villa";
   if (val.includes("apartment") || val.includes("شقة")) return "apartment";
-  return val;
+  return val || "all";
 }
 
 function applyFilters() {
@@ -1334,13 +1344,12 @@ function renderListings() {
     const type = getType(p);
     const price = getPrice(p);
     const rating = Number(p.rating || 0).toFixed(1);
-    const favClass = isFavorite(id) ? "active" : "";
 
     return `
       <article class="property-card">
         <div class="property-card-media">
           <img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='images/placeholder.jpg'">
-          <button class="favorite-btn ${favClass}" type="button" data-fav-id="${escapeHtml(id)}" aria-label="Favorite">
+          <button class="favorite-btn ${isFavorite(id) ? "active" : ""}" type="button" data-fav-id="${escapeHtml(id)}" aria-label="Favorite">
             <i class="ph ${isFavorite(id) ? "ph-heart-fill" : "ph-heart"}"></i>
           </button>
           <span class="property-urgency">
@@ -1351,29 +1360,17 @@ function renderListings() {
         <div class="property-card-body">
           <div class="property-card-top">
             <h3 class="property-card-title">${escapeHtml(title)}</h3>
-            <span class="property-card-rating">
-              <i class="ph ph-star-fill"></i>${escapeHtml(rating)}
-            </span>
+            <span class="property-card-rating"><i class="ph ph-star-fill"></i>${escapeHtml(rating)}</span>
           </div>
-          <p class="property-card-location">
-            <i class="ph ph-map-pin"></i>
-            <span>${escapeHtml(location)}</span>
-          </p>
-          <p class="property-card-meta">
-            <i class="ph ph-buildings"></i>
-            <span>${escapeHtml(type)}</span>
-          </p>
-          <div class="property-card-price">
-            ${escapeHtml(formatCurrency(price))} <span>/ ${t("night")}</span>
-          </div>
+          <p class="property-card-location"><i class="ph ph-map-pin"></i><span>${escapeHtml(location)}</span></p>
+          <p class="property-card-meta"><i class="ph ph-buildings"></i><span>${escapeHtml(type)}</span></p>
+          <div class="property-card-price">${escapeHtml(formatCurrency(price))} <span>/ ${t("night")}</span></div>
           <div class="property-card-actions">
             <button type="button" onclick="goToPropertyDetails('${escapeHtml(id)}')">
-              <i class="ph ph-info"></i>
-              <span>${t("viewDetails")}</span>
+              <i class="ph ph-info"></i><span>${t("viewDetails")}</span>
             </button>
             <button type="button" class="primary" onclick="goToBooking('${escapeHtml(id)}')">
-              <i class="ph ph-calendar-check"></i>
-              <span>${t("bookNow")}</span>
+              <i class="ph ph-calendar-check"></i><span>${t("bookNow")}</span>
             </button>
           </div>
         </div>
@@ -1384,6 +1381,10 @@ function renderListings() {
   $$("[data-fav-id]").forEach((btn) => {
     btn.addEventListener("click", () => toggleFavorite(btn.dataset.favId));
   });
+
+  if (els.listingsCount) {
+    els.listingsCount.textContent = String(state.filteredProperties.length);
+  }
 }
 
 // ──────────────────────────────────────────
@@ -1413,11 +1414,7 @@ function renderBookings() {
   if (!els.bookingsList) return;
 
   if (!state.currentUser) {
-    els.bookingsList.innerHTML = `
-      <div class="booking-entry">
-        <p>${escapeHtml(t("loginRequired"))}</p>
-      </div>
-    `;
+    els.bookingsList.innerHTML = `<div class="booking-entry"><p>${escapeHtml(t("loginRequired"))}</p></div>`;
     return;
   }
 
@@ -1445,7 +1442,7 @@ function renderBookings() {
           <div>
             <h4 class="booking-entry-title">${escapeHtml(title)}</h4>
             <div class="booking-entry-meta">
-              <span>${escapeHtml(checkIn)} ${checkOut ? `— ${escapeHtml(checkOut)}` : ""}</span>
+              <span>${escapeHtml(checkIn)}${checkOut ? ` — ${escapeHtml(checkOut)}` : ""}</span>
               <span>${escapeHtml(total)}</span>
             </div>
           </div>
@@ -1523,7 +1520,11 @@ async function ensureSupportChat(openAfterEnsure = false) {
   const chatId = getSupportChatDocId(uid);
   const chatRef = db.collection("supportChats").doc(chatId);
 
-  if (state.chatInitializedForUser === uid && state.currentChatId === chatId && state.currentChatUnsub) {
+  if (
+    state.chatInitializedForUser === uid &&
+    state.currentChatId === chatId &&
+    typeof state.currentChatUnsub === "function"
+  ) {
     if (openAfterEnsure) openModal(els.chatModal);
     return chatId;
   }
@@ -1532,6 +1533,7 @@ async function ensureSupportChat(openAfterEnsure = false) {
 
   try {
     const existing = await chatRef.get();
+    const existingData = existing.exists ? existing.data() || {} : {};
 
     await chatRef.set({
       chatId,
@@ -1540,10 +1542,10 @@ async function ensureSupportChat(openAfterEnsure = false) {
       userName: getCurrentUserName(),
       status: "open",
       channel: "support",
-      lastMessage: existing.exists ? (existing.data()?.lastMessage || "") : "",
-      lastMessageRole: existing.exists ? (existing.data()?.lastMessageRole || "") : "",
-      lastMessageAt: existing.exists ? (existing.data()?.lastMessageAt || getServerTimestamp()) : getServerTimestamp(),
-      createdAt: existing.exists ? (existing.data()?.createdAt || getServerTimestamp()) : getServerTimestamp(),
+      lastMessage: cleanText(existingData.lastMessage || ""),
+      lastMessageRole: cleanText(existingData.lastMessageRole || ""),
+      lastMessageAt: existingData.lastMessageAt || getServerTimestamp(),
+      createdAt: existingData.createdAt || getServerTimestamp(),
       updatedAt: getServerTimestamp()
     }, { merge: true });
 
@@ -1555,12 +1557,11 @@ async function ensureSupportChat(openAfterEnsure = false) {
     subscribeToCurrentChat(chatId);
 
     if (openAfterEnsure) openModal(els.chatModal);
-
-    setChatStatus("connected", t("supportReady"));
     return chatId;
   } catch (err) {
     console.error("ensureSupportChat error:", err);
     setChatStatus("error", t("chatError"));
+    scheduleChatRetry(uid);
     throw err;
   }
 }
@@ -1568,12 +1569,13 @@ async function ensureSupportChat(openAfterEnsure = false) {
 function subscribeToCurrentChat(chatId = state.currentChatId) {
   stopChatSubscription();
 
-  if (!db || !chatId) {
+  if (!db || !chatId || !state.currentUser?.uid) {
     state.chatMessages = [];
     renderChatMessages();
     return;
   }
 
+  const activeUid = state.currentUser.uid;
   setChatStatus("syncing", t("chatSyncing"));
 
   state.currentChatUnsub = db
@@ -1583,9 +1585,12 @@ function subscribeToCurrentChat(chatId = state.currentChatId) {
     .orderBy("createdAt", "asc")
     .onSnapshot(
       (snap) => {
+        if (!state.currentUser?.uid || state.currentUser.uid !== activeUid) return;
+
+        clearChatRetryTimer();
+
         const items = [];
         snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-
         state.chatMessages = items.map(normalizeMessage);
 
         if (!state.chatOpen) {
@@ -1601,7 +1606,13 @@ function subscribeToCurrentChat(chatId = state.currentChatId) {
       },
       (err) => {
         console.error("chat snapshot error:", err);
+
+        if (!state.currentUser?.uid || state.currentUser.uid !== activeUid) return;
+
+        stopChatSubscription();
+        state.chatInitializedForUser = "";
         setChatStatus("error", t("chatError"));
+        scheduleChatRetry(activeUid);
       }
     );
 }
@@ -1693,6 +1704,7 @@ async function sendChatMessage(rawText) {
   } catch (err) {
     console.error("sendChatMessage error:", err);
     setChatStatus("error", t("chatError"));
+    scheduleChatRetry(state.currentUser?.uid || "");
     showToast(t("chatError"), "error");
   } finally {
     if (sendBtn) {
@@ -1776,9 +1788,13 @@ function bindUIEvents() {
     }
   });
 
-  els.closeAuthBtn?.addEventListener("click", () => hideAuthModal());
-  els.chatCloseBtn?.addEventListener("click", () => closeSupportChat());
+  els.closeAuthBtn?.addEventListener("click", hideAuthModal);
+  els.chatCloseBtn?.addEventListener("click", closeSupportChat);
   els.closeBookingsBtn?.addEventListener("click", () => closeModal(els.bookingsModal));
+
+  els.favoritesModal?.addEventListener("click", (e) => {
+    if (e.target === els.favoritesModal) closeModal(els.favoritesModal);
+  });
 
   els.authModal?.addEventListener("click", (e) => {
     if (e.target === els.authModal) hideAuthModal();
@@ -1843,7 +1859,7 @@ function bindUIEvents() {
     btn.addEventListener("click", () => {
       $$(".category-item").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      state.activeCategory = normalizeCategory(btn.dataset.category || "all") || "all";
+      state.activeCategory = normalizeCategory(btn.dataset.category || "all");
       applyFilters();
     });
   });
@@ -1908,8 +1924,8 @@ function initAuthListener() {
       applyLang();
 
       if (user?.uid) {
-        await ensureSupportChat(false);
         await loadBookings();
+        await ensureSupportChat(false);
       } else {
         resetFrontendUserState();
       }
