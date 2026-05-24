@@ -1,10 +1,8 @@
 // =========================================
-// booking.js — OreBooking v16.5
-// Simplified booking flow + auth + payment
-// Fixed stale dates + success popup
-// Fixed desktop/mobile date typing
-// Added bed type support + theme logo swap
-// Fixed profile dropdown / favorites / my bookings behavior
+// booking.js — OreBooking v17.0
+// Safe booking flow + auth + payment
+// Fixed stale customer name/email leak
+// User-scoped draft storage
 // =========================================
 
 "use strict";
@@ -194,7 +192,9 @@ function clearLegacyDateStorage() {
     "selectedCheckIn",
     "selectedCheckOut",
     "ore_booking_check_in",
-    "ore_booking_check_out"
+    "ore_booking_check_out",
+    "ore_guest_basics",
+    "ore_booking_draft_v4"
   ].forEach((key) => safeRemove(key));
 }
 
@@ -237,6 +237,46 @@ function generateReference(prefix = "ORE") {
   const d = String(now.getDate()).padStart(2, "0");
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   return `${prefix}-${y}${m}${d}-${rand}`;
+}
+
+function getCurrentUserScope() {
+  return currentUser?.uid ? `user_${currentUser.uid}` : "guest";
+}
+
+function getBookingDraftKey() {
+  return `ore_booking_draft_v6_${getCurrentUserScope()}`;
+}
+
+function getGuestBasicsKey() {
+  return `ore_guest_basics_v2_${getCurrentUserScope()}`;
+}
+
+function clearGuestIdentityFields() {
+  if (bookingFields.guestName) bookingFields.guestName.value = "";
+  if (bookingFields.guestEmail) bookingFields.guestEmail.value = "";
+}
+
+function clearAllBookingFields() {
+  Object.values(bookingFields).forEach((el) => {
+    if (!el) return;
+    if (el.tagName === "SELECT") {
+      el.selectedIndex = 0;
+    } else if (el.type === "number") {
+      if (el.id === "guest-adults") el.value = "1";
+      else if (el.id === "guest-children") el.value = "0";
+      else el.value = "";
+    } else if ("value" in el) {
+      el.value = "";
+    }
+  });
+
+  if (els.agreePolicy) els.agreePolicy.checked = false;
+  if (els.paymentProof) els.paymentProof.value = "";
+}
+
+function clearScopedDrafts(scope = getCurrentUserScope()) {
+  safeRemove(`ore_booking_draft_v6_${scope}`);
+  safeRemove(`ore_guest_basics_v2_${scope}`);
 }
 
 // ──────────────────────────────────────────
@@ -319,6 +359,7 @@ function enhanceDateInput(el, options = {}) {
   el.setAttribute("autocorrect", "off");
   el.setAttribute("spellcheck", "false");
   el.setAttribute("dir", "ltr");
+
   if (!el.getAttribute("placeholder")) {
     el.setAttribute("placeholder", "YYYY-MM-DD");
   }
@@ -423,7 +464,6 @@ function setupDateInputs() {
 let currentUser = null;
 let isUpdatingUI = false;
 
-const BOOKING_DRAFT_KEY = "ore_booking_draft_v5";
 const LOCAL_BOOKINGS_KEY = "ore_bookings_local_v1";
 
 const bookingState = {
@@ -1076,17 +1116,19 @@ function handleProfileButtonClick(e) {
   }
 }
 
+function fillAuthenticatedGuestFields(user) {
+  if (!user) return;
+
+  setValueIfEmpty(bookingFields.guestName, cleanText(user.displayName));
+  setValueIfEmpty(bookingFields.guestEmail, cleanText(user.email));
+  setValueIfEmpty(bookingFields.billingName, cleanText(user.displayName));
+}
+
 function updateAuthUI(user) {
   currentUser = user || null;
 
-  const guestBasics = safeJsonGet("ore_guest_basics", {});
-  const name =
-    cleanText(user?.displayName) ||
-    cleanText(guestBasics?.guestName) ||
-    t("Guest User", "زائر");
-  const email =
-    cleanText(user?.email) ||
-    t("Sign in to continue", "سجل الدخول للمتابعة");
+  const name = cleanText(user?.displayName) || t("Guest User", "زائر");
+  const email = cleanText(user?.email) || t("Sign in to continue", "سجل الدخول للمتابعة");
 
   setText(els.dropdownUserName, name);
   setText(els.dropdownUserEmail, email);
@@ -1106,6 +1148,10 @@ function updateAuthUI(user) {
 
   if (els.logoutBtn) {
     els.logoutBtn.style.display = user ? "flex" : "none";
+  }
+
+  if (user) {
+    fillAuthenticatedGuestFields(user);
   }
 
   toggleProfileDropdown(false);
@@ -1188,8 +1234,17 @@ async function sendResetEmail(email) {
 
 async function logoutUser() {
   try {
+    const oldScope = getCurrentUserScope();
+
+    clearScopedDrafts(oldScope);
+    clearAllBookingFields();
+    clearGuestIdentityFields();
+
     if (auth) await auth.signOut();
+
     toggleProfileDropdown(false);
+    updateSummary();
+    updateReview();
     showToast(t("Logged out successfully.", "تم تسجيل الخروج بنجاح."), "success");
   } catch (error) {
     console.error("Logout error:", error);
@@ -1208,22 +1263,6 @@ function resolvePropertyId() {
     params.get("listingId") ||
     safeGet("selectedPropertyId");
   return id ? String(id).trim() : null;
-}
-
-function getQueryOrStorage(paramNames, storageKeys = [], fallback = "") {
-  const params = new URLSearchParams(window.location.search);
-
-  for (const name of paramNames) {
-    const value = cleanText(params.get(name));
-    if (value) return value;
-  }
-
-  for (const key of storageKeys) {
-    const value = cleanText(safeGet(key, ""));
-    if (value) return value;
-  }
-
-  return fallback;
 }
 
 function buildFallbackProperty(id = null) {
@@ -1319,13 +1358,9 @@ function renderPropertySummary() {
   setText(els.propMiniType, getPropertyType());
 
   if (els.propMiniLoc) {
-    const icon = els.propMiniLoc.querySelector("i");
-    const text = getPropertyLocation();
-    if (icon) {
-      els.propMiniLoc.innerHTML = `${icon.outerHTML} <span>${escapeHtml(text)}</span>`;
-    } else {
-      els.propMiniLoc.textContent = text;
-    }
+    const span = els.propMiniLoc.querySelector("span");
+    if (span) span.textContent = getPropertyLocation();
+    else els.propMiniLoc.textContent = getPropertyLocation();
   }
 }
 
@@ -1354,177 +1389,85 @@ function getPaymentMethodLabel(value) {
   }
 }
 
-function hydrateStayContext() {
-  const rawCheckIn = getQueryOrStorage(
-    ["checkIn", "checkin", "arrival"],
-    ["booking_check_in", "selectedCheckIn", "ore_booking_check_in"],
-    ""
-  );
-
-  const rawCheckOut = getQueryOrStorage(
-    ["checkOut", "checkout", "departure"],
-    ["booking_check_out", "selectedCheckOut", "ore_booking_check_out"],
-    ""
-  );
-
-  const guests = getQueryOrStorage(
-    ["guests", "guestCount", "adults"],
-    ["booking_guests", "selectedGuests", "booking_adults"],
-    ""
-  );
-
-  bookingState.checkIn = getSafeCheckIn(rawCheckIn);
-  bookingState.checkOut = getSafeCheckOut(bookingState.checkIn, rawCheckOut);
-  bookingState.guestCount = Math.max(1, parsePositiveInt(guests || 1, 1));
-  bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
-
-  if (bookingFields.arrivalDate && !cleanText(bookingFields.arrivalDate.value)) {
-    bookingFields.arrivalDate.value = bookingState.checkIn || "";
-  }
-
-  if (bookingFields.departureDate && !cleanText(bookingFields.departureDate.value)) {
-    bookingFields.departureDate.value = bookingState.checkOut || "";
-  }
-
-  if (bookingFields.guestAdults && !bookingFields.guestAdults.value) {
-    bookingFields.guestAdults.value = String(bookingState.guestCount);
-  }
-
-  if (!bookingState.checkIn && !bookingState.checkOut) {
-    clearLegacyDateStorage();
-  }
-}
-
-function persistStayContext() {
-  safeSet("booking_check_in", bookingState.checkIn || "");
-  safeSet("booking_check_out", bookingState.checkOut || "");
-  safeSet("booking_guests", String(bookingState.guestCount || 1));
-}
-
-function updateDateConstraints() {
-  const checkIn = cleanText(bookingFields.arrivalDate?.value);
-  const checkOut = cleanText(bookingFields.departureDate?.value);
-
-  if (bookingFields.departureDate && checkIn) {
-    bookingFields.departureDate.dataset.minDate = checkIn;
-  }
-
-  if (checkIn && checkOut && getDiffNights(checkIn, checkOut) < 1) {
-    bookingFields.departureDate.value = "";
-  }
-}
-
-function updateBookingStateFromInputs() {
-  bookingState.checkIn = getSafeCheckIn(getFieldValue("arrivalDate"));
-  bookingState.checkOut = getSafeCheckOut(bookingState.checkIn, getFieldValue("departureDate"));
-
-  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
-  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0));
-
-  bookingState.guestCount = adults + children;
-  bookingState.nights = getDiffNights(bookingState.checkIn, bookingState.checkOut);
-  bookingState.paymentValue = getSelectedPaymentValue();
-  bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
-  bookingState.rewardPoints = Math.max(0, bookingState.nights * 10);
-  bookingState.stayDetails.bedType = getFieldSelectedText("bedType", t("Not selected", "غير محدد"));
-
-  persistStayContext();
-}
-
 function updatePaymentCardsUI() {
   const selected = getSelectedPaymentValue();
 
   els.paymentCards.forEach((card) => {
-    const input = card.querySelector('input[type="radio"]');
-    const active = input?.value === selected;
-    card.classList.toggle("selected", active);
+    const radio = card.querySelector('input[type="radio"]');
+    card.classList.toggle("selected", !!radio && radio.value === selected);
   });
-
-  els.bankTransferBox?.classList.toggle("active", selected === "ccp" || selected === "bank" || selected === "bank-transfer");
-  els.cashBox?.classList.toggle("active", selected === "cash");
-  els.cardBox?.classList.toggle("active", selected === "card");
 
   bookingState.paymentValue = selected;
   bookingState.paymentMethod = getPaymentMethodLabel(selected);
+
+  if (els.bankTransferBox) els.bankTransferBox.classList.toggle("active", selected === "ccp" || selected === "bank");
+  if (els.cashBox) els.cashBox.classList.toggle("active", selected === "cash");
+  if (els.cardBox) els.cardBox.classList.toggle("active", selected === "card");
 }
 
-function getSpecialRequestsDisplay() {
-  return getFieldValue("specialRequests") || getFallbackText();
-}
+function updateBookingStateFromInputs() {
+  const checkIn = getSafeCheckIn(getFieldValue("arrivalDate"));
+  const checkOut = getSafeCheckOut(checkIn, getFieldValue("departureDate"));
 
-function getBedTypeDisplay() {
-  const value = getFieldSelectedText("bedType");
-  if (!value || /select/i.test(value) || /اختر/.test(value)) {
-    return t("Not selected", "غير محدد");
-  }
-  return value;
-}
+  bookingState.checkIn = checkIn;
+  bookingState.checkOut = checkOut;
+  bookingState.nights = checkIn && checkOut ? getDiffNights(checkIn, checkOut) : 0;
 
-function getBillingDisplay() {
-  const name = getFieldValue("billingName");
-  const note = getFieldValue("billingNote");
-  if (!name && !note) return getFallbackText();
-  if (name && note) return `${name} — ${note}`;
-  return name || note;
-}
+  const adults = parsePositiveInt(getFieldValue("guestAdults", "1"), 1);
+  const children = parsePositiveInt(getFieldValue("guestChildren", "0"), 0);
+  bookingState.guestCount = Math.max(1, adults + children);
 
-function getDocumentsDisplay() {
-  if (bookingState.paymentValue === "cash") {
-    return t("No receipt required", "لا يلزم إيصال");
-  }
-  if (bookingState.paymentProofUploading) {
-    return t("Uploading receipt...", "جارٍ رفع الإيصال...");
-  }
-  if (bookingState.paymentProofName) {
-    return bookingState.paymentProofName;
-  }
-  return t("No file uploaded", "لم يتم رفع ملف");
-}
+  bookingState.stayDetails.bedType = getFieldSelectedText("bedType", getFallbackText());
+  bookingState.paymentValue = getSelectedPaymentValue();
+  bookingState.paymentMethod = getPaymentMethodLabel(bookingState.paymentValue);
 
-function getPurposeArrivalDisplay() {
-  const purpose = getFieldSelectedText("stayPurpose", getFallbackText());
-  const arrival = getFieldSelectedText("arrivalTime", getFallbackText());
-  return `${purpose} — ${arrival}`;
-}
-
-function getGuestsDisplay() {
-  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
-  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0));
-
-  if (bookingState.lang === "ar") {
-    return `${adults} بالغ${adults > 1 ? "ون" : ""}${children ? `، ${children} طفل` : ""}`;
+  if (!bookingState.bookingReference) {
+    bookingState.bookingReference = generateReference();
   }
 
-  return `${adults} adult${adults > 1 ? "s" : ""}${children ? `, ${children} child${children > 1 ? "ren" : ""}` : ""}`;
+  if (els.paymentReference) {
+    els.paymentReference.textContent = bookingState.bookingReference;
+  }
+}
+
+function updateDateConstraints() {
+  const today = todayInputValue();
+
+  if (bookingFields.arrivalDate && !cleanText(bookingFields.arrivalDate.value)) {
+    bookingFields.arrivalDate.placeholder = today;
+  }
+
+  if (bookingFields.departureDate && bookingState.checkIn) {
+    const nextDay = addDays(bookingState.checkIn, 1);
+    if (!cleanText(bookingFields.departureDate.value)) {
+      bookingFields.departureDate.placeholder = nextDay || "YYYY-MM-DD";
+    }
+  }
 }
 
 function updateSummary() {
   updateBookingStateFromInputs();
 
-  const pricePerNight = getPropertyPrice();
-  const nights = bookingState.nights || 0;
-  const serviceFee = nights > 0 ? Math.round(pricePerNight * nights * 0.05) : 0;
-  const taxes = nights > 0 ? Math.round(pricePerNight * nights * 0.03) : 0;
-  const total = (pricePerNight * nights) + serviceFee + taxes;
+  const nightly = getPropertyPrice();
+  const nights = bookingState.nights;
+  const serviceFee = nights > 0 ? Math.round(nightly * nights * 0.08) : 0;
+  const taxes = nights > 0 ? Math.round(nightly * nights * 0.06) : 0;
+  const total = nightly * nights + serviceFee + taxes;
 
   setText(els.summaryCheckin, bookingState.checkIn ? formatDateDisplay(bookingState.checkIn) : "-");
   setText(els.summaryCheckout, bookingState.checkOut ? formatDateDisplay(bookingState.checkOut) : "-");
   setText(els.summaryGuests, String(bookingState.guestCount || 1));
-  setText(els.summaryPriceNight, formatCurrency(pricePerNight));
+  setText(els.summaryBedType, bookingState.stayDetails.bedType || "-");
+
+  setText(els.summaryPriceNight, formatCurrency(nightly));
   setText(els.summaryNights, String(nights));
   setText(els.summaryServiceFee, formatCurrency(serviceFee));
   setText(els.summaryTaxes, formatCurrency(taxes));
   setText(els.summaryTotal, formatCurrency(total));
-  setText(els.summaryBedType, getBedTypeDisplay());
 
-  if (!bookingState.bookingReference) {
-    bookingState.bookingReference = generateReference("ORE");
-  }
-  setText(els.paymentReference, bookingState.bookingReference);
-
-  if (els.userPoints) {
-    setText(els.userPoints, String(bookingState.rewardPoints || 0));
-  }
+  bookingState.rewardPoints = total > 0 ? Math.max(10, Math.round(total / 1000)) : 0;
+  setText(els.reviewPoints, String(bookingState.rewardPoints));
+  setText(els.reviewPointsInline, String(bookingState.rewardPoints));
 }
 
 function updateReview() {
@@ -1533,115 +1476,90 @@ function updateReview() {
   setText(els.reviewGuestPhone, getFieldValue("guestPhone", getFallbackText()));
   setText(els.reviewNationalityGender, getFieldValue("guestCountry", getFallbackText()));
 
-  const stayDates = bookingState.checkIn && bookingState.checkOut
-    ? `${formatDateDisplay(bookingState.checkIn)} → ${formatDateDisplay(bookingState.checkOut)}`
+  const datesText = bookingState.checkIn && bookingState.checkOut
+    ? `${formatDateDisplay(bookingState.checkIn)} — ${formatDateDisplay(bookingState.checkOut)}`
     : getFallbackText();
+  setText(els.reviewStayDates, datesText);
 
-  setText(els.reviewStayDates, stayDates);
-  setText(els.reviewGuests, getGuestsDisplay());
-  setText(els.reviewPurposeArrival, getPurposeArrivalDisplay());
-  setText(els.reviewSpecialRequests, getSpecialRequestsDisplay());
-  setText(els.reviewBedType, getBedTypeDisplay());
+  const adults = parsePositiveInt(getFieldValue("guestAdults", "1"), 1);
+  const children = parsePositiveInt(getFieldValue("guestChildren", "0"), 0);
+  setText(els.reviewGuests, `${adults} + ${children}`);
+
+  const purpose = getFieldSelectedText("stayPurpose", getFallbackText());
+  const arrival = getFieldSelectedText("arrivalTime", getFallbackText());
+  setText(els.reviewPurposeArrival, `${purpose} / ${arrival}`);
+
+  setText(els.reviewBedType, getFieldSelectedText("bedType", getFallbackText()));
+  setText(els.reviewDocuments, bookingState.paymentProofName || t("Not uploaded", "لم يتم الرفع"));
+  setText(els.reviewBillings, getFieldValue("billingName", getFallbackText()));
+  setText(els.reviewSpecialRequests, getFieldValue("specialRequests", getFallbackText()));
   setText(els.reviewPaymentMethod, bookingState.paymentMethod || getFallbackText());
-  setText(els.reviewDocuments, getDocumentsDisplay());
-  setText(els.reviewBillings, getBillingDisplay());
   setText(els.reviewPoints, String(bookingState.rewardPoints || 0));
-  setText(els.reviewPointsInline, String(bookingState.rewardPoints || 0));
 }
 
-// ──────────────────────────────────────────
-// Draft
-// ──────────────────────────────────────────
-function collectDraftData() {
-  return {
-    currentStep: bookingState.currentStep,
-    lang: bookingState.lang,
-    theme: bookingState.theme,
-    propertyId: bookingState.propertyId,
-    checkIn: bookingState.checkIn,
-    checkOut: bookingState.checkOut,
-    guestCount: bookingState.guestCount,
-    nights: bookingState.nights,
-    paymentMethod: bookingState.paymentMethod,
-    paymentValue: bookingState.paymentValue,
-    paymentProofUrl: bookingState.paymentProofUrl,
-    paymentProofName: bookingState.paymentProofName,
-    rewardPoints: bookingState.rewardPoints,
-    bookingReference: bookingState.bookingReference,
-    stayDetails: bookingState.stayDetails,
-    fields: Object.fromEntries(
-      Object.entries(bookingFields)
-        .filter(([, el]) => !!el)
-        .map(([key, el]) => [key, el.value])
-    )
-  };
+function setCurrentStep(step) {
+  bookingState.currentStep = Math.max(1, Math.min(3, Number(step) || 1));
+
+  [els.step1, els.step2, els.step3].forEach((section, idx) => {
+    if (!section) return;
+    section.classList.toggle("active", idx + 1 === bookingState.currentStep);
+  });
+
+  els.indicators.forEach((indicator, idx) => {
+    indicator.classList.toggle("active", idx + 1 <= bookingState.currentStep);
+  });
+
+  if (els.connector1) els.connector1.classList.toggle("active", bookingState.currentStep >= 2);
+  if (els.connector2) els.connector2.classList.toggle("active", bookingState.currentStep >= 3);
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function saveDraft() {
-  updateBookingStateFromInputs();
-  safeJsonSet(BOOKING_DRAFT_KEY, collectDraftData());
-}
-
-function restoreDraft() {
-  const draft = safeJsonGet(BOOKING_DRAFT_KEY, null);
-  if (!draft || typeof draft !== "object") return;
-
-  if (draft.fields && typeof draft.fields === "object") {
-    Object.entries(draft.fields).forEach(([key, value]) => {
-      if (bookingFields[key]) {
-        bookingFields[key].value = value ?? "";
-      }
-    });
-  }
-
-  bookingState.currentStep = Math.min(3, Math.max(1, parsePositiveInt(draft.currentStep || 1, 1)));
-  bookingState.paymentProofUrl = draft.paymentProofUrl || null;
-  bookingState.paymentProofName = draft.paymentProofName || "";
-  bookingState.bookingReference = draft.bookingReference || "";
-  bookingState.stayDetails = {
-    ...bookingState.stayDetails,
-    ...(draft.stayDetails || {})
-  };
-
-  const paymentValue = draft.paymentValue || "ccp";
-  const radio = document.querySelector(`input[name="paymentmethod"][value="${paymentValue}"], input[name="payment-method"][value="${paymentValue}"]`);
-  if (radio) radio.checked = true;
-
-  if (els.uploadText && bookingState.paymentProofName) {
-    els.uploadText.textContent = bookingState.paymentProofName;
-  }
-
-  updateBookingStateFromInputs();
-}
-
-// ──────────────────────────────────────────
-// Validation
-// ──────────────────────────────────────────
 function validateStep1() {
   clearAllInvalidStates();
   hideGlobalAlert();
 
   const required = [
-    ["guestName", (v) => !!cleanText(v)],
-    ["guestEmail", (v) => validateEmail(v)],
-    ["guestPhone", (v) => validatePhone(v)],
-    ["guestCountry", (v) => !!cleanText(v)],
-    ["arrivalDate", (v) => !!parseDate(v) && !isPastDate(v)],
-    ["departureDate", (v) => !!parseDate(v) && getDiffNights(getFieldValue("arrivalDate"), v) >= 1],
-    ["guestAdults", (v) => parsePositiveInt(v, 0) >= 1],
-    ["arrivalTime", (v) => !!cleanText(v)],
-    ["stayPurpose", (v) => !!cleanText(v)],
-    ["bedType", (v) => !!cleanText(v)]
+    bookingFields.guestName,
+    bookingFields.guestEmail,
+    bookingFields.guestPhone,
+    bookingFields.guestCountry,
+    bookingFields.arrivalDate,
+    bookingFields.departureDate,
+    bookingFields.guestAdults,
+    bookingFields.arrivalTime,
+    bookingFields.stayPurpose,
+    bookingFields.bedType
   ];
 
   let valid = true;
 
-  required.forEach(([field, check]) => {
-    const el = bookingFields[field];
-    const ok = check(el?.value);
-    markInvalid(el, !ok);
-    if (!ok) valid = false;
+  required.forEach((el) => {
+    if (!el) return;
+    const empty = !cleanText(el.value);
+    if (empty) {
+      markInvalid(el, true);
+      valid = false;
+    }
   });
+
+  if (bookingFields.guestEmail && !validateEmail(bookingFields.guestEmail.value)) {
+    markInvalid(bookingFields.guestEmail, true);
+    valid = false;
+  }
+
+  if (bookingFields.guestPhone && !validatePhone(bookingFields.guestPhone.value)) {
+    markInvalid(bookingFields.guestPhone, true);
+    valid = false;
+  }
+
+  updateBookingStateFromInputs();
+
+  if (!bookingState.checkIn || !bookingState.checkOut || bookingState.nights < 1) {
+    markInvalid(bookingFields.arrivalDate, true);
+    markInvalid(bookingFields.departureDate, true);
+    valid = false;
+  }
 
   if (!valid) {
     showGlobalAlert(t("Please complete the required fields correctly.", "يرجى إكمال الحقول المطلوبة بشكل صحيح."));
@@ -1657,172 +1575,265 @@ function validateStep2() {
 
   let valid = true;
 
-  if (!getFieldValue("billingName")) {
+  if (!cleanText(getFieldValue("billingName"))) {
     markInvalid(bookingFields.billingName, true);
     valid = false;
   }
 
-  const paymentValue = getSelectedPaymentValue();
+  const payment = getSelectedPaymentValue();
 
-  if (paymentValue === "ccp" || paymentValue === "bank" || paymentValue === "bank-transfer") {
-    if (!getFieldValue("senderName")) {
+  if (payment === "ccp" || payment === "bank") {
+    if (!cleanText(getFieldValue("senderName"))) {
       markInvalid(bookingFields.senderName, true);
       valid = false;
     }
-    if (parsePositiveInt(getFieldValue("transferAmount"), 0) <= 0) {
+
+    if (!cleanText(getFieldValue("transferAmount"))) {
       markInvalid(bookingFields.transferAmount, true);
       valid = false;
     }
-    if (!parseDate(getFieldValue("transferDate")) || isPastDate(getFieldValue("transferDate"))) {
+
+    if (!cleanText(getFieldValue("transferDate"))) {
       markInvalid(bookingFields.transferDate, true);
       valid = false;
     }
   }
 
-  if (paymentValue === "cash") {
-    if (!getFieldValue("cashPayerName")) {
+  if (payment === "cash") {
+    if (!cleanText(getFieldValue("cashPayerName"))) {
       markInvalid(bookingFields.cashPayerName, true);
       valid = false;
     }
-    if (!getFieldValue("cashCurrency")) {
+
+    if (!cleanText(getFieldValue("cashCurrency"))) {
       markInvalid(bookingFields.cashCurrency, true);
       valid = false;
     }
   }
 
   if (!valid) {
-    showGlobalAlert(t("Please complete payment information correctly.", "يرجى إكمال معلومات الدفع بشكل صحيح."));
+    showGlobalAlert(t("Please complete the payment details.", "يرجى إكمال بيانات الدفع."));
     scrollToFirstInvalid();
   }
 
   return valid;
 }
 
-function validateFinalStep() {
-  let valid = true;
+function validateStep3() {
+  clearAllInvalidStates();
+  hideGlobalAlert();
 
   if (!els.agreePolicy?.checked) {
     markInvalid(els.agreePolicy, true);
-    valid = false;
-  } else {
-    markInvalid(els.agreePolicy, false);
-  }
-
-  if (!valid) {
-    showGlobalAlert(t("You must agree to the booking policy.", "يجب الموافقة على سياسة الحجز أولاً."));
+    showGlobalAlert(t("Please agree to the policy first.", "يرجى الموافقة على الشروط أولاً."));
     scrollToFirstInvalid();
+    return false;
   }
 
-  return valid;
+  return true;
 }
 
 // ──────────────────────────────────────────
-// Steps
+// Draft Save / Load
 // ──────────────────────────────────────────
-function showStep(step) {
-  bookingState.currentStep = Math.min(3, Math.max(1, parsePositiveInt(step, 1)));
+function buildDraftPayload() {
+  updateBookingStateFromInputs();
 
-  const sections = [els.step1, els.step2, els.step3];
-  sections.forEach((section, index) => {
-    section?.classList.toggle("active", index + 1 === bookingState.currentStep);
-  });
+  return {
+    propertyId: bookingState.propertyId,
+    currentStep: bookingState.currentStep,
+    bookingReference: bookingState.bookingReference,
 
-  els.indicators.forEach((indicator, index) => {
-    const n = index + 1;
-    indicator.classList.toggle("active", n === bookingState.currentStep);
-    indicator.classList.toggle("completed", n < bookingState.currentStep);
-  });
+    guestName: currentUser?.displayName ? "" : getFieldValue("guestName"),
+    guestEmail: currentUser?.email ? "" : getFieldValue("guestEmail"),
+    guestPhone: getFieldValue("guestPhone"),
+    guestCountry: getFieldValue("guestCountry"),
 
-  els.connector1?.classList.toggle("completed", bookingState.currentStep > 1);
-  els.connector2?.classList.toggle("completed", bookingState.currentStep > 2);
+    guestAdults: getFieldValue("guestAdults", "1"),
+    guestChildren: getFieldValue("guestChildren", "0"),
+    stayPurpose: getFieldValue("stayPurpose"),
+    bedType: getFieldValue("bedType"),
+    arrivalDate: getFieldValue("arrivalDate"),
+    departureDate: getFieldValue("departureDate"),
+    arrivalTime: getFieldValue("arrivalTime"),
+    specialRequests: getFieldValue("specialRequests"),
 
-  hideGlobalAlert();
-  saveDraft();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+    billingName: getFieldValue("billingName"),
+    billingNote: getFieldValue("billingNote"),
+
+    paymentValue: getSelectedPaymentValue(),
+    senderName: getFieldValue("senderName"),
+    transferAmount: getFieldValue("transferAmount"),
+    transferDate: getFieldValue("transferDate"),
+    transferTime: getFieldValue("transferTime"),
+    cashPayerName: getFieldValue("cashPayerName"),
+    cashCurrency: getFieldValue("cashCurrency"),
+    cashPaymentNote: getFieldValue("cashPaymentNote"),
+
+    paymentProofUrl: bookingState.paymentProofUrl || null,
+    paymentProofName: bookingState.paymentProofName || ""
+  };
+}
+
+function saveDraft() {
+  const payload = buildDraftPayload();
+  safeJsonSet(getBookingDraftKey(), payload);
+
+  const guestBasics = {
+    guestPhone: payload.guestPhone,
+    guestCountry: payload.guestCountry
+  };
+
+  if (!currentUser?.displayName) guestBasics.guestName = payload.guestName;
+  if (!currentUser?.email) guestBasics.guestEmail = payload.guestEmail;
+
+  safeJsonSet(getGuestBasicsKey(), guestBasics);
+}
+
+function applyDraftToFields(draft) {
+  if (!draft || typeof draft !== "object") return;
+
+  if (!currentUser?.displayName) setValueIfEmpty(bookingFields.guestName, draft.guestName);
+  if (!currentUser?.email) setValueIfEmpty(bookingFields.guestEmail, draft.guestEmail);
+
+  setValueIfEmpty(bookingFields.guestPhone, draft.guestPhone);
+  setValueIfEmpty(bookingFields.guestCountry, draft.guestCountry);
+
+  setValueIfEmpty(bookingFields.guestAdults, draft.guestAdults || "1");
+  setValueIfEmpty(bookingFields.guestChildren, draft.guestChildren || "0");
+  setValueIfEmpty(bookingFields.arrivalDate, draft.arrivalDate);
+  setValueIfEmpty(bookingFields.departureDate, draft.departureDate);
+  setValueIfEmpty(bookingFields.arrivalTime, draft.arrivalTime);
+  setValueIfEmpty(bookingFields.stayPurpose, draft.stayPurpose);
+  setValueIfEmpty(bookingFields.bedType, draft.bedType);
+  setValueIfEmpty(bookingFields.specialRequests, draft.specialRequests);
+
+  setValueIfEmpty(bookingFields.billingName, draft.billingName);
+  setValueIfEmpty(bookingFields.billingNote, draft.billingNote);
+
+  setValueIfEmpty(bookingFields.senderName, draft.senderName);
+  setValueIfEmpty(bookingFields.transferAmount, draft.transferAmount);
+  setValueIfEmpty(bookingFields.transferDate, draft.transferDate);
+  setValueIfEmpty(bookingFields.transferTime, draft.transferTime);
+
+  setValueIfEmpty(bookingFields.cashPayerName, draft.cashPayerName);
+  setValueIfEmpty(bookingFields.cashCurrency, draft.cashCurrency);
+  setValueIfEmpty(bookingFields.cashPaymentNote, draft.cashPaymentNote);
+
+  bookingState.paymentProofUrl = draft.paymentProofUrl || null;
+  bookingState.paymentProofName = draft.paymentProofName || "";
+
+  if (els.uploadText && bookingState.paymentProofName) {
+    els.uploadText.textContent = bookingState.paymentProofName;
+  }
+
+  if (draft.paymentValue) {
+    const radio = document.querySelector(`input[name="paymentmethod"][value="${CSS.escape(draft.paymentValue)}"], input[name="payment-method"][value="${CSS.escape(draft.paymentValue)}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  bookingState.bookingReference = draft.bookingReference || bookingState.bookingReference;
+  if (els.paymentReference && bookingState.bookingReference) {
+    els.paymentReference.textContent = bookingState.bookingReference;
+  }
+
+  setCurrentStep(draft.currentStep || 1);
+  updatePaymentCardsUI();
+  updateBookingStateFromInputs();
+  updateSummary();
+  updateReview();
+}
+
+function loadDraft() {
+  const draft = safeJsonGet(getBookingDraftKey(), null);
+  if (draft) {
+    applyDraftToFields(draft);
+    return;
+  }
+
+  const guestBasics = safeJsonGet(getGuestBasicsKey(), null);
+  if (guestBasics && typeof guestBasics === "object") {
+    if (!currentUser?.displayName) setValueIfEmpty(bookingFields.guestName, guestBasics.guestName);
+    if (!currentUser?.email) setValueIfEmpty(bookingFields.guestEmail, guestBasics.guestEmail);
+    setValueIfEmpty(bookingFields.guestPhone, guestBasics.guestPhone);
+    setValueIfEmpty(bookingFields.guestCountry, guestBasics.guestCountry);
+  }
+
+  updateBookingStateFromInputs();
+  updateSummary();
+  updateReview();
 }
 
 // ──────────────────────────────────────────
 // Upload
 // ──────────────────────────────────────────
-async function uploadPaymentProof(file) {
-  if (!file) return null;
+async function handlePaymentProofUpload(file) {
+  if (!file) return;
 
-  const allowed = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "application/pdf"
-  ];
+  const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  const maxSize = 5 * 1024 * 1024;
 
   if (!allowed.includes(file.type)) {
     showToast(t("Unsupported file type.", "نوع الملف غير مدعوم."), "error");
-    return null;
+    return;
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    showToast(t("File is too large. Maximum is 5MB.", "حجم الملف كبير. الحد الأقصى 5MB."), "error");
-    return null;
+  if (file.size > maxSize) {
+    showToast(t("File is too large.", "الملف كبير جدًا."), "error");
+    return;
   }
 
-  bookingState.paymentProofName = file.name;
-  bookingState.paymentProofUploading = true;
-  if (els.uploadText) {
-    els.uploadText.textContent = t("Uploading...", "جارٍ الرفع...");
+  if (!storage) {
+    bookingState.paymentProofName = file.name;
+    bookingState.paymentProofUrl = null;
+    if (els.uploadText) els.uploadText.textContent = file.name;
+    saveDraft();
+    showToast(t("File attached locally.", "تم إرفاق الملف محليًا."), "success");
+    return;
   }
-  updateReview();
 
   try {
-    if (!storage || !auth?.currentUser) {
-      bookingState.paymentProofUrl = "";
-      bookingState.paymentProofName = file.name;
-      return { url: "", name: file.name };
-    }
+    bookingState.paymentProofUploading = true;
+    if (els.uploadText) els.uploadText.textContent = t("Uploading...", "جارٍ الرفع...");
 
-    const ref = storage.ref().child(`booking-receipts/${auth.currentUser.uid}/${Date.now()}-${file.name}`);
-    const snap = await ref.put(file);
-    const url = await snap.ref.getDownloadURL();
+    const ref = storage.ref().child(`booking-proofs/${getCurrentUserScope()}/${Date.now()}_${file.name}`);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
 
     bookingState.paymentProofUrl = url;
     bookingState.paymentProofName = file.name;
+    if (els.uploadText) els.uploadText.textContent = file.name;
 
-    return { url, name: file.name };
-  } catch (error) {
-    console.error("Upload error:", error);
-    showToast(t("Failed to upload receipt.", "تعذر رفع الإيصال."), "error");
-    return null;
-  } finally {
-    bookingState.paymentProofUploading = false;
-    if (els.uploadText) {
-      els.uploadText.textContent = bookingState.paymentProofName || t("Click to upload receipt", "اضغط لرفع إيصال الدفع");
-    }
     saveDraft();
     updateReview();
+    showToast(t("Receipt uploaded successfully.", "تم رفع الإيصال بنجاح."), "success");
+  } catch (error) {
+    console.error("Upload error:", error);
+    if (els.uploadText) els.uploadText.textContent = t("Upload failed", "فشل الرفع");
+    showToast(t("Failed to upload file.", "تعذر رفع الملف."), "error");
+  } finally {
+    bookingState.paymentProofUploading = false;
   }
 }
 
 // ──────────────────────────────────────────
-// Booking Payload / Submit
+// Booking Persistence
 // ──────────────────────────────────────────
 function buildBookingPayload() {
   updateBookingStateFromInputs();
+  updateSummary();
 
-  const adults = Math.max(1, parsePositiveInt(getFieldValue("guestAdults", "1"), 1));
-  const children = Math.max(0, parsePositiveInt(getFieldValue("guestChildren", "0"), 0));
-  const pricePerNight = getPropertyPrice();
-  const nights = bookingState.nights || 0;
-  const serviceFee = nights > 0 ? Math.round(pricePerNight * nights * 0.05) : 0;
-  const taxes = nights > 0 ? Math.round(pricePerNight * nights * 0.03) : 0;
-  const total = (pricePerNight * nights) + serviceFee + taxes;
-
-  if (!bookingState.bookingReference) {
-    bookingState.bookingReference = generateReference("ORE");
-  }
+  const nightly = getPropertyPrice();
+  const nights = bookingState.nights;
+  const serviceFee = nights > 0 ? Math.round(nightly * nights * 0.08) : 0;
+  const taxes = nights > 0 ? Math.round(nightly * nights * 0.06) : 0;
+  const total = nightly * nights + serviceFee + taxes;
 
   return {
-    reference: bookingState.bookingReference,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-    userId: auth?.currentUser?.uid || null,
+    reference: bookingState.bookingReference || generateReference(),
+    userId: currentUser?.uid || null,
+    userEmail: cleanText(currentUser?.email) || getFieldValue("guestEmail"),
+    userDisplayName: cleanText(currentUser?.displayName) || getFieldValue("guestName"),
 
     propertyId: bookingState.propertyId || null,
     propertyTitle: getPropertyTitle(),
@@ -1830,121 +1841,223 @@ function buildBookingPayload() {
     propertyType: getPropertyType(),
     propertyImage: getPropertyImage(),
 
-    guest: {
-      name: getFieldValue("guestName"),
-      email: getFieldValue("guestEmail"),
-      phone: getFieldValue("guestPhone"),
-      country: getFieldValue("guestCountry")
-    },
+    guestName: getFieldValue("guestName"),
+    guestEmail: getFieldValue("guestEmail"),
+    guestPhone: getFieldValue("guestPhone"),
+    guestCountry: getFieldValue("guestCountry"),
 
-    stay: {
-      checkIn: bookingState.checkIn,
-      checkOut: bookingState.checkOut,
-      nights,
-      adults,
-      children,
-      guests: bookingState.guestCount,
-      arrivalTime: getFieldValue("arrivalTime"),
-      purpose: getFieldValue("stayPurpose"),
-      purposeLabel: getFieldSelectedText("stayPurpose"),
-      bedType: getFieldValue("bedType"),
-      bedTypeLabel: getFieldSelectedText("bedType"),
-      specialRequests: getFieldValue("specialRequests")
-    },
+    checkIn: bookingState.checkIn,
+    checkOut: bookingState.checkOut,
+    nights,
+    adults: parsePositiveInt(getFieldValue("guestAdults", "1"), 1),
+    children: parsePositiveInt(getFieldValue("guestChildren", "0"), 0),
+    guestCount: bookingState.guestCount,
 
-    billing: {
-      name: getFieldValue("billingName"),
-      note: getFieldValue("billingNote")
-    },
+    arrivalTime: getFieldValue("arrivalTime"),
+    stayPurpose: getFieldValue("stayPurpose"),
+    bedType: getFieldValue("bedType"),
+    specialRequests: getFieldValue("specialRequests"),
 
-    payment: {
-      method: bookingState.paymentMethod,
-      methodValue: bookingState.paymentValue,
-      proofUrl: bookingState.paymentProofUrl,
-      proofName: bookingState.paymentProofName,
-      bankTransfer: {
-        senderName: getFieldValue("senderName"),
-        amount: parsePositiveInt(getFieldValue("transferAmount"), 0),
-        date: getFieldValue("transferDate"),
-        time: getFieldValue("transferTime")
-      },
-      cash: {
-        payerName: getFieldValue("cashPayerName"),
-        currency: getFieldValue("cashCurrency"),
-        note: getFieldValue("cashPaymentNote")
-      }
-    },
+    billingName: getFieldValue("billingName"),
+    billingNote: getFieldValue("billingNote"),
 
-    pricing: {
-      pricePerNight,
-      nights,
-      serviceFee,
-      taxes,
-      total,
-      currency: "DZD"
-    },
+    paymentMethod: bookingState.paymentMethod,
+    paymentValue: bookingState.paymentValue,
+    senderName: getFieldValue("senderName"),
+    transferAmount: getFieldValue("transferAmount"),
+    transferDate: getFieldValue("transferDate"),
+    transferTime: getFieldValue("transferTime"),
+    cashPayerName: getFieldValue("cashPayerName"),
+    cashCurrency: getFieldValue("cashCurrency"),
+    cashPaymentNote: getFieldValue("cashPaymentNote"),
+    paymentProofUrl: bookingState.paymentProofUrl || null,
+    paymentProofName: bookingState.paymentProofName || "",
 
-    rewardPoints: bookingState.rewardPoints || 0
+    nightlyPrice: nightly,
+    serviceFee,
+    taxes,
+    total,
+    rewardPoints: bookingState.rewardPoints || 0,
+    status: "pending",
+    createdAt: new Date()
   };
 }
 
-async function submitBooking() {
-  const payload = buildBookingPayload();
+function saveBookingLocally(payload) {
+  const list = safeJsonGet(LOCAL_BOOKINGS_KEY, []);
+  list.unshift({
+    ...payload,
+    createdAt: new Date().toISOString()
+  });
+  safeJsonSet(LOCAL_BOOKINGS_KEY, list);
+}
+
+async function saveBookingRemotely(payload) {
+  if (!db) return false;
 
   try {
-    if (db) {
-      await db.collection("bookings").add(payload);
-    } else {
-      const localBookings = safeJsonGet(LOCAL_BOOKINGS_KEY, []);
-      localBookings.unshift(payload);
-      safeJsonSet(LOCAL_BOOKINGS_KEY, localBookings);
-    }
-
-    safeJsonSet("ore_guest_basics", {
-      guestName: getFieldValue("guestName"),
-      guestEmail: getFieldValue("guestEmail"),
-      guestPhone: getFieldValue("guestPhone"),
-      guestCountry: getFieldValue("guestCountry")
-    });
-
-    safeRemove(BOOKING_DRAFT_KEY);
-
-    showBookingSuccessPopup(payload.reference);
-    showToast(t("Booking submitted successfully.", "تم إرسال الحجز بنجاح."), "success");
+    await db.collection("bookings").add(payload);
+    return true;
   } catch (error) {
-    console.error("Booking submit error:", error);
-    showToast(t("Failed to submit booking.", "تعذر إرسال الحجز."), "error");
-    throw error;
+    console.error("Remote booking save error:", error);
+    return false;
+  }
+}
+
+async function confirmBooking() {
+  if (!validateStep1()) {
+    setCurrentStep(1);
+    return;
+  }
+
+  if (!validateStep2()) {
+    setCurrentStep(2);
+    return;
+  }
+
+  if (!validateStep3()) {
+    setCurrentStep(3);
+    return;
+  }
+
+  if (bookingState.paymentProofUploading) {
+    showToast(t("Please wait until upload finishes.", "يرجى الانتظار حتى ينتهي الرفع."), "info");
+    return;
+  }
+
+  try {
+    setButtonLoading(els.btnConfirmBooking, true, t("Confirming...", "جارٍ تأكيد الحجز..."));
+
+    const payload = buildBookingPayload();
+    bookingState.bookingReference = payload.reference;
+
+    const savedRemote = await saveBookingRemotely(payload);
+    if (!savedRemote) saveBookingLocally(payload);
+
+    clearScopedDrafts(getCurrentUserScope());
+    showBookingSuccessPopup(payload.reference);
+    showToast(
+      savedRemote
+        ? t("Booking submitted successfully.", "تم إرسال الحجز بنجاح.")
+        : t("Booking saved locally.", "تم حفظ الحجز محليًا."),
+      "success"
+    );
+
+    clearAllBookingFields();
+    fillAuthenticatedGuestFields(currentUser);
+    bookingState.paymentProofName = "";
+    bookingState.paymentProofUrl = null;
+    bookingState.bookingReference = generateReference();
+    if (els.paymentReference) els.paymentReference.textContent = bookingState.bookingReference;
+    if (els.uploadText) els.uploadText.textContent = t("Click to upload payment receipt", "اضغط لرفع إيصال الدفع");
+
+    updatePaymentCardsUI();
+    setCurrentStep(1);
+    updateBookingStateFromInputs();
+    updateSummary();
+    updateReview();
+  } catch (error) {
+    console.error("Confirm booking error:", error);
+    showToast(t("Failed to confirm booking.", "تعذر تأكيد الحجز."), "error");
+  } finally {
+    setButtonLoading(els.btnConfirmBooking, false);
   }
 }
 
 // ──────────────────────────────────────────
 // Events
 // ──────────────────────────────────────────
-function bindFieldEvents() {
+function setupFieldAutosave() {
   Object.values(bookingFields).forEach((el) => {
     if (!el) return;
 
     const eventName = el.tagName === "SELECT" ? "change" : "input";
 
     el.addEventListener(eventName, () => {
-      if (isUpdatingUI) return;
-      markInvalid(el, false);
       updateBookingStateFromInputs();
+      updatePaymentCardsUI();
       updateSummary();
       updateReview();
       saveDraft();
+      markInvalid(el, false);
     });
 
-    if (el.tagName !== "SELECT") {
-      el.addEventListener("blur", () => {
+    if (eventName !== "change") {
+      el.addEventListener("change", () => {
         updateBookingStateFromInputs();
+        updatePaymentCardsUI();
         updateSummary();
         updateReview();
         saveDraft();
+        markInvalid(el, false);
       });
     }
   });
+}
+
+function setupAuthForms() {
+  els.loginForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await loginWithEmail(cleanText(els.loginEmail?.value), cleanText(els.loginPassword?.value));
+  });
+
+  els.registerForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await registerWithEmail(
+      cleanText(els.regName?.value),
+      cleanText(els.regEmail?.value),
+      cleanText(els.regPassword?.value)
+    );
+  });
+
+  els.forgotForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await sendResetEmail(cleanText(els.forgotEmail?.value));
+  });
+
+  getById("go-to-register")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("register");
+  });
+
+  getById("go-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("login");
+  });
+
+  getById("go-to-forgot")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("forgot");
+  });
+
+  getById("back-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchAuthForm("login");
+  });
+}
+
+function setupEventListeners() {
+  els.langToggle?.addEventListener("click", () => {
+    bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
+    safeSet("ore_lang", bookingState.lang);
+    safeSet("orelang", bookingState.lang);
+    refreshLocalizedUI();
+  });
+
+  els.themeToggle?.addEventListener("click", () => {
+    bookingState.theme = bookingState.theme === "dark" ? "light" : "dark";
+    safeSet("ore_theme", bookingState.theme);
+    safeSet("oretheme", bookingState.theme);
+    applyTheme();
+  });
+
+  els.openAuthBtn?.addEventListener("click", handleProfileButtonClick);
+  els.closeAuthBtn?.addEventListener("click", closeAuthModal);
+  els.authModal?.addEventListener("click", (e) => {
+    if (e.target === els.authModal) closeAuthModal();
+  });
+
+  els.logoutBtn?.addEventListener("click", logoutUser);
 
   els.paymentRadios.forEach((radio) => {
     radio.addEventListener("change", () => {
@@ -1955,297 +2068,137 @@ function bindFieldEvents() {
     });
   });
 
-  els.paymentCards.forEach((card) => {
-    card.addEventListener("click", () => {
-      const radio = card.querySelector('input[type="radio"]');
-      if (!radio) return;
-      radio.checked = true;
-      radio.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-  });
-
-  els.paymentProof?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadPaymentProof(file);
-  });
-
-  [
-    bookingFields.guestAdults,
-    bookingFields.guestChildren,
-    bookingFields.arrivalDate,
-    bookingFields.departureDate
-  ].forEach((el) => {
-    el?.addEventListener("change", () => {
-      updateBookingStateFromInputs();
-      updateDateConstraints();
-      updateSummary();
-      updateReview();
-      saveDraft();
-    });
-  });
-}
-
-function bindStepButtons() {
-  els.btnNext1?.addEventListener("click", () => {
-    if (!validateStep1()) return;
-    showStep(2);
-  });
-
-  els.btnPrev2?.addEventListener("click", () => {
-    showStep(1);
-  });
-
-  els.btnNext2?.addEventListener("click", () => {
-    if (!validateStep2()) return;
-    updateSummary();
-    updateReview();
-    showStep(3);
-  });
-
-  els.btnPrev3?.addEventListener("click", () => {
-    showStep(2);
-  });
-
-  els.editStep1Btns.forEach((btn) => {
-    btn.addEventListener("click", () => showStep(1));
-  });
-
-  els.editStep2Btns.forEach((btn) => {
-    btn.addEventListener("click", () => showStep(2));
-  });
-
-  els.btnConfirmBooking?.addEventListener("click", async () => {
-    if (!validateStep1()) {
-      showStep(1);
-      return;
-    }
-
-    if (!validateStep2()) {
-      showStep(2);
-      return;
-    }
-
-    if (!validateFinalStep()) return;
-
-    try {
-      setButtonLoading(els.btnConfirmBooking, true, t("Confirming...", "جارٍ التأكيد..."));
-      await submitBooking();
-    } finally {
-      setButtonLoading(els.btnConfirmBooking, false);
-    }
-  });
-}
-
-function bindNavbarEvents() {
-  els.langToggle?.addEventListener("click", () => {
-    bookingState.lang = bookingState.lang === "ar" ? "en" : "ar";
-    safeSet("ore_lang", bookingState.lang);
-    safeSet("orelang", bookingState.lang);
-    refreshLocalizedUI();
-    saveDraft();
-  });
-
-  els.themeToggle?.addEventListener("click", () => {
-    bookingState.theme = bookingState.theme === "dark" ? "light" : "dark";
-    safeSet("ore_theme", bookingState.theme);
-    safeSet("oretheme", bookingState.theme);
-    applyTheme();
-    saveDraft();
-  });
-
-  els.openAuthBtn?.addEventListener("click", handleProfileButtonClick);
-
-  els.closeAuthBtn?.addEventListener("click", () => {
-    closeAuthModal();
-  });
-
-  els.authModal?.addEventListener("click", (e) => {
-    if (e.target === els.authModal) {
-      closeAuthModal();
-    }
-  });
-
-  els.profileDropdown?.addEventListener("click", (e) => {
-    e.stopPropagation();
-  });
-
-  document.addEventListener("click", (e) => {
-    const clickedInsideProfile =
-      els.profileContainer && els.profileContainer.contains(e.target);
-
-    if (!clickedInsideProfile) {
-      toggleProfileDropdown(false);
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeAuthModal();
-      toggleProfileDropdown(false);
-    }
-  });
-
-  els.logoutBtn?.addEventListener("click", async () => {
-    toggleProfileDropdown(false);
-    await logoutUser();
-  });
-
-  els.myBookingsBtn?.addEventListener("click", () => {
-    toggleProfileDropdown(false);
-    window.location.href = "bookings.html";
-  });
-
-  els.myFavoritesBtn?.addEventListener("click", () => {
-    toggleProfileDropdown(false);
-    window.location.href = "favorites.html";
-  });
-
   els.copyIbanBtn?.addEventListener("click", async () => {
-    const value = cleanText(els.bankIban?.textContent);
-    if (!value) return;
     try {
-      await navigator.clipboard.writeText(value);
-      showToast(t("RIB copied.", "تم نسخ الـ RIB."), "success");
+      await navigator.clipboard.writeText(cleanText(els.bankIban?.textContent));
+      showToast(t("RIB copied.", "تم نسخ الحساب."), "success");
     } catch (_) {
       showToast(t("Failed to copy.", "تعذر النسخ."), "error");
     }
   });
 
   els.copyReferenceBtn?.addEventListener("click", async () => {
-    const value = cleanText(els.paymentReference?.textContent);
-    if (!value) return;
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(cleanText(els.paymentReference?.textContent));
       showToast(t("Reference copied.", "تم نسخ المرجع."), "success");
     } catch (_) {
       showToast(t("Failed to copy.", "تعذر النسخ."), "error");
     }
   });
-}
 
-function bindAuthForms() {
-  document.querySelectorAll("[data-auth-switch]").forEach((el) => {
-    el.addEventListener("click", (e) => {
-      e.preventDefault();
-      const target = el.getAttribute("data-auth-switch");
-      if (target) switchAuthForm(target);
-    });
+  els.paymentProof?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (file) handlePaymentProofUpload(file);
   });
 
-  els.loginForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = cleanText(els.loginEmail?.value);
-    const password = cleanText(els.loginPassword?.value);
-
-    if (!validateEmail(email) || !password) {
-      showAuthMessage(t("Enter a valid email and password.", "أدخل بريدًا إلكترونيًا صالحًا وكلمة مرور."));
-      return;
-    }
-
-    await loginWithEmail(email, password);
+  els.btnNext1?.addEventListener("click", () => {
+    if (!validateStep1()) return;
+    setCurrentStep(2);
+    saveDraft();
   });
 
-  els.registerForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = cleanText(els.regName?.value);
-    const email = cleanText(els.regEmail?.value);
-    const password = cleanText(els.regPassword?.value);
-
-    if (!name || !validateEmail(email) || password.length < 6) {
-      showAuthMessage(t("Complete all fields correctly.", "أكمل جميع الحقول بشكل صحيح."));
-      return;
-    }
-
-    await registerWithEmail(name, email, password);
+  els.btnPrev2?.addEventListener("click", () => {
+    setCurrentStep(1);
+    saveDraft();
   });
 
-  els.forgotForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = cleanText(els.forgotEmail?.value);
-    if (!validateEmail(email)) {
-      showAuthMessage(t("Enter a valid email.", "أدخل بريدًا إلكترونيًا صالحًا."));
-      return;
-    }
-    await sendResetEmail(email);
+  els.btnNext2?.addEventListener("click", () => {
+    if (!validateStep2()) return;
+    setCurrentStep(3);
+    updateReview();
+    saveDraft();
   });
 
-  const googleBtn = getById("google-signin-btn");
-  googleBtn?.addEventListener("click", async () => {
-    if (!auth || typeof firebase?.auth?.GoogleAuthProvider !== "function") {
-      showAuthMessage(t("Google sign-in is unavailable.", "تسجيل الدخول عبر Google غير متاح."));
-      return;
-    }
+  els.btnPrev3?.addEventListener("click", () => {
+    setCurrentStep(2);
+    saveDraft();
+  });
 
-    try {
-      clearAuthMessage();
-      const provider = new firebase.auth.GoogleAuthProvider();
-      await auth.signInWithPopup(provider);
-      closeAuthModal();
-      showToast(t("Logged in with Google.", "تم تسجيل الدخول عبر Google."), "success");
-    } catch (error) {
-      console.error("Google auth error:", error);
-      showAuthMessage(t("Google sign-in failed.", "فشل تسجيل الدخول عبر Google."));
+  els.btnConfirmBooking?.addEventListener("click", confirmBooking);
+
+  els.editStep1Btns.forEach((btn) => {
+    btn.addEventListener("click", () => setCurrentStep(1));
+  });
+
+  els.editStep2Btns.forEach((btn) => {
+    btn.addEventListener("click", () => setCurrentStep(2));
+  });
+
+  els.agreePolicy?.addEventListener("change", () => {
+    markInvalid(els.agreePolicy, false);
+    saveDraft();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (
+      els.profileDropdown?.classList.contains("active") &&
+      els.profileContainer &&
+      !els.profileContainer.contains(e.target)
+    ) {
+      toggleProfileDropdown(false);
     }
   });
-}
 
-function bindAuthState() {
-  if (!auth) {
-    updateAuthUI(null);
-    return;
-  }
-
-  auth.onAuthStateChanged((user) => {
-    updateAuthUI(user);
-  });
+  setupFieldAutosave();
+  setupAuthForms();
 }
 
 // ──────────────────────────────────────────
 // Init
 // ──────────────────────────────────────────
-async function initializeBookingPage() {
+function init() {
+  clearLegacyDateStorage();
   cacheOriginalLocalizedContent();
-  updateDirection();
-  applyTheme();
-  updateLangButton();
 
-  hydrateStayContext();
-  restoreDraft();
-  setupDateInputs();
-  updateDateConstraints();
-  updatePaymentCardsUI();
-  bindFieldEvents();
-  bindStepButtons();
-  bindNavbarEvents();
-  bindAuthForms();
-  bindAuthState();
+  bookingState.bookingReference = generateReference();
 
-  await loadPropertyData();
-
-  const guestBasics = safeJsonGet("ore_guest_basics", {});
-  setValueIfEmpty(bookingFields.guestName, guestBasics?.guestName || currentUser?.displayName || "");
-  setValueIfEmpty(bookingFields.guestEmail, guestBasics?.guestEmail || currentUser?.email || "");
-  setValueIfEmpty(bookingFields.guestPhone, guestBasics?.guestPhone || "");
-  setValueIfEmpty(bookingFields.guestCountry, guestBasics?.guestCountry || "");
-
-  updateBookingStateFromInputs();
-
-  if (!bookingState.bookingReference) {
-    bookingState.bookingReference = generateReference("ORE");
+  if (els.paymentReference) {
+    els.paymentReference.textContent = bookingState.bookingReference;
   }
 
-  applyTranslations();
+  applyTheme();
+  refreshLocalizedUI();
+  setupDateInputs();
+  setupEventListeners();
+  updatePaymentCardsUI();
+  updateDateConstraints();
   updateSummary();
   updateReview();
-  showStep(bookingState.currentStep || 1);
+  loadPropertyData();
+
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      const previousScope = getCurrentUserScope();
+
+      currentUser = user || null;
+      updateAuthUI(currentUser);
+
+      if (user) {
+        fillAuthenticatedGuestFields(user);
+      } else {
+        clearGuestIdentityFields();
+      }
+
+      const nextScope = getCurrentUserScope();
+
+      if (previousScope !== nextScope) {
+        clearAllBookingFields();
+        if (user) fillAuthenticatedGuestFields(user);
+        loadDraft();
+      } else {
+        loadDraft();
+      }
+
+      updateSummary();
+      updateReview();
+    });
+  } else {
+    updateAuthUI(null);
+    clearGuestIdentityFields();
+    loadDraft();
+  }
 
   bookingState.initialized = true;
-  saveDraft();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  safeCall(() => {
-    initializeBookingPage();
-  }, "Booking page initialization");
-});
+document.addEventListener("DOMContentLoaded", init);
